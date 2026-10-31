@@ -31,3 +31,13 @@ This repository also contains a static frontend in `public/`. To deploy the webs
 The Pages website is static and can stay available independently of a laptop. This does **not** run the Node/yt-dlp Docker backend. Platform extraction endpoints require a separate server runtime; the frontend now explains this rather than pretending extraction is available. Direct media URLs (for example a public MP4/MP3 URL) can be opened/downloaded when the source host permits it.
 
 Cloudflare Pages Git integration docs: https://developers.cloudflare.com/pages/get-started/git-integration/
+
+
+## Cloudflare Worker runtime
+The Cloudflare Worker entrypoint is `src/index.js`, configured by `wrangler.toml`. The Worker serves the static app from `public/` and exposes:
+- `GET /api/health` — service health.
+- `POST /api/download` — streams a public, direct media-file URL through the Worker to avoid browser CORS restrictions.
+
+The direct-download endpoint accepts file URLs ending in common media extensions (MP4, WebM, MOV, MP3, M4A, AAC, WAV, OGG, FLAC), rejects local/private network destinations and non-media page URLs, validates redirects, and applies a 100 MB declared-size limit. It streams rather than buffering the media.
+
+**Platform-page extraction is not included in the Cloudflare Worker.** Links to TikTok, Instagram, YouTube, Facebook, etc. are web pages rather than direct media files and require a separate extraction backend/runtime. The UI must not claim those downloads work until such a backend is deployed and tested. Download only content you own or have permission to save.
