@@ -3,12 +3,63 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#080d18"><meta name="description" content="ARYANZZ V5 — downloader file media langsung, smart queue, image tools, PDF, QR, password generator, profil dan backup."><meta property="og:title" content="ARYANZZ V5 — All in One"><meta property="og:description" content="Premium dark all-in-one downloader and web tools.">
-<link rel="manifest" href="/manifest.webmanifest"><title>ARYANZZ V5 — All in One</title>
+<link rel="manifest" href="/manifest.webmanifest?v=5.1"><title>ARYANZZ V5 — All in One</title>
 <style>
 :root{color-scheme:dark;--bg:#080d18;--panel:#101a2b;--line:#243650;--txt:#edf4ff;--muted:#91a2bc;--blue:#4f8cff;--cyan:#32d5ee}
 *{box-sizing:border-box}body{margin:0;background:radial-gradient(850px 440px at 85% -5%,#18355d 0%,transparent 58%),var(--bg);color:var(--txt);font:15px/1.5 system-ui,Arial,sans-serif;min-height:100vh}button,input,select{font:inherit}button{cursor:pointer}.wrap{max-width:1000px;margin:auto;padding:18px 16px 90px}.top{display:flex;justify-content:space-between;align-items:center;padding:8px 0 25px}.brand{font-size:20px;font-weight:900;letter-spacing:1.5px;display:flex;align-items:center;gap:10px}.logo{width:42px;height:42px;border-radius:14px;background:linear-gradient(135deg,#367cff,#29d4e8);display:grid;place-items:center;font-weight:1000}.pill{border:1px solid #294363;border-radius:30px;padding:6px 10px;color:#a9c7ed;font-size:11px}.hero{text-align:center;padding:28px 8px}.eyebrow{color:var(--cyan);letter-spacing:2.5px;font-size:11px;font-weight:800}.hero h1{font-size:clamp(34px,7vw,58px);line-height:1.08;margin:12px 0;background:linear-gradient(90deg,#fff,#80b4ff,#46d8e9);color:transparent;background-clip:text}.hero p{color:var(--muted);max-width:570px;margin:auto}.card{background:linear-gradient(145deg,#121f33,#0d1626);border:1px solid var(--line);border-radius:20px;padding:20px;box-shadow:0 18px 55px #0003}.download{max-width:790px;margin:auto}.label{display:block;color:#b9c8dd;font-size:12px;font-weight:700;margin:0 0 9px}.inputrow{display:flex;gap:9px}.field{width:100%;min-width:0;background:#080f1d;border:1px solid #2a3c58;color:white;border-radius:12px;padding:14px;outline:none}.field:focus{border-color:var(--blue)}.primary{border:0;border-radius:12px;background:linear-gradient(120deg,#367cff,#2cbedb);color:#fff;font-weight:800;padding:13px 18px;white-space:nowrap}.primary:disabled{opacity:.6}.hint,.muted{color:var(--muted);font-size:12px}.tags{display:flex;flex-wrap:wrap;gap:8px;margin-top:15px}.tag{border:1px solid #29405e;border-radius:9px;padding:6px 10px;color:#b7c9e1;font-size:12px}.result{margin-top:14px;padding:13px;border-radius:12px;background:#091321;border:1px solid #263852;color:#c7d7eb;font-size:13px;overflow-wrap:anywhere}.warning{border-left:3px solid #e5ad4b;background:#211b12;color:#d9c49c;padding:10px 12px;border-radius:7px;font-size:12px;margin-top:13px}.head{display:flex;justify-content:space-between;align-items:end;margin:32px 2px 14px}.head h2{font-size:20px;margin:0}.head span{color:var(--muted);font-size:12px}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:13px}.tool{background:var(--panel);border:1px solid var(--line);border-radius:17px;padding:17px;text-align:left;color:var(--txt);min-height:130px}.tool b{display:block}.tool small{display:block;color:var(--muted);margin-top:5px}.ico{width:40px;height:40px;border-radius:13px;background:#1b3150;display:grid;place-items:center;font-size:20px;margin-bottom:10px}.panel{display:none;margin-top:15px}.panel.active{display:block}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}.stat{background:#091321;border:1px solid #263852;border-radius:13px;padding:12px;text-align:center}.stat strong{display:block;font-size:22px}.stat small{color:var(--muted)}video{width:100%;max-height:280px;background:#000;border-radius:12px;margin-top:12px}.nav{position:fixed;bottom:0;left:0;right:0;background:#09111fee;border-top:1px solid #20304a;display:flex;justify-content:center;gap:8px;padding:9px 8px calc(9px + env(safe-area-inset-bottom));backdrop-filter:blur(16px)}.nav button{background:transparent;border:0;color:#8ea2be;padding:7px 12px;border-radius:10px;font-size:11px}.nav button.active{background:#1b3150;color:#fff}footer{text-align:center;color:#70829b;font-size:11px;margin-top:30px}@media(max-width:680px){.grid{grid-template-columns:repeat(2,1fr)}.inputrow{flex-direction:column}.primary{width:100%}.card{padding:16px}}@media(max-width:380px){.grid{grid-template-columns:1fr}}
-.feature-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px}.feature-card{background:linear-gradient(145deg,#14243a,#0c1524);border:1px solid #2a4261;border-radius:15px;padding:14px;color:var(--txt);text-align:left;min-height:105px}.feature-card b{display:block;margin:5px 0}.feature-card small{color:var(--muted)}.feature-row{display:flex;gap:9px;align-items:center;margin-top:12px}.feature-row>*{flex:1;min-width:0}.progress-track{height:8px;border-radius:20px;background:#1b2a40;overflow:hidden;margin-top:14px}.progress-fill{height:100%;width:0;background:linear-gradient(90deg,var(--blue),var(--cyan));transition:width .2s}.queue-row,.saved-row{display:flex;gap:10px;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #263852;overflow-wrap:anywhere}.queue-row span,.saved-row a{min-width:0;overflow-wrap:anywhere;color:#bcd4f5;text-decoration:none}.queue-row small,.saved-row small{color:var(--muted);white-space:nowrap}.status-ok{color:#65e2b1}.status-warn{color:#f0c16d}.tool-input{margin:9px 0}.tool-output{min-height:42px}.avatar{width:52px;height:52px;border-radius:18px;background:linear-gradient(135deg,#367cff,#29d4e8);display:grid;place-items:center;font-size:24px;font-weight:900}@media(max-width:520px){.feature-row{flex-direction:column}.feature-row>*{width:100%}.queue-row{align-items:flex-start;flex-direction:column}.saved-row{align-items:flex-start;flex-direction:column}}</style></head><body><div class="wrap">
-<header class="top"><div class="brand"><div class="logo">A</div>ARYANZZ</div><span class="pill">V5 · ALL IN ONE TOOLS</span></header>
+.feature-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px}.feature-card{background:linear-gradient(145deg,#14243a,#0c1524);border:1px solid #2a4261;border-radius:15px;padding:14px;color:var(--txt);text-align:left;min-height:105px}.feature-card b{display:block;margin:5px 0}.feature-card small{color:var(--muted)}.feature-row{display:flex;gap:9px;align-items:center;margin-top:12px}.feature-row>*{flex:1;min-width:0}.progress-track{height:8px;border-radius:20px;background:#1b2a40;overflow:hidden;margin-top:14px}.progress-fill{height:100%;width:0;background:linear-gradient(90deg,var(--blue),var(--cyan));transition:width .2s}.queue-row,.saved-row{display:flex;gap:10px;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #263852;overflow-wrap:anywhere}.queue-row span,.saved-row a{min-width:0;overflow-wrap:anywhere;color:#bcd4f5;text-decoration:none}.queue-row small,.saved-row small{color:var(--muted);white-space:nowrap}.status-ok{color:#65e2b1}.status-warn{color:#f0c16d}.tool-input{margin:9px 0}.tool-output{min-height:42px}.avatar{width:52px;height:52px;border-radius:18px;background:linear-gradient(135deg,#367cff,#29d4e8);display:grid;place-items:center;font-size:24px;font-weight:900}@media(max-width:520px){.feature-row{flex-direction:column}.feature-row>*{width:100%}.queue-row{align-items:flex-start;flex-direction:column}.saved-row{align-items:flex-start;flex-direction:column}}
+/* ARYANZZ V5.1 — visible UI refresh */
+:root{--bg:#070b14;--panel:#101a2b;--line:#263b59;--txt:#f4f7ff;--muted:#9aabc5;--blue:#568cff;--cyan:#35d6e7}
+body{background:radial-gradient(900px 480px at 50% -160px,#234a80 0%,transparent 70%),radial-gradient(500px 300px at 0% 38%,#101f38 0%,transparent 75%),#070b14;letter-spacing:.01em}
+.wrap{max-width:1080px;padding-top:20px}
+.top{padding:8px 2px 18px}
+.brand{letter-spacing:2px;font-size:22px}
+.logo{box-shadow:0 8px 26px #367cff55;border:1px solid #80b4ff55}
+.pill{background:#14233a;border-color:#34527b;color:#c6dcff;font-weight:800;letter-spacing:.8px}
+.hero{padding:34px 8px 30px}
+.hero h1{letter-spacing:-1.8px;text-shadow:0 8px 45px #398cff30}
+.hero p{font-size:15px;line-height:1.8}
+.card{background:linear-gradient(145deg,#121f34f5,#0a1423f5);border:1px solid #2c4568;border-radius:22px;box-shadow:0 24px 70px #0005,inset 0 1px #ffffff0b}
+.download{max-width:850px;padding:24px}
+.field{background:#080f1c;border-color:#314867;min-height:48px}
+.field:focus{box-shadow:0 0 0 3px #4f8cff25}
+.primary{background:linear-gradient(115deg,#367cff,#26bcd6);box-shadow:0 8px 22px #267bd633;transition:transform .18s,filter .18s}
+.primary:active,.tool:active,.feature-card:active{transform:scale(.985)}
+.warning{border:1px solid #725a31;border-left:3px solid #e5ad4b;background:#241d12}
+.head{margin-top:38px}
+.head h2{letter-spacing:-.4px}
+.grid{gap:15px}
+.tool,.feature-card{background:linear-gradient(145deg,#14243a,#0b1422);border-color:#2b4362;border-radius:18px;transition:border-color .18s,transform .18s,background .18s;box-shadow:0 10px 28px #0002}
+.tool:hover,.feature-card:hover{border-color:#568cff;background:linear-gradient(145deg,#192e4b,#0e192a)}
+.tool{min-height:146px;padding:18px}
+.feature-card{min-height:132px;padding:16px}
+.ico{background:linear-gradient(145deg,#244776,#152b49);border:1px solid #345985;color:#cce5ff}
+.feature-grid{gap:13px}
+.panel.card{margin-top:18px;padding:22px}
+.panel h3{letter-spacing:-.3px}
+.result{border-color:#304766;background:#091321}
+.stats{gap:12px}
+.stat{background:#0a1525;border-color:#2c4362}
+.nav{background:#080f1ced;border-top-color:#263a57}
+.nav button{font-weight:700;min-width:62px}
+.nav button.active{background:#1b3150;box-shadow:inset 0 0 0 1px #365b89}
+footer{padding-bottom:22px}
+.release-wrap{margin:30px 0 10px;padding:20px;border:1px solid #2a4262;border-radius:20px;background:linear-gradient(145deg,#111f33,#0a1321)}
+.release-top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px}
+.release-top h2{font-size:18px;margin:0}
+.release-top span{font-size:11px;color:#a8c5ec;border:1px solid #2d4c73;padding:5px 9px;border-radius:20px}
+.release-list{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.release-item{border:1px solid #2a4262;border-radius:14px;padding:13px;background:#0a1524;min-height:132px}
+.release-item strong{display:block;color:#8fc6ff;font-size:13px;margin-bottom:7px}
+.release-item b{display:block;font-size:13px;margin-bottom:5px}
+.release-item small{display:block;color:#9aabc5;line-height:1.55}
+.release-item.current{border-color:#3e8ba8;background:linear-gradient(145deg,#102b3a,#0a1827)}
+.release-item.current strong{color:#62e3d7}
+.capability-note{margin-top:13px;padding:12px 14px;border:1px solid #725a31;border-radius:12px;background:#211b12;color:#dfcda9;font-size:12px;line-height:1.6}
+@media(max-width:680px){.wrap{padding:12px 13px 100px}.hero{padding:26px 4px 22px}.hero h1{font-size:clamp(35px,10vw,48px)}.download{padding:17px}.release-list{grid-template-columns:repeat(2,minmax(0,1fr))}.release-item{min-height:120px}.panel.card{padding:17px}.head{margin-top:29px}}
+@media(max-width:360px){.release-list{grid-template-columns:1fr}.nav{gap:2px}.nav button{min-width:54px;padding:7px 8px}}
+</style></head><body><div class="wrap">
+<header class="top"><div class="brand"><div class="logo">A</div>ARYANZZ</div><span class="pill">V5.1 · UPDATED</span></header>
 <section id="home"><div class="hero"><div class="eyebrow">FAST · SIMPLE · PREMIUM MULTI-TOOL</div><h1>Download anything.<br>Do more.</h1><p>Satu tempat untuk mengunduh file media langsung dan memakai alat web praktis, langsung dari browser.</p></div>
 <div class="card download"><label class="label" for="url">TEMPEL LINK MEDIA</label><div class="inputrow"><input class="field" id="url" type="url" placeholder="https://..."><button class="primary" id="analyze">Periksa link ↗</button></div><p class="hint">File media langsung: MP4, WebM, MOV, MP3, M4A, AAC, WAV, OGG, FLAC. Ekstraksi halaman platform memerlukan backend terpisah dan saat ini belum aktif.</p><div class="tags"><span class="tag">TikTok</span><span class="tag">Instagram</span><span class="tag">YouTube</span><span class="tag">Facebook</span><span class="tag">Pinterest</span><span class="tag">Media URL</span></div><div id="downloadResult" class="result" hidden></div><div id="historyBox" class="result" hidden></div><div class="warning">Unduh hanya konten milik sendiri, berizin, atau yang memang boleh diunduh. Keberhasilan bergantung pada dukungan platform dan kapasitas server.</div><p class="hint" id="apiHealth">Memeriksa Cloudflare Worker…</p></div>
 <div class="head"><h2>Tools pilihan</h2><span>Tap untuk membuka</span></div><div class="grid">
@@ -18,7 +69,7 @@
 <button class="tool" data-panel="install"><div class="ico">＋</div><b>Install App</b><small>Pasang ARYANZZ ke layar utama.</small></button>
 <button class="tool" data-panel="about"><div class="ico">✦</div><b>About ARYANZZ</b><small>Informasi aplikasi dan privasi.</small></button>
 <button class="tool" data-panel="help"><div class="ico">?</div><b>Pusat Bantuan</b><small>Panduan fitur dan batasannya.</small></button></div>
-<div class="head"><h2>ARYANZZ Workspace</h2><span>V2 · V3 · V4 · V5</span></div>
+<div class="head"><h2>ARYANZZ Workspace</h2><span>13 fitur tersedia</span></div>
 <div class="feature-grid">
 <button class="feature-card" data-panel="queue"><div class="ico">⇄</div><b>Smart Queue</b><small>Antrean beberapa tautan sekaligus.</small></button>
 <button class="feature-card" data-panel="history"><div class="ico">◷</div><b>Riwayat & Favorit</b><small>Kelola media tersimpan di perangkat.</small></button>
@@ -27,6 +78,16 @@
 <button class="feature-card" data-panel="qrTools"><div class="ico">▦</div><b>QR Generator</b><small>Buat QR code dari teks atau tautan.</small></button>
 <button class="feature-card" data-panel="securityTools"><div class="ico">⌘</div><b>Password Generator</b><small>Buat password acak di perangkat.</small></button>
 <button class="feature-card" data-panel="profile"><div class="ico">◉</div><b>My Profile</b><small>Profil lokal dan backup data.</small></button>
+</div>
+<div class="release-wrap" id="releaseRoadmap">
+  <div class="release-top"><h2>Perjalanan ARYANZZ</h2><span>V2 — V5.1</span></div>
+  <div class="release-list">
+    <div class="release-item"><strong>V2 · DOWNLOADER</strong><b>Media downloader</b><small>Periksa tautan file, pilih media yang didukung, lalu unduh melalui server.</small></div>
+    <div class="release-item"><strong>V3 · WORKSPACE</strong><b>Queue & Library</b><small>Antrean unduhan, riwayat lokal, dan daftar favorit.</small></div>
+    <div class="release-item"><strong>V4 · WEB TOOLS</strong><b>Tools produktivitas</b><small>Kompres gambar, PDF, QR, pengolah teks, dan pembuat password.</small></div>
+    <div class="release-item current"><strong>V5 · PERSONAL</strong><b>Profil & backup</b><small>Foto profil, biodata, ekspor dan pemulihan data. Tersimpan di perangkat.</small></div>
+  </div>
+  <div class="capability-note"><b>Status downloader:</b> file media langsung (MP4, WebM, MP3, dan format yang didukung) menggunakan Cloudflare Worker. Ekstraksi halaman TikTok/Instagram/YouTube/Facebook belum aktif karena server ekstraksi terpisah belum terpasang.</div>
 </div></section>
 <section id="toolsArea">
 <div class="panel card" id="speed"><h3>⚡ Internet Speed Test</h3><p class="muted">Tes perkiraan menggunakan file uji publik.</p><button class="primary" id="speedBtn">Mulai tes</button><div class="stats"><div class="stat"><strong id="downVal">—</strong><small>Download Mbps</small></div><div class="stat"><strong id="pingVal">—</strong><small>Latency ms</small></div><div class="stat"><strong>—</strong><small>Upload</small></div></div><div id="speedMsg" class="result">Tekan mulai untuk menguji.</div></div>
@@ -69,5 +130,5 @@ $('checkSite').onclick=()=>{const o=$('siteResult');o.hidden=false;try{const u=n
 $('speedBtn').onclick=async()=>{const b=$('speedBtn'),m=$('speedMsg');b.disabled=true;b.textContent='Menguji…';try{let t=performance.now();await fetch('https://www.cloudflare.com/cdn-cgi/trace?x='+Math.random(),{mode:'no-cors',cache:'no-store'});$('pingVal').textContent=Math.round(performance.now()-t);t=performance.now();const r=await fetch('https://speed.cloudflare.com/__down?bytes=5000000&x='+Math.random());const blob=await r.blob();$('downVal').textContent=((blob.size*8/1e6)/((performance.now()-t)/1000)).toFixed(1);m.textContent='Kecepatan download perkiraan. Upload tidak diukur.';}catch{$('pingVal').textContent='—';$('downVal').textContent='—';m.textContent='Tes gagal atau dibatasi jaringan.';}finally{b.disabled=false;b.textContent='Ulangi tes';}};
 let stream=null;$('camStart').onclick=async()=>{try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false});$('camera').srcObject=stream;$('camStart').hidden=true;$('camStop').hidden=false;$('heartResult').textContent='Kamera aktif. Demo ini belum mengestimasi BPM.';}catch{$('heartResult').textContent='Kamera perlu HTTPS dan izin browser.';}};function stop(){if(stream)stream.getTracks().forEach(t=>t.stop());stream=null;$('camera').srcObject=null;$('camStart').hidden=false;$('camStop').hidden=true;}$('camStop').onclick=stop;window.addEventListener('pagehide',stop);
 let deferred=null;window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferred=e;});$('installBtn').onclick=async()=>{if(deferred){deferred.prompt();await deferred.userChoice;deferred=null;}else $('installMsg').textContent='Gunakan menu Chrome ⋮ → Tambahkan ke layar utama.';};
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('/sw.js').catch(()=>{}));
-</script><script src="/advanced.js" defer></script></body></html>
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('/sw.js?v=5.1').catch(()=>{}));
+</script><script src="/advanced.js?v=5.1" defer></script></body></html>
