@@ -1,9 +1,9 @@
 {
-  "name": "ARYANZZ — All in One Tools",
+  "name": "ARYANZZ V5 — All in One Tools",
   "short_name": "ARYANZZ",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#080d18",
   "theme_color": "#080d18",
-  "description": "ARYANZZ downloader, smart queue and web tools"
+  "description": "ARYANZZ V5 downloader, smart queue, image tools, PDF, QR and profile"
 }
