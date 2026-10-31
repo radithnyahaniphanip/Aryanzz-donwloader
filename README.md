@@ -50,3 +50,10 @@ The direct-download endpoint accepts file URLs ending in common media extensions
 - V5 foundation: local profile with optional photo and JSON backup/restore. Cloud account authentication and cross-device sync are intentionally not enabled until a database/auth provider is configured.
 - Cloudflare Worker currently handles public direct-media file URLs. Platform extraction runs only on the separate Node + yt-dlp backend; it is not available on the Worker-only deployment.
 
+
+
+### Backend connection
+The platform extractor is implemented in `server/index.js` and packaged by the existing Dockerfile (Node 20, yt-dlp, FFmpeg). Deploy that service on a Node/Docker host, then set the Cloudflare Worker environment variable `PLATFORM_API_ORIGIN` to the backend's HTTPS origin. The Worker proxies only allow-listed platform URLs to this backend. Without that environment variable, platform-page extraction correctly returns a not-connected message; do not represent it as live.
+
+### Local account scope
+The profile, favorites, history, and backup/restore currently use browser local storage. They are device-local, not cloud accounts and do not sync across browsers. Cross-device accounts require a configured auth/database service and explicit credentials/bindings.
