@@ -3,7 +3,7 @@ import cors from "cors";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import { spawn } from "node:child_process";
-import { randomUUID } from "node:crypto";
+import { randomUUID, timingSafeEqual } from "node:crypto";
 import { existsSync, mkdirSync, unlinkSync, statSync } from "node:fs";
 import path from "node:path";
 import os from "node:os";
@@ -11,6 +11,7 @@ import os from "node:os";
 const app = express();
 const PORT = Number(process.env.PORT || 3000);
 const YTDLP = process.env.YTDLP_PATH || "yt-dlp";
+const API_TOKEN = process.env.PLATFORM_API_TOKEN || "";
 const ORIGINS = (process.env.ALLOWED_ORIGINS || "*").split(",").map(x => x.trim());
 const TEMP = path.join(os.tmpdir(), "aryanzz-downloads");
 const MAX_FILE_BYTES = 100 * 1024 * 1024;
@@ -51,7 +52,14 @@ function run(args, timeout = 180000) {
 function cleanTitle(s){return String(s||"aryanzz-media").replace(/[\\/:*?"<>|\r\n]+/g,"_").slice(0,100);}
 function qualityHeight(q){const n=Number(q);return [360,480,720,1080,1440,2160].includes(n)?n:720;}
 app.get("/api/health",(_req,res)=>res.json({ok:true,service:"ARYANZZ Downloader API",features:["platform-info","mp4","mp3","quality-select"]}));
-app.post("/api/info",async(req,res)=>{
+function requirePlatformToken(req,res,next){
+  const supplied=String(req.headers.authorization||"").replace(/^Bearer\s+/i,"");
+  if(!API_TOKEN)return res.status(503).json({error:"PLATFORM_API_TOKEN belum dikonfigurasi pada backend."});
+  const a=Buffer.from(supplied),b=Buffer.from(API_TOKEN);
+  if(a.length!==b.length||!timingSafeEqual(a,b))return res.status(401).json({error:"Token backend tidak valid."});
+  next();
+}
+app.post("/api/info",requirePlatformToken,async(req,res)=>{
   try {
     const url=validateUrl(req.body?.url);
     const raw=await run(["--dump-single-json","--no-warnings","--no-playlist","--skip-download",url],90000);
@@ -67,7 +75,7 @@ app.post("/api/info",async(req,res)=>{
     });
   } catch(e){res.status(400).json({error:e.message});}
 });
-app.post("/api/download",async(req,res)=>{
+app.post("/api/download",requirePlatformToken,async(req,res)=>{
   let output;
   try {
     const url=validateUrl(req.body?.url);
