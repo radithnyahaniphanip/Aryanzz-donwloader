@@ -1,0 +1,20 @@
+name: Validate ARYANZZ
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Check JavaScript syntax
+        run: |
+          node --check src/index.js
+          node --check server/index.js
+          node --check public/advanced.js
+          node -e "const fs=require('fs');const h=fs.readFileSync('public/index.html','utf8');const s=h.indexOf('<script>')+8;const e=h.indexOf('</script>',s);if(s<8||e<s)throw Error('Inline script missing');new Function(h.slice(s,e));console.log('Inline browser script syntax OK')"
