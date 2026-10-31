@@ -1,4 +1,4 @@
-# ARYANZZ Downloader
+# ARYANZZ V5 — All in One
 
 Dark, mobile-first downloader and utility website with a Node.js API powered by yt-dlp and FFmpeg.
 
@@ -43,12 +43,12 @@ The direct-download endpoint accepts file URLs ending in common media extensions
 **Platform-page extraction is not included in the Cloudflare Worker.** Links to TikTok, Instagram, YouTube, Facebook, etc. are web pages rather than direct media files and require a separate extraction backend/runtime. The UI must not claim those downloads work until such a backend is deployed and tested. Download only content you own or have permission to save.
 
 
-## V2–V5 development milestone
+## V2–V5 release status
 - V2 foundation: direct-media metadata endpoint, streamed download with a 100 MB cap, platform metadata/MP4/MP3 quality selection in the Node + yt-dlp backend.
 - V3 foundation: local history, favorites, sequential batch queue and download progress in the browser.
 - V4 foundation: browser-local image compression, text conversion, password generation and print-to-PDF.
 - V5 foundation: local profile with optional photo and JSON backup/restore. Cloud account authentication and cross-device sync are intentionally not enabled until a database/auth provider is configured.
-- Cloudflare Worker currently handles public direct-media file URLs. Platform extraction runs only on the separate Node + yt-dlp backend; it is not available on the Worker-only deployment.
+- Cloudflare Worker currently handles public direct-media file URLs. Platform-page extraction (TikTok, Instagram, YouTube, Facebook) is NOT active on the Worker-only deployment because no separate Node + yt-dlp backend is configured. The health endpoint reports this honestly as `platformExtraction: false`.
 
 
 
@@ -57,3 +57,13 @@ The platform extractor is implemented in `server/index.js` and packaged by the e
 
 ### Local account scope
 The profile, favorites, history, and backup/restore currently use browser local storage. They are device-local, not cloud accounts and do not sync across browsers. Cross-device accounts require a configured auth/database service and explicit credentials/bindings.
+
+
+## ARYANZZ V5 deployment (Cloudflare Worker)
+- Production Worker name: `aryanzz-donwloader`.
+- Expected public address: `https://aryanzz-donwloader.radithnyahaniphanip.workers.dev/` (confirm in Cloudflare > Worker > Overview before sharing).
+- The Worker serves `public/` through the `ASSETS` binding and exposes direct-media download endpoints.
+- V2–V5 browser features are included in the static app: direct media download, local queue/history/favorites, image compression, text/PDF/QR/password tools, local profile/photo, and JSON backup/restore.
+- Profile, history, and favorites remain local to each browser; no cloud account or cross-device sync is configured.
+- Platform-page extraction is disabled until a compatible backend is hosted and its URL/token are configured. No paid host or card is assumed.
+- After updating files on GitHub, deploy the latest `main` revision to the existing Cloudflare Worker to publish the new site at the same URL.
