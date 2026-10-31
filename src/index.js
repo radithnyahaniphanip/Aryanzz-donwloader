@@ -73,9 +73,9 @@ async function download(request){
 export default {async fetch(request,env){
   const url=new URL(request.url);
   if(request.method==="OPTIONS"&&url.pathname.startsWith("/api/"))return new Response(null,{status:204,headers:{"access-control-allow-origin":url.origin,"access-control-allow-methods":"GET,POST,OPTIONS","access-control-allow-headers":"Content-Type"}});
-  if(url.pathname==="/api/health"&&request.method==="GET")return json({ok:true,service:"ARYANZZ",version:"5.0",mode:"cloudflare-worker",directMediaDownload:true,platformExtraction:false,platformBackend:"not-configured"});
-  if(url.pathname==="/api/info"&&request.method==="POST")return info(request);
-  if(url.pathname==="/api/download"&&request.method==="POST")return download(request);
+  if(url.pathname==="/api/health"&&request.method==="GET")return json({ok:true,service:"ARYANZZ",version:"5.1",mode:"cloudflare-worker",directMediaDownload:true,platformExtraction:false,platformBackend:"not-configured"});
+  if(url.pathname==="/api/info"&&request.method==="POST"){const proxied=await proxyPlatform(request,env,"/api/info");if(proxied)return proxied;return info(request);}
+  if(url.pathname==="/api/download"&&request.method==="POST"){const proxied=await proxyPlatform(request,env,"/api/download");if(proxied)return proxied;return download(request);}
   if(url.pathname.startsWith("/api/"))return json({error:"Endpoint tidak ditemukan."},404);
   return env.ASSETS.fetch(request);
 }};
