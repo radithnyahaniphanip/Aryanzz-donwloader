@@ -55,7 +55,10 @@
     const mode=document.createElement("select");mode.className="field";mode.id="aryMode";["video","audio"].forEach(v=>{const o=document.createElement("option");o.value=v;o.textContent=v==="video"?"Video MP4":"Audio MP3";mode.append(o)});
     const quality=document.createElement("select");quality.className="field";quality.id="aryQuality";
     const heights=(data.formats||[]).map(f=>typeof f==="number"?f:f.height).filter(Boolean);
-    [...new Set([...(heights.length?heights:[360,480,720,1080]),360,480,720,1080])].sort((a,b)=>a-b).forEach(h=>{const o=document.createElement("option");o.value=h;o.textContent=h+"p";if(h===720)o.selected=true;quality.append(o)});
+    const available=heights.length?[...new Set(heights)].sort((a,b)=>a-b):[720];
+    available.forEach(h=>{const o=document.createElement("option");o.value=h;o.textContent=h+"p";if(h===720)o.selected=true;quality.append(o)});
+    if(data.type==="audio")mode.value="audio";
+    quality.disabled=mode.value==="audio";
     row.append(mode,quality);box.append(row);
     mode.addEventListener("change",()=>quality.disabled=mode.value==="audio");
     const progress=document.createElement("div");progress.className="progress-track";const bar=document.createElement("div");bar.className="progress-fill";progress.append(bar);box.append(progress);
