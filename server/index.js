@@ -4,17 +4,20 @@ import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { existsSync, mkdirSync, unlinkSync } from "node:fs";
+import { existsSync, mkdirSync, unlinkSync, statSync } from "node:fs";
 import path from "node:path";
 import os from "node:os";
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = Number(process.env.PORT || 3000);
 const YTDLP = process.env.YTDLP_PATH || "yt-dlp";
 const ORIGINS = (process.env.ALLOWED_ORIGINS || "*").split(",").map(x => x.trim());
 const TEMP = path.join(os.tmpdir(), "aryanzz-downloads");
+const MAX_FILE_BYTES = 100 * 1024 * 1024;
+const MAX_DURATION = 2 * 60 * 60;
 mkdirSync(TEMP, { recursive: true });
 
+app.set("trust proxy", 1);
 app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
 app.use(cors({ origin(origin, cb) {
   if (!origin || ORIGINS.includes("*") || ORIGINS.includes(origin)) return cb(null, true);
@@ -23,50 +26,68 @@ app.use(cors({ origin(origin, cb) {
 app.use(express.json({ limit: "20kb" }));
 app.use("/api", rateLimit({ windowMs: 60_000, limit: 8, standardHeaders: true, legacyHeaders: false }));
 
-const ALLOWED = ["youtube.com","youtu.be","youtube-nocookie.com","tiktok.com","instagram.com","facebook.com","fb.watch","pinterest.com","pin.it","mediafire.com"];
+const ALLOWED = ["youtube.com","youtu.be","youtube-nocookie.com","tiktok.com","instagram.com","facebook.com","fb.watch","pinterest.com","pin.it"];
 function validateUrl(raw) {
   let u;
-  try { u = new URL(raw); } catch { throw new Error("URL tidak valid"); }
-  if (!["http:","https:"].includes(u.protocol)) throw new Error("Hanya URL HTTP/HTTPS yang diizinkan");
+  try { u = new URL(raw); } catch { throw new Error("URL tidak valid."); }
+  if (!["http:","https:"].includes(u.protocol)) throw new Error("Hanya URL HTTP/HTTPS yang diizinkan.");
   const host = u.hostname.toLowerCase();
-  if (!ALLOWED.some(d => host === d || host.endsWith("." + d))) throw new Error("Domain belum didukung");
-  if (u.username || u.password) throw new Error("URL dengan kredensial tidak diizinkan");
+  if (!ALLOWED.some(d => host === d || host.endsWith("." + d))) throw new Error("Domain belum didukung untuk ekstraksi platform.");
+  if (u.username || u.password) throw new Error("URL dengan kredensial tidak diizinkan.");
   return u.href;
 }
 function run(args, timeout = 180000) {
   return new Promise((resolve,reject) => {
     const child = spawn(YTDLP,args,{stdio:["ignore","pipe","pipe"]});
     let stdout="",stderr="",done=false;
-    const timer=setTimeout(()=>{child.kill("SIGKILL");finish(new Error("Waktu proses habis"));},timeout);
+    const timer=setTimeout(()=>{child.kill("SIGKILL");finish(new Error("Waktu proses habis. Coba kualitas lebih rendah."));},timeout);
     function finish(err,val){if(done)return;done=true;clearTimeout(timer);err?reject(err):resolve(val);}
-    child.stdout.on("data",d=>{stdout+=d.toString();if(stdout.length>2000000)child.kill("SIGKILL");});
-    child.stderr.on("data",d=>{stderr+=d.toString();if(stderr.length>16000)stderr=stderr.slice(-16000);});
-    child.on("error",()=>finish(new Error("yt-dlp tidak tersedia pada server")));
-    child.on("close",code=>code===0?finish(null,stdout):finish(new Error(stderr.trim().slice(-1000)||"Proses media gagal")));
+    child.stdout.on("data",d=>{stdout+=d.toString();if(stdout.length>4_000_000){child.kill("SIGKILL");finish(new Error("Metadata terlalu besar."));}});
+    child.stderr.on("data",d=>{stderr+=d.toString();if(stderr.length>24000)stderr=stderr.slice(-24000);});
+    child.on("error",()=>finish(new Error("yt-dlp tidak tersedia pada server.")));
+    child.on("close",code=>code===0?finish(null,stdout):finish(new Error(stderr.trim().split("\n").slice(-3).join(" ").slice(-900)||"Proses media gagal.")));
   });
 }
-app.get("/api/health",(_req,res)=>res.json({ok:true,service:"ARYANZZ Downloader API"}));
+function cleanTitle(s){return String(s||"aryanzz-media").replace(/[\\/:*?"<>|\r\n]+/g,"_").slice(0,100);}
+function qualityHeight(q){const n=Number(q);return [360,480,720,1080,1440,2160].includes(n)?n:720;}
+app.get("/api/health",(_req,res)=>res.json({ok:true,service:"ARYANZZ Downloader API",features:["platform-info","mp4","mp3","quality-select"]}));
 app.post("/api/info",async(req,res)=>{
   try {
     const url=validateUrl(req.body?.url);
-    const info=JSON.parse(await run(["--dump-single-json","--no-warnings","--no-playlist",url]));
-    res.json({title:info.title||"Media",extractor:info.extractor_key||info.extractor||"Media",duration:info.duration||null,thumbnail:info.thumbnail||null,formats:(info.formats||[]).slice(0,25).map(f=>({ext:f.ext,height:f.height||null}))});
+    const raw=await run(["--dump-single-json","--no-warnings","--no-playlist","--skip-download",url],90000);
+    const info=JSON.parse(raw);
+    const heights=[...new Set((info.formats||[]).filter(f=>f.vcodec&&f.vcodec!=="none"&&f.height).map(f=>f.height))].sort((a,b)=>a-b);
+    res.json({
+      title:info.title||"Media",
+      extractor:info.extractor_key||info.extractor||"Media",
+      duration:info.duration||null,
+      thumbnail:info.thumbnail||null,
+      webpage_url:info.webpage_url||url,
+      formats:heights.filter(h=>h<=2160).map(height=>({height,label:height+"p"}))
+    });
   } catch(e){res.status(400).json({error:e.message});}
 });
 app.post("/api/download",async(req,res)=>{
   let output;
   try {
     const url=validateUrl(req.body?.url);
-    const audio=req.body?.mode==="audio";
+    const mode=req.body?.mode==="audio"?"audio":"video";
+    const height=qualityHeight(req.body?.quality);
     const id=randomUUID();
-    output=path.join(TEMP,id+(audio?".mp3":".mp4"));
-    const args=audio
-      ? ["--no-warnings","--no-playlist","-x","--audio-format","mp3","--audio-quality","0","-o",output,url]
-      : ["--no-warnings","--no-playlist","-f","best[ext=mp4]/best","--merge-output-format","mp4","-o",output,url];
+    output=path.join(TEMP,id+(mode==="audio"?".mp3":".mp4"));
+    const args=mode==="audio"
+      ? ["--no-warnings","--no-playlist","--max-filesize",String(MAX_FILE_BYTES),"--match-filter",`duration <= ${MAX_DURATION}`,"-x","--audio-format","mp3","--audio-quality","0","-o",output,url]
+      : ["--no-warnings","--no-playlist","--max-filesize",String(MAX_FILE_BYTES),"--match-filter",`duration <= ${MAX_DURATION}`,"-f",`bv*[height<=${height}][ext=mp4]+ba[ext=m4a]/b[height<=${height}][ext=mp4]/best[height<=${height}]`,"--merge-output-format","mp4","-o",output,url];
     await run(args,240000);
-    if(!existsSync(output))throw new Error("File hasil tidak ditemukan");
-    res.download(output,audio?"aryanzz-audio.mp3":"aryanzz-video.mp4",()=>{try{if(existsSync(output))unlinkSync(output);}catch{}});
-  } catch(e){try{if(output&&existsSync(output))unlinkSync(output);}catch{}if(!res.headersSent)res.status(400).json({error:e.message});}
+    if(!existsSync(output))throw new Error("File hasil tidak ditemukan.");
+    const size=statSync(output).size;
+    if(size>MAX_FILE_BYTES)throw new Error("File melebihi batas 100 MB.");
+    const filename=cleanTitle(mode==="audio"?"aryanzz-audio.mp3":"aryanzz-video-"+height+"p.mp4");
+    res.download(output,filename,()=>{try{if(existsSync(output))unlinkSync(output);}catch{}});
+  } catch(e){
+    try{if(output&&existsSync(output))unlinkSync(output);}catch{}
+    if(!res.headersSent)res.status(400).json({error:e.message});
+  }
 });
 app.use(express.static(path.join(process.cwd(),"public")));
 app.listen(PORT,()=>console.log("ARYANZZ listening on "+PORT));
