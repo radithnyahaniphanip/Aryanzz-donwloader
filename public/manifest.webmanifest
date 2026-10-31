@@ -1,0 +1,9 @@
+{
+  "name": "ARYANZZ All in One",
+  "short_name": "ARYANZZ",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#080d18",
+  "theme_color": "#080d18",
+  "description": "ARYANZZ media downloader and web tools"
+}
