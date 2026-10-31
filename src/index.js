@@ -1,69 +1,62 @@
 const MEDIA_EXT = new Set(["mp4","webm","mov","m4v","mp3","m4a","aac","wav","ogg","oga","flac"]);
 const MAX_BYTES = 100 * 1024 * 1024;
-
-function json(data, status=200, headers={}) {
-  return new Response(JSON.stringify(data), {status, headers:{"content-type":"application/json; charset=utf-8","cache-control":"no-store",...headers}});
-}
-function mediaUrl(raw) {
-  let u;
-  try { u = new URL(raw); } catch { throw new Error("URL tidak valid."); }
-  if (!["http:","https:"].includes(u.protocol)) throw new Error("Hanya URL HTTP/HTTPS yang diizinkan.");
-  if (u.username || u.password) throw new Error("URL dengan kredensial tidak diizinkan.");
-  const host=u.hostname.toLowerCase();
-  if (host==="localhost" || host.endsWith(".localhost") || host.endsWith(".local") ||
-      /^127\./.test(host) || /^10\./.test(host) || /^192\.168\./.test(host) ||
-      /^172\.(1[6-9]|2\d|3[01])\./.test(host) || host==="0.0.0.0" || host==="::1") {
+function json(data,status=200){return new Response(JSON.stringify(data),{status,headers:{"content-type":"application/json; charset=utf-8","cache-control":"no-store"}})}
+function parseMediaUrl(raw){
+  let u;try{u=new URL(raw)}catch{throw new Error("URL tidak valid.")}
+  if(!["http:","https:"].includes(u.protocol))throw new Error("Hanya URL HTTP/HTTPS yang diizinkan.");
+  if(u.username||u.password)throw new Error("URL dengan kredensial tidak diizinkan.");
+  const h=u.hostname.toLowerCase().replace(/^\[|\]$/g,"");
+  if(h==="localhost"||h.endsWith(".localhost")||h.endsWith(".local")||h==="::1"||h==="::"||
+    /^127\./.test(h)||/^10\./.test(h)||/^192\.168\./.test(h)||/^169\.254\./.test(h)||
+    /^172\.(1[6-9]|2\d|3[01])\./.test(h)||/^fc[0-9a-f]{2}:/i.test(h)||/^fd[0-9a-f]{2}:/i.test(h)||/^fe80:/i.test(h))
     throw new Error("Alamat jaringan lokal tidak diizinkan.");
-  }
   const ext=(u.pathname.split(".").pop()||"").toLowerCase();
-  if (!MEDIA_EXT.has(ext)) throw new Error("Untuk saat ini, endpoint ini menerima URL file media langsung (MP4, WebM, MP3, dan format sejenis), bukan halaman platform.");
+  if(!MEDIA_EXT.has(ext))throw new Error("Gunakan tautan file langsung MP4, WebM, MP3, atau format media yang didukung.");
   return {url:u,ext};
 }
-function filenameFrom(url, ext) {
-  let name;
-  try { name=decodeURIComponent(url.pathname.split("/").pop()||""); } catch { name=""; }
-  name=(name||"aryanzz-media."+ext).replace(/[^a-zA-Z0-9._-]/g,"_").slice(0,100);
-  if (!name.includes(".")) name += "."+ext;
-  return name;
-}
-async function download(request) {
-  let body;
-  try { body=await request.json(); } catch { return json({error:"Body JSON tidak valid."},400); }
-  let parsed;
-  try { parsed=mediaUrl(body?.url); } catch(e) { return json({error:e.message},400); }
-  let upstream;
-  try {
-    upstream=await fetch(parsed.url.toString(),{method:"GET",redirect:"manual",headers:{"user-agent":"ARYANZZ/1.0 media fetch"}});
-    // Validate redirects rather than blindly following them.
-    for(let i=0;i<4 && [301,302,303,307,308].includes(upstream.status);i++){
-      const location=upstream.headers.get("location");
-      if(!location) break;
-      let next;
-      try { next=mediaUrl(new URL(location,parsed.url).toString()); } catch(e) { return json({error:"Redirect ke tujuan yang tidak diizinkan: "+e.message},400); }
-      parsed=next;
-      upstream=await fetch(parsed.url.toString(),{method:"GET",redirect:"manual",headers:{"user-agent":"ARYANZZ/1.0 media fetch"}});
-    }
-  } catch { return json({error:"Tidak dapat menghubungi server sumber. Link mungkin dibatasi atau server sedang bermasalah."},502); }
-  if(!upstream.ok || !upstream.body) return json({error:"Server sumber tidak menyediakan file (HTTP "+upstream.status+")."},502);
-  const size=Number(upstream.headers.get("content-length")||0);
-  if(size>MAX_BYTES) return json({error:"Ukuran file melebihi batas 100 MB untuk layanan gratis."},413);
-  const name=filenameFrom(parsed.url,parsed.ext);
-  const headers=new Headers({
-    "content-type":upstream.headers.get("content-type")||"application/octet-stream",
-    "content-disposition":'attachment; filename="'+name+'"',
-    "cache-control":"no-store",
-    "x-content-type-options":"nosniff"
-  });
-  if(size) headers.set("content-length",String(size));
-  // Stream the upstream response; do not buffer media in Worker memory.
-  return new Response(upstream.body,{status:200,headers});
-}
-export default {
-  async fetch(request, env) {
-    const url=new URL(request.url);
-    if(url.pathname==="/api/health" && request.method==="GET") return json({ok:true,service:"ARYANZZ",mode:"cloudflare-worker",directMediaDownload:true});
-    if(url.pathname==="/api/download" && request.method==="POST") return download(request);
-    if(url.pathname.startsWith("/api/")) return json({error:"Endpoint tidak ditemukan."},404);
-    return env.ASSETS.fetch(request);
+function fileName(u,ext){let n;try{n=decodeURIComponent(u.pathname.split("/").pop()||"")}catch{n=""}n=(n||"aryanzz-media."+ext).replace(/[^a-zA-Z0-9._-]/g,"_").slice(0,100);if(!n.includes("."))n+="."+ext;return n}
+async function getUpstream(parsed,method="HEAD"){
+  let current=parsed;
+  for(let i=0;i<5;i++){
+    const response=await fetch(current.url.toString(),{method,redirect:"manual",headers:{"user-agent":"ARYANZZ/2.0 media fetch"}});
+    if(![301,302,303,307,308].includes(response.status))return {response,parsed:current};
+    const loc=response.headers.get("location");if(!loc) return {response,parsed:current};
+    current=parseMediaUrl(new URL(loc,current.url).toString());
   }
-};
+  throw new Error("Terlalu banyak pengalihan URL.");
+}
+async function info(request){
+  let body;try{body=await request.json()}catch{return json({error:"Body JSON tidak valid."},400)}
+  let parsed;try{parsed=parseMediaUrl(body?.url)}catch(e){return json({error:e.message},400)}
+  try{
+    const {response,parsed:final}=await getUpstream(parsed,"HEAD");
+    if(!response.ok)return json({error:"Server sumber menjawab HTTP "+response.status+"."},502);
+    const size=Number(response.headers.get("content-length")||0);
+    if(size>MAX_BYTES)return json({error:"File melebihi batas 100 MB."},413);
+    return json({ok:true,title:fileName(final.url,final.ext),filename:fileName(final.url,final.ext),extension:final.ext,type:["mp3","m4a","aac","wav","ogg","oga","flac"].includes(final.ext)?"audio":"video",size:size||null,mime:response.headers.get("content-type")||null,source:final.url.hostname});
+  }catch(e){return json({error:e.message||"Gagal memeriksa file."},502)}
+}
+async function download(request){
+  let body;try{body=await request.json()}catch{return json({error:"Body JSON tidak valid."},400)}
+  let parsed;try{parsed=parseMediaUrl(body?.url)}catch(e){return json({error:e.message},400)}
+  let upstream;
+  try{const result=await getUpstream(parsed,"GET");upstream=result.response;parsed=result.parsed}
+  catch(e){return json({error:e.message||"Tidak dapat menghubungi server sumber."},502)}
+  if(!upstream.ok||!upstream.body)return json({error:"Server sumber tidak menyediakan file (HTTP "+upstream.status+")."},502);
+  const size=Number(upstream.headers.get("content-length")||0);
+  if(size>MAX_BYTES){await upstream.body.cancel();return json({error:"Ukuran file melebihi batas 100 MB."},413)}
+  let received=0;
+  const limited=upstream.body.pipeThrough(new TransformStream({transform(chunk,controller){received+=chunk.byteLength;if(received>MAX_BYTES){controller.error(new Error("File melebihi batas 100 MB."));return}controller.enqueue(chunk)}}));
+  const headers=new Headers({"content-type":upstream.headers.get("content-type")||"application/octet-stream","content-disposition":'attachment; filename="'+fileName(parsed.url,parsed.ext)+'"',"cache-control":"no-store","x-content-type-options":"nosniff"});
+  if(size)headers.set("content-length",String(size));
+  return new Response(limited,{status:200,headers});
+}
+export default {async fetch(request,env){
+  const url=new URL(request.url);
+  if(request.method==="OPTIONS"&&url.pathname.startsWith("/api/"))return new Response(null,{status:204,headers:{"access-control-allow-origin":url.origin,"access-control-allow-methods":"GET,POST,OPTIONS","access-control-allow-headers":"Content-Type"}});
+  if(url.pathname==="/api/health"&&request.method==="GET")return json({ok:true,service:"ARYANZZ",version:"2.0",mode:"cloudflare-worker",directMediaDownload:true,platformExtraction:false});
+  if(url.pathname==="/api/info"&&request.method==="POST")return info(request);
+  if(url.pathname==="/api/download"&&request.method==="POST")return download(request);
+  if(url.pathname.startsWith("/api/"))return json({error:"Endpoint tidak ditemukan."},404);
+  return env.ASSETS.fetch(request);
+}};
