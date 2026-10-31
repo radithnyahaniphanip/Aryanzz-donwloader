@@ -41,3 +41,12 @@ The Cloudflare Worker entrypoint is `src/index.js`, configured by `wrangler.toml
 The direct-download endpoint accepts file URLs ending in common media extensions (MP4, WebM, MOV, MP3, M4A, AAC, WAV, OGG, FLAC), rejects local/private network destinations and non-media page URLs, validates redirects, and applies a 100 MB declared-size limit. It streams rather than buffering the media.
 
 **Platform-page extraction is not included in the Cloudflare Worker.** Links to TikTok, Instagram, YouTube, Facebook, etc. are web pages rather than direct media files and require a separate extraction backend/runtime. The UI must not claim those downloads work until such a backend is deployed and tested. Download only content you own or have permission to save.
+
+
+## V2–V5 development milestone
+- V2 foundation: direct-media metadata endpoint, streamed download with a 100 MB cap, platform metadata/MP4/MP3 quality selection in the Node + yt-dlp backend.
+- V3 foundation: local history, favorites, sequential batch queue and download progress in the browser.
+- V4 foundation: browser-local image compression, text conversion, password generation and print-to-PDF.
+- V5 foundation: local profile with optional photo and JSON backup/restore. Cloud account authentication and cross-device sync are intentionally not enabled until a database/auth provider is configured.
+- Cloudflare Worker currently handles public direct-media file URLs. Platform extraction runs only on the separate Node + yt-dlp backend; it is not available on the Worker-only deployment.
+
