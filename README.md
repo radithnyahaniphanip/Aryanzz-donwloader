@@ -67,3 +67,10 @@ The profile, favorites, history, and backup/restore currently use browser local 
 - Profile, history, and favorites remain local to each browser; no cloud account or cross-device sync is configured.
 - Platform-page extraction is disabled until a compatible backend is hosted and its URL/token are configured. No paid host or card is assumed.
 - After updating files on GitHub, deploy the latest `main` revision to the existing Cloudflare Worker to publish the new site at the same URL.
+
+
+## V5.1 visible refresh
+- Updated the visual system across the existing dark interface: stronger hierarchy, spacing, card treatment, responsive workspace, and mobile navigation.
+- Added a visible V2–V5 release roadmap and an explicit downloader capability notice so platform-page extraction is not confused with direct media URL support.
+- Added versioned asset URLs and a new service-worker cache name to make browser updates more reliable.
+- Connected the existing platform-backend proxy handler to both /api/info and /api/download; it remains inactive until PLATFORM_API_ORIGIN and PLATFORM_API_TOKEN are configured.
