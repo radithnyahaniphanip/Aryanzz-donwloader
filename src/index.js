@@ -29,6 +29,20 @@ async function getUpstream(parsed,method="HEAD"){
   }
   throw new Error("Terlalu banyak pengalihan URL.");
 }
+const PLATFORM_HOSTS=["youtube.com","youtu.be","youtube-nocookie.com","tiktok.com","instagram.com","facebook.com","fb.watch","pinterest.com","pin.it"];
+function isPlatformLink(raw){
+  try{const u=new URL(raw);const h=u.hostname.toLowerCase();return ["http:","https:"].includes(u.protocol)&&PLATFORM_HOSTS.some(d=>h===d||h.endsWith("."+d));}catch{return false;}
+}
+async function proxyPlatform(request,env,path){
+  let body;try{body=await request.json()}catch{return json({error:"Body JSON tidak valid."},400)}
+  if(!isPlatformLink(body?.url))return null;
+  if(!env.PLATFORM_API_ORIGIN)return json({error:"Backend ekstraksi platform belum dihubungkan. Tautan file media langsung tetap bisa diunduh."},503);
+  let origin;try{origin=new URL(env.PLATFORM_API_ORIGIN).origin}catch{return json({error:"Konfigurasi backend tidak valid."},500)}
+  try{
+    const response=await fetch(origin+path,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)});
+    return new Response(response.body,{status:response.status,headers:{"content-type":response.headers.get("content-type")||"application/json","content-disposition":response.headers.get("content-disposition")||"","cache-control":"no-store"}});
+  }catch{return json({error:"Backend ekstraksi sedang tidak dapat dijangkau."},502)}
+}
 async function info(request){
   let body;try{body=await request.json()}catch{return json({error:"Body JSON tidak valid."},400)}
   let parsed;try{parsed=parseMediaUrl(body?.url)}catch(e){return json({error:e.message},400)}
@@ -58,7 +72,7 @@ async function download(request){
 export default {async fetch(request,env){
   const url=new URL(request.url);
   if(request.method==="OPTIONS"&&url.pathname.startsWith("/api/"))return new Response(null,{status:204,headers:{"access-control-allow-origin":url.origin,"access-control-allow-methods":"GET,POST,OPTIONS","access-control-allow-headers":"Content-Type"}});
-  if(url.pathname==="/api/health"&&request.method==="GET")return json({ok:true,service:"ARYANZZ",version:"2.0",mode:"cloudflare-worker",directMediaDownload:true,platformExtraction:false});
+  if(url.pathname==="/api/health"&&request.method==="GET")return json({ok:true,service:"ARYANZZ",version:"2.0",mode:"cloudflare-worker",directMediaDownload:true,platformExtraction:!!env.PLATFORM_API_ORIGIN});
   if(url.pathname==="/api/info"&&request.method==="POST")return info(request);
   if(url.pathname==="/api/download"&&request.method==="POST")return download(request);
   if(url.pathname.startsWith("/api/"))return json({error:"Endpoint tidak ditemukan."},404);
