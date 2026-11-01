@@ -377,6 +377,7 @@
     endInput.max = String(clip.duration);
     startInput.value = String(clip.start);
     endInput.value = String(clip.end);
+    setMotionControls(clip);
     $("editorSelectedClipName").textContent = clip.file.name;
     empty.hidden = true;
     updatePreview();
@@ -502,7 +503,8 @@
         const clip = {
           id:makeId(),file,url,duration,
           start:Math.max(0,Math.min(Number(item.start)||0,duration-0.1)),
-          end:Math.max(0,Math.min(Number(item.end)||duration,duration))
+          end:Math.max(0,Math.min(Number(item.end)||duration,duration)),
+          motion:item.motion?{...defaultMotion(),...item.motion}:defaultMotion()
         };
         if (clip.end <= clip.start) clip.end = duration;
         clips.push(clip);
@@ -557,7 +559,7 @@
     }
     recordUndo();
     const originalEnd = clip.end;
-    const right = Object.assign({},clip,{id:makeId(),start:point,end:originalEnd});
+    const right = Object.assign({},clip,{id:makeId(),start:point,end:originalEnd,motion:{...clip.motion}});
     clip.end = point;
     archive.set(right.id,right);
     const index = clips.findIndex(item=>item.id===clip.id);
@@ -727,7 +729,7 @@
         if (!exporting) { reject(new Error("Ekspor dihentikan.")); return; }
         if (video.ended || video.currentTime >= clip.end-0.015) {
           video.pause();
-          drawFrame(ctx,canvas,1);
+          drawFrame(ctx,canvas,1,clip,done+(clip.end-clip.start)/speed);
           resolve();
           return;
         }
@@ -737,7 +739,8 @@
             alpha = Math.min(1,(video.currentTime-clip.start)/fadeDuration,(clip.end-video.currentTime)/fadeDuration);
             alpha = Math.max(0,alpha);
           }
-          drawFrame(ctx,canvas,alpha);
+          const projectTime=done+Math.max(0,video.currentTime-clip.start)/speed;
+          drawFrame(ctx,canvas,alpha,clip,projectTime);
           setExportProgress(done,total,video.currentTime,clip);
         }
         animationFrame = requestAnimationFrame(tick);
