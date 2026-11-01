@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: aryanzz-cloudflare-v25-production
+  group: aryanzz-cloudflare-production
   cancel-in-progress: true
 
 jobs:
@@ -23,6 +23,18 @@ jobs:
 
       - name: Install Wrangler
         run: npm install --global wrangler
+
+      - name: Configure YouTube downloader secret
+        env:
+          SAVENOW_API_KEY: ${{ secrets.SAVENOW_API_KEY }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          if [ -z "$SAVENOW_API_KEY" ]; then
+            echo "::warning::SAVENOW_API_KEY is not configured. YouTube extraction will remain disabled."
+          else
+            printf '%s' "$SAVENOW_API_KEY" | wrangler secret put SAVENOW_API_KEY
+          fi
 
       - name: Deploy Worker and static assets
         run: wrangler deploy
