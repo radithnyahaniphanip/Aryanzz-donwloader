@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: aryanzz-cloudflare-v15-1-production
+  group: aryanzz-cloudflare-v25-production
   cancel-in-progress: true
 
 jobs:
