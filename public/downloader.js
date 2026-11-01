@@ -92,6 +92,11 @@
       box.append(label,select);
       const note=make("p",info.providerReady===false?"warning":"youtube-note",info.providerReady===false?(info.providerMessage||"Saldo API provider tidak mencukupi untuk membuat file unduhan."):"Catatan: membuat file unduhan dapat menggunakan saldo API provider. Pemeriksaan link tidak membuat job.");
       box.append(note);
+      if(info.providerReady===false){
+        const wallet=make("a","tag","Buka dashboard saldo API ↗");
+        wallet.href="https://video-download-api.com/dashboard";wallet.target="_blank";wallet.rel="noopener noreferrer";wallet.style.display="inline-block";
+        box.append(wallet);
+      }
       const start=make("button","primary youtube-start",info.providerReady===false?"Saldo API belum cukup":"Mulai download");
       start.type="button";
       start.disabled=info.providerReady===false;
