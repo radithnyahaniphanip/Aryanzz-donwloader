@@ -1,0 +1,79 @@
+/* ARYANZZ V67.7 — visual system for the Tools Center and feature panels */
+:root{--v677-line:rgba(148,180,235,.18);--v677-muted:#9aabc8;--v677-panel:#0c1628}
+#home .v674-home-foot{display:none!important}
+#allTools.v677-panel,.v677-panel{position:relative;isolation:isolate;overflow:hidden;border:1px solid var(--v677-line);background:linear-gradient(145deg,#111e35 0%,#0b1425 58%,#0b1020 100%);box-shadow:0 22px 70px rgba(0,0,0,.18)}
+.v677-panel::before{content:"";position:absolute;z-index:-1;inset:-1px;background:radial-gradient(520px 240px at 100% 0%,color-mix(in srgb,var(--v677-accent,#667aff),transparent 80%),transparent 70%),radial-gradient(420px 240px at 0% 100%,color-mix(in srgb,var(--v677-accent-2,#39c6d8),transparent 89%),transparent 70%);pointer-events:none}
+.v677-panel>*{position:relative;z-index:1}
+.v677-panel[data-feature="speed"]{--v677-accent:#ffb43b;--v677-accent-2:#ff647c}
+.v677-panel[data-feature="checker"]{--v677-accent:#40d7e5;--v677-accent-2:#5b8fff}
+.v677-panel[data-feature="heart"]{--v677-accent:#ff679f;--v677-accent-2:#ffb36a}
+.v677-panel[data-feature="install"]{--v677-accent:#a48bff;--v677-accent-2:#55c8ef}
+.v677-panel[data-feature="queue"]{--v677-accent:#39d5a8;--v677-accent-2:#5b9eff}
+.v677-panel[data-feature="history"]{--v677-accent:#ffc45d;--v677-accent-2:#f08078}
+.v677-panel[data-feature="imageTools"]{--v677-accent:#62a7ff;--v677-accent-2:#55dec6}
+.v677-panel[data-feature="pdfTools"]{--v677-accent:#ff8585;--v677-accent-2:#ffbd62}
+.v677-panel[data-feature="qrTools"]{--v677-accent:#63d5ee;--v677-accent-2:#9c83ff}
+.v677-panel[data-feature="securityTools"]{--v677-accent:#5bdfa5;--v677-accent-2:#8b9eff}
+.v677-panel[data-feature="colorStudio"]{--v677-accent:#ed8cff;--v677-accent-2:#5be1d4}
+.v677-panel[data-feature="profile"]{--v677-accent:#8d9aff;--v677-accent-2:#4bd3e8}
+.v677-panel[data-feature="musicFinder"]{--v677-accent:#f16db8;--v677-accent-2:#9c7aff}
+.v677-panel[data-feature="gradientStudio"]{--v677-accent:#7e83ff;--v677-accent-2:#ee79ca}
+.v677-panel[data-feature="fileHash"]{--v677-accent:#55d5c4;--v677-accent-2:#4f91ff}
+#speed .speed-heading{padding:17px 18px;border:1px solid color-mix(in srgb,#ffb43b,transparent 76%);border-radius:18px;background:linear-gradient(120deg,rgba(255,180,59,.11),rgba(255,100,124,.045),rgba(9,17,31,.55))}
+#editor .editor-pro-head{position:relative;overflow:hidden;padding:20px;border:1px solid color-mix(in srgb,#a77cff,transparent 75%);border-radius:20px;background:linear-gradient(115deg,rgba(167,124,255,.13),rgba(255,120,188,.055) 62%,rgba(9,17,31,.58))}
+#editor .editor-pro-head::after{content:"✦";position:absolute;right:22px;top:16px;width:48px;height:48px;display:grid;place-items:center;border-radius:16px;background:linear-gradient(145deg,#a77cff,#ff78bc);color:#fff;font-size:24px;box-shadow:0 12px 28px rgba(167,124,255,.24)}
+#profile .v25-profile-cover{border:1px solid rgba(141,154,255,.28);box-shadow:0 18px 42px rgba(77,100,190,.13)}
+#owner .owner-topbar{border-bottom:1px solid rgba(244,200,117,.2)}
+#gradientStudio .v680-tool-card,#fileHash .v680-hash-drop{border-color:color-mix(in srgb,var(--v677-accent),transparent 78%);background:linear-gradient(145deg,color-mix(in srgb,var(--v677-accent),#111b30 92%),rgba(8,15,28,.72))}
+
+.v677-panel[data-feature="editor"]{--v677-accent:#a77cff;--v677-accent-2:#ff78bc}
+.v677-panel[data-feature="about"]{--v677-accent:#8c91ff;--v677-accent-2:#52d2c9}
+.v677-panel[data-feature="help"]{--v677-accent:#6dbbff;--v677-accent-2:#70dfb5}
+.v677-panel[data-feature="owner"]{--v677-accent:#f4c875;--v677-accent-2:#e48d72}
+.v677-feature-hero{position:relative;display:flex;align-items:center;gap:16px;min-height:104px;margin:-2px -2px 22px;padding:20px;border:1px solid color-mix(in srgb,var(--v677-accent),transparent 72%);border-radius:19px;background:linear-gradient(115deg,color-mix(in srgb,var(--v677-accent),#101a30 83%),color-mix(in srgb,var(--v677-accent-2),#101a30 91%) 62%,rgba(7,14,27,.82));overflow:hidden}
+.v677-feature-hero::after{content:"";position:absolute;width:180px;height:180px;right:-54px;top:-86px;border-radius:50%;background:radial-gradient(circle,var(--v677-accent),transparent 70%);opacity:.23;pointer-events:none}
+.v677-feature-logo{flex:0 0 62px;width:62px;height:62px;display:grid;place-items:center;border-radius:20px;color:#fff;background:linear-gradient(145deg,var(--v677-accent),var(--v677-accent-2));box-shadow:0 12px 30px color-mix(in srgb,var(--v677-accent),transparent 70%);animation:v677-float 5s ease-in-out infinite}
+.v677-feature-logo svg{width:31px;height:31px;display:block}
+.v677-feature-copy{min-width:0}
+.v677-feature-kicker{display:block;margin-bottom:5px;color:var(--v677-accent);font-size:9px;font-weight:950;letter-spacing:1.8px;text-transform:uppercase}
+.v677-feature-copy h2{margin:0 0 5px;color:#f4f7ff;font-size:clamp(20px,3vw,27px);letter-spacing:-.6px;line-height:1.15}
+.v677-feature-copy p{margin:0;color:#a8b7d1;font-size:12px;line-height:1.65}
+#allTools .v674-tools-head{position:relative;padding:3px 0 17px}
+#allTools .v674-tools-orb{box-shadow:0 14px 36px rgba(111,91,244,.24);border:1px solid rgba(255,255,255,.18)}
+#allTools .tool{min-height:184px;border-radius:21px;padding:17px;background:linear-gradient(145deg,color-mix(in srgb,var(--a),#10172a 78%),#0b1220 78%);box-shadow:inset 0 1px rgba(255,255,255,.055),0 12px 26px rgba(0,0,0,.12);transition:transform .24s ease,border-color .24s ease,box-shadow .24s ease}
+#allTools .tool::before{width:170px;height:170px;right:-54px;top:-72px;opacity:.32;filter:blur(2px)}
+#allTools .tool::after{content:"";position:absolute;left:0;right:0;bottom:0;height:3px;background:linear-gradient(90deg,var(--a),var(--b));opacity:.72}
+#allTools .tool:hover{transform:translateY(-5px);border-color:color-mix(in srgb,var(--a),white 28%);box-shadow:0 18px 36px rgba(0,0,0,.22),0 0 0 1px color-mix(in srgb,var(--a),transparent 75%)}
+#allTools .tool:focus-visible,.v677-feature-hero:focus-visible{outline:3px solid color-mix(in srgb,var(--a,#7f8cff),white 20%);outline-offset:3px}
+#allTools .tool .ico{width:54px;height:54px;border-radius:18px;margin-bottom:17px;box-shadow:0 10px 22px color-mix(in srgb,var(--a),transparent 75%),inset 0 1px rgba(255,255,255,.24)}
+#allTools .tool .ico svg{width:28px;height:28px;display:block;filter:drop-shadow(0 2px 4px rgba(0,0,0,.15))}
+#allTools .tool b{font-size:13px;letter-spacing:-.1px}
+#allTools .tool small{max-width:230px;color:#9cacc8;font-size:10px;line-height:1.55}
+.v674-tool-category{font-size:8px;letter-spacing:1.7px}
+.v677-panel.v677-enter{animation:v677-panel-in .42s cubic-bezier(.2,.75,.25,1) both}
+.v677-reveal{opacity:0;transform:translateY(12px);transition:opacity .45s ease,transform .45s ease}
+.v677-reveal.v677-visible{opacity:1;transform:translateY(0)}
+#speed .speed-heading-icon,#musicFinder .music-head-mark,#colorStudio .v674-feature-mark{box-shadow:0 12px 32px color-mix(in srgb,var(--v677-accent),transparent 75%);animation:v677-float 5s ease-in-out infinite}
+#editor .editor-pro-workspace,#musicFinder .music-card,#colorStudio .v674-color-controls,#colorStudio .v674-color-custom,#profile .v25-profile-card{border-color:color-mix(in srgb,var(--v677-accent),transparent 78%)}
+#colorStudio .v674-color-meta{display:flex;flex-wrap:wrap;gap:7px 14px;padding:11px 13px;border:1px solid color-mix(in srgb,var(--v677-accent),transparent 80%);border-radius:13px;background:rgba(9,16,31,.58);color:#c5d2e8;font-size:10px}
+#colorStudio .v674-palette-grid{grid-template-columns:repeat(auto-fill,minmax(145px,1fr));gap:11px}
+#colorStudio .v674-swatch-card{overflow:hidden;border:1px solid rgba(255,255,255,.12);border-radius:15px;background:linear-gradient(145deg,#142039,#0b1425);transition:transform .2s,border-color .2s}
+#colorStudio .v674-swatch-card:hover{transform:translateY(-3px);border-color:color-mix(in srgb,var(--v677-accent),white 15%)}
+#colorStudio .v674-swatch-color{height:68px;border-radius:9px 9px 0 0}
+#colorStudio .v674-swatch-info b{font-size:10px}
+#colorStudio .v674-swatch-info small{color:#9bacc8;font-size:9px}
+#colorStudio .v674-color-message{min-height:20px}
+.v677-roadmap-note{margin-top:12px;padding:12px 14px;border:1px solid rgba(121,151,208,.2);border-radius:13px;background:rgba(9,16,31,.45);color:#9eafca;font-size:11px;line-height:1.65}
+body[data-theme="light"] .v677-panel{background:linear-gradient(145deg,#fff,#eef3ff);border-color:#bdcbe4}
+body[data-theme="light"] .v677-feature-hero{background:linear-gradient(115deg,color-mix(in srgb,var(--v677-accent),white 90%),color-mix(in srgb,var(--v677-accent-2),white 94%))}
+body[data-theme="light"] .v677-feature-copy h2{color:#1c2947}
+body[data-theme="light"] .v677-feature-copy p{color:#63718d}
+body[data-theme="light"] #allTools .tool{background:linear-gradient(145deg,color-mix(in srgb,var(--a),white 87%),#f7f9ff 78%);color:#1c2947}
+body[data-theme="light"] #allTools .tool small{color:#63718d}
+body[data-theme="light"] #colorStudio .v674-color-meta{background:#edf2ff;color:#455474}
+body[data-theme="light"] #colorStudio .v674-swatch-card{background:#fff;border-color:#d2dcef}
+@keyframes v677-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+@keyframes v677-panel-in{from{opacity:.65;transform:translateY(9px) scale(.995)}to{opacity:1;transform:translateY(0) scale(1)}}
+@media(max-width:680px){.v677-feature-hero{min-height:88px;padding:14px;gap:12px;margin-bottom:17px}.v677-feature-logo{width:52px;height:52px;flex-basis:52px;border-radius:16px}.v677-feature-logo svg{width:26px;height:26px}#allTools .tool{min-height:169px;padding:13px;border-radius:18px}#allTools .tool .ico{width:48px;height:48px;border-radius:15px;margin-bottom:13px}#allTools .tool .ico svg{width:25px;height:25px}#colorStudio .v674-palette-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:360px){#allTools .tool{min-height:158px;padding:11px}#allTools .tool b{font-size:12px}#allTools .tool small{font-size:9px}}
+@media(prefers-reduced-motion:reduce){.v677-feature-logo,#speed .speed-heading-icon,#musicFinder .music-head-mark,#colorStudio .v674-feature-mark{animation:none!important}.v677-reveal{opacity:1;transform:none;transition:none}.v677-panel.v677-enter{animation:none}}

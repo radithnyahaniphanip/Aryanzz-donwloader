@@ -1,4 +1,4 @@
-# ARYANZZ V67.6 — Title Search, Music Fallback & Creative Studio
+# ARYANZZ V68.0 — Gradient Studio, File Hash & Tools Center
 
 Production website: https://aryanzz-donwloader.radithnyahaniphanip.workers.dev/
 

@@ -76,7 +76,18 @@
     if (!response.ok) throw new Error(data.error || "Server downloader tidak dapat memproses tautan.");
     return data;
   }
-  async function downloadFile(url, mode, quality, bar, progressText) {
+  function safeFilename(value,fallback){
+    const clean=String(value||fallback||"aryanzz-media.bin").replace(/[\\/:*?"<>|\u0000-\u001f]/g,"_").replace(/\s+/g," ").trim().slice(0,140);
+    return clean||fallback||"aryanzz-media.bin";
+  }
+  function responseFilename(header){
+    if(!header)return "";
+    const star=/filename\*=(?:UTF-8'')?([^;]+)/i.exec(header);
+    if(star){try{return decodeURIComponent(star[1].trim().replace(/^"|"$/g,""))}catch{}}
+    const plain=/filename="?([^";]+)"?/i.exec(header);
+    return plain?plain[1].trim():"";
+  }
+  async function downloadFile(url, mode, quality, bar, progressText, info={}) {
     const response = await fetch("/api/download", {
       method: "POST",
       headers: {"Content-Type":"application/json","Accept":"application/octet-stream"},
@@ -85,7 +96,7 @@
     });
     if (!response.ok) {
       const error = await response.json().catch(() => ({}));
-      throw new Error(error.error || "Unduhan gagal. Coba lagi atau pilih kualitas lebih rendah.");
+      throw new Error(error.error || "Unduhan gagal. Periksa status backend atau pilih kualitas yang tersedia.");
     }
     const total = Number(response.headers.get("content-length") || 0);
     const reader = response.body && response.body.getReader ? response.body.getReader() : null;
@@ -110,8 +121,10 @@
     }
     if (!blob.size) throw new Error("File hasil kosong. Coba ulangi proses.");
     const mime = blob.type || "";
-    const ext = mode === "audio" ? (mime.includes("mp4") ? "m4a" : "mp3") : (mime.includes("webm") ? "webm" : "mp4");
-    const filename = "aryanzz-" + (mode === "audio" ? "audio" : "video-" + quality + "p") + "." + ext;
+    const sourceExt = !info.extractor && /^[a-z0-9]{2,8}$/i.test(info.extension||"") ? info.extension.toLowerCase() : "";
+    const ext = sourceExt || (mode === "audio" ? (mime.includes("mp4") ? "m4a" : "mp3") : (mime.includes("webm") ? "webm" : "mp4"));
+    const fallback = safeFilename(info.filename || info.title || ("aryanzz-" + (mode === "audio" ? "audio" : "video-" + quality + "p") + "." + ext));
+    const filename = safeFilename(responseFilename(response.headers.get("content-disposition")) || fallback, fallback);
     const objectUrl = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = objectUrl;
@@ -128,13 +141,16 @@
   function showError(out, error, url) {
     out.hidden = false;
     out.replaceChildren();
+    const message=error.message||"Terjadi kesalahan saat memeriksa tautan.";
     const title = make("b", "", "Link belum dapat diproses");
-    const note = make("p", "warning", error.message || "Terjadi kesalahan saat memeriksa tautan.");
+    const note = make("p", "warning", message);
     out.append(title, note);
-    if (/backend ekstraksi|server downloader|PLATFORM_API|cloudflare container|belum dihubungkan|tidak dapat dijangkau/i.test(error.message || "")) {
-      const help = make("p", "muted", "Backend Cloudflare Container sedang dinyalakan atau belum siap. Tunggu beberapa saat lalu coba lagi. Tautan file media langsung tetap dapat diproses tanpa ekstraksi platform.");
-      out.append(help);
-    }
+    let guidance="";
+    if(/quota|not enough balance|insufficient balance|saldo/i.test(message))guidance="Batas penggunaan berasal dari penyedia layanan. Periksa paket atau saldo provider; ARYANZZ tidak dapat menambah kuota provider.";
+    else if(/backend|platform_api|cloudflare container|yt-dlp|belum dihubungkan|tidak dapat dijangkau|pencarian judul membutuhkan/i.test(message))guidance="Tautan platform dan pencarian judul memerlukan backend yt-dlp yang aktif. Gunakan Cloudflare Container atau backend HTTPS yang sudah dikonfigurasi. Tautan file media langsung tetap dapat diproses tanpa ekstraksi platform.";
+    else if(/429|batas pencarian|rate limit/i.test(message))guidance="Terlalu banyak permintaan dalam waktu singkat. Tunggu sebentar sebelum mencoba lagi.";
+    else if(/format|kualitas|file melebihi/i.test(message))guidance="Periksa format sumber dan batas ukuran file. Tidak semua platform menyediakan semua kualitas.";
+    if(guidance)out.append(make("p","muted",guidance));
     if (url) {
       const link = make("a", "tag", "Buka sumber ↗");
       link.href = url;
@@ -191,17 +207,27 @@
       qualityLabel.style.marginTop = "12px";
       const quality = make("select", "field");
       quality.id = "aryQuality";
+      const directMedia=!!info.extension&&!info.extractor;
       const heights = Array.isArray(info.formats)
         ? [...new Set(info.formats.map(item => Number(typeof item === "number" ? item : item.height)).filter(n => [360,480,720,1080,1440,2160].includes(n)))].sort((a,b) => a-b)
         : [];
-      const available = heights.length ? heights : [360,480,720,1080,1440,2160];
-      FORMATS.video.filter(item => available.includes(Number(item[0]))).forEach(([value,label]) => {
-        const option = make("option", "", label);
-        option.value = String(value);
-        if (Number(value) === 720) option.selected = true;
-        quality.append(option);
-      });
-      const audioHint = make("p", "muted", "Audio akan diekspor sebagai MP3. Kualitas video hanya berlaku untuk mode video.");
+      if(directMedia){
+        const sourceOption=make("option","","Original · file sumber");sourceOption.value="0";quality.append(sourceOption);quality.disabled=true;
+        qualityLabel.textContent="KUALITAS SUMBER";
+        const audioOption=mode.querySelector('option[value="audio"]'),videoOption=mode.querySelector('option[value="video"]');
+        if(info.type==="audio"){mode.value="audio";if(videoOption)videoOption.disabled=true}
+        else{mode.value="video";if(audioOption)audioOption.disabled=true}
+        mode.disabled=true;
+      }else{
+        const available = heights.length ? heights : [360,480,720,1080,1440,2160];
+        FORMATS.video.filter(item => available.includes(Number(item[0]))).forEach(([value,label]) => {
+          const option = make("option", "", label);
+          option.value = String(value);
+          if (Number(value) === 720) option.selected = true;
+          quality.append(option);
+        });
+      }
+      const audioHint = make("p", "muted", directMedia?(info.type==="audio"?"File audio langsung akan diunduh dalam format sumber, tanpa konversi.":"File video langsung akan diunduh dalam kualitas aslinya."): "Audio akan diekspor sebagai MP3. Kualitas video mengikuti format yang tersedia dari sumber.");
       const note = make("p", "youtube-note", "Unduh hanya media milik sendiri atau konten yang memang diizinkan. Ketersediaan format mengikuti sumber dan dukungan yt-dlp.");
       box.append(formatLabel, mode, qualityLabel, quality, audioHint, note);
 
@@ -228,7 +254,7 @@
         quality.disabled = true;
         start.textContent = "Memproses…";
         try {
-          const filename = await downloadFile(url.href, mode.value, Number(quality.value) || 720, bar, progressText);
+          const filename = await downloadFile(url.href, mode.value, Number(quality.value) || 720, bar, progressText, info);
           progressText.textContent = "Berhasil disimpan: " + filename;
           start.textContent = "Unduhan selesai ✓";
         } catch (error) {
@@ -250,14 +276,21 @@
     const node=$("backendStatus");
     if(!node)return;
     try{
-      const response=await fetch("/api/health",{cache:"no-store"});
+      const healthResponse=await fetch("/api/health",{cache:"no-store"});
+      const health=await healthResponse.json().catch(()=>({}));
+      if(!healthResponse.ok||!health.platformExtraction){
+        node.dataset.state="warn";
+        node.textContent="Backend ekstraksi platform belum terhubung. File media langsung tetap dapat diunduh.";
+        return;
+      }
+      const response=await fetch("/api/platform/status",{cache:"no-store"});
       const data=await response.json().catch(()=>({}));
-      if(response.ok&&data.platformExtraction){
+      if(response.ok&&data.ok){
         node.dataset.state="ok";
-        node.textContent="Cloudflare Downloader Container terpasang · yt-dlp + FFmpeg";
+        node.textContent="Backend aktif · "+(data.backend||"yt-dlp")+(data.engine?" · "+data.engine:"");
       }else{
         node.dataset.state="warn";
-        node.textContent="Ekstraksi tautan platform belum aktif. File media langsung tetap bisa diunduh.";
+        node.textContent="Backend terpasang tetapi belum siap. "+(data.message||data.error||"Coba lagi sebentar.")+" File media langsung tetap tersedia.";
       }
     }catch{
       node.dataset.state="warn";
