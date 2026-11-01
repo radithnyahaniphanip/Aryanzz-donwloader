@@ -20,9 +20,9 @@ const downloaderCss=file("../public/downloader.css");
 const manifest=JSON.parse(file("../public/manifest.webmanifest"));
 
 const checks=[
-  ["V67.7 page title",html.includes("ARYANZZ V67.7 — All-in-One Creative Space")],
+  ["V67.9 page title",html.includes("ARYANZZ V67.9 — All-in-One Creative Space")],
   ["V59.5 versioned assets",html.includes("/v15.js?v=59.5")&&html.includes("/owner.js?v=59.5")&&html.includes("/downloader.js?v=59.5")&&html.includes("/downloader.css?v=59.5")&&html.includes("/v59.css?v=59.5")&&html.includes("/editor-pro.css?v=65.0")&&html.includes("/editor.js?v=65.0")],
-  ["service worker cache and V59.5 assets",html.includes("/sw.js?v=67.7")&&sw.includes("aryanzz-v67-7")&&sw.includes("/editor.js?v=65.0")&&sw.includes("/editor-pro.css?v=65.0")&&sw.includes("/v59.css?v=59.5")],
+  ["service worker cache and V59.5 assets",html.includes("/sw.js?v=67.9")&&sw.includes("aryanzz-v67-9")&&sw.includes("/editor.js?v=65.0")&&sw.includes("/editor-pro.css?v=65.0")&&sw.includes("/v59.css?v=59.5")],
   ["downloader input, result and backend status",html.includes('id="analyze"')&&html.includes('id="downloadResult"')&&html.includes('id="backendStatus"')],
   ["unified self-hosted downloader API",downloader.includes('postJson("/api/info"')&&downloader.includes('fetch("/api/download"')&&downloader.includes("PLATFORM_NAMES")&&!downloader.toLowerCase().includes("savenow")],
   ["single capture-phase universal URL handler",downloader.includes('button.addEventListener("click"')&&downloader.includes("event.stopImmediatePropagation()")&&downloader.includes("}, true);")],
@@ -48,7 +48,7 @@ const checks=[
   ["V65.0 chroma key live preview and export",html.includes('id="editorPreviewCanvas"')&&html.includes('id="editorChromaEnabled"')&&editor.includes("function applyChromaKey")&&editor.includes("drawFrame(previewCtx")],
   ["V65.0 animated captions",html.includes('id="editorTextAnimation"')&&editor.includes("function textAnimationState")&&editor.includes("overlay.dataset.animation")],
   ["Music Finder panel and tool card",html.includes('id="musicFinder"')&&html.includes('data-panel="musicFinder"')],
-  ["Music Finder assets and PWA cache",html.includes("/music-recognition.js?v=67.7")&&html.includes("/music-recognition.css?v=67.7")&&sw.includes("/music-recognition.js?v=67.7")&&sw.includes("/music-recognition.css?v=67.7")],
+  ["Music Finder assets and PWA cache",html.includes("/music-recognition.js?v=67.9")&&html.includes("/music-recognition.css?v=67.9")&&sw.includes("/music-recognition.js?v=67.9")&&sw.includes("/music-recognition.css?v=67.9")],
   ["DJ mix scan uses AudD Enterprise endpoint",html.includes('id="musicFileScanButton"')&&html.includes('id="musicScanSkip"')&&musicJs.includes('/api/music/scan-video')&&workerSource.includes("enterprise.audd.io")],
   ["Music Finder supports file, video URL and microphone",musicJs.includes("captureMediaSample")&&musicJs.includes("getUserMedia")&&musicJs.includes("/api/music/recognize")&&musicJs.includes("musicVideoUrl")],
   ["AudD errors expose provider code and actionable quota guidance",workerSource.includes("function auddFailure")&&workerSource.includes("providerErrorCode")&&workerSource.includes("kode 901")&&workerSource.includes("kode 902")],
@@ -59,20 +59,23 @@ const checks=[
   ["Music Finder responsive styling",musicCss.includes(".music-grid")&&musicCss.includes("@media(max-width:620px)")],
   ["Video URL DJ scanning goes directly through AudD Enterprise",workerSource.includes('fetch("https://enterprise.audd.io/"')&&!musicJs.includes("identifyVideoUrl(url,startSeconds)")],
   ["tool hub remains available",html.includes('id="allTools"')],
-  ["PWA manifest version",manifest.name.includes("V67.7")],
+  ["PWA manifest version",manifest.name.includes("V67.9")],
   ["V67.7 visual assets are loaded",html.includes("/v677.css?v=67.7")&&html.includes("/v677.js?v=67.7")&&sw.includes("/v677.css?v=67.7")&&sw.includes("/v677.js?v=67.7")],
   ["V67.7 home remains focused on the downloader",html.includes('id="home"')&&html.includes('id="downloadLinkMode"')&&!html.slice(html.indexOf('id="home"'),html.indexOf('id="toolsArea"')).includes('id="toolGrid"')],
   ["V67.7 feature identity map covers all tools",file("../public/v677.js").includes("const ICONS=")&&["speed","checker","queue","editor","musicFinder","history","imageTools","pdfTools","qrTools","securityTools","colorStudio","profile","owner","about","help"].every(id=>file("../public/v677.js").includes(id))],
   ["V67.7 expanded Color Studio palettes",file("../public/v677.js").includes("990M+ kombinasi palet")&&file("../public/v677.js").includes("Tyrian Purple")&&file("../public/v677.js").includes("holographic")],
   ["V67.7 reduced-motion support",file("../public/v677.css").includes("prefers-reduced-motion")],
-  ["V67.7 service worker cache",sw.includes("aryanzz-v67-7")]
+  ["V67.9 service worker cache",sw.includes("aryanzz-v67-9")],
+  ["V67.9 downloader preserves direct-source details",downloader.includes("function responseFilename")&&downloader.includes("const directMedia=!!info.extension&&!info.extractor")&&downloader.includes("/api/platform/status")],
+  ["V67.9 title search supports external yt-dlp backend",workerSource.includes('fetch(origin+"/api/search"')&&workerSource.includes('authorization:"Bearer "+env.PLATFORM_API_TOKEN')],
+  ["V67.9 direct media whitelist includes common formats",workerSource.includes('"mkv"')&&workerSource.includes('"avi"')&&workerSource.includes('"aiff"')&&workerSource.includes('"opus"')]
 ];
 for(const [name,ok] of checks){assert.ok(ok,name+" failed");console.log("✔ "+name)}
 
 const healthResponse=await worker.fetch(new Request("https://aryanzz.example/api/health"),{});
 assert.equal(healthResponse.status,200);
 const health=await healthResponse.json();
-assert.equal(health.version,"67.7");
+assert.equal(health.version,"67.9");
 assert.equal(health.selfHostedDownloader,false);
 assert.equal(health.youtubeDownloader,true);
 assert.equal(health.musicRecognitionConfigured,false);
@@ -205,7 +208,7 @@ const fallbackStub={
       ok:true,match:true,provider:"Shazam",scannedChunks:2,
       tracks:[{title:"DJ Fallback Track",artist:"DJ Fallback Artist",offset:"00:00",offsets:["00:00","01:00"]}]
     }),{status:200,headers:{"content-type":"application/json"}});
-    if(path==="/api/health")return new Response(JSON.stringify({ok:true,engine:"yt-dlp + FFmpeg + ShazamIO",version:"67.7"}),{status:200,headers:{"content-type":"application/json"}});
+    if(path==="/api/health")return new Response(JSON.stringify({ok:true,engine:"yt-dlp + FFmpeg + ShazamIO",version:"67.9"}),{status:200,headers:{"content-type":"application/json"}});
     return new Response(JSON.stringify({ok:false,error:"Unknown container route"}),{status:404,headers:{"content-type":"application/json"}});
   }
 };
@@ -224,6 +227,57 @@ const emptyTitleSearch=await worker.fetch(new Request("https://aryanzz.example/a
 }),{});
 assert.equal(emptyTitleSearch.status,400);
 console.log("✔ Title search validates short queries before using the Container");
+
+const originalSearchFetch=globalThis.fetch;
+try{
+  globalThis.fetch=async(input,init={})=>{
+    const url=new URL(typeof input==="string"?input:input.url);
+    assert.equal(url.href,"https://extractor.example/api/search");
+    assert.equal(init.method,"POST");
+    assert.equal(init.headers.authorization,"Bearer test-platform-token");
+    assert.equal(JSON.parse(init.body).query,"lofi beats");
+    return new Response(JSON.stringify({ok:true,results:[
+      {id:"EXT123",title:"External Search Result",url:"https://www.youtube.com/watch?v=EXT123"},
+      {id:"BAD123",title:"Unsafe result",url:"https://attacker.example/video"}
+    ]}),{status:200,headers:{"content-type":"application/json"}});
+  };
+  const externalSearch=await worker.fetch(new Request("https://aryanzz.example/api/search",{
+    method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({query:"lofi beats"})
+  }),{PLATFORM_API_ORIGIN:"https://extractor.example",PLATFORM_API_TOKEN:"test-platform-token"});
+  assert.equal(externalSearch.status,200);
+  const externalData=await externalSearch.json();
+  assert.equal(externalData.results.length,1);
+  assert.equal(externalData.results[0].id,"EXT123");
+  console.log("✔ V67.9 title search works through a configured HTTPS backend and filters non-YouTube URLs");
+}finally{globalThis.fetch=originalSearchFetch;}
+
+const originalDirectFetch=globalThis.fetch;
+try{
+  globalThis.fetch=async(input,init={})=>{
+    assert.equal(init.method,"HEAD");
+    return new Response(null,{status:200,headers:{"content-length":"2048","content-type":"video/x-matroska"}});
+  };
+  const directInfo=await worker.fetch(new Request("https://aryanzz.example/api/info",{
+    method:"POST",headers:{"content-type":"application/json"},
+    body:JSON.stringify({url:"https://cdn.example/video.mkv"})
+  }),{});
+  assert.equal(directInfo.status,200);
+  const directData=await directInfo.json();
+  assert.equal(directData.extension,"mkv");
+  assert.equal(directData.type,"video");
+  console.log("✔ V67.9 direct MKV links are recognized with source extension preserved");
+  const unsupported=await worker.fetch(new Request("https://aryanzz.example/api/info",{
+    method:"POST",headers:{"content-type":"application/json"},
+    body:JSON.stringify({url:"https://cdn.example/file.exe"})
+  }),{});
+  assert.equal(unsupported.status,400);
+  const localBlocked=await worker.fetch(new Request("https://aryanzz.example/api/info",{
+    method:"POST",headers:{"content-type":"application/json"},
+    body:JSON.stringify({url:"http://127.0.0.1/video.mp4"})
+  }),{});
+  assert.equal(localBlocked.status,400);
+  console.log("✔ Direct media validation rejects unsupported extensions and local network targets");
+}finally{globalThis.fetch=originalDirectFetch;}
 
 const originalFallbackFetch=globalThis.fetch;
 try{
