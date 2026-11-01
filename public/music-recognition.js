@@ -144,11 +144,6 @@
     const form=new FormData();form.append("file",blob,name||"aryanzz-audio-sample.webm");
     return readResponse(await fetch("/api/music/recognize",{method:"POST",body:form,cache:"no-store"}));
   }
-  async function identifyVideoUrl(url,startSeconds){
-    return readResponse(await fetch("/api/music/recognize",{
-      method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({url,startSeconds}),cache:"no-store"
-    }));
-  }
 
   async function identifyVideoScan(url,skip,limit){
     return readResponse(await fetch("/api/music/scan-video",{
