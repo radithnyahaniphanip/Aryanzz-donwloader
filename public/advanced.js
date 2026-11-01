@@ -10,6 +10,7 @@
   const fmtSize = n => n ? (n/1048576).toFixed(2)+" MB" : "Ukuran tidak diketahui";
   function notify(message){const box=$("advancedNotice");if(box){box.hidden=false;box.textContent=message;}}
   function setPanel(id){
+    document.body.dataset.view=id?"tool":"home";
     document.querySelectorAll(".panel").forEach(p=>p.classList.toggle("active",p.id===id));
     document.querySelectorAll("[data-nav]").forEach(b=>b.classList.toggle("active",b.dataset.nav===id||(!id&&b.dataset.nav==="home")));
     (id?$("toolsArea"):$("home"))?.scrollIntoView({behavior:"smooth",block:"start"});
