@@ -93,7 +93,7 @@ Music Finder uses the AudD music-recognition API through the Cloudflare Worker. 
 
 ### Enable song recognition
 
-1. Create an AudD account and obtain an API token from its dashboard. The standard recognition endpoint is usage-based; check the current plan and charges before enabling it.
+1. Create an AudD account and obtain an API token from its dashboard. AudD currently advertises 300 free recognition requests at signup; after the trial, its standard plan starts at US$5/month for 1,000 requests. Check the current dashboard pricing before enabling it.
 2. In Cloudflare Dashboard → Workers & Pages → aryanzz-donwloader → Settings → Variables and Secrets, add a secret named AUDD_API_TOKEN with the token value.
 3. Alternatively, add AUDD_API_TOKEN as a GitHub Actions repository secret. The deploy workflow syncs it to the Worker on the next deployment.
 4. Refresh ARYANZZ. The /api/music/status endpoint should report configured: true.
@@ -104,7 +104,7 @@ Music Finder uses the AudD music-recognition API through the Cloudflare Worker. 
 - **Video URL:** paste a public URL from a platform supported by the existing yt-dlp backend. The backend extracts a 12-second MP3 segment using FFmpeg, then the Worker sends that sample to AudD. This mode requires PLATFORM_API_ORIGIN and PLATFORM_API_TOKEN to be configured and reachable.
 - **Microphone:** records up to 12 seconds after the visitor grants microphone permission.
 
-The start-second field lets visitors choose a later part of a DJ mix or video. AudD documents matching for altered recordings such as remixes, slowed/reverb, pitch shifts and edits, but a match is not guaranteed. If an edit is not in the catalogue, the result may identify the underlying original track. The standard endpoint identifies a short sample; scanning an entire long DJ set and returning every track with timestamps requires AudD's enterprise service.
+The start-second field lets visitors choose a later part of a DJ mix or video. AudD describes use cases involving DJ mixes, but its standard endpoint is designed to identify a single song from a short sample. Matching a heavily edited remix, slowed/reverb, sped-up or pitch-shifted version is not guaranteed; the result may identify the underlying original track or return no match. Scanning an entire long DJ set and returning every track with timestamps requires AudD's enterprise endpoint.
 
 ### Limits and privacy
 
@@ -112,7 +112,7 @@ The start-second field lets visitors choose a later part of a DJ mix or video. A
 - Recognition sample: up to 12 seconds per request.
 - The Worker keeps AUDD_API_TOKEN server-side and applies a best-effort per-IP limit of 8 recognition requests per minute per Worker isolate.
 - ARYANZZ does not save uploaded or recorded audio. Audio samples are sent to AudD for recognition; review the provider's privacy and pricing terms before enabling the feature.
-- Recognition requests may incur provider charges depending on the AudD account plan. Cloudflare hosting does not make the external recognition API free.
+- AudD currently advertises 300 free signup requests; after that, its standard plan starts at US$5/month for 1,000 requests (pricing may change). Cloudflare hosting does not make the external recognition API free.
 - Video URL recognition depends on the self-hosted yt-dlp/FFmpeg backend being online. Local uploads and microphone recognition do not require that extractor backend.
 ## Tools Hub
 
