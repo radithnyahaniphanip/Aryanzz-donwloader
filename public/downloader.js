@@ -177,7 +177,7 @@
     input.addEventListener("keydown",event=>{
       if(event.key==="Enter"){
         const url=safeYouTube(input.value.trim());
-        if(url){event.preventDefault();button.click();}
+        if(url){event.preventDefault();event.stopImmediatePropagation();button.click();}
       }
     },true);
   }
