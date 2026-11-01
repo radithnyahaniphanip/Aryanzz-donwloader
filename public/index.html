@@ -145,6 +145,7 @@ body:before{content:"";position:fixed;z-index:-1;inset:-30%;pointer-events:none;
     <input id="editorMusicFile" type="file" accept="audio/*" multiple hidden>
     <label class="editor-source-btn editor-source-subtitle" for="editorSubtitleFile"><span>CC</span> Subtitle SRT</label>
     <input id="editorSubtitleFile" type="file" accept=".srt,text/plain" hidden>
+    <span class="editor-subtitle-status" id="editorSubtitleStatus">Belum ada subtitle</span>
     <div class="editor-source-info">
       <b id="editorFileName">Belum ada klip</b>
       <small>Maks. 8 klip · 300 MB per file · edit lokal</small>
@@ -160,6 +161,7 @@ body:before{content:"";position:fixed;z-index:-1;inset:-30%;pointer-events:none;
         </div>
         <div class="editor-preview-frame" id="editorPreviewFrame" data-ratio="16:9">
           <video id="editorPreview" playsinline preload="metadata"></video>
+          <canvas id="editorPreviewCanvas" class="editor-preview-canvas" hidden></canvas>
           <div class="editor-overlay" id="editorOverlay" data-position="bottom" data-animation="none" hidden></div>
           <div class="editor-empty" id="editorEmpty"><div class="editor-empty-art">▶</div><b>Mulai proyek pertamamu</b><span>Tambahkan satu atau beberapa video untuk mengisi timeline.</span></div>
         </div>
@@ -231,6 +233,11 @@ body:before{content:"";position:fixed;z-index:-1;inset:-30%;pointer-events:none;
         <label class="editor-pro-range">Brightness <output id="editorBrightnessValue">100%</output><input id="editorBrightness" type="range" min="50" max="150" value="100" disabled></label>
         <label class="editor-pro-range">Contrast <output id="editorContrastValue">100%</output><input id="editorContrast" type="range" min="50" max="160" value="100" disabled></label>
         <label class="editor-pro-range">Saturation <output id="editorSaturationValue">100%</output><input id="editorSaturation" type="range" min="0" max="180" value="100" disabled></label>
+      </div>
+      <div class="editor-inspector-section editor-subtitle-section">
+        <b class="editor-section-title">Subtitle</b>
+        <small class="editor-section-hint" id="editorSubtitleDetail">Belum ada file subtitle SRT.</small>
+        <button type="button" class="editor-quiet-btn" id="editorClearSubtitles" disabled>Hapus subtitle</button>
       </div>
       <div class="editor-inspector-section editor-chroma-section">
         <b class="editor-section-title">Green screen / chroma key</b>
