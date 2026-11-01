@@ -1,0 +1,30 @@
+name: Validate ARYANZZ V67.6
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [fix/cloudflare-container-downloader-shazam-fallback]
+
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Check JavaScript syntax
+        run: |
+          node --check src/index.js
+          node --check server/index.js
+          node --check public/v674.js
+          node --check public/music-recognition.js
+          node --check public/downloader.js
+          node --check public/editor.js
+      - name: Check Python syntax
+        run: python3 -m py_compile server/shazam_recognize.py
