@@ -17,3 +17,15 @@ body[data-theme="light"]{background:#f2f5ff;color:#1b2440}body[data-theme="light
 @media(max-width:680px){.v674-home{min-height:calc(100vh - 150px);padding-top:0}.v674-hero{padding:22px 4px}.v674-hero h1{letter-spacing:-1.8px}.v674-download{border-radius:22px}.v674-input-row{flex-direction:column}.v674-input-row .primary{width:100%;min-height:50px}.v674-tools-head{align-items:flex-start}.v674-tools-orb{width:54px;height:54px}.v674-tool-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}#allTools .tool{min-height:160px;padding:13px}.v674-color-custom{grid-template-columns:54px minmax(0,1fr)}.v674-color-preview{width:54px}.v674-color-custom>.tag,.v674-color-custom>.primary{width:100%;grid-row:2}.v674-color-controls{grid-template-columns:1fr}.v674-color-controls label{grid-column:auto}.v674-color-controls .primary{width:100%}}
 @media(max-width:380px){.v674-tool-grid{grid-template-columns:1fr}.v674-version{font-size:9px;padding:5px 8px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.01ms!important}}
+
+/* V67.6 title-based downloader search */
+.v674-search-results{display:grid;gap:10px;margin-top:16px}
+.v674-search-result{display:grid;grid-template-columns:112px minmax(0,1fr);gap:12px;padding:10px;border:1px solid #ffffff1c;border-radius:15px;background:#0a1324;align-items:center}
+.v674-search-result img{width:112px;aspect-ratio:16/9;object-fit:cover;border-radius:10px;background:#18243b}
+.v674-search-result h3{font-size:12px;line-height:1.5;margin:0 0 5px;color:#f2f5ff}
+.v674-search-result p{font-size:10px;line-height:1.5;margin:0 0 9px;color:#9eafd0}
+.v674-search-result button{border:0;border-radius:10px;padding:8px 11px;background:linear-gradient(110deg,#815cf6,#328fe8);color:#fff;font-size:10px;font-weight:850}
+.v674-search-loading,.v674-search-empty{padding:13px;border:1px solid #ffffff18;border-radius:13px;color:#aab9d5;background:#0b1425;font-size:11px;line-height:1.6}
+body[data-theme="light"] .v674-search-result,body[data-theme="light"] .v674-search-loading,body[data-theme="light"] .v674-search-empty{background:#fff;border-color:#c4d0e7}
+body[data-theme="light"] .v674-search-result h3{color:#1b2440}
+@media(max-width:390px){.v674-search-result{grid-template-columns:90px minmax(0,1fr);gap:9px;padding:8px}.v674-search-result img{width:90px}}
