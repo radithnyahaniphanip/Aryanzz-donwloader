@@ -85,8 +85,10 @@ jobs:
           const musicResponse = await fetch(base + "/api/music/status", { cache: "no-store" });
           if (!musicResponse.ok) throw new Error("Music Finder status endpoint failed.");
           const music = await musicResponse.json();
-          if (!music.configured) console.warn("Music Finder UI is deployed but AUDD_API_TOKEN is not configured yet.");
-          else console.log("Music Finder recognition provider is configured.");
+          if (!music.configured || !music.videoUrlReady) {
+            throw new Error("Live Worker cannot read AUDD_API_TOKEN. Check the secret binding on the production Worker service.");
+          }
+          console.log("Music Finder recognition provider is configured on the live Worker.");
 
           const statusResponse = await fetch(base + "/api/platform/status", { cache: "no-store" });
           const status = await statusResponse.json();
