@@ -1,10 +1,10 @@
 {
-  "name": "ARYANZZ V15.1 — All in One Tools",
+  "name": "ARYANZZ V25.0 — All in One Tools",
   "short_name": "ARYANZZ",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "background_color": "#070b16",
   "theme_color": "#070b16",
-  "description": "ARYANZZ V15.1: premium mobile-first downloader, Wi-Fi and mobile-data speed test, image converter, and web tools."
+  "description": "ARYANZZ V25.0: premium downloader, personal profile studio, membership plans, speed test, image converter, and web tools."
 }
