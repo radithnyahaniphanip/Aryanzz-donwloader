@@ -8,7 +8,7 @@ if(!isNodeRuntime){
 }
 export class DownloaderContainer extends ContainerBase {
   defaultPort=3000;
-  sleepAfter="10m";
+  sleepAfter="3m";
   pingEndpoint="localhost/ping";
 }
 
