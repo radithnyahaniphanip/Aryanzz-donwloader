@@ -50,7 +50,7 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
-      - name: Smoke test live V59.5 Worker and editor assets
+      - name: Smoke test live Worker and V60.0 editor assets
         env:
           WORKER_URL: https://aryanzz-donwloader.radithnyahaniphanip.workers.dev
         run: |
@@ -64,16 +64,16 @@ jobs:
           }
           console.log("Live Worker health OK: V" + health.version + ".");
 
-          for (const path of ["/editor.js?v=59.5", "/v59.js?v=59.5", "/v59.css?v=59.5"]) {
+          for (const path of ["/editor.js?v=60.0", "/editor-pro.css?v=60.0", "/v59.js?v=59.5", "/v59.css?v=59.5"]) {
             const response = await fetch(base + path, { cache: "no-store" });
             if (!response.ok) throw new Error("Static asset unavailable: " + path + " HTTP " + response.status);
           }
-          console.log("V59.5 editor and visual assets are available.");
+          console.log("V60.0 Creative Studio Pro assets are available.");
 
           const statusResponse = await fetch(base + "/api/platform/status", { cache: "no-store" });
           const status = await statusResponse.json();
           if (!status.configured) {
-            console.warn("Self-hosted extractor is not connected yet. Add PLATFORM_API_ORIGIN and PLATFORM_API_TOKEN secrets after deploying the Render backend.");
+            console.warn("Self-hosted extractor is not connected yet. Add PLATFORM_API_ORIGIN and PLATFORM_API_TOKEN secrets after starting the local backend package or another supported backend host.");
           } else if (!status.ok) {
             console.warn("Extractor is configured but did not respond healthy. Check the backend service.");
           } else {
