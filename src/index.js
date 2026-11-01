@@ -70,10 +70,88 @@ async function download(request){
   if(size)headers.set("content-length",String(size));
   return new Response(limited,{status:200,headers});
 }
+
+const SAVENOW_BASE="https://p.savenow.to";
+const YOUTUBE_FORMATS=new Set(["mp3","m4a","webm","aac","flac","opus","ogg","wav","144","240","360","480","720","1080","1440","4k"]);
+function isYouTubeUrl(raw){
+  try{
+    const u=new URL(raw),h=u.hostname.toLowerCase();
+    return ["http:","https:"].includes(u.protocol)&&
+      ["youtube.com","www.youtube.com","m.youtube.com","music.youtube.com","youtu.be","www.youtu.be"].includes(h);
+  }catch{return false;}
+}
+function savenowHeaders(){return {
+  accept:"*/*",
+  "accept-language":"id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7",
+  "cache-control":"no-cache",
+  pragma:"no-cache",
+  referer:"https://en.loader.to/"
+};}
+async function savenowRequest(path,env){
+  if(!env.SAVENOW_API_KEY)return {error:"API key downloader YouTube belum dipasang di Cloudflare Worker.",status:503};
+  const response=await fetch(SAVENOW_BASE+path,{
+    headers:savenowHeaders(),
+    signal:AbortSignal.timeout(25000)
+  });
+  const raw=await response.text();let data;
+  try{data=JSON.parse(raw)}catch{return {error:"Respons layanan downloader tidak valid (HTTP "+response.status+").",status:502};}
+  if(!response.ok)return {error:data.error||"Layanan downloader menjawab HTTP "+response.status+".",status:502};
+  return {data};
+}
+function youtubeResult(initial,data,format){
+  const fileUrl=data.download_url||data.url||initial.download_url||initial.url;
+  if(!fileUrl)return null;
+  let parsed;try{parsed=new URL(fileUrl)}catch{return null;}
+  if(!["http:","https:"].includes(parsed.protocol))return null;
+  return {status:true,pending:false,result:{
+    title:initial.info?.title||"YouTube Content",
+    thumbnail:initial.info?.image||null,
+    format,
+    filename:data.filename||null,
+    url:parsed.toString(),
+    expiresIn:data.expires_in||null
+  }};
+}
+async function youtubeStart(request,env){
+  let body;try{body=await request.json()}catch{return json({error:"Body JSON tidak valid."},400)}
+  if(!isYouTubeUrl(body?.url))return json({error:"URL YouTube tidak valid."},400);
+  const format=String(body?.format||"mp3").toLowerCase();
+  if(!YOUTUBE_FORMATS.has(format))return json({error:"Format tidak didukung."},400);
+  const params=new URLSearchParams({format,url:body.url,apikey:env.SAVENOW_API_KEY||"",add_info:"1"});
+  try{
+    const response=await savenowRequest("/api/v2/download?"+params.toString(),env);
+    if(response.error)return json({error:response.error},response.status);
+    const initial=response.data;
+    if(!initial.success)return json({error:initial.error||"Gagal memulai proses download."},502);
+    const ready=youtubeResult(initial,initial,format);if(ready)return json(ready);
+    if(!initial.id)return json({error:"ID proses download tidak ditemukan."},502);
+    return json({status:true,pending:true,id:String(initial.id),format,info:{
+      title:initial.info?.title||"YouTube Content",
+      thumbnail:initial.info?.image||null
+    }});
+  }catch(e){return json({error:e.message||"Gagal menghubungi layanan downloader."},502)}
+}
+async function youtubeProgress(request,env){
+  let body;try{body=await request.json()}catch{return json({error:"Body JSON tidak valid."},400)}
+  const id=String(body?.id||"");
+  const format=String(body?.format||"mp3").toLowerCase();
+  if(!/^[a-zA-Z0-9_-]{1,160}$/.test(id))return json({error:"ID proses tidak valid."},400);
+  if(!YOUTUBE_FORMATS.has(format))return json({error:"Format tidak didukung."},400);
+  const params=new URLSearchParams({id,_:String(Date.now())});
+  try{
+    const response=await savenowRequest("/api/progress?"+params.toString(),env);
+    if(response.error)return json({error:response.error},response.status);
+    const data=response.data;
+    const initial={info:body.info||{}};
+    const ready=youtubeResult(initial,data,format);if(ready)return json(ready);
+    if(data.error||/fail|error|gagal/i.test(data.text||""))return json({error:data.text||data.error||"Proses download gagal."},502);
+    return json({status:true,pending:true,text:typeof data.text==="string"?data.text:"",progress:data.progress??null});
+  }catch(e){return json({error:e.message||"Gagal memeriksa proses download."},502)}
+}
 export default {async fetch(request,env){
   const url=new URL(request.url);
   if(request.method==="OPTIONS"&&url.pathname.startsWith("/api/"))return new Response(null,{status:204,headers:{"access-control-allow-origin":url.origin,"access-control-allow-methods":"GET,POST,OPTIONS","access-control-allow-headers":"Content-Type"}});
-  if(url.pathname==="/api/health"&&request.method==="GET")return json({ok:true,service:"ARYANZZ",version:"26.0",mode:"cloudflare-worker",directMediaDownload:true,platformExtraction:!!(env.PLATFORM_API_ORIGIN&&env.PLATFORM_API_TOKEN),platformBackend:env.PLATFORM_API_ORIGIN&&env.PLATFORM_API_TOKEN?"configured":"not-configured"});
+  if(url.pathname==="/api/youtube/download"&&request.method==="POST")return youtubeStart(request,env);\n  if(url.pathname==="/api/youtube/progress"&&request.method==="POST")return youtubeProgress(request,env);\n  if(url.pathname==="/api/health"&&request.method==="GET")return json({ok:true,service:"ARYANZZ",version:"27.0",mode:"cloudflare-worker",directMediaDownload:true,youtubeDownloader:true,platformExtraction:!!(env.PLATFORM_API_ORIGIN&&env.PLATFORM_API_TOKEN),platformBackend:env.PLATFORM_API_ORIGIN&&env.PLATFORM_API_TOKEN?"configured":"not-configured"});
   if(url.pathname==="/api/info"&&request.method==="POST"){const proxied=await proxyPlatform(request,env,"/api/info");if(proxied)return proxied;return info(request);}
   if(url.pathname==="/api/download"&&request.method==="POST"){const proxied=await proxyPlatform(request,env,"/api/download");if(proxied)return proxied;return download(request);}
   if(url.pathname.startsWith("/api/"))return json({error:"Endpoint tidak ditemukan."},404);
