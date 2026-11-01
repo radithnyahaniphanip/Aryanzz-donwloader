@@ -67,7 +67,7 @@ const checks=[
   ["V67.7 reduced-motion support",file("../public/v677.css").includes("prefers-reduced-motion")],
   ["V67.9 service worker cache",sw.includes("aryanzz-v67-9")],
   ["V67.9 downloader preserves direct-source details",downloader.includes("function responseFilename")&&downloader.includes("const directMedia=!!info.extension&&!info.extractor")&&downloader.includes("/api/platform/status")],
-  ["V67.9 title search supports external yt-dlp backend",workerSource.includes('fetch(origin+"/api/search"')&&workerSource.includes('authorization:"Bearer "+env.PLATFORM_API_TOKEN')],
+  ["V67.9 title search supports external yt-dlp backend",workerSource.includes('fetch(origin+"/api/search"')&&workerSource.includes('"authorization":"Bearer "+env.PLATFORM_API_TOKEN')],
   ["V67.9 direct media whitelist includes common formats",workerSource.includes('"mkv"')&&workerSource.includes('"avi"')&&workerSource.includes('"aiff"')&&workerSource.includes('"opus"')]
 ];
 for(const [name,ok] of checks){assert.ok(ok,name+" failed");console.log("✔ "+name)}
