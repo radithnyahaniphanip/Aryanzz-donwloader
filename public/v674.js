@@ -1,4 +1,4 @@
-/* ARYANZZ V67.4 — UI controls */
+/* ARYANZZ V67.6 — UI controls */
 (()=>{"use strict";
 const $=id=>document.getElementById(id),THEME="aryanzz.theme.v674",FAV="aryanzz.color-favorites.v674";
 const read=(k)=>{try{return JSON.parse(localStorage.getItem(k)||"[]")}catch{return []}};
