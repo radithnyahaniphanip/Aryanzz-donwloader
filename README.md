@@ -13,7 +13,8 @@ ARYANZZ is a mobile-first creator workspace. The Cloudflare Worker serves the we
 | V40–V44 | Local Video Editor: import, preview, trim start/end, crop ratios, rotation and playback speed |
 | V45–V49 | Video filters, brightness/contrast/saturation, text overlays, mute and export controls |
 | V50–V54 | Creator workspace integration, mobile layout, local-only editing and clearer feature states |
-| V55–V59.5 | Backend health status, PWA cache refresh, expanded smoke tests and deployment configuration |\n| V60.0 | Multi-clip timeline, split/reorder/trim, music track, caption styling, fade transition, undo/redo, project JSON and local export |
+| V55–V59.5 | Backend health status, PWA cache refresh, expanded smoke tests and deployment configuration |
+| V60.0 | Multi-clip timeline, split/reorder/trim, music track, caption styling, fade transition, undo/redo, project JSON and local export |
 
 ## Downloader
 
