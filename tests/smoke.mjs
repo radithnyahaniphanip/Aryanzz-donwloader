@@ -8,6 +8,8 @@ const workerSource=file("../src/index.js");
 const sw=file("../public/sw.js");
 const v15=file("../public/v15.js");
 const downloader=file("../public/downloader.js");
+const v677css=file("../public/v677.css");
+const v677js=file("../public/v677.js");
 const editor=file("../public/editor.js");
 const v59css=file("../public/v59.css");
 const editorProCss=file("../public/editor-pro.css");
@@ -65,6 +67,9 @@ const checks=[
   ["V67.7 feature identity map covers all tools",file("../public/v677.js").includes("const ICONS=")&&["speed","checker","queue","editor","musicFinder","history","imageTools","pdfTools","qrTools","securityTools","colorStudio","profile","owner","about","help"].every(id=>file("../public/v677.js").includes(id))],
   ["V67.7 expanded Color Studio palettes",file("../public/v677.js").includes("990M+ kombinasi palet")&&file("../public/v677.js").includes("Tyrian Purple")&&file("../public/v677.js").includes("holographic")],
   ["V67.7 reduced-motion support",file("../public/v677.css").includes("prefers-reduced-motion")],
+  ["V67.9 remaining tools have branded backgrounds",v677css.includes('data-feature="gradientStudio"')&&v677css.includes('data-feature="fileHash"')&&v677css.includes("#editor .editor-pro-head")&&v677css.includes("#profile .v25-profile-cover")],
+  ["V67.9 Color Studio favorites and clipboard work after redesign",v677js.includes("palette.onclick=async event")&&v677js.includes("favorites.onclick=async event")&&v677js.includes('localStorage.setItem("aryanzz.color-favorites.v674"')&&v677js.includes("copyExpandedColor")],
+
   ["V68.0 service worker cache and missing tool assets",sw.includes("aryanzz-v68-0")&&sw.includes("/v680.css?v=68.0")&&sw.includes("/v680.js?v=68.0")&&html.includes("/v680.js?v=68.0")],
   ["V67.9 downloader preserves direct-source details",downloader.includes("function responseFilename")&&downloader.includes("const directMedia=!!info.extension&&!info.extractor")&&downloader.includes("/api/platform/status")],
   ["V67.9 title search supports external yt-dlp backend",workerSource.includes('fetch(origin+"/api/search"')&&workerSource.includes('authorization:"Bearer "+env.PLATFORM_API_TOKEN')],
@@ -252,6 +257,12 @@ try{
   assert.equal(externalData.results[0].id,"EXT123");
   console.log("✔ V67.9 title search works through a configured HTTPS backend and filters non-YouTube URLs");
 }finally{globalThis.fetch=originalSearchFetch;}
+
+const insecureSearch=await worker.fetch(new Request("https://aryanzz.example/api/search",{
+  method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({query:"lofi beats"})
+}),{PLATFORM_API_ORIGIN:"http://extractor.example",PLATFORM_API_TOKEN:"test-platform-token"});
+assert.equal(insecureSearch.status,500);
+console.log("✔ V67.9 title search rejects insecure HTTP backend origins");
 
 const originalDirectFetch=globalThis.fetch;
 try{
