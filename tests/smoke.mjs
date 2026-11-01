@@ -265,7 +265,13 @@ try{
   const directData=await directInfo.json();
   assert.equal(directData.extension,"mkv");
   assert.equal(directData.type,"video");
-  console.log("✔ V67.9 direct MKV links are recognized with source extension preserved");
+  const audioInfo=await worker.fetch(new Request("https://aryanzz.example/api/info",{
+    method:"POST",headers:{"content-type":"application/json"},
+    body:JSON.stringify({url:"https://cdn.example/voice-note.wma"})
+  }),{});
+  assert.equal(audioInfo.status,200);
+  assert.equal((await audioInfo.json()).type,"audio");
+  console.log("✔ V67.9 direct MKV and WMA links retain their correct media types");
   const unsupported=await worker.fetch(new Request("https://aryanzz.example/api/info",{
     method:"POST",headers:{"content-type":"application/json"},
     body:JSON.stringify({url:"https://cdn.example/file.exe"})
