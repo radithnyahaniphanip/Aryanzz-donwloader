@@ -32,6 +32,7 @@
   window.aryanzzShowPanel=goto;
   function bindNavigation(){
     document.querySelectorAll("[data-nav], [data-panel]").forEach(btn=>{
+      btn.onclick=null;
       btn.addEventListener("click",()=>{goto(btn.dataset.nav||btn.dataset.panel||"")});
     });
     document.querySelectorAll("#toolsArea > .panel:not(#allTools)").forEach(p=>{
