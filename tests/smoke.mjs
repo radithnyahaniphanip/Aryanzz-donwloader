@@ -10,15 +10,18 @@ const downloader=file("../public/downloader.js");
 const editor=file("../public/editor.js");
 const v59css=file("../public/v59.css");
 const editorProCss=file("../public/editor-pro.css");
+const musicJs=file("../public/music-recognition.js");
+const musicCss=file("../public/music-recognition.css");
+const serverSource=file("../server/index.js");
 const ownerJs=file("../public/owner.js");
 const ownerCss=file("../public/owner.css");
 const downloaderCss=file("../public/downloader.css");
 const manifest=JSON.parse(file("../public/manifest.webmanifest"));
 
 const checks=[
-  ["V65.0 page title",html.includes("ARYANZZ V65.0 — Ultimate Creative Studio")],
+  ["V66.0 page title",html.includes("ARYANZZ V66.0 — Music Recognition & Creative Studio")],
   ["V59.5 versioned assets",html.includes("/v15.js?v=59.5")&&html.includes("/owner.js?v=59.5")&&html.includes("/downloader.js?v=59.5")&&html.includes("/downloader.css?v=59.5")&&html.includes("/v59.css?v=59.5")&&html.includes("/editor-pro.css?v=65.0")&&html.includes("/editor.js?v=65.0")],
-  ["service worker cache and V59.5 assets",html.includes("/sw.js?v=65.0")&&sw.includes("aryanzz-v65-0")&&sw.includes("/editor.js?v=65.0")&&sw.includes("/editor-pro.css?v=65.0")&&sw.includes("/v59.css?v=59.5")],
+  ["service worker cache and V59.5 assets",html.includes("/sw.js?v=65.0")&&sw.includes("aryanzz-v66-0")&&sw.includes("/editor.js?v=65.0")&&sw.includes("/editor-pro.css?v=65.0")&&sw.includes("/v59.css?v=59.5")],
   ["downloader input, result and backend status",html.includes('id="analyze"')&&html.includes('id="downloadResult"')&&html.includes('id="backendStatus"')],
   ["unified self-hosted downloader API",downloader.includes('postJson("/api/info"')&&downloader.includes('fetch("/api/download"')&&downloader.includes("PLATFORM_NAMES")&&!downloader.toLowerCase().includes("savenow")],
   ["single capture-phase universal URL handler",downloader.includes('button.addEventListener("click"')&&downloader.includes("event.stopImmediatePropagation()")&&downloader.includes("}, true);")],
@@ -43,19 +46,25 @@ const checks=[
   ["V65.0 SRT subtitle import and persistence",html.includes('id="editorSubtitleFile"')&&editor.includes("function parseSrt(source)")&&editor.includes("subtitles,")&&editor.includes("function clearSubtitles()")],
   ["V65.0 chroma key live preview and export",html.includes('id="editorPreviewCanvas"')&&html.includes('id="editorChromaEnabled"')&&editor.includes("function applyChromaKey")&&editor.includes("drawFrame(previewCtx")],
   ["V65.0 animated captions",html.includes('id="editorTextAnimation"')&&editor.includes("function textAnimationState")&&editor.includes("overlay.dataset.animation")],
+  ["Music Finder panel and tool card",html.includes('id="musicFinder"')&&html.includes('data-panel="musicFinder"')],
+  ["Music Finder assets and PWA cache",html.includes("/music-recognition.js?v=66.0")&&html.includes("/music-recognition.css?v=66.0")&&sw.includes("/music-recognition.js?v=66.0")&&sw.includes("/music-recognition.css?v=66.0")],
+  ["Music Finder supports file, video URL and microphone",musicJs.includes("captureMediaSample")&&musicJs.includes("getUserMedia")&&musicJs.includes("/api/music/recognize")&&musicJs.includes("musicVideoUrl")],
+  ["Music Finder responsive styling",musicCss.includes(".music-grid")&&musicCss.includes("@media(max-width:620px)")],
+  ["Video URL audio sample extraction uses yt-dlp sections",serverSource.includes('app.post("/api/music/sample"')&&serverSource.includes("--download-sections")],
   ["tool hub remains available",html.includes('id="allTools"')],
-  ["PWA manifest version",manifest.name.includes("V65.0")]
+  ["PWA manifest version",manifest.name.includes("V66.0")]
 ];
 for(const [name,ok] of checks){assert.ok(ok,name+" failed");console.log("✔ "+name)}
 
 const healthResponse=await worker.fetch(new Request("https://aryanzz.example/api/health"),{});
 assert.equal(healthResponse.status,200);
 const health=await healthResponse.json();
-assert.equal(health.version,"59.5");
+assert.equal(health.version,"66.0");
 assert.equal(health.selfHostedDownloader,true);
 assert.equal(health.youtubeDownloader,true);
+assert.equal(health.musicRecognitionConfigured,false);
 assert.equal(health.youtubeApiKeyConfigured,false);
-console.log("✔ V59.5 Worker health and self-hosted downloader status");
+console.log("✔ V66.0 Worker health and self-hosted downloader status");
 const platformStatusResponse=await worker.fetch(new Request("https://aryanzz.example/api/platform/status"),{});
 assert.equal(platformStatusResponse.status,200);
 const platformStatus=await platformStatusResponse.json();
@@ -92,6 +101,57 @@ const invalidProgress=await worker.fetch(new Request("https://aryanzz.example/ap
 }),{});
 assert.equal(invalidProgress.status,400);
 console.log("✔ YouTube progress validates process ID");
+
+
+const musicStatusResponse=await worker.fetch(new Request("https://aryanzz.example/api/music/status"),{});
+assert.equal(musicStatusResponse.status,200);
+const musicStatus=await musicStatusResponse.json();
+assert.equal(musicStatus.configured,false);
+assert.equal(musicStatus.videoUrlReady,false);
+console.log("✔ Music Finder status reports missing AudD and video-extractor secrets");
+const musicNoToken=await worker.fetch(new Request("https://aryanzz.example/api/music/recognize",{method:"POST"}),{});
+assert.equal(musicNoToken.status,503);
+assert.match((await musicNoToken.json()).error,/AUDD_API_TOKEN/);
+console.log("✔ Music recognition stays disabled until the AudD secret is configured");
+const musicConfigured=await worker.fetch(new Request("https://aryanzz.example/api/music/status"),{AUDD_API_TOKEN:"test-audd-token"});
+assert.equal((await musicConfigured.json()).configured,true);
+console.log("✔ Music Finder status detects the configured AudD secret");
+const originalMusicFetch=globalThis.fetch;
+try{
+  let calls=0;
+  globalThis.fetch=async(input,init={})=>{
+    const url=new URL(typeof input==="string"?input:input.url);
+    assert.equal(url.href,"https://api.audd.io/");
+    assert.equal(init.method,"POST");
+    assert.ok(init.body instanceof FormData);
+    assert.equal(init.body.get("api_token"),"test-audd-token");
+    assert.equal(init.body.get("return"),"apple_music,spotify");
+    calls++;
+    const result=calls===1?{
+      title:"Test Track",artist:"Test Artist",album:"Test Album",release_date:"2025-01-01",
+      timecode:"00:12",song_link:"https://lis.tn/test",
+      apple_music:{url:"https://music.apple.com/id/album/test"},
+      spotify:{external_urls:{spotify:"https://open.spotify.com/track/test"}}
+    }:null;
+    return new Response(JSON.stringify({status:"success",result}),{status:200,headers:{"content-type":"application/json"}});
+  };
+  const audioForm=new FormData();
+  audioForm.append("file",new Blob(["sample audio bytes"],{type:"audio/webm"}),"sample.webm");
+  const recognized=await worker.fetch(new Request("https://aryanzz.example/api/music/recognize",{method:"POST",body:audioForm}),{AUDD_API_TOKEN:"test-audd-token"});
+  assert.equal(recognized.status,200);
+  const recognizedData=await recognized.json();
+  assert.equal(recognizedData.match,true);
+  assert.equal(recognizedData.result.title,"Test Track");
+  assert.equal(recognizedData.result.artist,"Test Artist");
+  assert.equal(recognizedData.result.song_link,"https://lis.tn/test");
+  console.log("✔ Music recognition forwards audio securely and maps AudD track metadata");
+  const noMatchForm=new FormData();
+  noMatchForm.append("file",new Blob(["another sample"],{type:"audio/webm"}),"sample.webm");
+  const noMatch=await worker.fetch(new Request("https://aryanzz.example/api/music/recognize",{method:"POST",body:noMatchForm}),{AUDD_API_TOKEN:"test-audd-token"});
+  assert.equal(noMatch.status,200);
+  assert.equal((await noMatch.json()).match,false);
+  console.log("✔ Music recognition handles an audio sample with no catalogue match");
+}finally{globalThis.fetch=originalMusicFetch;}
 
 const unknown=await worker.fetch(new Request("https://aryanzz.example/api/not-a-route"),{});
 assert.equal(unknown.status,404);
@@ -192,4 +252,4 @@ try{
   globalThis.fetch=originalFetch;
 }
 
-console.log("\nARYANZZ V65.0 Ultimate Creative Studio smoke tests passed.");
+console.log("\nARYANZZ V66.0 Music Recognition & Creative Studio smoke tests passed.");
