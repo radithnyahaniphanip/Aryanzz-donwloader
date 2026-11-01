@@ -1,4 +1,4 @@
-# ARYANZZ V67.2 — Cloudflare Downloader Container & Shazam Fallback
+# ARYANZZ V67.6 — Title Search, Music Fallback & Creative Studio
 
 Production website: https://aryanzz-donwloader.radithnyahaniphanip.workers.dev/
 
