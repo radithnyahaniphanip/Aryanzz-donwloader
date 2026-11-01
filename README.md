@@ -1,4 +1,4 @@
-# ARYANZZ V65.0 — Ultimate Creative Studio
+# ARYANZZ V66.0 — Music Recognition & Creative Studio
 
 Production website: https://aryanzz-donwloader.radithnyahaniphanip.workers.dev/
 
@@ -16,6 +16,7 @@ ARYANZZ is a mobile-first creator workspace. The Cloudflare Worker serves the we
 | V55–V59.5 | Backend health status, PWA cache refresh, expanded smoke tests and deployment configuration |
 | V60.0 | Multi-clip timeline, split/reorder/trim, audio track, caption styling, fade transition, undo/redo, project JSON and local export |
 | V65.0 | Premium wide editor workspace, three mixed audio tracks, per-clip zoom keyframes and pan, live/export chroma key, animated captions, SRT subtitle import and project restore |
+| V66.0 | Music Finder: recognition from local video/audio, supported video URLs and microphone; DJ/remix-friendly audio fingerprint matching; local search history |
 
 ## Downloader
 
@@ -86,6 +87,33 @@ The editor runs locally in the browser. Source media is not uploaded to ARYANZZ 
 ### Current limitations
 V65.0 is a lightweight local browser editor, not a full replacement for CapCut or Alight Motion. It still uses one sequential video track and up to three audio tracks. Motion editing currently provides two zoom keyframes plus a fixed pan offset per clip; it is not a general-purpose multi-property keyframe graph. Chroma key replaces the keyed area with a solid color, not a background image/video. Advanced multi-layer compositing, animated stickers, motion tracking, waveform editing, cloud project sync and guaranteed MP4 export are not included. Browser codec support, available memory and device performance determine practical file sizes and export speed.
 
+## Music Finder — V66.0
+
+Music Finder uses the AudD music-recognition API through the Cloudflare Worker. The browser never receives the provider token.
+
+### Enable song recognition
+
+1. Create an AudD account and obtain an API token from its dashboard. AudD currently advertises 300 free recognition requests at signup; after the trial, its standard plan starts at US$5/month for 1,000 requests. Check the current dashboard pricing before enabling it.
+2. In Cloudflare Dashboard → Workers & Pages → aryanzz-donwloader → Settings → Variables and Secrets, add a secret named AUDD_API_TOKEN with the token value.
+3. Alternatively, add AUDD_API_TOKEN as a GitHub Actions repository secret. The deploy workflow syncs it to the Worker on the next deployment.
+4. Refresh ARYANZZ. The /api/music/status endpoint should report configured: true.
+
+### Supported recognition modes
+
+- **Local video/audio:** upload a file. Video audio is captured locally in the browser; only a 12-second audio sample is sent to AudD. Audio files up to 10 MB can be sent directly; larger files are sampled in the browser.
+- **Video URL:** paste a public URL from a platform supported by the existing yt-dlp backend. The backend extracts a 12-second MP3 segment using FFmpeg, then the Worker sends that sample to AudD. This mode requires PLATFORM_API_ORIGIN and PLATFORM_API_TOKEN to be configured and reachable.
+- **Microphone:** records up to 12 seconds after the visitor grants microphone permission.
+
+The start-second field lets visitors choose a later part of a DJ mix or video. AudD describes use cases involving DJ mixes, but its standard endpoint is designed to identify a single song from a short sample. Matching a heavily edited remix, slowed/reverb, sped-up or pitch-shifted version is not guaranteed; the result may identify the underlying original track or return no match. Scanning an entire long DJ set and returning every track with timestamps requires AudD's enterprise endpoint.
+
+### Limits and privacy
+
+- Maximum uploaded audio sample: 10 MB.
+- Recognition sample: up to 12 seconds per request.
+- The Worker keeps AUDD_API_TOKEN server-side and applies a best-effort per-IP limit of 8 recognition requests per minute per Worker isolate.
+- ARYANZZ does not save uploaded or recorded audio. Audio samples are sent to AudD for recognition; review the provider's privacy and pricing terms before enabling the feature.
+- AudD currently advertises 300 free signup requests; after that, its standard plan starts at US$5/month for 1,000 requests (pricing may change). Cloudflare hosting does not make the external recognition API free.
+- Video URL recognition depends on the self-hosted yt-dlp/FFmpeg backend being online. Local uploads and microphone recognition do not require that extractor backend.
 ## Tools Hub
 
 The home banner links to:

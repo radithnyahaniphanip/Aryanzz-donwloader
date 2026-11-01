@@ -87,6 +87,8 @@ const SAVENOW_BASE="https://p.savenow.to";
 const YOUTUBE_AUDIO_FORMATS=new Set(["mp3","m4a","webm","aac","flac","opus","ogg","wav"]);
 const YOUTUBE_VIDEO_FORMATS=new Set(["360","720","1080","1440","mp44k"]);
 const MAX_YOUTUBE_BYTES=500*1024*1024;
+const AUDD_MAX_BYTES=10*1024*1024;
+const MUSIC_RATE_BUCKETS=new Map();
 
 function isYouTubeUrl(raw){
   try{
@@ -293,16 +295,121 @@ async function youtubeFile(request,env){
   }));
   return new Response(limited,{status:200,headers});
 }
+
+function musicStatus(env){
+  return json({ok:true,provider:"AudD",configured:!!env.AUDD_API_TOKEN,
+    videoUrlReady:!!(env.PLATFORM_API_ORIGIN&&env.PLATFORM_API_TOKEN),
+    sampleSeconds:12,maxUploadBytes:AUDD_MAX_BYTES});
+}
+function musicRateLimited(request){
+  const ip=request.headers.get("cf-connecting-ip")||"unknown",now=Date.now();
+  let bucket=MUSIC_RATE_BUCKETS.get(ip);
+  if(!bucket||now-bucket.started>=60000)bucket={started:now,count:0};
+  bucket.count++;MUSIC_RATE_BUCKETS.set(ip,bucket);
+  if(MUSIC_RATE_BUCKETS.size>1000){
+    for(const [key,value] of MUSIC_RATE_BUCKETS)if(now-value.started>=60000)MUSIC_RATE_BUCKETS.delete(key);
+  }
+  return bucket.count>8;
+}
+async function platformMusicSample(url,startSeconds,env){
+  if(!isPlatformLink(url))throw new Error("Tautan video belum didukung. Gunakan tautan publik dari platform yang tersedia di ARYANZZ.");
+  if(!env.PLATFORM_API_ORIGIN||!env.PLATFORM_API_TOKEN)
+    throw new Error("Pengenalan dari tautan video memerlukan server ekstraksi ARYANZZ yang aktif. Kamu masih bisa upload video dari perangkat.");
+  let origin;
+  try{
+    const parsed=new URL(env.PLATFORM_API_ORIGIN);
+    if(parsed.protocol!=="https:"||parsed.username||parsed.password)throw new Error("origin tidak aman");
+    origin=parsed.origin;
+  }catch{throw new Error("Konfigurasi URL backend harus berupa HTTPS yang valid.");}
+  let response;
+  try{
+    response=await fetch(origin+"/api/music/sample",{
+      method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+env.PLATFORM_API_TOKEN},
+      body:JSON.stringify({url,startSeconds,durationSeconds:12}),
+      signal:AbortSignal.timeout(180000),cache:"no-store"
+    });
+  }catch{throw new Error("Server ekstraksi ARYANZZ tidak dapat dijangkau. Periksa koneksi backend.");}
+  if(!response.ok){
+    const error=await response.json().catch(()=>({}));
+    throw new Error(error.error||"Gagal mengambil cuplikan audio dari video.");
+  }
+  const length=Number(response.headers.get("content-length")||0);
+  if(length>AUDD_MAX_BYTES){if(response.body)response.body.cancel().catch(()=>{});throw new Error("Cuplikan audio melebihi batas 10 MB.");}
+  const bytes=await response.arrayBuffer();
+  if(!bytes.byteLength)throw new Error("Cuplikan audio dari video kosong.");
+  if(bytes.byteLength>AUDD_MAX_BYTES)throw new Error("Cuplikan audio melebihi batas 10 MB.");
+  return new Blob([bytes],{type:"audio/mpeg"});
+}
+async function recognizeMusic(request,env){
+  if(!env.AUDD_API_TOKEN)return json({error:"Music Finder belum aktif. Admin perlu menambahkan secret AUDD_API_TOKEN pada Cloudflare Worker."},503);
+  if(musicRateLimited(request))return json({error:"Batas pencarian sementara tercapai. Coba lagi sekitar satu menit."},429);
+  const contentLength=Number(request.headers.get("content-length")||0);
+  if(contentLength>AUDD_MAX_BYTES+1024*1024)return json({error:"Upload terlalu besar. Maksimum cuplikan audio adalah 10 MB."},413);
+  let audioBlob=null,audioName="aryanzz-audio-sample.webm";
+  const contentType=(request.headers.get("content-type")||"").toLowerCase();
+  if(contentType.includes("application/json")){
+    let body;try{body=await request.json();}catch{return json({error:"Body JSON tidak valid."},400);}
+    const url=String(body?.url||"").trim(),startSeconds=Number(body?.startSeconds??0);
+    if(!url||!Number.isFinite(startSeconds)||startSeconds<0||startSeconds>10800)
+      return json({error:"Tautan video atau posisi cuplikan tidak valid."},400);
+    try{audioBlob=await platformMusicSample(url,startSeconds,env);audioName="aryanzz-video-sample.mp3";}
+    catch(error){return json({error:error?.message||"Gagal mengambil audio dari video."},503);}
+  }else{
+    let incoming;try{incoming=await request.formData();}catch{return json({error:"Form upload tidak valid."},400);}
+    const file=incoming.get("file");
+    if(!file||typeof file.arrayBuffer!=="function")return json({error:"Pilih file audio atau kirim cuplikan audio hasil ekstraksi video."},400);
+    const extension=String(file.name||"").split(".").pop().toLowerCase();
+    const audioExtensions=new Set(["mp3","m4a","aac","wav","ogg","oga","flac","opus"]);
+    if(!String(file.type||"").toLowerCase().startsWith("audio/")&&!audioExtensions.has(extension))
+      return json({error:"File harus berupa audio. Untuk video, gunakan fitur ekstraksi dari browser."},415);
+    if(!file.size)return json({error:"File audio kosong."},400);
+    if(file.size>AUDD_MAX_BYTES)return json({error:"File audio melebihi batas 10 MB. Pilih bagian video/audio yang lebih pendek."},413);
+    audioBlob=file;
+    audioName=String(file.name||"aryanzz-audio-sample.webm").replace(/[^a-zA-Z0-9._-]/g,"_").slice(0,90);
+  }
+  if(!audioBlob||!audioBlob.size)return json({error:"Cuplikan audio tidak tersedia."},400);
+  if(audioBlob.size>AUDD_MAX_BYTES)return json({error:"Cuplikan audio melebihi batas 10 MB."},413);
+  const form=new FormData();
+  form.append("api_token",env.AUDD_API_TOKEN);
+  form.append("file",audioBlob,audioName);
+  form.append("return","apple_music,spotify");
+  form.append("market","id");
+  try{
+    const response=await fetch("https://api.audd.io/",{method:"POST",body:form,signal:AbortSignal.timeout(30000),cache:"no-store"});
+    const data=await response.json().catch(()=>null);
+    if(!response.ok||!data||data.status!=="success"){
+      const detail=data?.error?.error_message||data?.error?.message||data?.error||data?.message;
+      return json({error:String(detail||"Layanan pengenal lagu tidak dapat memproses audio saat ini.")},502);
+    }
+    const result=Array.isArray(data.result)?data.result[0]:data.result;
+    if(!result)return json({ok:true,match:false,message:"Lagu belum ditemukan. Coba bagian video lain yang musiknya terdengar lebih jelas."});
+    return json({ok:true,match:true,provider:"AudD",result:{
+      title:String(result.title||"Unknown title").slice(0,300),
+      artist:String(result.artist||"Unknown artist").slice(0,300),
+      album:String(result.album||"").slice(0,300),
+      release_date:String(result.release_date||"").slice(0,40),
+      label:String(result.label||"").slice(0,200),
+      timecode:String(result.timecode||"").slice(0,40),
+      song_link:typeof result.song_link==="string"?result.song_link:null,
+      apple_music:result.apple_music||null,spotify:result.spotify||null
+    }});
+  }catch(error){
+    return json({error:error?.name==="TimeoutError"?"Pencarian lagu terlalu lama. Coba lagi.":"Tidak dapat menghubungi layanan pengenal lagu."},502);
+  }
+}
+
 export default {async fetch(request,env){
   const url=new URL(request.url);
   if(request.method==="OPTIONS"&&url.pathname.startsWith("/api/"))return new Response(null,{status:204,headers:{"access-control-allow-origin":url.origin,"access-control-allow-methods":"GET,POST,OPTIONS","access-control-allow-headers":"Content-Type"}});
+  if(url.pathname==="/api/music/status"&&request.method==="GET")return musicStatus(env);
+  if(url.pathname==="/api/music/recognize"&&request.method==="POST")return recognizeMusic(request,env);
   if(url.pathname==="/api/platform/status"&&request.method==="GET")return platformStatus(env);
   if(url.pathname==="/api/youtube/status"&&request.method==="GET")return json({ok:true,service:"ARYANZZ YouTube Backend",youtubeDownloader:true,youtubeApiKeyConfigured:!!env.SAVENOW_API_KEY,supportedAudio:[...YOUTUBE_AUDIO_FORMATS],supportedVideo:["360","720","1080","1440","4k"]});
   if(url.pathname==="/api/youtube/info"&&request.method==="GET")return youtubeInfo(request,env);
   if(url.pathname==="/api/youtube/download"&&request.method==="POST")return youtubeStart(request,env);
   if(url.pathname==="/api/youtube/progress"&&request.method==="POST")return youtubeProgress(request,env);
   if(url.pathname==="/api/youtube/file"&&request.method==="GET")return youtubeFile(request,env);
-  if(url.pathname==="/api/health"&&request.method==="GET")return json({ok:true,service:"ARYANZZ",version:"59.5",mode:"cloudflare-worker",directMediaDownload:true,selfHostedDownloader:true,youtubeDownloader:true,youtubeApiKeyConfigured:!!env.SAVENOW_API_KEY,platformExtraction:!!(env.PLATFORM_API_ORIGIN&&env.PLATFORM_API_TOKEN),platformBackend:env.PLATFORM_API_ORIGIN&&env.PLATFORM_API_TOKEN?"configured":"not-configured"});
+  if(url.pathname==="/api/health"&&request.method==="GET")return json({ok:true,service:"ARYANZZ",version:"66.0",mode:"cloudflare-worker",directMediaDownload:true,selfHostedDownloader:true,youtubeDownloader:true,youtubeApiKeyConfigured:!!env.SAVENOW_API_KEY,musicRecognitionConfigured:!!env.AUDD_API_TOKEN,musicVideoRecognitionReady:!!(env.PLATFORM_API_ORIGIN&&env.PLATFORM_API_TOKEN),platformExtraction:!!(env.PLATFORM_API_ORIGIN&&env.PLATFORM_API_TOKEN),platformBackend:env.PLATFORM_API_ORIGIN&&env.PLATFORM_API_TOKEN?"configured":"not-configured"});
   if(url.pathname==="/api/info"&&request.method==="POST"){const proxied=await proxyPlatform(request,env,"/api/info");if(proxied)return proxied;return info(request);}
   if(url.pathname==="/api/download"&&request.method==="POST"){const proxied=await proxyPlatform(request,env,"/api/download");if(proxied)return proxied;return download(request);}
   if(url.pathname.startsWith("/api/"))return json({error:"Endpoint tidak ditemukan."},404);

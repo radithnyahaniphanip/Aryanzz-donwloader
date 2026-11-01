@@ -97,5 +97,31 @@ app.post("/api/download",requirePlatformToken,async(req,res)=>{
     if(!res.headersSent)res.status(400).json({error:e.message});
   }
 });
+
+app.post("/api/music/sample",requirePlatformToken,async(req,res)=>{
+  let output;
+  try{
+    const url=validateUrl(req.body?.url);
+    const start=Number(req.body?.startSeconds??0),duration=12;
+    if(!Number.isFinite(start)||start<0||start>MAX_DURATION-duration)
+      return res.status(400).json({error:"Posisi cuplikan video tidak valid."});
+    const id=randomUUID();output=path.join(TEMP,id+".mp3");
+    const args=["--no-warnings","--no-playlist","--max-filesize",String(MAX_FILE_BYTES),
+      "--download-sections","*"+start+"-"+(start+duration),"--force-keyframes-at-cuts",
+      "-x","--audio-format","mp3","--audio-quality","5","-o",output,url];
+    await run(args,240000);
+    if(!existsSync(output))throw new Error("Cuplikan audio tidak ditemukan. Pastikan video publik dan memiliki suara.");
+    const size=statSync(output).size;
+    if(!size)throw new Error("Cuplikan audio kosong.");
+    if(size>10*1024*1024)throw new Error("Cuplikan audio melebihi batas 10 MB.");
+    res.setHeader("Cache-Control","no-store");
+    res.download(output,"aryanzz-music-sample.mp3",()=>{
+      try{if(output&&existsSync(output))unlinkSync(output);}catch{}
+    });
+  }catch(e){
+    try{if(output&&existsSync(output))unlinkSync(output);}catch{}
+    if(!res.headersSent)res.status(400).json({error:e.message||"Gagal mengekstrak cuplikan audio."});
+  }
+});
 app.use(express.static(path.join(process.cwd(),"public")));
 app.listen(PORT,()=>console.log("ARYANZZ listening on "+PORT));
