@@ -21,11 +21,11 @@
   }
   function goto(id){
     const panelId=id==="home"||!id?"":id;
-    document.body.dataset.view=panelId?"tool":"home";
+    document.body.dataset.view=panelId==="owner"?"owner":panelId?"tool":"home";
     document.querySelectorAll("#toolsArea .panel").forEach(p=>p.classList.toggle("active",!!panelId&&p.id===panelId));
     document.querySelectorAll("[data-nav]").forEach(b=>{
       const target=b.dataset.nav;
-      b.classList.toggle("active",target===(panelId?(panelId==="allTools"?"allTools":["history","profile"].includes(panelId)?panelId:"allTools"):"home"));
+      b.classList.toggle("active",target===(panelId?(panelId==="allTools"?"allTools":["history","profile","owner"].includes(panelId)?panelId:"allTools"):"home"));
     });
     (panelId?$("toolsArea"):$("home"))?.scrollIntoView({behavior:document.body.dataset.motion==="off"?"auto":"smooth",block:"start"});
   }
@@ -75,7 +75,7 @@
       queue:"media",history:"media",
       imageTools:"creative",pdfTools:"creative",qrTools:"creative",
       securityTools:"utility",install:"utility",
-      profile:"account",about:"account",help:"account"
+      profile:"account",owner:"account",about:"account",help:"account"
     };
     const aliases={network:"Internet",media:"Media",creative:"Kreatif",utility:"Utilitas",account:"Akun"};
     const tools=[...grid.querySelectorAll("[data-panel]")];
@@ -190,6 +190,17 @@
     button.onclick=async()=>{
       const raw=input.value.trim();out.hidden=false;out.replaceChildren();if(!raw){out.append(node("p","v15-note","Masukkan link media terlebih dahulu."));return}
       let url;try{url=safeURL(raw).href}catch(e){out.append(node("p","v15-note",e.message));return}
+      const host=url.hostname.toLowerCase();
+      const isYouTube=host==="youtu.be"||host==="www.youtu.be"||host==="youtube.com"||host.endsWith(".youtube.com")||host==="youtube-nocookie.com"||host.endsWith(".youtube-nocookie.com");
+      const isTikTok=host==="tiktok.com"||host.endsWith(".tiktok.com");
+      if(isYouTube){
+        if(typeof window.showYouTubeDownloader==="function"){window.showYouTubeDownloader(url);return;}
+        out.textContent="Panel YouTube belum termuat. Muat ulang halaman dan coba lagi.";return;
+      }
+      if(isTikTok){
+        if(typeof window.showPlatformGuide==="function"){window.showPlatformGuide(url,"tiktok");return;}
+        out.textContent="Gunakan opsi Simpan Video yang disediakan TikTok oleh kreator.";return;
+      }
       button.disabled=true;out.append(node("p","v15-note","Memeriksa link…"));
       try{const data=await apiInfo(url);showMedia(url,data)}
       catch(e){out.replaceChildren();const box=node("div","v15-box");box.append(node("b","","Tidak dapat memproses link"),node("p","v15-note",e.message));
