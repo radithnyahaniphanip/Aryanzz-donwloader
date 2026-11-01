@@ -1,48 +1,51 @@
-# ARYANZZ V15 — All-in-One Web Tools
+# ARYANZZ V25 — Premium All-in-One
 
-Dark, mobile-first web utility workspace. The production app remains deployed from the **existing GitHub `main` branch** to **Cloudflare Workers**.
+Production website: https://aryanzz-donwloader.radithnyahaniphanip.workers.dev/
 
-**Production URL:** https://aryanzz-donwloader.radithnyahaniphanip.workers.dev/
+ARYANZZ is a dark, mobile-first media downloader and browser utility workspace. The existing GitHub `main` branch deploys to Cloudflare Workers with static assets.
 
-## What is actually implemented (V7–V15)
+## V16–V25 release scope
 
-| Milestone | Shipped capability |
+| Version | Improvements |
 | --- | --- |
-| V7 | Four selectable accent themes with persistent browser settings |
-| V8 | Searchable tool hub and category filters |
-| V9 | Downloader UX refresh: file metadata, original-format selection, progress, cancellation, favorites |
-| V10 | Local image studio: PNG/JPEG/WebP conversion, resize, original-dimension option |
-| V11 | QR input character counter and improved tool organization (QR generation still depends on its CDN library) |
-| V12 | Live text statistics and JSON format/minify tools |
-| V13 | Searchable local library, history/favorites counters and safe source links |
-| V14 | Motion toggle, share website, local profile preferences |
-| V15 | Mobile navigation, keyboard shortcuts, PWA shell caching, accessibility and responsive polish |
+| V16 | Profile studio refresh: avatar, banner, editable bio and member overview |
+| V17 | Personal background presets: Aurora, Ocean, Nebula and Midnight |
+| V18 | Membership catalog with Basic, Pro and Elite tiers |
+| V19 | Local profile dashboard: history, favorites and member-since summary |
+| V20 | Profile image processing: resize/compress avatar, banner and background in browser |
+| V21 | Backup/restore extended to include profile design, selected plan and theme |
+| V22 | Motion design: animated ambient background, cover shine and reveal effects |
+| V23 | Membership comparison, benefit summaries and local plan selection |
+| V24 | Responsive layouts, keyboard/focus states and reduced-motion support |
+| V25 | PWA cache refresh, version metadata and production health endpoint |
 
-Additional existing V2–V6 functions are retained: direct-media file downloading, queued downloads, favorites, history, local profile/photos, backup/restore, browser-local image compression, PDF print workflow, QR, text tools, password generator, internet speed estimate, URL checker, and experimental camera lab.
+## Membership catalog
 
-### Real downloader scope
+- **Basic — Rp36.000**: core tools, direct media downloader, speed test, local history/favorites, profile and local backup.
+- **Pro — Rp88.000**: Basic benefits plus broader personalization, banner/background options, visual presets and early access to new tools.
+- **Elite — Rp479.000**: Pro benefits plus Elite identity, exclusive visual presets and selected beta access.
 
-The Cloudflare Worker handles publicly accessible **direct-file links** ending in supported extensions: MP4, WebM, MOV, M4V, MP3, M4A, AAC, WAV, OGG, OGA, and FLAC. It checks remote metadata where permitted, streams files up to a configured 100 MB cap, and may fail when the source host denies access or redirects incompatibly. The frontend does **not** claim to transcode direct files.
+**Payment status:** these prices and benefits are currently presented as a membership catalog. No payment gateway, subscription activation, recurring billing, or server-side entitlement enforcement is connected. Selecting a plan only stores the user's choice locally and does not charge them. Do not treat a selected plan as an active subscription.
 
-A YouTube/TikTok/Instagram/Facebook/Pinterest *page link* is **not** equivalent to a direct media file. Platform-page extraction depends on the separate **Node.js + yt-dlp + FFmpeg** backend in `server/index.js`, deployed elsewhere with `PLATFORM_API_ORIGIN` and `PLATFORM_API_TOKEN` configured as Cloudflare Worker secrets. **That backend is not presently deployed**. The Worker health endpoint reports whether the environment is configured, but configuration alone does not prove the extraction service works. No free 24/7 backend is promised.
+## Profile and data
 
-Only download media you own or are authorized to download. Some services prohibit extraction and DRM-protected media are unsupported.
+Profile text, images, selected visual preset, membership selection, history and favorites are stored in the current browser's local storage. Browser data is not automatically synchronized between devices. The backup file can be exported and restored manually.
 
-### Privacy and persistence
+Profile images are resized/compressed in the browser before saving. Large source images are limited to 15 MB.
 
-User profile/photo, theme preferences, downloaded-link history, favorites, and app backups are browser-local. They are **not cross-device accounts**. Browser storage may be cleared. Backup/restore exports JSON for manual transfer. Image conversion, text formatting, and password generation are browser-local. QR generation loads a script from cdnjs when first requested, so first-time offline QR generation is not assured.
+## Downloader status
 
-### Deployment
+- Direct media-file URLs in supported formats are handled by the Cloudflare Worker.
+- Platform-page extraction (TikTok, Instagram, YouTube, Facebook and similar) still requires a separately hosted extraction backend configured with `PLATFORM_API_ORIGIN` and `PLATFORM_API_TOKEN`.
+- The site does not bypass login walls, private content, DRM, or platform access restrictions. Only download content you own or are authorized to save.
 
-The repo already includes `.github/workflows/deploy-cloudflare.yml` and `wrangler.toml`. GitHub Actions deploys pushes on `main` using repository secrets `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN`. **Do not commit secrets**. The server remains unchanged on Cloudflare Worker-only hosting.
+## Development
 
-```sh
-npm install -g wrangler
-wrangler deploy
-```
+- Frontend: `public/index.html`, `public/v15.css`, `public/v15.js`, `public/v25.css`, `public/v25.js`
+- Profile/local utility integration: `public/advanced.js`
+- Cloudflare Worker: `src/index.js`
+- PWA cache: `public/sw.js`
+- Deploy config: `wrangler.toml`
+- Smoke tests: `tests/smoke.mjs`
 
-Local UI can also be served from `public/` with a static file server, but /api/ endpoints require the Cloudflare Worker runtime. The optional Node extraction backend uses `npm start` and Dockerfile dependencies.
-
-## Verification
-
-GitHub Actions runs `node --check` for all JavaScript and `node tests/smoke.mjs` for static UI checks and Worker API safety checks. A successful CI/deployment result confirms code publication; individual third-party media downloads still depend on the source and should be tested separately.
+The deployment workflow uses the existing GitHub repository secrets `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN`.
