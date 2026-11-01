@@ -177,3 +177,6 @@
 .editor-overlay{z-index:2}
 .editor-preview-frame #editorPreview{position:relative;z-index:0}
 .editor-preview-frame #editorEmpty{z-index:4}
+
+/* Text animation timing is driven by the active clip/SRT playhead. */
+.editor-overlay[data-animation]{animation:none!important}
