@@ -17,6 +17,15 @@
 .v677-panel[data-feature="colorStudio"]{--v677-accent:#ed8cff;--v677-accent-2:#5be1d4}
 .v677-panel[data-feature="profile"]{--v677-accent:#8d9aff;--v677-accent-2:#4bd3e8}
 .v677-panel[data-feature="musicFinder"]{--v677-accent:#f16db8;--v677-accent-2:#9c7aff}
+.v677-panel[data-feature="gradientStudio"]{--v677-accent:#7e83ff;--v677-accent-2:#ee79ca}
+.v677-panel[data-feature="fileHash"]{--v677-accent:#55d5c4;--v677-accent-2:#4f91ff}
+#speed .speed-heading{padding:17px 18px;border:1px solid color-mix(in srgb,#ffb43b,transparent 76%);border-radius:18px;background:linear-gradient(120deg,rgba(255,180,59,.11),rgba(255,100,124,.045),rgba(9,17,31,.55))}
+#editor .editor-pro-head{position:relative;overflow:hidden;padding:20px;border:1px solid color-mix(in srgb,#a77cff,transparent 75%);border-radius:20px;background:linear-gradient(115deg,rgba(167,124,255,.13),rgba(255,120,188,.055) 62%,rgba(9,17,31,.58))}
+#editor .editor-pro-head::after{content:"✦";position:absolute;right:22px;top:16px;width:48px;height:48px;display:grid;place-items:center;border-radius:16px;background:linear-gradient(145deg,#a77cff,#ff78bc);color:#fff;font-size:24px;box-shadow:0 12px 28px rgba(167,124,255,.24)}
+#profile .v25-profile-cover{border:1px solid rgba(141,154,255,.28);box-shadow:0 18px 42px rgba(77,100,190,.13)}
+#owner .owner-topbar{border-bottom:1px solid rgba(244,200,117,.2)}
+#gradientStudio .v680-tool-card,#fileHash .v680-hash-drop{border-color:color-mix(in srgb,var(--v677-accent),transparent 78%);background:linear-gradient(145deg,color-mix(in srgb,var(--v677-accent),#111b30 92%),rgba(8,15,28,.72))}
+
 .v677-panel[data-feature="editor"]{--v677-accent:#a77cff;--v677-accent-2:#ff78bc}
 .v677-panel[data-feature="about"]{--v677-accent:#8c91ff;--v677-accent-2:#52d2c9}
 .v677-panel[data-feature="help"]{--v677-accent:#6dbbff;--v677-accent-2:#70dfb5}
