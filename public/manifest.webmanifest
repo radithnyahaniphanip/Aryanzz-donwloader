@@ -1,10 +1,10 @@
 {
-  "name": "ARYANZZ V67.2 — Downloader & Shazam Music Lab",
-  "short_name": "ARYANZZ V67.2",
+  "name": "ARYANZZ V67.4 — All-in-One Creative Space",
+  "short_name": "ARYANZZ V67.4",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "background_color": "#070b16",
   "theme_color": "#070b16",
-  "description": "Downloader powered by yt-dlp and FFmpeg with Shazam music recognition fallback."
+  "description": "A clean, mobile-first media downloader and creative tools workspace."
 }
