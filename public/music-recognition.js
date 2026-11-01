@@ -92,7 +92,7 @@
     a.className="music-result-link";a.textContent=label;container.append(a);
   }
   function getArtwork(result){
-    let raw=result.apple_music&&result.apple_music.artwork&&result.apple_music.artwork.url;
+    let raw=result.artwork_url||(result.apple_music&&result.apple_music.artwork&&result.apple_music.artwork.url);
     if(typeof raw==="string")raw=raw.replace("{w}","320").replace("{h}","320");
     if(!raw&&result.spotify&&result.spotify.album&&Array.isArray(result.spotify.album.images))
       raw=result.spotify.album.images[0]&&result.spotify.album.images[0].url;
@@ -126,7 +126,7 @@
     if(coverUrl){const img=document.createElement("img");img.className="music-cover";img.src=coverUrl;img.alt="Cover album";img.loading="lazy";card.append(img);}
     else{const cover=document.createElement("div");cover.className="music-cover music-cover-fallback";cover.textContent="♫";card.append(cover);}
     const details=document.createElement("div");details.className="music-match-details";
-    const badge=document.createElement("span");badge.className="music-match-badge";badge.textContent="LAGU DITEMUKAN";
+    const badge=document.createElement("span");badge.className="music-match-badge";badge.textContent="LAGU DITEMUKAN"+(result.provider?" · "+result.provider:"");
     const title=document.createElement("h3");title.textContent=result.title||"Unknown title";
     const artist=document.createElement("p");artist.className="music-artist";artist.textContent=result.artist||"Unknown artist";
     details.append(badge,title,artist);
@@ -168,7 +168,7 @@
     if(!tracks.length){setMessage(data.message||"Belum ada lagu yang cocok pada bagian video yang dipindai.",false);return;}
     const heading=document.createElement("div");heading.className="music-scan-summary";
     const title=document.createElement("b");title.textContent=tracks.length+" hasil lagu ditemukan";
-    const meta=document.createElement("small");meta.textContent="AudD Enterprise · "+(data.scannedChunks||0)+" segmen dipindai";
+    const meta=document.createElement("small");meta.textContent=(data.provider||"AudD Enterprise")+" · "+(data.scannedChunks||0)+" segmen dipindai";
     heading.append(title,meta);box.append(heading);
     tracks.forEach((track,index)=>{
       const row=document.createElement("article");row.className="music-track-row";
