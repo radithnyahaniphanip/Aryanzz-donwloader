@@ -681,40 +681,110 @@
     }
     ctx.restore();
   }
-    function setupAudioGraph() {
-    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-    if (!AudioContextClass) return null;
-    if (!audioContext) audioContext = new AudioContextClass();
-    if (!audioDestination) audioDestination = audioContext.createMediaStreamDestination();
-    if (!videoSourceNode) {
-      videoSourceNode = audioContext.createMediaElementSource(video);
-      videoPreviewGain = audioContext.createGain();
-      videoRecordGain = audioContext.createGain();
+    function renderAudioTracks() {
+    if(!audioTrackList)return;
+    audioTrackList.replaceChildren();
+    $("editorAudioCount").textContent=audioTracks.length+"/3";
+    if(!audioTracks.length){
+      const emptyTrack=document.createElement("div");
+      emptyTrack.className="editor-timeline-empty";
+      emptyTrack.textContent="Belum ada audio. Tambahkan musik, narasi, atau efek suara.";
+      audioTrackList.append(emptyTrack);
+      return;
+    }
+    audioTracks.forEach((track,index)=>{
+      const row=document.createElement("div");
+      row.className="editor-audio-track";
+      const icon=document.createElement("span");
+      icon.className="editor-audio-track-icon";
+      icon.textContent=index===0?"♫":"♪";
+      const info=document.createElement("span");
+      info.className="editor-audio-track-info";
+      const name=document.createElement("b");
+      name.textContent=track.file.name;
+      const detail=document.createElement("small");
+      detail.textContent="TRACK "+(index+1)+" · "+formatBytes(track.file.size);
+      info.append(name,detail);
+      const volume=document.createElement("label");
+      volume.className="editor-audio-track-volume";
+      volume.textContent="Volume ";
+      const value=document.createElement("output");
+      value.textContent=Math.round(track.volume*100)+"%";
+      const slider=document.createElement("input");
+      slider.type="range";slider.min="0";slider.max="100";slider.value=String(Math.round(track.volume*100));
+      slider.disabled=exporting;
+      slider.addEventListener("input",()=>{
+        track.volume=Number(slider.value)/100;
+        value.textContent=slider.value+"%";
+        updateAudioGraphGains();
+      });
+      volume.append(value,slider);
+      const remove=document.createElement("button");
+      remove.type="button";remove.className="editor-audio-track-remove";
+      remove.textContent="×";remove.title="Hapus "+track.file.name;remove.disabled=exporting;
+      remove.addEventListener("click",()=>removeMusic(track.id));
+      row.append(icon,info,volume,remove);
+      audioTrackList.append(row);
+    });
+  }
+  function setupAudioGraph() {
+    const AudioContextClass=window.AudioContext||window.webkitAudioContext;
+    if(!AudioContextClass)return null;
+    if(!audioContext)audioContext=new AudioContextClass();
+    if(!audioDestination)audioDestination=audioContext.createMediaStreamDestination();
+    if(!videoSourceNode){
+      videoSourceNode=audioContext.createMediaElementSource(video);
+      videoPreviewGain=audioContext.createGain();
+      videoRecordGain=audioContext.createGain();
       videoSourceNode.connect(videoPreviewGain);
       videoPreviewGain.connect(audioContext.destination);
       videoSourceNode.connect(videoRecordGain);
       videoRecordGain.connect(audioDestination);
     }
-    if (musicFile && !musicSourceNode) {
-      musicSourceNode = audioContext.createMediaElementSource(musicAudio);
-      musicPreviewGain = audioContext.createGain();
-      musicRecordGain = audioContext.createGain();
-      musicSourceNode.connect(musicPreviewGain);
-      musicPreviewGain.connect(audioContext.destination);
-      musicSourceNode.connect(musicRecordGain);
-      musicRecordGain.connect(audioDestination);
-    }
+    audioTracks.forEach(track=>{
+      if(track.sourceNode)return;
+      track.sourceNode=audioContext.createMediaElementSource(track.audio);
+      track.previewGain=audioContext.createGain();
+      track.recordGain=audioContext.createGain();
+      track.sourceNode.connect(track.previewGain);
+      track.previewGain.connect(audioContext.destination);
+      track.sourceNode.connect(track.recordGain);
+      track.recordGain.connect(audioDestination);
+    });
+    updateAudioGraphGains();
     return audioDestination;
   }
   function setAudioExportMode(active) {
-    if (!audioContext) return;
-    const muted = $("editorMute").checked;
-    if (videoPreviewGain) videoPreviewGain.gain.setTargetAtTime(active?0:1,audioContext.currentTime,0.02);
-    if (videoRecordGain) videoRecordGain.gain.setTargetAtTime(active&&!muted?1:0,audioContext.currentTime,0.02);
-    if (musicPreviewGain) musicPreviewGain.gain.setTargetAtTime(0,audioContext.currentTime,0.02);
-    if (musicRecordGain) musicRecordGain.gain.setTargetAtTime(active&&musicFile?Number($("editorMusicVolume").value)/100:0,audioContext.currentTime,0.02);
+    if(!audioContext)return;
+    const muted=$("editorMute").checked;
+    if(videoPreviewGain)videoPreviewGain.gain.setTargetAtTime(active?0:1,audioContext.currentTime,.02);
+    if(videoRecordGain)videoRecordGain.gain.setTargetAtTime(active&&!muted?1:0,audioContext.currentTime,.02);
+    audioTracks.forEach(track=>{
+      if(track.previewGain)track.previewGain.gain.setTargetAtTime(active?0:track.volume,audioContext.currentTime,.02);
+      if(track.recordGain)track.recordGain.gain.setTargetAtTime(active?track.volume:0,audioContext.currentTime,.02);
+    });
   }
-  function setExportProgress(done,total,current,clip) {
+  function syncAudioPreview(force) {
+    if(exporting)return;
+    const clip=selectedClip();
+    if(!clip||video.paused){
+      audioTracks.forEach(track=>track.audio.pause());
+      return;
+    }
+    const projectTime=timelineOffset(clip)+Math.max(0,video.currentTime-clip.start);
+    const now=Date.now();
+    if(!force&&now-lastAudioSync<800)return;
+    lastAudioSync=now;
+    audioTracks.forEach(track=>{
+      const duration=Number(track.audio.duration);
+      if(Number.isFinite(duration)&&duration>0){
+        const target=projectTime%duration;
+        if(Math.abs(track.audio.currentTime-target)>.45)track.audio.currentTime=target;
+      }
+      track.audio.play().catch(()=>{});
+    });
+  }
+    function setExportProgress(done,total,current,clip) {
     const speed = Number($("editorSpeed").value)||1;
     const clipDone = Math.max(0,current-clip.start)/speed;
     const pct = Math.min(99,Math.max(0,((done+clipDone)/Math.max(0.1,total))*100));
