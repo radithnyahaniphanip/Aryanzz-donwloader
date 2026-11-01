@@ -522,7 +522,6 @@ async function recognizeMusic(request,env){
 
 
 async function recognizeMusicVideo(request,env){
-  if(musicRateLimited(request))return json({error:"Batas pemindaian sementara tercapai. Coba lagi sekitar satu menit."},429);
   const contentLength=Number(request.headers.get("content-length")||0);
   const maxBytes=50*1024*1024;
   if(contentLength>maxBytes+1024*1024)return json({error:"File video/audio melebihi batas 50 MB untuk pemindaian DJ."},413);
@@ -562,6 +561,7 @@ async function recognizeMusicVideo(request,env){
   form.append("skip",String(skip));
   form.append("every",String(every));
   form.append("limit",String(limit));
+  if(musicRateLimited(request))return json({error:"Batas pemindaian sementara tercapai. Coba lagi sekitar satu menit."},429);
   if(!env.AUDD_API_TOKEN)return shazamScan(fallbackSource,skip,every,limit,env,"AudD Enterprise tidak dikonfigurasi");
   let response;
   try{
