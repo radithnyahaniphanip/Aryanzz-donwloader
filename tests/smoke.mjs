@@ -20,9 +20,9 @@ const downloaderCss=file("../public/downloader.css");
 const manifest=JSON.parse(file("../public/manifest.webmanifest"));
 
 const checks=[
-  ["V67.0 page title",html.includes("ARYANZZ V67.0 — Music Recognition & Creative Studio")],
+  ["V67.1 page title",html.includes("ARYANZZ V67.1 — Music Recognition & Creative Studio")],
   ["V59.5 versioned assets",html.includes("/v15.js?v=59.5")&&html.includes("/owner.js?v=59.5")&&html.includes("/downloader.js?v=59.5")&&html.includes("/downloader.css?v=59.5")&&html.includes("/v59.css?v=59.5")&&html.includes("/editor-pro.css?v=65.0")&&html.includes("/editor.js?v=65.0")],
-  ["service worker cache and V59.5 assets",html.includes("/sw.js?v=65.0")&&sw.includes("aryanzz-v67-0")&&sw.includes("/editor.js?v=65.0")&&sw.includes("/editor-pro.css?v=65.0")&&sw.includes("/v59.css?v=59.5")],
+  ["service worker cache and V59.5 assets",html.includes("/sw.js?v=65.0")&&sw.includes("aryanzz-v67-1")&&sw.includes("/editor.js?v=65.0")&&sw.includes("/editor-pro.css?v=65.0")&&sw.includes("/v59.css?v=59.5")],
   ["downloader input, result and backend status",html.includes('id="analyze"')&&html.includes('id="downloadResult"')&&html.includes('id="backendStatus"')],
   ["unified self-hosted downloader API",downloader.includes('postJson("/api/info"')&&downloader.includes('fetch("/api/download"')&&downloader.includes("PLATFORM_NAMES")&&!downloader.toLowerCase().includes("savenow")],
   ["single capture-phase universal URL handler",downloader.includes('button.addEventListener("click"')&&downloader.includes("event.stopImmediatePropagation()")&&downloader.includes("}, true);")],
@@ -48,20 +48,21 @@ const checks=[
   ["V65.0 chroma key live preview and export",html.includes('id="editorPreviewCanvas"')&&html.includes('id="editorChromaEnabled"')&&editor.includes("function applyChromaKey")&&editor.includes("drawFrame(previewCtx")],
   ["V65.0 animated captions",html.includes('id="editorTextAnimation"')&&editor.includes("function textAnimationState")&&editor.includes("overlay.dataset.animation")],
   ["Music Finder panel and tool card",html.includes('id="musicFinder"')&&html.includes('data-panel="musicFinder"')],
-  ["Music Finder assets and PWA cache",html.includes("/music-recognition.js?v=67.0")&&html.includes("/music-recognition.css?v=67.0")&&sw.includes("/music-recognition.js?v=67.0")&&sw.includes("/music-recognition.css?v=67.0")],
+  ["Music Finder assets and PWA cache",html.includes("/music-recognition.js?v=67.1")&&html.includes("/music-recognition.css?v=67.1")&&sw.includes("/music-recognition.js?v=67.1")&&sw.includes("/music-recognition.css?v=67.1")],
   ["DJ mix scan uses AudD Enterprise endpoint",html.includes('id="musicFileScanButton"')&&html.includes('id="musicScanSkip"')&&musicJs.includes('/api/music/scan-video')&&workerSource.includes("enterprise.audd.io")],
   ["Music Finder supports file, video URL and microphone",musicJs.includes("captureMediaSample")&&musicJs.includes("getUserMedia")&&musicJs.includes("/api/music/recognize")&&musicJs.includes("musicVideoUrl")],
+  ["AudD errors expose provider code and actionable quota guidance",workerSource.includes("function auddFailure")&&workerSource.includes("providerErrorCode")&&workerSource.includes("kode 901")&&workerSource.includes("kode 902")],
   ["Music Finder responsive styling",musicCss.includes(".music-grid")&&musicCss.includes("@media(max-width:620px)")],
   ["Video URL DJ scanning goes directly through AudD Enterprise",workerSource.includes('fetch("https://enterprise.audd.io/"')&&!musicJs.includes("identifyVideoUrl(url,startSeconds)")],
   ["tool hub remains available",html.includes('id="allTools"')],
-  ["PWA manifest version",manifest.name.includes("V67.0")]
+  ["PWA manifest version",manifest.name.includes("V67.1")]
 ];
 for(const [name,ok] of checks){assert.ok(ok,name+" failed");console.log("✔ "+name)}
 
 const healthResponse=await worker.fetch(new Request("https://aryanzz.example/api/health"),{});
 assert.equal(healthResponse.status,200);
 const health=await healthResponse.json();
-assert.equal(health.version,"67.0");
+assert.equal(health.version,"67.1");
 assert.equal(health.selfHostedDownloader,true);
 assert.equal(health.youtubeDownloader,true);
 assert.equal(health.musicRecognitionConfigured,false);
@@ -158,6 +159,25 @@ try{
   console.log("✔ Music recognition handles an audio sample with no catalogue match");
 }finally{globalThis.fetch=originalMusicFetch;}
 
+const providerErrorFetch=globalThis.fetch;
+try{
+  globalThis.fetch=async()=>new Response(JSON.stringify({status:"error",error:{error_code:901,error_message:"authorization failed: the limit was reached."}}),{status:200,headers:{"content-type":"application/json"}});
+  const deniedForm=new FormData();deniedForm.append("file",new Blob(["sample"],{type:"audio/webm"}),"sample.webm");
+  const denied=await worker.fetch(new Request("https://aryanzz.example/api/music/recognize",{method:"POST",body:deniedForm}),{AUDD_API_TOKEN:"test-audd-token"});
+  assert.equal(denied.status,502);
+  const deniedData=await denied.json();
+  assert.equal(deniedData.providerErrorCode,901);
+  assert.equal(deniedData.retryable,false);
+  assert.match(deniedData.error,/API token tidak diterima/);
+  globalThis.fetch=async()=>new Response(JSON.stringify({status:"error",error:{error_code:902,error_message:"quota exceeded"}}),{status:200,headers:{"content-type":"application/json"}});
+  const quotaForm=new FormData();quotaForm.append("file",new Blob(["sample"],{type:"audio/webm"}),"sample.webm");
+  const quota=await worker.fetch(new Request("https://aryanzz.example/api/music/recognize",{method:"POST",body:quotaForm}),{AUDD_API_TOKEN:"test-audd-token"});
+  assert.equal(quota.status,502);
+  const quotaData=await quota.json();
+  assert.equal(quotaData.providerErrorCode,902);
+  assert.match(quotaData.error,/Kuota akun AudD sudah habis/);
+  console.log("✔ AudD authentication and quota failures are identified without exposing the token");
+}finally{globalThis.fetch=providerErrorFetch;}
 
 const originalEnterpriseFetch=globalThis.fetch;
 try{

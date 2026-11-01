@@ -1,10 +1,10 @@
 {
-  "name": "ARYANZZ V67.0 — Music Recognition & DJ Mix Scanner",
-  "short_name": "ARYANZZ V67",
+  "name": "ARYANZZ V67.1 — Music Recognition & DJ Mix Scanner",
+  "short_name": "ARYANZZ V67.1",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "background_color": "#070b16",
   "theme_color": "#070b16",
-  "description": "Downloader, creative studio, Shazam-style music recognition and DJ mix scanning."
+  "description": "Downloader, creative studio, Shazam-style recognition and DJ mix scanning with clearer AudD diagnostics."
 }

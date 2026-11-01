@@ -1,6 +1,31 @@
 const MEDIA_EXT = new Set(["mp4","webm","mov","m4v","mp3","m4a","aac","wav","ogg","oga","flac"]);
 const MAX_BYTES = 100 * 1024 * 1024;
 function json(data,status=200){return new Response(JSON.stringify(data),{status,headers:{"content-type":"application/json; charset=utf-8","cache-control":"no-store"}})}
+
+function auddFailure(data,mode="standard"){
+  const err=data?.error;
+  const codeValue=err&&typeof err==="object"?(err.error_code??err.code):(data?.error_code??data?.code);
+  const code=Number.isFinite(Number(codeValue))?Number(codeValue):null;
+  const raw=String((err&&typeof err==="object"?(err.error_message||err.message):(typeof err==="string"?err:""))||data?.message||"").trim();
+  let message=raw||"AudD tidak dapat memproses permintaan.";
+  if(code===901){
+    message="AudD menolak permintaan (kode 901): API token tidak diterima atau batas gratis tanpa token sudah tercapai. Worker ARYANZZ memang memiliki Secret, tetapi AudD belum mengenali nilai token yang dikirim. Pastikan nilainya adalah API token dari dashboard.audd.io, bukan token Cloudflare/GitHub. Jangan mengulang permintaan sebelum token diperiksa.";
+  }else if(code===902){
+    message="Kuota akun AudD sudah habis (kode 902). Ini batas pemakaian akun AudD, bukan batas ARYANZZ. Periksa Usage/Billing di dashboard AudD atau tunggu periode kuota berikutnya.";
+  }else if(code===900){
+    message="API token AudD tidak valid (kode 900). Periksa token yang tersimpan pada Secret AUDD_API_TOKEN di Worker.";
+  }else if(code===903){
+    message="API token AudD dinonaktifkan (kode 903). Buat atau aktifkan token yang valid dari dashboard AudD.";
+  }else if(code===904||code===905){
+    message=mode==="enterprise"
+      ?"Akun/token AudD belum diizinkan memakai endpoint Enterprise (kode "+code+"). Periksa paket dan akses Enterprise pada dashboard AudD."
+      :"Akun/token AudD tidak diizinkan memakai metode ini (kode "+code+"). Periksa akses API pada dashboard AudD.";
+  }else if(/authorization failed|limit was reached|quota exceeded/i.test(raw)){
+    message="AudD mengembalikan kesalahan otorisasi atau batas penggunaan. Secret sudah terpasang di Worker, tetapi respons ini belum memastikan apakah token tidak diterima atau kuota akun habis. Periksa API token dan Usage/Billing pada dashboard AudD sebelum mencoba lagi.";
+  }
+  return {error:message,provider:"AudD",providerErrorCode:code,retryable:false};
+}
+
 function parseMediaUrl(raw){
   let u;try{u=new URL(raw)}catch{throw new Error("URL tidak valid.")}
   if(!["http:","https:"].includes(u.protocol))throw new Error("Hanya URL HTTP/HTTPS yang diizinkan.");
@@ -379,8 +404,7 @@ async function recognizeMusic(request,env){
     const response=await fetch("https://api.audd.io/",{method:"POST",body:form,signal:AbortSignal.timeout(30000),cache:"no-store"});
     const data=await response.json().catch(()=>null);
     if(!response.ok||!data||data.status!=="success"){
-      const detail=data?.error?.error_message||data?.error?.message||data?.error||data?.message;
-      return json({error:String(detail||"Layanan pengenal lagu tidak dapat memproses audio saat ini.")},502);
+      return json(auddFailure(data,"standard"),502);
     }
     const result=Array.isArray(data.result)?data.result[0]:data.result;
     if(!result)return json({ok:true,match:false,message:"Lagu belum ditemukan. Coba bagian video lain yang musiknya terdengar lebih jelas."});
@@ -448,8 +472,7 @@ async function recognizeMusicVideo(request,env){
   }
   const data=await response.json().catch(()=>null);
   if(!response.ok||!data||data.status!=="success"){
-    const detail=data?.error?.error_message||data?.error?.message||data?.error||data?.message;
-    return json({error:String(detail||"AudD tidak dapat memindai video/audio tersebut.")},502);
+    return json(auddFailure(data,"enterprise"),502);
   }
   const groups=Array.isArray(data.result)?data.result:[];
   const tracks=[];
@@ -495,7 +518,7 @@ export default {async fetch(request,env){
   if(url.pathname==="/api/youtube/download"&&request.method==="POST")return youtubeStart(request,env);
   if(url.pathname==="/api/youtube/progress"&&request.method==="POST")return youtubeProgress(request,env);
   if(url.pathname==="/api/youtube/file"&&request.method==="GET")return youtubeFile(request,env);
-  if(url.pathname==="/api/health"&&request.method==="GET")return json({ok:true,service:"ARYANZZ",version:"67.0",mode:"cloudflare-worker",directMediaDownload:true,selfHostedDownloader:true,youtubeDownloader:true,youtubeApiKeyConfigured:!!env.SAVENOW_API_KEY,musicRecognitionConfigured:!!env.AUDD_API_TOKEN,musicVideoRecognitionReady:!!(env.PLATFORM_API_ORIGIN&&env.PLATFORM_API_TOKEN),platformExtraction:!!(env.PLATFORM_API_ORIGIN&&env.PLATFORM_API_TOKEN),platformBackend:env.PLATFORM_API_ORIGIN&&env.PLATFORM_API_TOKEN?"configured":"not-configured"});
+  if(url.pathname==="/api/health"&&request.method==="GET")return json({ok:true,service:"ARYANZZ",version:"67.1",mode:"cloudflare-worker",directMediaDownload:true,selfHostedDownloader:true,youtubeDownloader:true,youtubeApiKeyConfigured:!!env.SAVENOW_API_KEY,musicRecognitionConfigured:!!env.AUDD_API_TOKEN,musicVideoRecognitionReady:!!(env.PLATFORM_API_ORIGIN&&env.PLATFORM_API_TOKEN),platformExtraction:!!(env.PLATFORM_API_ORIGIN&&env.PLATFORM_API_TOKEN),platformBackend:env.PLATFORM_API_ORIGIN&&env.PLATFORM_API_TOKEN?"configured":"not-configured"});
   if(url.pathname==="/api/info"&&request.method==="POST"){const proxied=await proxyPlatform(request,env,"/api/info");if(proxied)return proxied;return info(request);}
   if(url.pathname==="/api/download"&&request.method==="POST"){const proxied=await proxyPlatform(request,env,"/api/download");if(proxied)return proxied;return download(request);}
   if(url.pathname.startsWith("/api/"))return json({error:"Endpoint tidak ditemukan."},404);
