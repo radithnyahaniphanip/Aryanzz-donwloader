@@ -1,10 +1,10 @@
 {
-  "name": "ARYANZZ V27.1.1 — All in One Tools",
+  "name": "ARYANZZ V28.0 — All in One Tools",
   "short_name": "ARYANZZ",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "background_color": "#070b16",
   "theme_color": "#070b16",
-  "description": "ARYANZZ V27.1.1: free downloader, personal profile studio, speed test, image converter, and web tools."
+  "description": "ARYANZZ V28.0: free downloader, personal profile studio, speed test, image converter, and web tools."
 }
