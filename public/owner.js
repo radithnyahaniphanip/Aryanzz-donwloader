@@ -4,10 +4,10 @@
   const $ = id => document.getElementById(id);
   const KEY = "aryanzz.owner.links.v28";
   const DEFAULTS = {
-    whatsapp: "",
+    whatsapp: "https://wa.me/6282110767071",
     github: "https://github.com/radithnyahaniphanip",
     telegram: "",
-    tiktok: ""
+    tiktok: "https://www.tiktok.com/@azazeuu?_r=1&_t=ZS-9B2FU0QemSi"
   };
   const safeRead = (key, fallback) => {
     try { return JSON.parse(localStorage.getItem(key) || "null") || fallback; }
@@ -21,7 +21,10 @@
     } catch { return ""; }
   }
   function linksRead() {
-    return { ...DEFAULTS, ...safeRead(KEY, {}) };
+    const stored = safeRead(KEY, {});
+    return Object.fromEntries(Object.keys(DEFAULTS).map(key => [
+      key, validLink(stored[key]) || DEFAULTS[key]
+    ]));
   }
   function renderLinks() {
     const links = linksRead();
@@ -45,7 +48,7 @@
         card.rel = "noopener noreferrer";
         card.classList.remove("is-unset");
         card.setAttribute("aria-disabled", "false");
-        if (action && key !== "github") action.firstChild.textContent = ({whatsapp:"Gabung Saluran ",telegram:"Buka Telegram ",tiktok:"Follow di TikTok "})[key] || "Buka tautan ";
+        if (action) action.firstChild.textContent = ({whatsapp:"Chat WhatsApp ",github:"Kunjungi GitHub ",telegram:"Buka Telegram ",tiktok:"Follow di TikTok "})[key] || "Buka tautan ";
       } else {
         card.removeAttribute("href");
         card.removeAttribute("target");
