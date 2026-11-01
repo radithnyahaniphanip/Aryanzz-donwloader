@@ -1,4 +1,4 @@
-const CACHE="aryanzz-v26-0";
+const CACHE="aryanzz-v27-0";
 const SHELL=["/","/manifest.webmanifest","/advanced.js","/v15.js","/v15.css","/v25.css","/v25.js"];
 self.addEventListener("install",event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(SHELL)).then(()=>self.skipWaiting())));
 self.addEventListener("activate",event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));
