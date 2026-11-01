@@ -15,7 +15,7 @@
     document.querySelectorAll("[data-nav]").forEach(b=>b.classList.toggle("active",b.dataset.nav===id||(!id&&b.dataset.nav==="home")));
     (id?$("toolsArea"):$("home"))?.scrollIntoView({behavior:"smooth",block:"start"});
   }
-  document.querySelectorAll("[data-panel]").forEach(b=>b.addEventListener("click",()=>setPanel(b.dataset.panel)));
+  if(!document.querySelector('script[src*="v15.js"]'))document.querySelectorAll("[data-panel]").forEach(b=>b.addEventListener("click",()=>setPanel(b.dataset.panel)));
   function historyAdd(item){const list=[item,...read(KEY.history).filter(x=>x.url!==item.url)].slice(0,40);write(KEY.history,list);renderSaved();}
   function favoriteToggle(item){let list=read(KEY.favorites);const exists=list.some(x=>x.url===item.url);list=exists?list.filter(x=>x.url!==item.url):[{...item,at:Date.now()},...list].slice(0,40);write(KEY.favorites,list);renderSaved();return !exists;}
   function renderSaved(){
