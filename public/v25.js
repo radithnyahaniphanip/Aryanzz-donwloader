@@ -80,7 +80,7 @@
     try{await navigator.clipboard.writeText(value);toast("Ringkasan paket disalin.");}
     catch{const area=document.createElement("textarea");area.value=value;document.body.append(area);area.select();try{document.execCommand("copy");toast("Ringkasan paket disalin.");}catch{toast("Tidak dapat menyalin otomatis.");}area.remove();}
   }
-  function selectPlan(id){
+  function selectPlan(id,quiet=false){
     const p=plans[id];if(!p)return;
     localStorage.setItem(PLAN_KEY,id);
     document.querySelectorAll("[data-plan-card]").forEach(card=>card.classList.toggle("is-selected",card.dataset.planCard===id));
@@ -93,11 +93,11 @@
       status.append(title,detail,copy);
     }
     const badge=document.querySelector(".v25-member-badge");if(badge)badge.textContent="✦ "+p.name.toUpperCase()+" · DIPILIH";
-    toast(p.name+" dipilih. Belum ada pembayaran yang dilakukan.");
+    if(!quiet)toast(p.name+" dipilih. Belum ada pembayaran yang dilakukan.");
   }
   function setupPlans(){
     document.querySelectorAll("[data-select-plan]").forEach(b=>b.addEventListener("click",()=>selectPlan(b.dataset.selectPlan)));
-    const saved=localStorage.getItem(PLAN_KEY);if(saved&&plans[saved])selectPlan(saved);
+    const saved=localStorage.getItem(PLAN_KEY);if(saved&&plans[saved])selectPlan(saved,true);
   }
   function setupReveal(){
     const targets=document.querySelectorAll(".v25-profile-card,.v25-plan-card,.v25-plan-compare,.v25-profile-stats>div");
