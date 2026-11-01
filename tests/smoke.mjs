@@ -17,7 +17,7 @@ const checks=[
   ["V29 assets and downloader stylesheet",html.includes("/v15.js?v=29.0")&&html.includes("/owner.js?v=29.0")&&html.includes("/downloader.js?v=29.0")&&html.includes("/downloader.css?v=29.0")],
   ["service worker cache and downloader assets",html.includes("/sw.js?v=29.0")&&sw.includes("aryanzz-v29-0")&&sw.includes("/downloader.js")&&sw.includes("/downloader.css")],
   ["downloader input and result panel",html.includes('id="analyze"')&&html.includes('id="downloadResult"')],
-  ["YouTube preview, job and file UI",downloader.includes("/api/youtube/info?url=")&&downloader.includes("/api/youtube/download")&&downloader.includes("/api/youtube/progress")&&downloader.includes("/api/youtube/file")],
+  ["YouTube preview, job and file UI",downloader.includes("/api/youtube/info?url=")&&downloader.includes("/api/youtube/download")&&downloader.includes("/api/youtube/progress")&&downloader.includes("/api/youtube/file")&&downloader.includes("video-download-api.com/dashboard")],
   ["single capture-phase YouTube click handler",downloader.includes('button.addEventListener("click"')&&downloader.includes("event.stopImmediatePropagation()")],
   ["supported video formats match provider",downloader.includes('["360","360p"]')&&downloader.includes('["720","720p HD"]')&&downloader.includes('["1080","1080p Full HD"]')&&downloader.includes('["4k","4K · MP4"]')],
   ["legacy competing downloader handler removed",!v15.includes("button.onclick=async()=>{")],
@@ -88,6 +88,8 @@ try{
       assert.equal(url.searchParams.get("apikey"),"test-secret");
       assert.equal(url.searchParams.get("format"),"mp44k");
       assert.equal(url.searchParams.get("allow_extended_duration"),"0");
+      if(url.searchParams.get("url").includes("LOWBALANCE"))
+        return new Response(JSON.stringify({success:false,error:"Not enough balance"}),{status:200,headers:{"content-type":"application/json"}});
       return new Response(JSON.stringify({success:true,id:"job-123",progress:0,info:{title:"Test YouTube Video",image:"https://img.example/thumb.jpg"}}),{status:200,headers:{"content-type":"application/json"}});
     }
     if(url.pathname==="/ajax/progress.php"){
@@ -122,6 +124,14 @@ try{
   assert.equal(startData.id,"job-123");
   assert.equal(startData.pending,true);
   console.log("✔ YouTube job creation uses current /ajax/download.php and maps 4K to mp44k");
+
+  const lowBalanceStart=await worker.fetch(new Request("https://aryanzz.example/api/youtube/download",{
+    method:"POST",headers:{"content-type":"application/json"},
+    body:JSON.stringify({url:"https://www.youtube.com/watch?v=LOWBALANCE",format:"mp3"})
+  }),{SAVENOW_API_KEY:"test-secret"});
+  assert.equal(lowBalanceStart.status,502);
+  assert.match((await lowBalanceStart.json()).error,/Not enough balance/);
+  console.log("✔ Provider low-balance response is surfaced without pretending a job was created");
 
   const progress=await worker.fetch(new Request("https://aryanzz.example/api/youtube/progress",{
     method:"POST",headers:{"content-type":"application/json"},
