@@ -16,9 +16,9 @@ const downloaderCss=file("../public/downloader.css");
 const manifest=JSON.parse(file("../public/manifest.webmanifest"));
 
 const checks=[
-  ["V60.0 page title",html.includes("ARYANZZ V60.0 — Creator Studio Pro")],
-  ["V59.5 versioned assets",html.includes("/v15.js?v=59.5")&&html.includes("/owner.js?v=59.5")&&html.includes("/downloader.js?v=59.5")&&html.includes("/downloader.css?v=59.5")&&html.includes("/v59.css?v=59.5")&&html.includes("/editor-pro.css?v=60.0")&&html.includes("/editor.js?v=60.0")],
-  ["service worker cache and V59.5 assets",html.includes("/sw.js?v=60.0")&&sw.includes("aryanzz-v60-0")&&sw.includes("/editor.js?v=60.0")&&sw.includes("/editor-pro.css?v=60.0")&&sw.includes("/v59.css?v=59.5")],
+  ["V65.0 page title",html.includes("ARYANZZ V65.0 — Ultimate Creative Studio")],
+  ["V59.5 versioned assets",html.includes("/v15.js?v=59.5")&&html.includes("/owner.js?v=59.5")&&html.includes("/downloader.js?v=59.5")&&html.includes("/downloader.css?v=59.5")&&html.includes("/v59.css?v=59.5")&&html.includes("/editor-pro.css?v=65.0")&&html.includes("/editor.js?v=65.0")],
+  ["service worker cache and V59.5 assets",html.includes("/sw.js?v=65.0")&&sw.includes("aryanzz-v65-0")&&sw.includes("/editor.js?v=65.0")&&sw.includes("/editor-pro.css?v=65.0")&&sw.includes("/v59.css?v=59.5")],
   ["downloader input, result and backend status",html.includes('id="analyze"')&&html.includes('id="downloadResult"')&&html.includes('id="backendStatus"')],
   ["unified self-hosted downloader API",downloader.includes('postJson("/api/info"')&&downloader.includes('fetch("/api/download"')&&downloader.includes("PLATFORM_NAMES")&&!downloader.toLowerCase().includes("savenow")],
   ["single capture-phase universal URL handler",downloader.includes('button.addEventListener("click"')&&downloader.includes("event.stopImmediatePropagation()")&&downloader.includes("}, true);")],
@@ -32,13 +32,19 @@ const checks=[
   ["Video Editor panel and controls",html.includes('id="editor"')&&html.includes('id="editorFile"')&&html.includes('id="editorStart"')&&html.includes('id="editorExport"')],
   ["Local editor has trim, filters, canvas export and MediaRecorder",editor.includes("MediaRecorder")&&editor.includes("captureStream")&&editor.includes("selectedStart")&&editor.includes("editorSaturation")],
   ["V59.5 tools banner remains responsive",v59css.includes(".tools-banner")&&v59css.includes("@media(max-width:700px)")],
-  ["V60.0 editor pro responsive design",editorProCss.includes(".editor-pro-workspace")&&editorProCss.includes(".editor-clip-card")&&editorProCss.includes("@media(max-width:600px)")],
-  ["V60.0 multi-clip timeline and clip operations",editor.includes("MAX_CLIPS = 8")&&editor.includes("function splitClip")&&editor.includes("function moveClip")&&editor.includes("function updateClipTrim")],
-  ["V60.0 background music and audio mixing",editor.includes("createMediaStreamDestination")&&editor.includes("editorMusicVolume")&&editor.includes("editorMute")],
-  ["V60.0 project save and restore",editor.includes("function saveProject")&&editor.includes("async function loadProjectFile")&&editor.includes("ARYANZZ Creative Studio Pro")],
-  ["V60.0 fade transition and caption styling",editor.includes("fadeDuration")&&editor.includes("editorTextColor")&&editor.includes("editorTextSize")],
+  ["V65.0 editor pro responsive design",editorProCss.includes(".editor-pro-workspace")&&editorProCss.includes(".editor-clip-card")&&editorProCss.includes("@media(max-width:600px)")],
+  ["V65.0 multi-clip timeline and clip operations",editor.includes("MAX_CLIPS = 8")&&editor.includes("function splitClip")&&editor.includes("function moveClip")&&editor.includes("function updateClipTrim")],
+  ["V65.0 background music and audio mixing",editor.includes("createMediaStreamDestination")&&editor.includes("audioTracks.length>=3")&&editor.includes("editorMute")],
+  ["V65.0 project save and restore",editor.includes("function saveProject")&&editor.includes("async function loadProjectFile")&&editor.includes("ARYANZZ Creative Studio Pro")],
+  ["V65.0 fade transition and caption styling",editor.includes("fadeDuration")&&editor.includes("editorTextColor")&&editor.includes("editorTextSize")],
+  ["V65.0 premium wide editor layout",editorProCss.includes("min(1220px")&&editorProCss.includes(".editor-inspector{position:sticky")&&html.includes("PRO · V65.0")],
+  ["V65.0 per-clip motion keyframes",html.includes('id="editorZoomStart"')&&html.includes('id="editorZoomEnd"')&&editor.includes("function motionAt")&&editor.includes("motion:clip.motion?")],
+  ["V65.0 three mixed audio tracks",html.includes('id="editorAudioTrackList"')&&html.includes('id="editorMusicFile"')&&editor.includes("audioTracks.length>=3")&&editor.includes("createMediaElementSource(track.audio)")],
+  ["V65.0 SRT subtitle import and persistence",html.includes('id="editorSubtitleFile"')&&editor.includes("function parseSrt(source)")&&editor.includes("subtitles,")&&editor.includes("function clearSubtitles()")],
+  ["V65.0 chroma key live preview and export",html.includes('id="editorPreviewCanvas"')&&html.includes('id="editorChromaEnabled"')&&editor.includes("function applyChromaKey")&&editor.includes("drawFrame(previewCtx")],
+  ["V65.0 animated captions",html.includes('id="editorTextAnimation"')&&editor.includes("function textAnimationState")&&editor.includes("overlay.dataset.animation")],
   ["tool hub remains available",html.includes('id="allTools"')],
-  ["PWA manifest version",manifest.name.includes("V60.0")]
+  ["PWA manifest version",manifest.name.includes("V65.0")]
 ];
 for(const [name,ok] of checks){assert.ok(ok,name+" failed");console.log("✔ "+name)}
 
@@ -186,4 +192,4 @@ try{
   globalThis.fetch=originalFetch;
 }
 
-console.log("\nARYANZZ V60.0 Creative Studio Pro smoke tests passed.");
+console.log("\nARYANZZ V65.0 Ultimate Creative Studio smoke tests passed.");

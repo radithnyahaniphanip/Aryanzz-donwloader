@@ -1,9 +1,10 @@
-/* ARYANZZ V60.0 — Creative Studio Pro: multi-clip local editor */
+/* ARYANZZ V65.0 — Ultimate Creative Studio: local multi-track editor */
 (() => {
   "use strict";
   const $ = id => document.getElementById(id);
   const fileInput = $("editorFile");
   const video = $("editorPreview");
+  const previewCanvas = $("editorPreviewCanvas");
   const frame = $("editorPreviewFrame");
   const empty = $("editorEmpty");
   const status = $("editorStatus");
@@ -13,7 +14,8 @@
   const progressBar = $("editorProgressFill");
   const clipList = $("editorClipList");
   const musicInput = $("editorMusicFile");
-  const musicAudio = $("editorMusicAudio");
+  const audioTrackList = $("editorAudioTrackList");
+  const subtitleInput = $("editorSubtitleFile");
   if (!fileInput || !video || !frame || !exportButton || !clipList) return;
 
   const MAX_CLIPS = 8;
@@ -21,8 +23,10 @@
   let clips = [];
   const archive = new Map();
   let selectedId = null;
-  let musicFile = null;
-  let musicUrl = "";
+  let audioTracks = [];
+  let subtitles = [];
+  let subtitleFileName = "";
+  let chromaCanvas = null;
   let exportUrl = "";
   let recorder = null;
   let recordingStream = null;
@@ -35,11 +39,9 @@
   let audioContext = null;
   let audioDestination = null;
   let videoSourceNode = null;
-  let musicSourceNode = null;
   let videoPreviewGain = null;
   let videoRecordGain = null;
-  let musicPreviewGain = null;
-  let musicRecordGain = null;
+  let lastAudioSync = 0;
 
   const startInput = $("editorStart");
   const endInput = $("editorEnd");
@@ -57,12 +59,95 @@
     return h ? [h,String(m).padStart(2,"0"),String(s).padStart(2,"0")].join(":") : [m,String(s).padStart(2,"0")].join(":");
   };
   const seconds = value => Math.max(0, Number(value) || 0);
+  function defaultMotion() { return {zoomStart:1,zoomEnd:1,panX:0,panY:0,easing:"ease"}; }
+  function timelineOffset(clip) {
+    const index=clips.findIndex(item=>item.id===clip?.id);
+    const speed=Number($("editorSpeed").value)||1;
+    return clips.slice(0,Math.max(0,index)).reduce((sum,item)=>sum+Math.max(0,item.end-item.start)/speed,0);
+  }
+  function motionAt(clip,localTime) {
+    const motion = clip && clip.motion ? clip.motion : defaultMotion();
+    let t = clip ? Math.max(0,Math.min(1,(localTime-clip.start)/Math.max(.1,clip.end-clip.start))) : 0;
+    if (motion.easing==="ease") t=t*t*(3-2*t);
+    return {
+      zoom:(Number(motion.zoomStart)||1)+((Number(motion.zoomEnd)||1)-(Number(motion.zoomStart)||1))*t,
+      panX:Number(motion.panX)||0,
+      panY:Number(motion.panY)||0
+    };
+  }
+  function setMotionControls(clip) {
+    const motion=clip&&clip.motion?clip.motion:defaultMotion();
+    $("editorZoomStart").value=String(Math.round((Number(motion.zoomStart)||1)*100));
+    $("editorZoomEnd").value=String(Math.round((Number(motion.zoomEnd)||1)*100));
+    $("editorPanX").value=String(motion.panX||0);
+    $("editorPanY").value=String(motion.panY||0);
+    $("editorMotionEasing").value=motion.easing||"ease";
+    updateMotionLabels();
+  }
+  function updateMotionLabels() {
+    $("editorZoomStartValue").textContent=$("editorZoomStart").value+"%";
+    $("editorZoomEndValue").textContent=$("editorZoomEnd").value+"%";
+    $("editorPanXValue").textContent=$("editorPanX").value;
+    $("editorPanYValue").textContent=$("editorPanY").value;
+  }
+  function applyMotionControls() {
+    const clip=selectedClip(); if(!clip)return;
+    clip.motion={
+      zoomStart:Number($("editorZoomStart").value)/100,
+      zoomEnd:Number($("editorZoomEnd").value)/100,
+      panX:Number($("editorPanX").value),
+      panY:Number($("editorPanY").value),
+      easing:$("editorMotionEasing").value
+    };
+    updateMotionLabels();
+    updatePreview();
+  }
+  function parseSrtTime(value) {
+    const match=value.trim().match(/(\\d{2}):(\\d{2}):(\\d{2})[,\.](\\d{1,3})/);
+    return match ? Number(match[1])*3600+Number(match[2])*60+Number(match[3])+Number(match[4].padEnd(3,"0"))/1000 : 0;
+  }
+  function parseSrt(source) {
+    return String(source||"").replace(/\\r/g,"").split(/\\n\\s*\\n/).map(block=>{
+      const lines=block.split("\\n").map(line=>line.trim()).filter(Boolean);
+      const timing=lines.findIndex(line=>line.includes("-->"));
+      if(timing<0)return null;
+      const parts=lines[timing].split("-->");
+      const start=parseSrtTime(parts[0]||"");
+      const end=parseSrtTime(parts[1]||"");
+      const text=lines.slice(timing+1).join("\\n").replace(/<[^>]*>/g,"");
+      return end>start&&text?{start,end,text}:null;
+    }).filter(Boolean).sort((a,b)=>a.start-b.start);
+  }
+  function captionAt(projectTime,clip) {
+    const subtitle=subtitles.find(item=>projectTime>=item.start&&projectTime<=item.end);
+    return subtitle ? {text:subtitle.text,start:subtitle.start,end:subtitle.end,isSubtitle:true} :
+      {text:textInput.value.trim(),start:timelineOffset(clip||selectedClip()),end:totalDuration(),isSubtitle:false};
+  }
+  function textAnimationState(caption,projectTime) {
+    const mode=$("editorTextAnimation").value;
+    const duration=.5;
+    const t=Math.max(0,Math.min(1,(projectTime-caption.start)/duration));
+    if(mode==="fade")return {opacity:t,transform:"translateY(0) scale(1)"};
+    if(mode==="slide")return {opacity:t,transform:"translateY("+(1-t)*20+"px) scale(1)"};
+    if(mode==="pop")return {opacity:t,transform:"translateY(0) scale("+(0.72+t*.28)+")"};
+    return {opacity:1,transform:"none"};
+  }
+  function updateAudioGraphGains() {
+    if(!audioContext)return;
+    audioTracks.forEach(track=>{
+      track.audio.volume=1;
+      if(track.previewGain)track.previewGain.gain.setTargetAtTime(exporting?0:track.volume,audioContext.currentTime,.02);
+      if(track.recordGain)track.recordGain.gain.setTargetAtTime(exporting?track.volume:0,audioContext.currentTime,.02);
+    });
+  }
   const makeId = () => (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : "clip-" + Date.now() + "-" + Math.random().toString(36).slice(2);
   const selectedClip = () => clips.find(clip => clip.id === selectedId) || null;
   const settingsIds = [
     "editorRatio","editorRotate","editorSpeed","editorTransition","editorFilterPreset",
     "editorBrightness","editorContrast","editorSaturation","editorText","editorTextColor",
-    "editorTextPosition","editorTextSize","editorMute","editorResolution","editorQuality"
+    "editorTextPosition","editorTextSize","editorTextAnimation","editorChromaEnabled",
+    "editorChromaColor","editorChromaTolerance","editorBackgroundColor",
+    "editorMute","editorResolution","editorQuality"
   ];
 
   function message(text, kind) {
@@ -75,7 +160,6 @@
       const el = $(id);
       if (el) settings[id] = el.type === "checkbox" ? el.checked : el.value;
     });
-    settings.editorMusicVolume = $("editorMusicVolume").value;
     return settings;
   }
   function setSettings(settings) {
@@ -87,13 +171,13 @@
       if (el.type === "checkbox") el.checked = !!settings[id];
       else el.value = String(settings[id]);
     });
-    if (settings.editorMusicVolume !== undefined) $("editorMusicVolume").value = String(settings.editorMusicVolume);
     updatePreview();
-    updateMusicVolume();
+    renderAudioTracks();
+    updateAudioGraphGains();
   }
   function snapshot() {
     return {
-      clips: clips.map(clip => ({ id:clip.id,start:clip.start,end:clip.end })),
+      clips: clips.map(clip => ({ id:clip.id,start:clip.start,end:clip.end,motion:clip.motion?{...clip.motion}:defaultMotion() })),
       selectedId,
       settings:getSettings()
     };
@@ -112,7 +196,7 @@
     if (!state) return;
     clips = state.clips.map(item => {
       const original = archive.get(item.id);
-      return original ? Object.assign({},original,{start:item.start,end:item.end}) : null;
+      return original ? Object.assign({},original,{start:item.start,end:item.end,motion:item.motion?{...item.motion}:defaultMotion()}) : null;
     }).filter(Boolean);
     selectedId = clips.some(clip => clip.id === state.selectedId) ? state.selectedId : (clips[0] && clips[0].id) || null;
     setSettings(state.settings);
@@ -159,29 +243,36 @@
     return clips.reduce((sum,clip) => sum + Math.max(0,clip.end - clip.start),0);
   }
   function updateEditorState() {
-    const hasClips = clips.length > 0;
-    const clip = selectedClip();
-    const enabledIds = [
+    const hasClips=clips.length>0;
+    const clip=selectedClip();
+    const enabledIds=[
       "editorPlay","editorJumpStart","editorScrub","editorStart","editorEnd",
       "editorRatio","editorRotate","editorSpeed","editorTransition","editorFilterPreset",
       "editorBrightness","editorContrast","editorSaturation","editorText","editorTextColor",
-      "editorTextPosition","editorTextSize","editorMute","editorResolution","editorQuality",
-      "editorReset","editorExport"
+      "editorTextPosition","editorTextSize","editorTextAnimation","editorMute",
+      "editorZoomStart","editorZoomEnd","editorPanX","editorPanY","editorMotionEasing",
+      "editorChromaEnabled","editorChromaColor","editorChromaTolerance","editorBackgroundColor",
+      "editorResolution","editorQuality","editorReset","editorExport"
     ];
-    enabledIds.forEach(id => { const el=$(id); if(el) el.disabled = !hasClips || exporting; });
-    $("editorSplit").disabled = !clip || exporting;
-    $("editorMoveUp").disabled = !clip || clips.findIndex(item=>item.id===selectedId)<=0 || exporting;
-    $("editorMoveDown").disabled = !clip || clips.findIndex(item=>item.id===selectedId)>=clips.length-1 || exporting;
-    $("editorRemoveClip").disabled = !clip || exporting;
-    $("editorMusicVolume").disabled = !musicFile || exporting;
-    $("editorRemoveMusic").disabled = !musicFile || exporting;
-    $("editorSaveProject").disabled = !hasClips || exporting;
-    $("editorClipCount").textContent = clips.length + " klip · " + totalDuration().toFixed(1) + " detik";
-    const uniqueFiles = new Set(clips.map(clip=>clip.file));
-    $("editorFileName").textContent = hasClips ? clips.length + " klip dimuat · " + formatBytes(Array.from(uniqueFiles).reduce((sum,file)=>sum+file.size,0)) : "Belum ada klip";
-    $("editorSelectedClipName").textContent = clip ? clip.file.name : "Belum ada klip dipilih";
-    $("editorPreviewMeta").textContent = $("editorRatio").value + " · " + $("editorResolution").value + "p canvas";
-    empty.hidden = hasClips;
+    enabledIds.forEach(id=>{const el=$(id);if(el)el.disabled=!hasClips||exporting;});
+    $("editorSplit").disabled=!clip||exporting;
+    $("editorMoveUp").disabled=!clip||clips.findIndex(item=>item.id===selectedId)<=0||exporting;
+    $("editorMoveDown").disabled=!clip||clips.findIndex(item=>item.id===selectedId)>=clips.length-1||exporting;
+    $("editorRemoveClip").disabled=!clip||exporting;
+    $("editorSaveProject").disabled=!hasClips||exporting;
+    musicInput.disabled=exporting||audioTracks.length>=3;
+    subtitleInput.disabled=exporting;
+    $("editorAudioCount").textContent=audioTracks.length+"/3";
+    $("editorClearSubtitles").disabled=!subtitles.length||exporting;
+    $("editorSubtitleStatus").textContent=subtitles.length?subtitles.length+" cue · "+subtitleFileName:"Belum ada subtitle";
+    $("editorSubtitleDetail").textContent=subtitles.length?subtitles.length+" subtitle dimuat dari "+subtitleFileName+".":"Import file SRT untuk menampilkan subtitle otomatis pada timeline.";
+    $("editorClipCount").textContent=clips.length+" klip · "+totalDuration().toFixed(1)+" detik";
+    const uniqueFiles=new Set(clips.map(item=>item.file));
+    $("editorFileName").textContent=hasClips?clips.length+" klip dimuat · "+formatBytes(Array.from(uniqueFiles).reduce((sum,file)=>sum+file.size,0)):"Belum ada klip";
+    $("editorSelectedClipName").textContent=clip?clip.file.name:"Belum ada klip dipilih";
+    $("editorPreviewMeta").textContent=$("editorRatio").value+" · "+$("editorResolution").value+"p canvas";
+    empty.hidden=hasClips;
+    renderAudioTracks();
     updateHistoryButtons();
   }
   function selectedStart() {
@@ -207,27 +298,47 @@
     }
   }
   function updatePreview() {
-    const brightness = Number($("editorBrightness").value) || 100;
-    const contrast = Number($("editorContrast").value) || 100;
-    const saturation = Number($("editorSaturation").value) || 100;
-    const rotate = Number($("editorRotate").value) || 0;
-    video.style.filter = "brightness(" + brightness + "%) contrast(" + contrast + "%) saturate(" + saturation + "%)";
-    video.style.transform = "rotate(" + rotate + "deg)";
-    frame.dataset.ratio = $("editorRatio").value;
-    overlay.textContent = textInput.value.trim();
-    overlay.hidden = !textInput.value.trim();
-    overlay.dataset.position = $("editorTextPosition").value;
-    overlay.style.color = $("editorTextColor").value;
-    overlay.style.fontSize = $("editorTextSize").value + "px";
-    video.playbackRate = Number($("editorSpeed").value) || 1;
-    $("editorBrightnessValue").textContent = brightness + "%";
-    $("editorContrastValue").textContent = contrast + "%";
-    $("editorSaturationValue").textContent = saturation + "%";
-    $("editorTextSizeValue").textContent = $("editorTextSize").value + " px";
-    $("editorPreviewMeta").textContent = $("editorRatio").value + " · " + $("editorResolution").value + "p canvas";
+    const brightness=Number($("editorBrightness").value)||100;
+    const contrast=Number($("editorContrast").value)||100;
+    const saturation=Number($("editorSaturation").value)||100;
+    const rotate=Number($("editorRotate").value)||0;
+    const clip=selectedClip();
+    const motion=motionAt(clip,video.currentTime||0);
+    video.style.filter="brightness("+brightness+"%) contrast("+contrast+"%) saturate("+saturation+"%)";
+    video.style.transform="translate("+motion.panX*.35+"%, "+motion.panY*.35+"%) scale("+motion.zoom+") rotate("+rotate+"deg)";
+    frame.dataset.ratio=$("editorRatio").value;
+    const speed=Number($("editorSpeed").value)||1;
+    const projectTime=clip?timelineOffset(clip)+Math.max(0,(video.currentTime||clip.start)-clip.start)/speed:0;
+    const caption=captionAt(projectTime,clip);
+    overlay.textContent=caption.text;
+    const chromaPreview=$("editorChromaEnabled").checked;
+    overlay.hidden=!caption.text||chromaPreview;
+    previewCanvas.hidden=!chromaPreview;
+    video.style.visibility=chromaPreview?"hidden":"visible";
+    if(chromaPreview&&video.readyState>=2&&video.videoWidth){
+      const ratio=$("editorRatio").value;
+      const size=ratio==="9:16"?[304,540]:ratio==="1:1"?[480,480]:ratio==="4:5"?[432,540]:[540,304];
+      if(previewCanvas.width!==size[0]||previewCanvas.height!==size[1]){previewCanvas.width=size[0];previewCanvas.height=size[1];}
+      const previewCtx=previewCanvas.getContext("2d",{alpha:false});
+      drawFrame(previewCtx,previewCanvas,1,clip,projectTime);
+    }
+    overlay.dataset.position=$("editorTextPosition").value;
+    overlay.dataset.animation=$("editorTextAnimation").value;
+    const animated=textAnimationState(caption,projectTime);
+    overlay.style.opacity=String(animated.opacity);
+    overlay.style.transform=($("editorTextPosition").value==="middle"?"translateY(-50%) ":"")+animated.transform;
+    overlay.style.color=$("editorTextColor").value;
+    overlay.style.fontSize=$("editorTextSize").value+"px";
+    video.playbackRate=Number($("editorSpeed").value)||1;
+    $("editorBrightnessValue").textContent=brightness+"%";
+    $("editorContrastValue").textContent=contrast+"%";
+    $("editorSaturationValue").textContent=saturation+"%";
+    $("editorTextSizeValue").textContent=$("editorTextSize").value+" px";
+    $("editorPreviewMeta").textContent=$("editorRatio").value+" · "+$("editorResolution").value+"p canvas";
     updateLabels();
+    updateMotionLabels();
   }
-  function preset(name) {
+    function preset(name) {
     const values = {
       none:[100,100,100], vivid:[108,112,135], cinematic:[96,118,82],
       mono:[100,112,0], warm:[106,105,118], cool:[103,108,112]
@@ -282,6 +393,7 @@
     endInput.max = String(clip.duration);
     startInput.value = String(clip.start);
     endInput.value = String(clip.end);
+    setMotionControls(clip);
     $("editorSelectedClipName").textContent = clip.file.name;
     empty.hidden = true;
     updatePreview();
@@ -380,7 +492,7 @@
       ? project.clips.map(item => ({ file:fileByName.get(item.name),item })).filter(x=>x.file)
       : incoming.map(file => ({file,item:null}));
     if (!project && clips.length) recordUndo();
-    const remaining = Math.max(0,MAX_CLIPS-clips.length);
+    const remaining = project ? MAX_CLIPS : Math.max(0,MAX_CLIPS-clips.length);
     if (project) { clips = []; selectedId = null; history = []; future = []; }
     if (project && !descriptors.length) { message("File video sumber tidak ditemukan. Pilih file proyek dan semua video sumber dalam satu kali pemilihan.","error"); return; }
     if (project && descriptors.length !== project.clips.length) message("Sebagian sumber video tidak ditemukan. Klip yang cocok saja yang akan dimuat.","error");
@@ -407,7 +519,8 @@
         const clip = {
           id:makeId(),file,url,duration,
           start:Math.max(0,Math.min(Number(item.start)||0,duration-0.1)),
-          end:Math.max(0,Math.min(Number(item.end)||duration,duration))
+          end:Math.max(0,Math.min(Number(item.end)||duration,duration)),
+          motion:item.motion?{...defaultMotion(),...item.motion}:defaultMotion()
         };
         if (clip.end <= clip.start) clip.end = duration;
         clips.push(clip);
@@ -462,7 +575,7 @@
     }
     recordUndo();
     const originalEnd = clip.end;
-    const right = Object.assign({},clip,{id:makeId(),start:point,end:originalEnd});
+    const right = Object.assign({},clip,{id:makeId(),start:point,end:originalEnd,motion:{...clip.motion}});
     clip.end = point;
     archive.set(right.id,right);
     const index = clips.findIndex(item=>item.id===clip.id);
@@ -480,99 +593,217 @@
     if (ratio === "4:5") return [Math.round(resolution*4/5),resolution];
     return [Math.round(resolution*16/9),resolution];
   }
-  function drawCaption(ctx,width,height) {
-    const caption = textInput.value.trim();
-    if (!caption) return;
-    const fontSize = Math.max(18,Number($("editorTextSize").value)||42);
-    const position = $("editorTextPosition").value;
-    const y = position==="top" ? height*0.12 : position==="middle" ? height*0.5 : height*0.88;
-    const maxWidth = width*0.86;
+  function drawCaption(ctx,width,height,clip,projectTime) {
+    const caption=captionAt(projectTime||0,clip);
+    if(!caption.text)return;
+    const fontSize=Math.max(18,Number($("editorTextSize").value)||42);
+    const position=$("editorTextPosition").value;
+    const y=position==="top"?height*.12:position==="middle"?height*.5:height*.88;
+    const maxWidth=width*.86;
+    const animated=textAnimationState(caption,projectTime||0);
     ctx.save();
-    ctx.font = "900 " + fontSize + "px system-ui, sans-serif";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillStyle = $("editorTextColor").value || "#fff";
-    ctx.strokeStyle = "rgba(0,0,0,.86)";
-    ctx.lineWidth = Math.max(3,fontSize*0.13);
-    ctx.lineJoin = "round";
-    ctx.shadowColor = "rgba(0,0,0,.7)";
-    ctx.shadowBlur = 10;
-    const words = caption.split(/\s+/);
-    const lines = [];
-    let line = "";
-    words.forEach(word => {
-      const test = line ? line + " " + word : word;
-      if (line && ctx.measureText(test).width > maxWidth) {
-        lines.push(line);
-        line = word;
-      } else line = test;
+    ctx.globalAlpha=animated.opacity;
+    ctx.translate(width/2,height/2);
+    if($("editorTextAnimation").value==="slide")ctx.translate(0,(1-animated.opacity)*20);
+    if($("editorTextAnimation").value==="pop")ctx.scale(.72+animated.opacity*.28,.72+animated.opacity*.28);
+    ctx.translate(-width/2,-height/2);
+    ctx.font="900 "+fontSize+"px system-ui, sans-serif";
+    ctx.textAlign="center";
+    ctx.textBaseline="middle";
+    ctx.fillStyle=$("editorTextColor").value||"#fff";
+    ctx.strokeStyle="rgba(0,0,0,.9)";
+    ctx.lineWidth=Math.max(3,fontSize*.14);
+    ctx.lineJoin="round";
+    ctx.shadowColor="rgba(0,0,0,.75)";
+    ctx.shadowBlur=10;
+    const words=caption.text.split(/\\s+/);
+    const lines=[];
+    let line="";
+    words.forEach(word=>{
+      const test=line?line+" "+word:word;
+      if(line&&ctx.measureText(test).width>maxWidth){lines.push(line);line=word;}
+      else line=test;
     });
-    if (line) lines.push(line);
-    const lineHeight = fontSize*1.16;
-    const firstY = y - ((lines.length-1)*lineHeight)/2;
-    lines.slice(0,3).forEach((text,index) => {
-      const lineY = firstY + index*lineHeight;
+    if(line)lines.push(line);
+    const lineHeight=fontSize*1.16;
+    const firstY=y-((lines.length-1)*lineHeight)/2;
+    if(caption.isSubtitle){
+      const boxWidth=Math.min(maxWidth,Math.max(...lines.map(item=>ctx.measureText(item).width))+30);
+      ctx.fillStyle="rgba(0,0,0,.56)";
+      ctx.fillRect((width-boxWidth)/2,firstY-lineHeight*.55,boxWidth,lines.length*lineHeight+lineHeight*.1);
+      ctx.fillStyle=$("editorTextColor").value||"#fff";
+    }
+    lines.slice(0,3).forEach((text,index)=>{
+      const lineY=firstY+index*lineHeight;
       ctx.strokeText(text,width/2,lineY,maxWidth);
       ctx.fillText(text,width/2,lineY,maxWidth);
     });
     ctx.restore();
   }
-  function drawFrame(ctx,canvas,fadeAlpha) {
-    const width = canvas.width, height = canvas.height;
-    const rotate = ((Number($("editorRotate").value)||0)%360+360)%360;
-    const rotatedWidth = rotate===90||rotate===270 ? video.videoHeight : video.videoWidth;
-    const rotatedHeight = rotate===90||rotate===270 ? video.videoWidth : video.videoHeight;
-    const scale = Math.max(width/rotatedWidth,height/rotatedHeight);
+  function drawVideoLayer(target,width,height,clip) {
+    const rotate=((Number($("editorRotate").value)||0)%360+360)%360;
+    const rotatedWidth=rotate===90||rotate===270?video.videoHeight:video.videoWidth;
+    const rotatedHeight=rotate===90||rotate===270?video.videoWidth:video.videoHeight;
+    const baseScale=Math.max(width/rotatedWidth,height/rotatedHeight);
+    const motion=motionAt(clip,video.currentTime||0);
+    const scale=baseScale*motion.zoom;
+    const panX=motion.panX*width/300;
+    const panY=motion.panY*height/300;
+    target.save();
+    if(target.canvas===chromaCanvas)target.clearRect(0,0,width,height);
+    target.filter="brightness("+$("editorBrightness").value+"%) contrast("+$("editorContrast").value+"%) saturate("+$("editorSaturation").value+"%)";
+    target.translate(width/2+panX,height/2+panY);
+    target.rotate(rotate*Math.PI/180);
+    target.drawImage(video,-video.videoWidth*scale/2,-video.videoHeight*scale/2,video.videoWidth*scale,video.videoHeight*scale);
+    target.restore();
+    target.filter="none";
+  }
+  function applyChromaKey(sourceCanvas) {
+    const source=sourceCanvas.getContext("2d",{willReadFrequently:true});
+    const image=source.getImageData(0,0,sourceCanvas.width,sourceCanvas.height);
+    const pixels=image.data;
+    const hex=$("editorChromaColor").value||"#00ff00";
+    const key=[parseInt(hex.slice(1,3),16),parseInt(hex.slice(3,5),16),parseInt(hex.slice(5,7),16)];
+    const tolerance=Number($("editorChromaTolerance").value)||65;
+    const feather=22;
+    for(let i=0;i<pixels.length;i+=4){
+      const dr=pixels[i]-key[0],dg=pixels[i+1]-key[1],db=pixels[i+2]-key[2];
+      const distance=Math.sqrt(dr*dr+dg*dg+db*db);
+      if(distance<=tolerance)pixels[i+3]=0;
+      else if(distance<tolerance+feather)pixels[i+3]=Math.round(pixels[i+3]*(distance-tolerance)/feather);
+    }
+    source.putImageData(image,0,0);
+  }
+  function drawFrame(ctx,canvas,fadeAlpha,clip,projectTime) {
+    const width=canvas.width,height=canvas.height;
     ctx.save();
     ctx.clearRect(0,0,width,height);
-    ctx.fillStyle = "#000";
+    ctx.fillStyle=$("editorBackgroundColor").value||"#101827";
     ctx.fillRect(0,0,width,height);
-    ctx.filter = "brightness("+$("editorBrightness").value+"%) contrast("+$("editorContrast").value+"%) saturate("+$("editorSaturation").value+"%)";
-    ctx.translate(width/2,height/2);
-    ctx.rotate(rotate*Math.PI/180);
-    ctx.drawImage(video,-video.videoWidth*scale/2,-video.videoHeight*scale/2,video.videoWidth*scale,video.videoHeight*scale);
-    ctx.restore();
-    ctx.filter = "none";
-    drawCaption(ctx,width,height);
-    if (fadeAlpha !== undefined && fadeAlpha < 1) {
-      ctx.fillStyle = "rgba(0,0,0," + Math.max(0,Math.min(1,1-fadeAlpha)) + ")";
+    if($("editorChromaEnabled").checked){
+      if(!chromaCanvas)chromaCanvas=document.createElement("canvas");
+      if(chromaCanvas.width!==width||chromaCanvas.height!==height){chromaCanvas.width=width;chromaCanvas.height=height;}
+      const chromaCtx=chromaCanvas.getContext("2d",{willReadFrequently:true});
+      drawVideoLayer(chromaCtx,width,height,clip);
+      try{applyChromaKey(chromaCanvas);ctx.drawImage(chromaCanvas,0,0);}
+      catch(error){ctx.drawImage(chromaCanvas,0,0);message("Chroma key tidak dapat diproses pada perangkat ini. Coba resolusi 720p.","error");}
+    }else{
+      drawVideoLayer(ctx,width,height,clip);
+    }
+    drawCaption(ctx,width,height,clip,projectTime||0);
+    if(fadeAlpha!==undefined&&fadeAlpha<1){
+      ctx.fillStyle="rgba(0,0,0,"+Math.max(0,Math.min(1,1-fadeAlpha))+")";
       ctx.fillRect(0,0,width,height);
     }
+    ctx.restore();
+  }
+    function renderAudioTracks() {
+    if(!audioTrackList)return;
+    audioTrackList.replaceChildren();
+    $("editorAudioCount").textContent=audioTracks.length+"/3";
+    if(!audioTracks.length){
+      const emptyTrack=document.createElement("div");
+      emptyTrack.className="editor-timeline-empty";
+      emptyTrack.textContent="Belum ada audio. Tambahkan musik, narasi, atau efek suara.";
+      audioTrackList.append(emptyTrack);
+      return;
+    }
+    audioTracks.forEach((track,index)=>{
+      const row=document.createElement("div");
+      row.className="editor-audio-track";
+      const icon=document.createElement("span");
+      icon.className="editor-audio-track-icon";
+      icon.textContent=index===0?"♫":"♪";
+      const info=document.createElement("span");
+      info.className="editor-audio-track-info";
+      const name=document.createElement("b");
+      name.textContent=track.file.name;
+      const detail=document.createElement("small");
+      detail.textContent="TRACK "+(index+1)+" · "+formatBytes(track.file.size);
+      info.append(name,detail);
+      const volume=document.createElement("label");
+      volume.className="editor-audio-track-volume";
+      volume.textContent="Volume ";
+      const value=document.createElement("output");
+      value.textContent=Math.round(track.volume*100)+"%";
+      const slider=document.createElement("input");
+      slider.type="range";slider.min="0";slider.max="100";slider.value=String(Math.round(track.volume*100));
+      slider.disabled=exporting;
+      slider.addEventListener("input",()=>{
+        track.volume=Number(slider.value)/100;
+        value.textContent=slider.value+"%";
+        if(!audioContext)track.audio.volume=track.volume;
+        updateAudioGraphGains();
+      });
+      volume.append(value,slider);
+      const remove=document.createElement("button");
+      remove.type="button";remove.className="editor-audio-track-remove";
+      remove.textContent="×";remove.title="Hapus "+track.file.name;remove.disabled=exporting;
+      remove.addEventListener("click",()=>removeMusic(track.id));
+      row.append(icon,info,volume,remove);
+      audioTrackList.append(row);
+    });
   }
   function setupAudioGraph() {
-    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-    if (!AudioContextClass) return null;
-    if (!audioContext) audioContext = new AudioContextClass();
-    if (!audioDestination) audioDestination = audioContext.createMediaStreamDestination();
-    if (!videoSourceNode) {
-      videoSourceNode = audioContext.createMediaElementSource(video);
-      videoPreviewGain = audioContext.createGain();
-      videoRecordGain = audioContext.createGain();
+    const AudioContextClass=window.AudioContext||window.webkitAudioContext;
+    if(!AudioContextClass)return null;
+    if(!audioContext)audioContext=new AudioContextClass();
+    if(!audioDestination)audioDestination=audioContext.createMediaStreamDestination();
+    if(!videoSourceNode){
+      videoSourceNode=audioContext.createMediaElementSource(video);
+      videoPreviewGain=audioContext.createGain();
+      videoRecordGain=audioContext.createGain();
       videoSourceNode.connect(videoPreviewGain);
       videoPreviewGain.connect(audioContext.destination);
       videoSourceNode.connect(videoRecordGain);
       videoRecordGain.connect(audioDestination);
     }
-    if (musicFile && !musicSourceNode) {
-      musicSourceNode = audioContext.createMediaElementSource(musicAudio);
-      musicPreviewGain = audioContext.createGain();
-      musicRecordGain = audioContext.createGain();
-      musicSourceNode.connect(musicPreviewGain);
-      musicPreviewGain.connect(audioContext.destination);
-      musicSourceNode.connect(musicRecordGain);
-      musicRecordGain.connect(audioDestination);
-    }
+    audioTracks.forEach(track=>{
+      if(track.sourceNode)return;
+      track.sourceNode=audioContext.createMediaElementSource(track.audio);
+      track.previewGain=audioContext.createGain();
+      track.recordGain=audioContext.createGain();
+      track.sourceNode.connect(track.previewGain);
+      track.previewGain.connect(audioContext.destination);
+      track.sourceNode.connect(track.recordGain);
+      track.recordGain.connect(audioDestination);
+    });
+    updateAudioGraphGains();
     return audioDestination;
   }
   function setAudioExportMode(active) {
-    if (!audioContext) return;
-    const muted = $("editorMute").checked;
-    if (videoPreviewGain) videoPreviewGain.gain.setTargetAtTime(active?0:1,audioContext.currentTime,0.02);
-    if (videoRecordGain) videoRecordGain.gain.setTargetAtTime(active&&!muted?1:0,audioContext.currentTime,0.02);
-    if (musicPreviewGain) musicPreviewGain.gain.setTargetAtTime(0,audioContext.currentTime,0.02);
-    if (musicRecordGain) musicRecordGain.gain.setTargetAtTime(active&&musicFile?Number($("editorMusicVolume").value)/100:0,audioContext.currentTime,0.02);
+    if(!audioContext)return;
+    const muted=$("editorMute").checked;
+    if(videoPreviewGain)videoPreviewGain.gain.setTargetAtTime(active?0:1,audioContext.currentTime,.02);
+    if(videoRecordGain)videoRecordGain.gain.setTargetAtTime(active&&!muted?1:0,audioContext.currentTime,.02);
+    audioTracks.forEach(track=>{
+      if(track.previewGain)track.previewGain.gain.setTargetAtTime(active?0:track.volume,audioContext.currentTime,.02);
+      if(track.recordGain)track.recordGain.gain.setTargetAtTime(active?track.volume:0,audioContext.currentTime,.02);
+    });
   }
-  function setExportProgress(done,total,current,clip) {
+  function syncAudioPreview(force) {
+    if(exporting)return;
+    const clip=selectedClip();
+    if(!clip||video.paused){
+      audioTracks.forEach(track=>track.audio.pause());
+      return;
+    }
+    const speed=Number($("editorSpeed").value)||1;
+    const projectTime=timelineOffset(clip)+Math.max(0,video.currentTime-clip.start)/speed;
+    const now=Date.now();
+    if(!force&&now-lastAudioSync<800)return;
+    lastAudioSync=now;
+    audioTracks.forEach(track=>{
+      const duration=Number(track.audio.duration);
+      if(Number.isFinite(duration)&&duration>0){
+        const target=projectTime%duration;
+        if(Math.abs(track.audio.currentTime-target)>.45)track.audio.currentTime=target;
+      }
+      track.audio.volume=audioContext?1:track.volume;
+      track.audio.play().catch(()=>{});
+    });
+  }
+    function setExportProgress(done,total,current,clip) {
     const speed = Number($("editorSpeed").value)||1;
     const clipDone = Math.max(0,current-clip.start)/speed;
     const pct = Math.min(99,Math.max(0,((done+clipDone)/Math.max(0.1,total))*100));
@@ -587,7 +818,7 @@
         if (!exporting) { reject(new Error("Ekspor dihentikan.")); return; }
         if (video.ended || video.currentTime >= clip.end-0.015) {
           video.pause();
-          drawFrame(ctx,canvas,1);
+          drawFrame(ctx,canvas,1,clip,done+(clip.end-clip.start)/speed);
           resolve();
           return;
         }
@@ -597,7 +828,8 @@
             alpha = Math.min(1,(video.currentTime-clip.start)/fadeDuration,(clip.end-video.currentTime)/fadeDuration);
             alpha = Math.max(0,alpha);
           }
-          drawFrame(ctx,canvas,alpha);
+          const projectTime=done+Math.max(0,video.currentTime-clip.start)/speed;
+          drawFrame(ctx,canvas,alpha,clip,projectTime);
           setExportProgress(done,total,video.currentTime,clip);
         }
         animationFrame = requestAnimationFrame(tick);
@@ -609,7 +841,7 @@
     cancelAnimationFrame(animationFrame);
     exporting = false;
     setAudioExportMode(false);
-    if (musicAudio) { musicAudio.pause(); musicAudio.currentTime=0; }
+    audioTracks.forEach(track=>{track.audio.pause();try{track.audio.currentTime=0;}catch{}});
     if (recordingStream) recordingStream.getVideoTracks().forEach(track=>track.stop());
     transientAudioTracks.forEach(track=>{try{track.stop();}catch{}});
     transientAudioTracks = [];
@@ -730,12 +962,9 @@
     try {
       const speed = Number($("editorSpeed").value)||1;
       const total = validClips.reduce((sum,clip)=>sum+(clip.end-clip.start)/speed,0);
-      if (musicFile) {
-        musicAudio.loop = true;
-        musicAudio.currentTime = 0;
-        musicAudio.volume = 1;
-        await musicAudio.play().catch(()=>{});
-      }
+      audioTracks.forEach(track=>{track.audio.loop=true;track.audio.currentTime=0;});
+      if(audioGraph)await Promise.all(audioTracks.map(track=>track.audio.play().catch(()=>{})));
+      else if(audioTracks.length)message("Browser tidak mendukung pencampuran beberapa audio track. Audio latar tidak disertakan pada ekspor ini.","error");
       recorder.start(500);
       let done = 0;
       for (const clip of validClips) {
@@ -768,6 +997,12 @@
     $("editorTextColor").value = "#ffffff";
     $("editorTextPosition").value = "bottom";
     $("editorTextSize").value = "42";
+    $("editorTextAnimation").value = "none";
+    $("editorChromaEnabled").checked = false;
+    $("editorChromaColor").value = "#00ff00";
+    $("editorChromaTolerance").value = "65";
+    $("editorBackgroundColor").value = "#101827";
+    const clip=selectedClip();if(clip){clip.motion=defaultMotion();setMotionControls(clip);}
     $("editorMute").checked = false;
     $("editorResolution").value = "720";
     $("editorQuality").value = "standard";
@@ -776,92 +1011,121 @@
     progressBar.style.width = "0%";
     message("Pengaturan visual dikembalikan ke awal.","info");
   }
-  function updateMusicVolume() {
-    const volume = Number($("editorMusicVolume").value)||0;
-    $("editorMusicVolumeValue").textContent = volume+"%";
-    if (musicAudio) musicAudio.volume = volume/100;
-    if (musicRecordGain && audioContext && !exporting) musicRecordGain.gain.setTargetAtTime(0,audioContext.currentTime,0.02);
+  function addMusic(fileCollection,savedTracks) {
+    const incoming=Array.from(fileCollection||[]);
+    if(!incoming.length)return;
+    let added=0;
+    for(const file of incoming){
+      if(audioTracks.length>=3){message("Maksimal 3 audio track. Hapus salah satu track untuk menambahkan audio lain.","error");break;}
+      if(!file.type.startsWith("audio/")||file.size>MAX_FILE){message("Lewati "+file.name+": pilih file audio maksimal 300 MB.","error");continue;}
+      const saved=(savedTracks||[]).find(item=>item.name===file.name);
+      const url=URL.createObjectURL(file);
+      const audio=document.createElement("audio");
+      audio.hidden=true;audio.preload="auto";audio.loop=true;audio.volume=1;audio.src=url;audio.load();
+      document.body.appendChild(audio);
+      const track={id:makeId(),file,url,audio,volume:saved&&Number.isFinite(Number(saved.volume))?Math.max(0,Math.min(1,Number(saved.volume))):.7,sourceNode:null,previewGain:null,recordGain:null};
+      audioTracks.push(track);
+      added++;
+    }
+    if(audioContext)setupAudioGraph();
+    renderAudioTracks();
+    updateEditorState();
+    if(added)message(added+" audio track ditambahkan. Maksimal 3 track dapat dicampur saat ekspor.","ready");
   }
-  function saveProject() {
-    if (!clips.length) return;
-    const project = {
+  function removeMusic(id) {
+    const index=audioTracks.findIndex(track=>track.id===id);
+    if(index<0||exporting)return;
+    const [track]=audioTracks.splice(index,1);
+    track.audio.pause();
+    track.audio.removeAttribute("src");
+    track.audio.load();
+    if(track.sourceNode)try{track.sourceNode.disconnect();}catch{}
+    if(track.previewGain)try{track.previewGain.disconnect();}catch{}
+    if(track.recordGain)try{track.recordGain.disconnect();}catch{}
+    URL.revokeObjectURL(track.url);
+    track.audio.remove();
+    renderAudioTracks();
+    updateEditorState();
+    message("Audio track dihapus.","info");
+  }
+  function clearSubtitles() {
+    subtitles=[];subtitleFileName="";
+    $("editorSubtitleStatus").textContent="Belum ada subtitle";
+    $("editorSubtitleDetail").textContent="Import file SRT untuk menampilkan subtitle otomatis pada timeline.";
+    updatePreview();updateEditorState();
+    message("Subtitle dihapus dari proyek.","info");
+  }
+  async function importSubtitles(file) {
+    if(!file)return;
+    if(file.size>5*1024*1024){message("File subtitle maksimal 5 MB.","error");return;}
+    try{
+      const parsed=parseSrt(await file.text());
+      if(!parsed.length)throw new Error("File SRT tidak memiliki cue subtitle yang valid.");
+      subtitles=parsed;
+      subtitleFileName=file.name;
+      $("editorSubtitleStatus").textContent=parsed.length+" cue · "+file.name;
+      $("editorSubtitleDetail").textContent=parsed.length+" subtitle siap ditampilkan sesuai timestamp SRT.";
+      updatePreview();
+      message(parsed.length+" subtitle berhasil dimuat dari "+file.name+".","ready");
+    }catch(error){message(error.message||"Subtitle tidak dapat dibaca.","error");}
+  }
+    function saveProject() {
+    if(!clips.length)return;
+    const project={
       app:"ARYANZZ Creative Studio Pro",
-      version:"60.0",
+      version:"65.0",
       savedAt:new Date().toISOString(),
       settings:getSettings(),
-      clips:clips.map(clip=>({name:clip.file.name,start:clip.start,end:clip.end,duration:clip.duration})),
-      musicName:musicFile?musicFile.name:null
+      clips:clips.map(clip=>({name:clip.file.name,start:clip.start,end:clip.end,duration:clip.duration,motion:clip.motion?{...clip.motion}:defaultMotion()})),
+      audioTracks:audioTracks.map(track=>({name:track.file.name,volume:track.volume})),
+      subtitles,
+      subtitleName:subtitleFileName
     };
-    const blob = new Blob([JSON.stringify(project,null,2)],{type:"application/json"});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "aryanzz-project-"+Date.now()+".json";
-    a.click();
+    const blob=new Blob([JSON.stringify(project,null,2)],{type:"application/json"});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");
+    a.href=url;a.download="aryanzz-project-v65-"+Date.now()+".json";a.click();
     setTimeout(()=>URL.revokeObjectURL(url),30000);
-    message("File proyek berhasil disimpan. Simpan juga file video dan musik sumbernya.","ready");
+    message("Proyek V65 berhasil disimpan. Simpan juga semua file video, audio, dan subtitle sumber.","ready");
   }
-  async function loadProjectFile(file,sourceFiles) {
-    try {
-      const project = JSON.parse(await file.text());
-      if (project.app!=="ARYANZZ Creative Studio Pro" || !Array.isArray(project.clips) || project.clips.length>MAX_CLIPS) {
+    async function loadProjectFile(file,sourceFiles) {
+    try{
+      const project=JSON.parse(await file.text());
+      if(project.app!=="ARYANZZ Creative Studio Pro"||!Array.isArray(project.clips)||project.clips.length>MAX_CLIPS)
         throw new Error("File proyek ARYANZZ tidak valid atau jumlah klip melebihi batas.");
-      }
-      const videoFiles = sourceFiles.filter(item=>item.type.startsWith("video/"));
-      const audioFile = sourceFiles.find(item=>item.type.startsWith("audio/"));
-      if (!videoFiles.length) throw new Error("Pilih file proyek dan video sumber yang digunakan di dalam proyek secara bersamaan.");
+      const videoFiles=sourceFiles.filter(item=>item.type.startsWith("video/"));
+      const audioFiles=sourceFiles.filter(item=>item.type.startsWith("audio/"));
+      if(!videoFiles.length)throw new Error("Pilih file proyek dan semua video sumber secara bersamaan.");
+      audioTracks.slice().forEach(track=>removeMusic(track.id));
+      subtitles=[];subtitleFileName="";
       await addVideoFiles(videoFiles,project);
-      if (audioFile) addMusic(audioFile);
-      else if (project.musicName) message("Proyek dibuka. Pilih ulang musik latar: "+project.musicName,"info");
-    } catch(error) {
-      message(error.message||"File proyek tidak dapat dibuka.","error");
-    }
+      if(audioFiles.length)addMusic(audioFiles,project.audioTracks||[]);
+      if(Array.isArray(project.subtitles)){subtitles=project.subtitles.filter(item=>Number.isFinite(item.start)&&Number.isFinite(item.end)&&item.end>item.start);subtitleFileName=project.subtitleName||"Subtitle proyek";}
+      $("editorSubtitleStatus").textContent=subtitles.length?subtitles.length+" cue · "+subtitleFileName:"Belum ada subtitle";
+      $("editorSubtitleDetail").textContent=subtitles.length?subtitles.length+" subtitle dipulihkan dari file proyek.":"Import file SRT untuk menampilkan subtitle otomatis pada timeline.";
+      updatePreview();updateEditorState();
+      if(project.audioTracks?.length&&!audioFiles.length)message("Video dan pengaturan proyek dimuat. Pilih ulang "+project.audioTracks.length+" file audio sumber.","info");
+      else if(project.musicName&&!audioFiles.length)message("Video proyek dimuat. Pilih ulang file musik: "+project.musicName,"info");
+      else message("Proyek V65 berhasil dibuka. Periksa kembali sumber media yang digunakan.","ready");
+    }catch(error){message(error.message||"File proyek tidak dapat dibuka.","error");}
   }
-  function addMusic(file) {
-    if (!file) return;
-    if (!file.type.startsWith("audio/") || file.size>MAX_FILE) {
-      message("Pilih file audio maksimal 300 MB.","error");
-      return;
-    }
-    if (musicUrl) URL.revokeObjectURL(musicUrl);
-    musicFile = file;
-    musicUrl = URL.createObjectURL(file);
-    musicAudio.src = musicUrl;
-    musicAudio.loop = true;
-    musicAudio.load();
-    $("editorMusicName").textContent = file.name;
-    $("editorMusicDetail").textContent = formatBytes(file.size)+" · musik latar lokal";
-    $("editorMusicVolume").disabled = false;
-    $("editorRemoveMusic").disabled = false;
-    updateMusicVolume();
-    message("Musik latar ditambahkan. Volume dapat diatur pada track audio.","ready");
-  }
-  function removeMusic() {
-    if (!musicFile) return;
-    if (musicUrl) URL.revokeObjectURL(musicUrl);
-    musicFile = null;
-    musicUrl = "";
-    musicAudio.pause();
-    musicAudio.removeAttribute("src");
-    musicAudio.load();
-    $("editorMusicName").textContent = "AUDIO TRACK";
-    $("editorMusicDetail").textContent = "Belum ada musik latar";
-    $("editorMusicVolume").disabled = true;
-    $("editorRemoveMusic").disabled = true;
-    message("Track musik dihapus.","info");
-  }
-
-  fileInput.addEventListener("change",async() => {
+      fileInput.addEventListener("change",async() => {
     const files = Array.from(fileInput.files||[]);
     if (!files.length) return;
     await addVideoFiles(files,null);
     fileInput.value = "";
   });
-  musicInput.addEventListener("change",() => {
-    const file = musicInput.files && musicInput.files[0];
-    if (file) addMusic(file);
-    musicInput.value = "";
+  musicInput.addEventListener("change",()=>{
+    const files=Array.from(musicInput.files||[]);
+    if(files.length)addMusic(files);
+    musicInput.value="";
   });
+  subtitleInput.addEventListener("change",()=>{
+    const file=subtitleInput.files&&subtitleInput.files[0];
+    if(file)importSubtitles(file);
+    subtitleInput.value="";
+  });
+  $("editorClearSubtitles").addEventListener("click",clearSubtitles);
   video.addEventListener("loadedmetadata",() => {
     const clip = selectedClip();
     if (!clip || video.src!==clip.url) return;
@@ -870,33 +1134,44 @@
     endInput.max = String(clip.duration);
     startInput.value = String(clip.start);
     endInput.value = String(clip.end);
+    setMotionControls(clip);
     empty.hidden = true;
     updatePreview();
   });
-  video.addEventListener("timeupdate",() => {
-    updateLabels();
-    const clip = selectedClip();
-    if (!exporting && clip && !video.paused && video.currentTime>=clip.end) {
+  video.addEventListener("timeupdate",()=>{
+    updatePreview();
+    syncAudioPreview(false);
+    const clip=selectedClip();
+    if(!exporting&&clip&&!video.paused&&video.currentTime>=clip.end){
       video.pause();
-      playButton.textContent = "▶";
+      playButton.textContent="▶";
     }
   });
-  playButton.addEventListener("click",async() => {
-    const clip = selectedClip();
-    if (!clip || exporting) return;
-    if (video.paused) {
-      if (video.currentTime<clip.start || video.currentTime>=clip.end) await seekVideo(clip.start);
-      video.playbackRate = Number($("editorSpeed").value)||1;
-      try { await video.play(); playButton.textContent = "Ⅱ"; }
-      catch { message("Preview tidak dapat diputar. Tekan tombol sekali lagi.","error"); }
-    } else {
+  playButton.addEventListener("click",async()=>{
+    const clip=selectedClip();
+    if(!clip||exporting)return;
+    if(video.paused){
+      if(video.currentTime<clip.start||video.currentTime>=clip.end)await seekVideo(clip.start);
+      video.playbackRate=Number($("editorSpeed").value)||1;
+      try{
+        if(audioTracks.length){setupAudioGraph();if(audioContext)await audioContext.resume();}
+        await video.play();
+        playButton.textContent="Ⅱ";
+        syncAudioPreview(true);
+      }catch{message("Preview tidak dapat diputar. Tekan tombol sekali lagi.","error");}
+    }else{
       video.pause();
-      playButton.textContent = "▶";
+      audioTracks.forEach(track=>track.audio.pause());
+      playButton.textContent="▶";
     }
   });
-  video.addEventListener("pause",() => { if (!exporting) playButton.textContent="▶"; });
-  $("editorJumpStart").addEventListener("click",()=>{const clip=selectedClip();if(clip){seekVideo(clip.start);}});
-  scrub.addEventListener("input",()=>{if(!exporting)video.currentTime=Number(scrub.value)||0;});
+  video.addEventListener("pause",()=>{
+    if(!exporting){playButton.textContent="▶";audioTracks.forEach(track=>track.audio.pause());}
+  });
+  $("editorJumpStart").addEventListener("click",()=>{const clip=selectedClip();if(clip){seekVideo(clip.start);updatePreview();syncAudioPreview(true);}});
+  scrub.addEventListener("input",()=>{
+    if(!exporting){video.currentTime=Number(scrub.value)||0;updatePreview();syncAudioPreview(true);}
+  });
   startInput.addEventListener("change",updateClipTrim);
   endInput.addEventListener("change",updateClipTrim);
   startInput.addEventListener("input",() => {
@@ -918,7 +1193,9 @@
       else updatePreview();
     });
   });
-  $("editorMusicVolume").addEventListener("input",updateMusicVolume);
+  ["editorZoomStart","editorZoomEnd","editorPanX","editorPanY","editorMotionEasing"].forEach(id=>{
+    const el=$(id);armUndo(el);el.addEventListener("input",applyMotionControls);el.addEventListener("change",applyMotionControls);
+  });
   $("editorSplit").addEventListener("click",splitClip);
   $("editorMoveUp").addEventListener("click",()=>moveClip(clips.findIndex(c=>c.id===selectedId),-1));
   $("editorMoveDown").addEventListener("click",()=>moveClip(clips.findIndex(c=>c.id===selectedId),1));
@@ -937,7 +1214,6 @@
     else message("Pilih file proyek ARYANZZ berformat JSON.","error");
     $("editorProjectFile").value="";
   });
-  $("editorRemoveMusic").addEventListener("click",removeMusic);
 
   document.addEventListener("keydown",event => {
     const target=event.target;
@@ -955,11 +1231,13 @@
       removeClip(selectedId);
     }
   });
-  window.addEventListener("pagehide",() => {
+  window.addEventListener("pagehide",()=>{
     video.pause();
-    musicAudio.pause();
+    audioTracks.forEach(track=>{
+      track.audio.pause();
+      try{URL.revokeObjectURL(track.url);}catch{}
+    });
     archive.forEach(clip=>{try{URL.revokeObjectURL(clip.url);}catch{}});
-    if(musicUrl)URL.revokeObjectURL(musicUrl);
     if(exportUrl)URL.revokeObjectURL(exportUrl);
     if(audioContext)audioContext.close().catch(()=>{});
   });
@@ -967,5 +1245,5 @@
   [startInput,endInput].forEach(armUndo);
   updateEditorState();
   updatePreview();
-  updateMusicVolume();
+  renderAudioTracks();
 })();

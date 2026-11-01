@@ -1,10 +1,10 @@
 {
-  "name": "ARYANZZ V60.0 — Creator Studio Pro",
+  "name": "ARYANZZ V65.0 — Ultimate Creative Studio",
   "short_name": "ARYANZZ",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "background_color": "#070b16",
   "theme_color": "#070b16",
-  "description": "ARYANZZ V60.0: multi-clip Creative Studio Pro with timeline editing, audio track, captions, filters, transitions, project files and local export."
+  "description": "ARYANZZ V65.0: motion keyframes, three audio tracks, chroma key, animated captions, SRT subtitles and local video export."
 }
