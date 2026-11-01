@@ -134,7 +134,7 @@ body:before{content:"";position:fixed;z-index:-1;inset:-30%;pointer-events:none;
     <div class="editor-project-actions">
       <button type="button" class="editor-quiet-btn" id="editorSaveProject">Simpan proyek</button>
       <button type="button" class="editor-quiet-btn" id="editorLoadProject">Buka proyek</button>
-      <input id="editorProjectFile" type="file" accept="application/json,.json" hidden>
+      <input id="editorProjectFile" type="file" accept=".json,application/json,video/*,audio/*" multiple hidden>
     </div>
   </div>
 
@@ -196,7 +196,7 @@ body:before{content:"";position:fixed;z-index:-1;inset:-30%;pointer-events:none;
           <label class="editor-music-volume">Volume <output id="editorMusicVolumeValue">70%</output><input id="editorMusicVolume" type="range" min="0" max="100" value="70" disabled></label>
           <button type="button" class="editor-icon-btn editor-danger-btn" id="editorRemoveMusic" disabled>Hapus</button>
         </div>
-        <audio id="editorMusicAudio" preload="metadata"></audio>
+        <audio id="editorMusicAudio" preload="metadata" hidden></audio>
       </section>
     </main>
 
