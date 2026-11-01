@@ -1,4 +1,4 @@
-name: Validate ARYANZZ V67.1
+name: Validate ARYANZZ V67.2
 on:
   push:
     branches: [main]
@@ -8,11 +8,16 @@ on:
 jobs:
   syntax:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Enable Docker Buildx
+        uses: docker/setup-buildx-action@v3
       - name: Check JavaScript syntax
         run: |
           node --check src/index.js
@@ -27,6 +32,9 @@ jobs:
           node --check public/music-recognition.js
           node --check public/sw.js
           node --check tests/smoke.mjs
+          python3 -m py_compile server/shazam_recognize.py
           node -e "const fs=require('fs');const h=fs.readFileSync('public/index.html','utf8');const s=h.indexOf('<script>')+8;const e=h.indexOf('</script>',s);if(s<8||e<s)throw Error('Inline script missing');new Function(h.slice(s,e));console.log('Inline script syntax OK')"
       - name: Smoke tests
         run: node tests/smoke.mjs
+      - name: Build downloader container image
+        run: docker build --platform linux/amd64 -t aryanzz-downloader-test .
