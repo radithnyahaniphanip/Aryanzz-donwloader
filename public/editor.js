@@ -135,6 +135,7 @@
   function updateAudioGraphGains() {
     if(!audioContext)return;
     audioTracks.forEach(track=>{
+      track.audio.volume=1;
       if(track.previewGain)track.previewGain.gain.setTargetAtTime(exporting?0:track.volume,audioContext.currentTime,.02);
       if(track.recordGain)track.recordGain.gain.setTargetAtTime(exporting?track.volume:0,audioContext.currentTime,.02);
     });
@@ -960,7 +961,8 @@
       const speed = Number($("editorSpeed").value)||1;
       const total = validClips.reduce((sum,clip)=>sum+(clip.end-clip.start)/speed,0);
       audioTracks.forEach(track=>{track.audio.loop=true;track.audio.currentTime=0;});
-      await Promise.all(audioTracks.map(track=>track.audio.play().catch(()=>{})));
+      if(audioGraph)await Promise.all(audioTracks.map(track=>track.audio.play().catch(()=>{})));
+      else if(audioTracks.length)message("Browser tidak mendukung pencampuran beberapa audio track. Audio latar tidak disertakan pada ekspor ini.","error");
       recorder.start(500);
       let done = 0;
       for (const clip of validClips) {
@@ -1097,17 +1099,15 @@
       await addVideoFiles(videoFiles,project);
       if(audioFiles.length)addMusic(audioFiles,project.audioTracks||[]);
       if(Array.isArray(project.subtitles)){subtitles=project.subtitles.filter(item=>Number.isFinite(item.start)&&Number.isFinite(item.end)&&item.end>item.start);subtitleFileName=project.subtitleName||"Subtitle proyek";}
-      updatePreview();
+      $("editorSubtitleStatus").textContent=subtitles.length?subtitles.length+" cue · "+subtitleFileName:"Belum ada subtitle";
+      $("editorSubtitleDetail").textContent=subtitles.length?subtitles.length+" subtitle dipulihkan dari file proyek.":"Import file SRT untuk menampilkan subtitle otomatis pada timeline.";
+      updatePreview();updateEditorState();
       if(project.audioTracks?.length&&!audioFiles.length)message("Video dan pengaturan proyek dimuat. Pilih ulang "+project.audioTracks.length+" file audio sumber.","info");
       else if(project.musicName&&!audioFiles.length)message("Video proyek dimuat. Pilih ulang file musik: "+project.musicName,"info");
       else message("Proyek V65 berhasil dibuka. Periksa kembali sumber media yang digunakan.","ready");
     }catch(error){message(error.message||"File proyek tidak dapat dibuka.","error");}
   }
-    function addMusicPlaceholder() {
-    // Audio tracks are managed by addMusic(fileCollection, savedTracks).
-  }
-
-    fileInput.addEventListener("change",async() => {
+      fileInput.addEventListener("change",async() => {
     const files = Array.from(fileInput.files||[]);
     if (!files.length) return;
     await addVideoFiles(files,null);
