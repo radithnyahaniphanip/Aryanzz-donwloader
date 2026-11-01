@@ -493,7 +493,7 @@
       ? project.clips.map(item => ({ file:fileByName.get(item.name),item })).filter(x=>x.file)
       : incoming.map(file => ({file,item:null}));
     if (!project && clips.length) recordUndo();
-    const remaining = Math.max(0,MAX_CLIPS-clips.length);
+    const remaining = project ? MAX_CLIPS : Math.max(0,MAX_CLIPS-clips.length);
     if (project) { clips = []; selectedId = null; history = []; future = []; }
     if (project && !descriptors.length) { message("File video sumber tidak ditemukan. Pilih file proyek dan semua video sumber dalam satu kali pemilihan.","error"); return; }
     if (project && descriptors.length !== project.clips.length) message("Sebagian sumber video tidak ditemukan. Klip yang cocok saja yang akan dimuat.","error");
