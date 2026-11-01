@@ -471,11 +471,13 @@ async function recognizeMusicVideo(request,env){
       });
     }
   }
-  const unique=[],seen=new Set();
+  const grouped=new Map();
   for(const track of tracks){
-    const key=[track.offset,track.title,track.artist].join("|");
-    if(seen.has(key))continue;seen.add(key);unique.push(track);
+    const key=[track.title.toLowerCase(),track.artist.toLowerCase()].join("|");
+    if(!grouped.has(key))grouped.set(key,{...track,offsets:track.offset?[track.offset]:[]});
+    else if(track.offset&&!grouped.get(key).offsets.includes(track.offset))grouped.get(key).offsets.push(track.offset);
   }
+  const unique=[...grouped.values()];
   return json({ok:true,match:unique.length>0,provider:"AudD Enterprise",
     scannedChunks:groups.length,tracks:unique.slice(0,300),
     message:unique.length?"Pemindaian selesai.":"Belum ada lagu yang cocok pada segmen yang dipindai."});
