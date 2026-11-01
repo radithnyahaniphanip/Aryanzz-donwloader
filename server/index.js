@@ -95,8 +95,8 @@ async function identifyShazamBuffer(buffer){
   return runShazamPayload({audio:buffer.toString("base64")},45000);
 }
 async function scanShazamMedia(inputPath,skip,every,limit){
-  const durationText=await run(["ffprobe","-v","error","-show_entries","format=duration","-of","default=noprint_wrappers=1:nokey=1",inputPath],30000);
-  const duration=Number(String(durationText).trim());
+  const durationBuffer=await runBinary("ffprobe",["-v","error","-show_entries","format=duration","-of","default=noprint_wrappers=1:nokey=1",inputPath],30000);
+  const duration=Number(durationBuffer.toString().trim());
   if(!Number.isFinite(duration)||duration<=0)throw new Error("Durasi video/audio tidak dapat dibaca.");
   if(duration>MAX_DURATION)throw new Error("Durasi media melebihi batas 3 jam.");
   const interval=Math.max(12,(skip+1)*12);
