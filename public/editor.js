@@ -138,12 +138,17 @@
   }
   function armUndo(el) {
     if (!el) return;
+    el.addEventListener("pointerdown",() => {
+      if (el.dataset.undoArmed !== "pointer") recordUndo();
+      el.dataset.undoArmed = "pointer";
+    });
     el.addEventListener("focus",() => {
-      if (el.dataset.undoArmed !== "1") {
+      if (!el.dataset.undoArmed) {
         recordUndo();
-        el.dataset.undoArmed = "1";
+        el.dataset.undoArmed = "keyboard";
       }
     });
+    el.addEventListener("pointerup",() => { delete el.dataset.undoArmed; });
     el.addEventListener("change",() => { delete el.dataset.undoArmed; });
     el.addEventListener("blur",() => { delete el.dataset.undoArmed; });
   }
@@ -172,7 +177,8 @@
     $("editorRemoveMusic").disabled = !musicFile || exporting;
     $("editorSaveProject").disabled = !hasClips || exporting;
     $("editorClipCount").textContent = clips.length + " klip · " + totalDuration().toFixed(1) + " detik";
-    $("editorFileName").textContent = hasClips ? clips.length + " klip dimuat · " + formatBytes(clips.reduce((s,c)=>s+c.file.size,0)) : "Belum ada klip";
+    const uniqueFiles = new Set(clips.map(clip=>clip.file));
+    $("editorFileName").textContent = hasClips ? clips.length + " klip dimuat · " + formatBytes(Array.from(uniqueFiles).reduce((sum,file)=>sum+file.size,0)) : "Belum ada klip";
     $("editorSelectedClipName").textContent = clip ? clip.file.name : "Belum ada klip dipilih";
     $("editorPreviewMeta").textContent = $("editorRatio").value + " · " + $("editorResolution").value + "p canvas";
     empty.hidden = hasClips;
@@ -377,6 +383,7 @@
     const remaining = Math.max(0,MAX_CLIPS-clips.length);
     if (project) { clips = []; selectedId = null; history = []; future = []; }
     if (project && !descriptors.length) { message("File video sumber tidak ditemukan. Pilih file proyek dan semua video sumber dalam satu kali pemilihan.","error"); return; }
+    if (project && descriptors.length !== project.clips.length) message("Sebagian sumber video tidak ditemukan. Klip yang cocok saja yang akan dimuat.","error");
     if (descriptors.length > remaining) {
       message("Maksimal " + MAX_CLIPS + " klip dalam satu proyek. " + remaining + " slot tersisa.","error");
     }
