@@ -88,25 +88,26 @@ The editor runs locally in the browser. Source media is not uploaded to ARYANZZ 
 ### Current limitations
 V65.0 is a lightweight local browser editor, not a full replacement for CapCut or Alight Motion. It still uses one sequential video track and up to three audio tracks. Motion editing currently provides two zoom keyframes plus a fixed pan offset per clip; it is not a general-purpose multi-property keyframe graph. Chroma key replaces the keyed area with a solid color, not a background image/video. Advanced multi-layer compositing, animated stickers, motion tracking, waveform editing, cloud project sync and guaranteed MP4 export are not included. Browser codec support, available memory and device performance determine practical file sizes and export speed.
 
-## Music Finder — V66.0
+## Music Finder — V67.0
 
 Music Finder uses the AudD music-recognition API through the Cloudflare Worker. The browser never receives the provider token.
 
 ### Enable song recognition
 
-1. Create an AudD account and obtain an API token from its dashboard. AudD currently advertises 300 free recognition requests at signup; after the trial, its standard plan starts at US$5/month for 1,000 requests. Check the current dashboard pricing before enabling it.
-2. In Cloudflare Dashboard → Workers & Pages → aryanzz-donwloader → Settings → Variables and Secrets, add a secret named AUDD_API_TOKEN with the token value.
-3. Alternatively, add AUDD_API_TOKEN as a GitHub Actions repository secret. The deploy workflow syncs it to the Worker on the next deployment.
-4. Refresh ARYANZZ. The /api/music/status endpoint should report configured: true.
+1. Create an AudD account and obtain an API token from its dashboard.
+2. In Cloudflare Dashboard → Workers & Pages → aryanzz-donwloader → Settings → Variables and Secrets, add a secret named `AUDD_API_TOKEN` with the token value. The secret must be attached to the production Worker that serves the ARYANZZ website.
+3. Alternatively, add `AUDD_API_TOKEN` as a GitHub Actions repository secret. The deploy workflow syncs it to the Worker on the next deployment.
+4. Refresh ARYANZZ. The `/api/music/status` endpoint should report `configured: true`.
 
-### Supported recognition modes
+### Standard Shazam-style recognition
 
-- **Local video/audio:** upload a file. Video audio is captured locally in the browser; only a 12-second audio sample is sent to AudD. Audio files up to 10 MB can be sent directly; larger files are sampled in the browser.
-- **Video URL:** paste a public URL from a platform supported by the existing yt-dlp backend. The backend extracts a 12-second MP3 segment using FFmpeg, then the Worker sends that sample to AudD. This mode requires PLATFORM_API_ORIGIN and PLATFORM_API_TOKEN to be configured and reachable.
+- **Local video/audio:** upload a file and select the timestamp. The browser extracts a 12-second audio sample and sends only that sample to the standard AudD endpoint.
 - **Microphone:** records up to 12 seconds after the visitor grants microphone permission.
+- **Results:** title, artist, album, cover artwork where available, streaming links, and local search history.
 
-The start-second field lets visitors choose a later part of a DJ mix or video. AudD describes use cases involving DJ mixes, but its standard endpoint is designed to identify a single song from a short sample. Matching a heavily edited remix, slowed/reverb, sped-up or pitch-shifted version is not guaranteed; the result may identify the underlying original track or return no match. Scanning an entire long DJ set and returning every track with timestamps requires AudD's enterprise endpoint.
+### Remix and DJ recognition
 
+AudD's fingerprinting can match altered recordings such as remixes, slowed/reverb, pitch shifts and edits, but a match is not guaranteed. For one song, use the 12-second standard mode. For a full DJ mix or video with multiple songs, use the Enterprise scan below.
 ### Full video and DJ mix scanning — V67.0
 
 The **Pindai seluruh video / DJ mix** actions use AudD Enterprise directly. Public video-page URLs are sent to AudD; the browser does not need the separate yt-dlp extractor for this recognition mode. Uploaded video/audio files are sent to the Worker and forwarded to AudD Enterprise (maximum 50 MB).
