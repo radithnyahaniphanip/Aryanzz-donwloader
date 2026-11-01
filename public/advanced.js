@@ -74,7 +74,7 @@
   if(analyze)analyze.onclick=async()=>{
     const url=$("url").value.trim(),box=$("downloadResult");box.hidden=false;box.textContent="Memeriksa link…";
     try{const u=new URL(url);if(!["http:","https:"].includes(u.protocol))throw new Error("Gunakan tautan HTTP atau HTTPS.");const data=await inspect(u.href);showMedia(data,u.href);}
-    catch(e){box.innerHTML="";const b=document.createElement("b");b.textContent="Link belum bisa diproses";const p=document.createElement("p");p.className="muted";p.textContent=e.message;const hint=document.createElement("p");hint.className="muted";hint.textContent="Tautan file langsung didukung oleh Cloudflare Worker. Link halaman TikTok/Instagram/YouTube memerlukan backend ekstraksi yt-dlp yang aktif dan terhubung.";box.append(b,p,hint);}
+    catch(e){box.innerHTML="";const b=document.createElement("b");b.textContent="Link belum bisa diproses";const p=document.createElement("p");p.className="muted";p.textContent=e.message;const hint=document.createElement("p");hint.className="muted";hint.textContent="Tautan file langsung didukung oleh Cloudflare Worker. YouTube memakai downloader khusus. TikTok saat ini hanya memakai opsi Simpan Video resmi; ekstraksi otomatis platform lain belum aktif.";box.append(b,p,hint);}
   };
   const queue=$("queueList"),queueItems=[];
   function drawQueue(){if(!queue)return;queue.innerHTML="";if(!queueItems.length){queue.innerHTML="<p class='muted'>Antrean masih kosong.</p>";return;}queueItems.forEach((x,i)=>{const d=document.createElement("div");d.className="queue-row";const label=document.createElement("span");label.textContent=(i+1)+". "+x.url;const state=document.createElement("small");state.textContent=x.status;d.append(label,state);queue.append(d);});}
