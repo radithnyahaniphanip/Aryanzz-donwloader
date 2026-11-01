@@ -57,7 +57,14 @@ jobs:
           const infoResponse = await fetch(base + "/api/youtube/info?url=" + encodeURIComponent(sample), { cache: "no-store" });
           const info = await infoResponse.json();
           if (!infoResponse.ok || !info.ok || !info.title) {
-            throw new Error("SaveNow metadata check failed: " + (info.error || "No video title returned."));
+            if (/not enough balance|insufficient balance|low balance/i.test(info.error || "")) {
+              console.warn("SaveNow API key is reachable, but its wallet needs a top-up before downloads can be created.");
+            } else {
+              throw new Error("SaveNow metadata check failed: " + (info.error || "No video title returned."));
+            }
+          } else if (info.providerReady === false) {
+            console.warn("YouTube preview is available, but SaveNow wallet balance is insufficient. Paid download jobs remain disabled.");
+          } else {
+            console.log("SaveNow non-billable metadata check OK: " + info.title);
           }
-          console.log("SaveNow non-billable metadata check OK: " + info.title);
           NODE
