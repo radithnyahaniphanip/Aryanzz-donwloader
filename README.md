@@ -1,10 +1,10 @@
-# ARYANZZ V59.5 — Creator Studio
+# ARYANZZ V60.0 — Creator Studio Pro
 
 Production website: https://aryanzz-donwloader.radithnyahaniphanip.workers.dev/
 
 ARYANZZ is a mobile-first creator workspace. The Cloudflare Worker serves the website and safely proxies supported platform requests to a separate Docker backend running yt-dlp and FFmpeg.
 
-## V59.5 release scope
+## V60.0 release scope
 
 | Release stage | Scope |
 | --- | --- |
@@ -13,7 +13,7 @@ ARYANZZ is a mobile-first creator workspace. The Cloudflare Worker serves the we
 | V40–V44 | Local Video Editor: import, preview, trim start/end, crop ratios, rotation and playback speed |
 | V45–V49 | Video filters, brightness/contrast/saturation, text overlays, mute and export controls |
 | V50–V54 | Creator workspace integration, mobile layout, local-only editing and clearer feature states |
-| V55–V59.5 | Backend health status, PWA cache refresh, expanded smoke tests, documentation and deployment configuration |
+| V55–V59.5 | Backend health status, PWA cache refresh, expanded smoke tests and deployment configuration |\n| V60.0 | Multi-clip timeline, split/reorder/trim, music track, caption styling, fade transition, undo/redo, project JSON and local export |
 
 ## Downloader
 
@@ -43,21 +43,41 @@ Until both platform secrets are configured and the backend is reachable, `/api/p
 
 The Render free plan may sleep when idle and may have CPU, memory, bandwidth and execution limits. A production service with frequent or large downloads may need a paid always-on host.
 
-## Video Editor
+## Video Editor — Creative Studio Pro V60.0
 
-The Video Editor runs locally in the browser. It supports one clip at a time:
+The editor runs locally in the browser. Source media is not uploaded to ARYANZZ servers.
 
-- Import local video (up to 300 MB).
-- Preview, trim start/end and playback speed.
-- 16:9, 9:16, 1:1 and 4:5 crop canvas.
+### Timeline and clips
+- Import up to 8 local video clips, each up to 300 MB.
+- Preview the selected clip and scrub its playhead.
+- Trim the in/out points of each clip independently.
+- Split the selected clip at the preview playhead.
+- Reorder clips, remove clips, and undo/redo timeline changes.
+- Export plays clips sequentially in timeline order.
+
+### Audio and captions
+- Add one local background music file (up to 300 MB).
+- Adjust background music volume.
+- Optionally mute the original audio from the video clips.
+- Add a caption overlay with editable text, color, size and placement.
+
+### Image treatment and export
+- 16:9, 9:16, 1:1 and 4:5 canvas ratios.
 - 90°, 180° and 270° rotation.
-- Original, vivid, cinematic, monochrome and warm filter presets.
+- 0.5× to 2× playback speed.
+- Original, vivid, cinematic, monochrome, warm and cool presets.
 - Brightness, contrast and saturation adjustments.
-- Text overlay with top, middle or bottom placement.
-- Mute audio and export quality selection.
-- Export as WebM or MP4 when the browser's MediaRecorder supports it.
+- Cut or fade-to-black transition between clips.
+- 720p or 1080p canvas and low/standard/high bitrate presets.
+- Browser-based MediaRecorder export, usually WebM in Chrome Android; MP4 is offered only when supported by the browser.
 
-The editor does not upload source files. Browser support determines the available export format. This is a single-clip editor, not a full CapCut/Alight Motion replacement: multi-track editing, keyframes, transitions, motion tracking, advanced effects and project cloud sync are not included in V59.5.
+### Project files
+- Save a project as JSON with clip order, trim points and editing settings.
+- Reopen a project by selecting the project JSON together with its original source videos (and optional music file).
+- The project JSON does not contain the video/audio media itself; keep the original source files.
+
+### Current limitations
+V60.0 is a lightweight local editor, not a complete replacement for CapCut or Alight Motion. It currently has one video track arranged as sequential clips and one background music track. It does not yet include keyframes, multi-layer overlays, multiple audio tracks, animated stickers, motion tracking, advanced transitions, cloud project sync or guaranteed MP4 export. Browser memory, codec support and device performance determine practical file sizes and export speed.
 
 ## Tools Hub
 
@@ -74,7 +94,7 @@ Profile details, profile images, visual presets, history and favorites remain st
 ## Development and deployment
 
 - Frontend: `public/index.html`, `public/v15.css`, `public/v25.css`, `public/v59.css`
-- Frontend logic: `public/v15.js`, `public/v25.js`, `public/v59.js`, `public/editor.js`, `public/downloader.js`
+- Frontend logic: `public/v15.js`, `public/v25.js`, `public/v59.js`, `public/editor.js` and `public/editor-pro.css`, `public/downloader.js`
 - Existing local tools/profile: `public/advanced.js`, `public/owner.js`
 - Cloudflare Worker: `src/index.js`
 - Self-hosted extraction service: `server/index.js`
@@ -94,4 +114,4 @@ The API listens on port 3000 by default. Set `ALLOWED_ORIGINS` if browser client
 
 ## Legacy API note
 
-The older `/api/youtube/*` SaveNow endpoints remain in the Worker for backward compatibility with older clients. The V59.5 page does not call those endpoints; the primary downloader uses the self-hosted yt-dlp backend.
+The older `/api/youtube/*` SaveNow endpoints remain in the Worker for backward compatibility with older clients. The V59.5 downloader page does not call those endpoints; the primary downloader uses the self-hosted yt-dlp backend. The editor UI is V60.0.
