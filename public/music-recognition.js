@@ -209,8 +209,8 @@
       status.className="music-status "+(apiReady?"is-ready":"is-warning");
       status.textContent=apiReady?(data.auddConfigured?"AudD token terpasang"+(data.shazamFallbackReady?" · Shazam fallback tersedia":""):"Shazam fallback aktif"):"Music Finder belum aktif. Hubungkan AudD atau Cloudflare Container Shazam.";
       $("musicUrlHelp").textContent=videoUrlReady
-        ?"Tautan publik dipindai langsung oleh AudD Enterprise; tidak perlu server ekstraksi tambahan."
-        :"Tautan video dan DJ mix memerlukan AudD Enterprise atau backend ekstraksi yang kompatibel.";
+        ?(data.auddConfigured?(data.shazamFallbackReady?"Tautan publik dipindai AudD Enterprise; bila kuota/akses AudD gagal, Shazam Container menjadi cadangan.":"Tautan publik memerlukan akses AudD Enterprise yang aktif."):"Tautan publik dipindai oleh Shazam Container. Maksimum 30 sampel per pemindaian DJ.")
+        :"Tautan video memerlukan AudD Enterprise atau Cloudflare Container Shazam yang aktif.";
       refreshButtons();
     }catch(error){
       apiReady=false;videoUrlReady=false;status.className="music-status is-warning";
