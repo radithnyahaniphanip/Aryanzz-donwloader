@@ -1,7 +1,7 @@
-const CACHE="aryanzz-v65-0";
+const CACHE="aryanzz-v66-0";
 const SHELL=[
-  "/?v=65.0",
-  "/manifest.webmanifest?v=65.0",
+  "/?v=66.0",
+  "/manifest.webmanifest?v=66.0",
   "/advanced.js?v=59.5",
   "/v15.js?v=59.5",
   "/v15.css?v=59.5",
@@ -14,7 +14,9 @@ const SHELL=[
   "/v59.css?v=59.5",
   "/v59.js?v=59.5",
   "/editor-pro.css?v=65.0",
-  "/editor.js?v=65.0"
+  "/editor.js?v=65.0",
+  "/music-recognition.css?v=66.0",
+  "/music-recognition.js?v=66.0"
 ];
 self.addEventListener("install",event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(SHELL)).then(()=>self.skipWaiting())));
 self.addEventListener("activate",event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));
