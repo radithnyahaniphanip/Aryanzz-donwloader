@@ -207,7 +207,7 @@
       const data=await readResponse(await fetch("/api/music/status",{cache:"no-store"}));
       apiReady=!!data.configured;videoUrlReady=!!data.videoUrlReady;
       status.className="music-status "+(apiReady?"is-ready":"is-warning");
-      status.textContent=apiReady?(data.auddConfigured?"AudD token terpasang"+(data.shazamFallbackReady?" · Shazam fallback tersedia":""):"Shazam fallback aktif"):"Music Finder belum aktif. Hubungkan AudD atau Cloudflare Container Shazam.";
+      status.textContent=apiReady?(data.auddConfigured?"AudD token terpasang"+(data.shazamFallbackReady?" · Shazam fallback tersedia":"") :"Shazam fallback terkonfigurasi"):"Music Finder belum aktif. Hubungkan AudD atau Cloudflare Container Shazam.";
       $("musicUrlHelp").textContent=videoUrlReady
         ?(data.auddConfigured?(data.shazamFallbackReady?"Tautan publik dipindai AudD Enterprise; bila kuota/akses AudD gagal, Shazam Container menjadi cadangan.":"Tautan publik memerlukan akses AudD Enterprise yang aktif."):"Tautan publik dipindai oleh Shazam Container. Maksimum 30 sampel per pemindaian DJ.")
         :"Tautan video memerlukan AudD Enterprise atau Cloudflare Container Shazam yang aktif.";
