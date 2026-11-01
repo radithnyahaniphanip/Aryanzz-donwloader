@@ -168,3 +168,12 @@
 @media(max-width:900px){.editor-pro-workspace{grid-template-columns:1fr}.editor-inspector{position:static;max-height:none;overflow:visible}.editor-inspector-head{position:static;background:transparent}}
 @media(max-width:600px){.editor-panel{width:calc(100vw - 20px);margin-left:50%;padding:13px;transform:translateX(-50%)}.editor-audio-track{grid-template-columns:26px minmax(70px,1fr) minmax(78px,.7fr) 26px;gap:6px;padding:7px}.editor-audio-track-volume{min-width:0}.editor-source-subtitle{flex-basis:100%}.editor-keyframe-section .editor-control-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(prefers-reduced-motion:reduce){.editor-overlay[data-animation]{animation:none!important}}
+
+
+.editor-preview-canvas{position:absolute;inset:0;width:100%;height:100%;display:block;object-fit:contain;background:#050b13;z-index:1}
+.editor-preview-canvas[hidden]{display:none}
+.editor-subtitle-status{flex-basis:100%;padding:0 3px;color:#b9a8e7;font-size:9px}
+.editor-subtitle-section .editor-quiet-btn{padding:7px 10px;font-size:9px}
+.editor-overlay{z-index:2}
+.editor-preview-frame #editorPreview{position:relative;z-index:0}
+.editor-preview-frame #editorEmpty{z-index:4}
