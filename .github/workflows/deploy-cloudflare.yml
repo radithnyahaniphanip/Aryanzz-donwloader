@@ -1,4 +1,4 @@
-name: Deploy ARYANZZ V67.1 to Cloudflare Workers
+name: Deploy ARYANZZ V67.2 to Cloudflare Workers
 
 on:
   push:
@@ -8,6 +8,7 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -20,29 +21,14 @@ jobs:
       - name: Install Wrangler
         run: npm install --global wrangler
 
-      - name: Configure self-hosted extractor origin
-        env:
-          PLATFORM_API_ORIGIN: ${{ secrets.PLATFORM_API_ORIGIN }}
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: |
-          if [ -z "$PLATFORM_API_ORIGIN" ]; then
-            echo "::warning::PLATFORM_API_ORIGIN is not configured. Platform-page extraction will remain offline; direct media URLs still work."
-          else
-            printf '%s' "$PLATFORM_API_ORIGIN" | wrangler secret put PLATFORM_API_ORIGIN
-          fi
+      - name: Install Worker dependencies
+        run: npm install --no-audit --no-fund
 
-      - name: Configure self-hosted extractor token
-        env:
-          PLATFORM_API_TOKEN: ${{ secrets.PLATFORM_API_TOKEN }}
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: |
-          if [ -z "$PLATFORM_API_TOKEN" ]; then
-            echo "::warning::PLATFORM_API_TOKEN is not configured. Platform-page extraction will remain offline; direct media URLs still work."
-          else
-            printf '%s' "$PLATFORM_API_TOKEN" | wrangler secret put PLATFORM_API_TOKEN
-          fi
+      - name: Enable Docker Buildx for Cloudflare Containers
+        uses: docker/setup-buildx-action@v3
+
+      - name: Verify Docker engine
+        run: docker info
 
       - name: Configure AudD music recognition secret
         env:
@@ -62,7 +48,7 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
-      - name: Smoke test live Worker and V67.1 editor assets
+      - name: Smoke test live Worker and V67.2 editor assets
         env:
           WORKER_URL: https://aryanzz-donwloader.radithnyahaniphanip.workers.dev
         run: |
@@ -71,16 +57,16 @@ jobs:
           const healthResponse = await fetch(base + "/api/health", { cache: "no-store" });
           if (!healthResponse.ok) throw new Error("Live Worker health check failed: HTTP " + healthResponse.status);
           const health = await healthResponse.json();
-          if (health.version !== "67.1" || !health.selfHostedDownloader || !health.directMediaDownload) {
-            throw new Error("Live Worker version or downloader status is incorrect: " + JSON.stringify(health));
+          if (health.version !== "67.2" || !health.selfHostedDownloader || !health.platformExtraction || !health.musicFallbackReady || !health.directMediaDownload) {
+            throw new Error("Live Worker or Cloudflare Container backend is not configured: " + JSON.stringify(health));
           }
           console.log("Live Worker health OK: V" + health.version + ".");
 
-          for (const path of ["/editor.js?v=65.0", "/editor-pro.css?v=65.0", "/music-recognition.js?v=67.1", "/music-recognition.css?v=67.1", "/v59.js?v=59.5", "/v59.css?v=59.5"]) {
+          for (const path of ["/editor.js?v=65.0", "/editor-pro.css?v=65.0", "/music-recognition.js?v=67.2", "/music-recognition.css?v=67.2", "/v59.js?v=59.5", "/v59.css?v=59.5"]) {
             const response = await fetch(base + path, { cache: "no-store" });
             if (!response.ok) throw new Error("Static asset unavailable: " + path + " HTTP " + response.status);
           }
-          console.log("V67.1 Creative Studio and Music Finder assets are available.");
+          console.log("V67.2 Creative Studio and Music Finder assets are available.");
 
           const musicResponse = await fetch(base + "/api/music/status", { cache: "no-store" });
           if (!musicResponse.ok) throw new Error("Music Finder status endpoint failed.");
@@ -90,13 +76,20 @@ jobs:
           }
           console.log("Music Finder recognition provider is configured on the live Worker.");
 
-          const statusResponse = await fetch(base + "/api/platform/status", { cache: "no-store" });
-          const status = await statusResponse.json();
-          if (!status.configured) {
-            console.warn("Self-hosted extractor is not connected yet. Add PLATFORM_API_ORIGIN and PLATFORM_API_TOKEN secrets after starting the local backend package or another supported backend host.");
-          } else if (!status.ok) {
-            console.warn("Extractor is configured but did not respond healthy. Check the backend service.");
-          } else {
-            console.log("Self-hosted extractor is online.");
+          let status = null;
+          for (let attempt = 0; attempt < 18; attempt++) {
+            try {
+              const statusResponse = await fetch(base + "/api/platform/status", { cache: "no-store", signal: AbortSignal.timeout(75000) });
+              status = await statusResponse.json();
+              if (status.ok) break;
+            } catch {}
+            await new Promise(resolve => setTimeout(resolve, 10000));
           }
+          if (!status?.ok) throw new Error("Cloudflare yt-dlp + FFmpeg container did not become healthy: " + JSON.stringify(status));
+          console.log("Cloudflare downloader container is online.");
+
+          const musicStatusResponse = await fetch(base + "/api/music/status", { cache: "no-store" });
+          const musicStatus = await musicStatusResponse.json();
+          if (!musicStatus.shazamFallbackReady) throw new Error("Shazam fallback container is not ready.");
+          console.log("Shazam fallback provider is available.");
           NODE
