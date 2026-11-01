@@ -370,12 +370,27 @@ async function youtubeFile(request,env){
 function musicStatus(env){
   const shazamReady=!!env.DOWNLOADER_CONTAINER;
   const auddReady=!!env.AUDD_API_TOKEN;
-  return json({ok:true,provider:auddReady?"AudD":"Shazam",configured:auddReady||shazamReady,
-    auddConfigured:auddReady,shazamFallbackReady:shazamReady,
-    videoUrlReady:shazamReady||auddReady||!!(env.PLATFORM_API_ORIGIN&&env.PLATFORM_API_TOKEN),
-    videoScanProvider:auddReady?"AudD Enterprise + Shazam fallback":"Shazam multi-segment fallback",
+  const externalExtractorReady=!!(env.PLATFORM_API_ORIGIN&&env.PLATFORM_API_TOKEN);
+  const provider=auddReady?(shazamReady?"AudD + Shazam fallback":"AudD"):shazamReady?"Shazam":"Unavailable";
+  return json({ok:true,provider,configured:auddReady||shazamReady,
+    auddConfigured:auddReady,shazamFallbackConfigured:shazamReady,shazamFallbackReady:shazamReady,
+    videoUrlReady:auddReady||shazamReady||externalExtractorReady,
+    videoScanProvider:auddReady?(shazamReady?"AudD Enterprise + Shazam fallback":"AudD Enterprise"):shazamReady?"Shazam multi-segment fallback":"Unavailable",
     extractorRequiredForMusicScan:false,sampleSeconds:12,maxUploadBytes:AUDD_MAX_BYTES,
-    maxEnterpriseUploadBytes:50*1024*1024});
+    maxEnterpriseUploadBytes:50*1024*1024,shazamMaxScanChunks:30,auddMaxScanChunks:100,
+    note:"Status konfigurasi menunjukkan binding tersedia; status ini tidak menguji kuota AudD atau menjalankan pengenalan lagu."});
+}
+async function searchYouTube(request,env){
+  let body;try{body=await request.json()}catch{return json({error:"Body JSON tidak valid."},400)}
+  const query=String(body?.query||"").replace(/\s+/g," ").trim();
+  if(query.length<2)return json({error:"Masukkan minimal 2 karakter untuk mencari judul video."},400);
+  if(query.length>160)return json({error:"Judul pencarian maksimal 160 karakter."},400);
+  if(!env.DOWNLOADER_CONTAINER)return json({error:"Pencarian judul membutuhkan Cloudflare Container yt-dlp yang aktif."},503);
+  try{
+    const response=await callDownloaderContainer(env,"/api/search",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({query})});
+    const data=await response.json().catch(()=>({}));
+    return json(data,response.status);
+  }catch{return json({error:"Layanan pencarian judul belum siap. Tunggu container aktif lalu coba lagi."},502)}
 }
 function musicRateLimited(request){
   const ip=request.headers.get("cf-connecting-ip")||"unknown",now=Date.now();
@@ -616,6 +631,7 @@ export default {async fetch(request,env){
   if(request.method==="OPTIONS"&&url.pathname.startsWith("/api/"))return new Response(null,{status:204,headers:{"access-control-allow-origin":url.origin,"access-control-allow-methods":"GET,POST,OPTIONS","access-control-allow-headers":"Content-Type"}});
   if(url.pathname==="/api/music/scan-video"&&request.method==="POST")return recognizeMusicVideo(request,env);
   if(url.pathname==="/api/music/status"&&request.method==="GET")return musicStatus(env);
+  if(url.pathname==="/api/search"&&request.method==="POST")return searchYouTube(request,env);
   if(url.pathname==="/api/music/recognize"&&request.method==="POST")return recognizeMusic(request,env);
   if(url.pathname==="/api/platform/status"&&request.method==="GET")return platformStatus(env);
   if(url.pathname==="/api/youtube/status"&&request.method==="GET")return json({ok:true,service:"ARYANZZ YouTube Backend",youtubeDownloader:true,youtubeApiKeyConfigured:!!env.SAVENOW_API_KEY,supportedAudio:[...YOUTUBE_AUDIO_FORMATS],supportedVideo:["360","720","1080","1440","4k"]});
@@ -623,7 +639,7 @@ export default {async fetch(request,env){
   if(url.pathname==="/api/youtube/download"&&request.method==="POST")return youtubeStart(request,env);
   if(url.pathname==="/api/youtube/progress"&&request.method==="POST")return youtubeProgress(request,env);
   if(url.pathname==="/api/youtube/file"&&request.method==="GET")return youtubeFile(request,env);
-  if(url.pathname==="/api/health"&&request.method==="GET")return json({ok:true,service:"ARYANZZ",version:"67.2",mode:"cloudflare-worker",directMediaDownload:true,selfHostedDownloader:!!env.DOWNLOADER_CONTAINER||!!(env.PLATFORM_API_ORIGIN&&env.PLATFORM_API_TOKEN),youtubeDownloader:true,youtubeApiKeyConfigured:!!env.SAVENOW_API_KEY,musicRecognitionConfigured:!!env.AUDD_API_TOKEN,musicFallbackReady:!!env.DOWNLOADER_CONTAINER,musicVideoRecognitionReady:!!env.DOWNLOADER_CONTAINER||!!(env.PLATFORM_API_ORIGIN&&env.PLATFORM_API_TOKEN),platformExtraction:!!env.DOWNLOADER_CONTAINER||!!(env.PLATFORM_API_ORIGIN&&env.PLATFORM_API_TOKEN),platformBackend:env.DOWNLOADER_CONTAINER?"cloudflare-container":env.PLATFORM_API_ORIGIN&&env.PLATFORM_API_TOKEN?"external":"not-configured"});
+  if(url.pathname==="/api/health"&&request.method==="GET")return json({ok:true,service:"ARYANZZ",version:"67.6",mode:"cloudflare-worker",directMediaDownload:true,selfHostedDownloader:!!env.DOWNLOADER_CONTAINER||!!(env.PLATFORM_API_ORIGIN&&env.PLATFORM_API_TOKEN),youtubeDownloader:true,youtubeApiKeyConfigured:!!env.SAVENOW_API_KEY,musicRecognitionConfigured:!!env.AUDD_API_TOKEN,musicFallbackReady:!!env.DOWNLOADER_CONTAINER,musicVideoRecognitionReady:!!env.DOWNLOADER_CONTAINER||!!(env.PLATFORM_API_ORIGIN&&env.PLATFORM_API_TOKEN),platformExtraction:!!env.DOWNLOADER_CONTAINER||!!(env.PLATFORM_API_ORIGIN&&env.PLATFORM_API_TOKEN),platformBackend:env.DOWNLOADER_CONTAINER?"cloudflare-container":env.PLATFORM_API_ORIGIN&&env.PLATFORM_API_TOKEN?"external":"not-configured"});
   if(url.pathname==="/api/info"&&request.method==="POST"){const proxied=await proxyPlatform(request,env,"/api/info");if(proxied)return proxied;return info(request);}
   if(url.pathname==="/api/download"&&request.method==="POST"){const proxied=await proxyPlatform(request,env,"/api/download");if(proxied)return proxied;return download(request);}
   if(url.pathname.startsWith("/api/"))return json({error:"Endpoint tidak ditemukan."},404);
