@@ -117,10 +117,10 @@
       return end>start&&text?{start,end,text}:null;
     }).filter(Boolean).sort((a,b)=>a.start-b.start);
   }
-  function captionAt(projectTime) {
+  function captionAt(projectTime,clip) {
     const subtitle=subtitles.find(item=>projectTime>=item.start&&projectTime<=item.end);
     return subtitle ? {text:subtitle.text,start:subtitle.start,end:subtitle.end,isSubtitle:true} :
-      {text:textInput.value.trim(),start:timelineOffset(selectedClip()),end:totalDuration(),isSubtitle:false};
+      {text:textInput.value.trim(),start:timelineOffset(clip||selectedClip()),end:totalDuration(),isSubtitle:false};
   }
   function textAnimationState(caption,projectTime) {
     const mode=$("editorTextAnimation").value;
@@ -138,7 +138,7 @@
       if(track.recordGain)track.recordGain.gain.setTargetAtTime(exporting?track.volume:0,audioContext.currentTime,.02);
     });
   }
-  function makeId = () => (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : "clip-" + Date.now() + "-" + Math.random().toString(36).slice(2);
+  const makeId = () => (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : "clip-" + Date.now() + "-" + Math.random().toString(36).slice(2);
   const selectedClip = () => clips.find(clip => clip.id === selectedId) || null;
   const settingsIds = [
     "editorRatio","editorRotate","editorSpeed","editorTransition","editorFilterPreset",
@@ -634,7 +634,6 @@
     const panX=motion.panX*width/300;
     const panY=motion.panY*height/300;
     target.save();
-    target.clearRect(0,0,width,height);
     target.filter="brightness("+$("editorBrightness").value+"%) contrast("+$("editorContrast").value+"%) saturate("+$("editorSaturation").value+"%)";
     target.translate(width/2+panX,height/2+panY);
     target.rotate(rotate*Math.PI/180);
@@ -716,6 +715,7 @@
       slider.addEventListener("input",()=>{
         track.volume=Number(slider.value)/100;
         value.textContent=slider.value+"%";
+        if(!audioContext)track.audio.volume=track.volume;
         updateAudioGraphGains();
       });
       volume.append(value,slider);
@@ -781,6 +781,7 @@
         const target=projectTime%duration;
         if(Math.abs(track.audio.currentTime-target)>.45)track.audio.currentTime=target;
       }
+      track.audio.volume=audioContext?1:track.volume;
       track.audio.play().catch(()=>{});
     });
   }
@@ -977,6 +978,12 @@
     $("editorTextColor").value = "#ffffff";
     $("editorTextPosition").value = "bottom";
     $("editorTextSize").value = "42";
+    $("editorTextAnimation").value = "none";
+    $("editorChromaEnabled").checked = false;
+    $("editorChromaColor").value = "#00ff00";
+    $("editorChromaTolerance").value = "65";
+    $("editorBackgroundColor").value = "#101827";
+    const clip=selectedClip();if(clip){clip.motion=defaultMotion();setMotionControls(clip);}
     $("editorMute").checked = false;
     $("editorResolution").value = "720";
     $("editorQuality").value = "standard";
@@ -994,9 +1001,9 @@
       if(!file.type.startsWith("audio/")||file.size>MAX_FILE){message("Lewati "+file.name+": pilih file audio maksimal 300 MB.","error");continue;}
       const saved=(savedTracks||[]).find(item=>item.name===file.name);
       const url=URL.createObjectURL(file);
-      const audio=audioTracks.length===0?musicAudio:document.createElement("audio");
-      audio.hidden=true;audio.preload="auto";audio.loop=true;audio.src=url;audio.load();
-      if(audio!==musicAudio)document.body.appendChild(audio);
+      const audio=document.createElement("audio");
+      audio.hidden=true;audio.preload="auto";audio.loop=true;audio.volume=1;audio.src=url;audio.load();
+      document.body.appendChild(audio);
       const track={id:makeId(),file,url,audio,volume:saved&&Number.isFinite(Number(saved.volume))?Math.max(0,Math.min(1,Number(saved.volume))):.7,sourceNode:null,previewGain:null,recordGain:null};
       audioTracks.push(track);
       added++;
@@ -1017,7 +1024,7 @@
     if(track.previewGain)try{track.previewGain.disconnect();}catch{}
     if(track.recordGain)try{track.recordGain.disconnect();}catch{}
     URL.revokeObjectURL(track.url);
-    if(track.audio!==musicAudio)track.audio.remove();
+    track.audio.remove();
     renderAudioTracks();
     updateEditorState();
     message("Audio track dihapus.","info");
@@ -1061,11 +1068,14 @@
       const videoFiles=sourceFiles.filter(item=>item.type.startsWith("video/"));
       const audioFiles=sourceFiles.filter(item=>item.type.startsWith("audio/"));
       if(!videoFiles.length)throw new Error("Pilih file proyek dan semua video sumber secara bersamaan.");
+      audioTracks.slice().forEach(track=>removeMusic(track.id));
+      subtitles=[];subtitleFileName="";
       await addVideoFiles(videoFiles,project);
       if(audioFiles.length)addMusic(audioFiles,project.audioTracks||[]);
       if(Array.isArray(project.subtitles)){subtitles=project.subtitles.filter(item=>Number.isFinite(item.start)&&Number.isFinite(item.end)&&item.end>item.start);subtitleFileName=project.subtitleName||"Subtitle proyek";}
       updatePreview();
       if(project.audioTracks?.length&&!audioFiles.length)message("Video dan pengaturan proyek dimuat. Pilih ulang "+project.audioTracks.length+" file audio sumber.","info");
+      else if(project.musicName&&!audioFiles.length)message("Video proyek dimuat. Pilih ulang file musik: "+project.musicName,"info");
       else message("Proyek V65 berhasil dibuka. Periksa kembali sumber media yang digunakan.","ready");
     }catch(error){message(error.message||"File proyek tidak dapat dibuka.","error");}
   }
