@@ -1079,10 +1079,15 @@
     await addVideoFiles(files,null);
     fileInput.value = "";
   });
-  musicInput.addEventListener("change",() => {
-    const file = musicInput.files && musicInput.files[0];
-    if (file) addMusic(file);
-    musicInput.value = "";
+  musicInput.addEventListener("change",()=>{
+    const files=Array.from(musicInput.files||[]);
+    if(files.length)addMusic(files);
+    musicInput.value="";
+  });
+  subtitleInput.addEventListener("change",()=>{
+    const file=subtitleInput.files&&subtitleInput.files[0];
+    if(file)importSubtitles(file);
+    subtitleInput.value="";
   });
   video.addEventListener("loadedmetadata",() => {
     const clip = selectedClip();
@@ -1092,33 +1097,44 @@
     endInput.max = String(clip.duration);
     startInput.value = String(clip.start);
     endInput.value = String(clip.end);
+    setMotionControls(clip);
     empty.hidden = true;
     updatePreview();
   });
-  video.addEventListener("timeupdate",() => {
-    updateLabels();
-    const clip = selectedClip();
-    if (!exporting && clip && !video.paused && video.currentTime>=clip.end) {
+  video.addEventListener("timeupdate",()=>{
+    updatePreview();
+    syncAudioPreview(false);
+    const clip=selectedClip();
+    if(!exporting&&clip&&!video.paused&&video.currentTime>=clip.end){
       video.pause();
-      playButton.textContent = "▶";
+      playButton.textContent="▶";
     }
   });
-  playButton.addEventListener("click",async() => {
-    const clip = selectedClip();
-    if (!clip || exporting) return;
-    if (video.paused) {
-      if (video.currentTime<clip.start || video.currentTime>=clip.end) await seekVideo(clip.start);
-      video.playbackRate = Number($("editorSpeed").value)||1;
-      try { await video.play(); playButton.textContent = "Ⅱ"; }
-      catch { message("Preview tidak dapat diputar. Tekan tombol sekali lagi.","error"); }
-    } else {
+  playButton.addEventListener("click",async()=>{
+    const clip=selectedClip();
+    if(!clip||exporting)return;
+    if(video.paused){
+      if(video.currentTime<clip.start||video.currentTime>=clip.end)await seekVideo(clip.start);
+      video.playbackRate=Number($("editorSpeed").value)||1;
+      try{
+        if(audioTracks.length){setupAudioGraph();if(audioContext)await audioContext.resume();}
+        await video.play();
+        playButton.textContent="Ⅱ";
+        syncAudioPreview(true);
+      }catch{message("Preview tidak dapat diputar. Tekan tombol sekali lagi.","error");}
+    }else{
       video.pause();
-      playButton.textContent = "▶";
+      audioTracks.forEach(track=>track.audio.pause());
+      playButton.textContent="▶";
     }
   });
-  video.addEventListener("pause",() => { if (!exporting) playButton.textContent="▶"; });
-  $("editorJumpStart").addEventListener("click",()=>{const clip=selectedClip();if(clip){seekVideo(clip.start);}});
-  scrub.addEventListener("input",()=>{if(!exporting)video.currentTime=Number(scrub.value)||0;});
+  video.addEventListener("pause",()=>{
+    if(!exporting){playButton.textContent="▶";audioTracks.forEach(track=>track.audio.pause());}
+  });
+  $("editorJumpStart").addEventListener("click",()=>{const clip=selectedClip();if(clip){seekVideo(clip.start);updatePreview();syncAudioPreview(true);}});
+  scrub.addEventListener("input",()=>{
+    if(!exporting){video.currentTime=Number(scrub.value)||0;updatePreview();syncAudioPreview(true);}
+  });
   startInput.addEventListener("change",updateClipTrim);
   endInput.addEventListener("change",updateClipTrim);
   startInput.addEventListener("input",() => {
@@ -1140,7 +1156,9 @@
       else updatePreview();
     });
   });
-  $("editorMusicVolume").addEventListener("input",updateMusicVolume);
+  ["editorZoomStart","editorZoomEnd","editorPanX","editorPanY","editorMotionEasing"].forEach(id=>{
+    const el=$(id);armUndo(el);el.addEventListener("input",applyMotionControls);el.addEventListener("change",applyMotionControls);
+  });
   $("editorSplit").addEventListener("click",splitClip);
   $("editorMoveUp").addEventListener("click",()=>moveClip(clips.findIndex(c=>c.id===selectedId),-1));
   $("editorMoveDown").addEventListener("click",()=>moveClip(clips.findIndex(c=>c.id===selectedId),1));
@@ -1159,7 +1177,6 @@
     else message("Pilih file proyek ARYANZZ berformat JSON.","error");
     $("editorProjectFile").value="";
   });
-  $("editorRemoveMusic").addEventListener("click",removeMusic);
 
   document.addEventListener("keydown",event => {
     const target=event.target;
@@ -1177,11 +1194,13 @@
       removeClip(selectedId);
     }
   });
-  window.addEventListener("pagehide",() => {
+  window.addEventListener("pagehide",()=>{
     video.pause();
-    musicAudio.pause();
+    audioTracks.forEach(track=>{
+      track.audio.pause();
+      try{URL.revokeObjectURL(track.url);}catch{}
+    });
     archive.forEach(clip=>{try{URL.revokeObjectURL(clip.url);}catch{}});
-    if(musicUrl)URL.revokeObjectURL(musicUrl);
     if(exportUrl)URL.revokeObjectURL(exportUrl);
     if(audioContext)audioContext.close().catch(()=>{});
   });
@@ -1189,5 +1208,5 @@
   [startInput,endInput].forEach(armUndo);
   updateEditorState();
   updatePreview();
-  updateMusicVolume();
+  renderAudioTracks();
 })();
