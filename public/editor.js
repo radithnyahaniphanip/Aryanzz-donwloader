@@ -822,7 +822,7 @@
     cancelAnimationFrame(animationFrame);
     exporting = false;
     setAudioExportMode(false);
-    if (musicAudio) { musicAudio.pause(); musicAudio.currentTime=0; }
+    audioTracks.forEach(track=>{track.audio.pause();try{track.audio.currentTime=0;}catch{}});
     if (recordingStream) recordingStream.getVideoTracks().forEach(track=>track.stop());
     transientAudioTracks.forEach(track=>{try{track.stop();}catch{}});
     transientAudioTracks = [];
@@ -943,12 +943,8 @@
     try {
       const speed = Number($("editorSpeed").value)||1;
       const total = validClips.reduce((sum,clip)=>sum+(clip.end-clip.start)/speed,0);
-      if (musicFile) {
-        musicAudio.loop = true;
-        musicAudio.currentTime = 0;
-        musicAudio.volume = 1;
-        await musicAudio.play().catch(()=>{});
-      }
+      audioTracks.forEach(track=>{track.audio.loop=true;track.audio.currentTime=0;});
+      await Promise.all(audioTracks.map(track=>track.audio.play().catch(()=>{})));
       recorder.start(500);
       let done = 0;
       for (const clip of validClips) {
@@ -989,82 +985,95 @@
     progressBar.style.width = "0%";
     message("Pengaturan visual dikembalikan ke awal.","info");
   }
-  function updateMusicVolume() {
-    const volume = Number($("editorMusicVolume").value)||0;
-    $("editorMusicVolumeValue").textContent = volume+"%";
-    if (musicAudio) musicAudio.volume = volume/100;
-    if (musicRecordGain && audioContext && !exporting) musicRecordGain.gain.setTargetAtTime(0,audioContext.currentTime,0.02);
+  function addMusic(fileCollection,savedTracks) {
+    const incoming=Array.from(fileCollection||[]);
+    if(!incoming.length)return;
+    let added=0;
+    for(const file of incoming){
+      if(audioTracks.length>=3){message("Maksimal 3 audio track. Hapus salah satu track untuk menambahkan audio lain.","error");break;}
+      if(!file.type.startsWith("audio/")||file.size>MAX_FILE){message("Lewati "+file.name+": pilih file audio maksimal 300 MB.","error");continue;}
+      const saved=(savedTracks||[]).find(item=>item.name===file.name);
+      const url=URL.createObjectURL(file);
+      const audio=audioTracks.length===0?musicAudio:document.createElement("audio");
+      audio.hidden=true;audio.preload="auto";audio.loop=true;audio.src=url;audio.load();
+      if(audio!==musicAudio)document.body.appendChild(audio);
+      const track={id:makeId(),file,url,audio,volume:saved&&Number.isFinite(Number(saved.volume))?Math.max(0,Math.min(1,Number(saved.volume))):.7,sourceNode:null,previewGain:null,recordGain:null};
+      audioTracks.push(track);
+      added++;
+    }
+    if(audioContext)setupAudioGraph();
+    renderAudioTracks();
+    updateEditorState();
+    if(added)message(added+" audio track ditambahkan. Maksimal 3 track dapat dicampur saat ekspor.","ready");
   }
-  function saveProject() {
-    if (!clips.length) return;
-    const project = {
+  function removeMusic(id) {
+    const index=audioTracks.findIndex(track=>track.id===id);
+    if(index<0||exporting)return;
+    const [track]=audioTracks.splice(index,1);
+    track.audio.pause();
+    track.audio.removeAttribute("src");
+    track.audio.load();
+    if(track.sourceNode)try{track.sourceNode.disconnect();}catch{}
+    if(track.previewGain)try{track.previewGain.disconnect();}catch{}
+    if(track.recordGain)try{track.recordGain.disconnect();}catch{}
+    URL.revokeObjectURL(track.url);
+    if(track.audio!==musicAudio)track.audio.remove();
+    renderAudioTracks();
+    updateEditorState();
+    message("Audio track dihapus.","info");
+  }
+  async function importSubtitles(file) {
+    if(!file)return;
+    if(file.size>5*1024*1024){message("File subtitle maksimal 5 MB.","error");return;}
+    try{
+      const parsed=parseSrt(await file.text());
+      if(!parsed.length)throw new Error("File SRT tidak memiliki cue subtitle yang valid.");
+      subtitles=parsed;
+      subtitleFileName=file.name;
+      updatePreview();
+      message(parsed.length+" subtitle berhasil dimuat dari "+file.name+".","ready");
+    }catch(error){message(error.message||"Subtitle tidak dapat dibaca.","error");}
+  }
+    function saveProject() {
+    if(!clips.length)return;
+    const project={
       app:"ARYANZZ Creative Studio Pro",
-      version:"60.0",
+      version:"65.0",
       savedAt:new Date().toISOString(),
       settings:getSettings(),
-      clips:clips.map(clip=>({name:clip.file.name,start:clip.start,end:clip.end,duration:clip.duration})),
-      musicName:musicFile?musicFile.name:null
+      clips:clips.map(clip=>({name:clip.file.name,start:clip.start,end:clip.end,duration:clip.duration,motion:clip.motion?{...clip.motion}:defaultMotion()})),
+      audioTracks:audioTracks.map(track=>({name:track.file.name,volume:track.volume})),
+      subtitles,
+      subtitleName:subtitleFileName
     };
-    const blob = new Blob([JSON.stringify(project,null,2)],{type:"application/json"});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "aryanzz-project-"+Date.now()+".json";
-    a.click();
+    const blob=new Blob([JSON.stringify(project,null,2)],{type:"application/json"});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");
+    a.href=url;a.download="aryanzz-project-v65-"+Date.now()+".json";a.click();
     setTimeout(()=>URL.revokeObjectURL(url),30000);
-    message("File proyek berhasil disimpan. Simpan juga file video dan musik sumbernya.","ready");
+    message("Proyek V65 berhasil disimpan. Simpan juga semua file video, audio, dan subtitle sumber.","ready");
   }
-  async function loadProjectFile(file,sourceFiles) {
-    try {
-      const project = JSON.parse(await file.text());
-      if (project.app!=="ARYANZZ Creative Studio Pro" || !Array.isArray(project.clips) || project.clips.length>MAX_CLIPS) {
+    async function loadProjectFile(file,sourceFiles) {
+    try{
+      const project=JSON.parse(await file.text());
+      if(project.app!=="ARYANZZ Creative Studio Pro"||!Array.isArray(project.clips)||project.clips.length>MAX_CLIPS)
         throw new Error("File proyek ARYANZZ tidak valid atau jumlah klip melebihi batas.");
-      }
-      const videoFiles = sourceFiles.filter(item=>item.type.startsWith("video/"));
-      const audioFile = sourceFiles.find(item=>item.type.startsWith("audio/"));
-      if (!videoFiles.length) throw new Error("Pilih file proyek dan video sumber yang digunakan di dalam proyek secara bersamaan.");
+      const videoFiles=sourceFiles.filter(item=>item.type.startsWith("video/"));
+      const audioFiles=sourceFiles.filter(item=>item.type.startsWith("audio/"));
+      if(!videoFiles.length)throw new Error("Pilih file proyek dan semua video sumber secara bersamaan.");
       await addVideoFiles(videoFiles,project);
-      if (audioFile) addMusic(audioFile);
-      else if (project.musicName) message("Proyek dibuka. Pilih ulang musik latar: "+project.musicName,"info");
-    } catch(error) {
-      message(error.message||"File proyek tidak dapat dibuka.","error");
-    }
+      if(audioFiles.length)addMusic(audioFiles,project.audioTracks||[]);
+      if(Array.isArray(project.subtitles)){subtitles=project.subtitles.filter(item=>Number.isFinite(item.start)&&Number.isFinite(item.end)&&item.end>item.start);subtitleFileName=project.subtitleName||"Subtitle proyek";}
+      updatePreview();
+      if(project.audioTracks?.length&&!audioFiles.length)message("Video dan pengaturan proyek dimuat. Pilih ulang "+project.audioTracks.length+" file audio sumber.","info");
+      else message("Proyek V65 berhasil dibuka. Periksa kembali sumber media yang digunakan.","ready");
+    }catch(error){message(error.message||"File proyek tidak dapat dibuka.","error");}
   }
-  function addMusic(file) {
-    if (!file) return;
-    if (!file.type.startsWith("audio/") || file.size>MAX_FILE) {
-      message("Pilih file audio maksimal 300 MB.","error");
-      return;
-    }
-    if (musicUrl) URL.revokeObjectURL(musicUrl);
-    musicFile = file;
-    musicUrl = URL.createObjectURL(file);
-    musicAudio.src = musicUrl;
-    musicAudio.loop = true;
-    musicAudio.load();
-    $("editorMusicName").textContent = file.name;
-    $("editorMusicDetail").textContent = formatBytes(file.size)+" · musik latar lokal";
-    $("editorMusicVolume").disabled = false;
-    $("editorRemoveMusic").disabled = false;
-    updateMusicVolume();
-    message("Musik latar ditambahkan. Volume dapat diatur pada track audio.","ready");
-  }
-  function removeMusic() {
-    if (!musicFile) return;
-    if (musicUrl) URL.revokeObjectURL(musicUrl);
-    musicFile = null;
-    musicUrl = "";
-    musicAudio.pause();
-    musicAudio.removeAttribute("src");
-    musicAudio.load();
-    $("editorMusicName").textContent = "AUDIO TRACK";
-    $("editorMusicDetail").textContent = "Belum ada musik latar";
-    $("editorMusicVolume").disabled = true;
-    $("editorRemoveMusic").disabled = true;
-    message("Track musik dihapus.","info");
+    function addMusicPlaceholder() {
+    // Audio tracks are managed by addMusic(fileCollection, savedTracks).
   }
 
-  fileInput.addEventListener("change",async() => {
+    fileInput.addEventListener("change",async() => {
     const files = Array.from(fileInput.files||[]);
     if (!files.length) return;
     await addVideoFiles(files,null);
