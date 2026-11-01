@@ -1,10 +1,10 @@
 {
-  "name": "ARYANZZ V67.1 — Music Recognition & DJ Mix Scanner",
-  "short_name": "ARYANZZ V67.1",
+  "name": "ARYANZZ V67.2 — Downloader & Shazam Music Lab",
+  "short_name": "ARYANZZ V67.2",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "background_color": "#070b16",
   "theme_color": "#070b16",
-  "description": "Downloader, creative studio, Shazam-style recognition and DJ mix scanning with clearer AudD diagnostics."
+  "description": "Downloader powered by yt-dlp and FFmpeg with Shazam music recognition fallback."
 }
