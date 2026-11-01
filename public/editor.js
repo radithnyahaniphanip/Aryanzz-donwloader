@@ -1,4 +1,4 @@
-/* ARYANZZ V60.0 — Creative Studio Pro: multi-clip local editor */
+/* ARYANZZ V65.0 — Ultimate Creative Studio: local multi-track editor */
 (() => {
   "use strict";
   const $ = id => document.getElementById(id);
@@ -14,6 +14,8 @@
   const clipList = $("editorClipList");
   const musicInput = $("editorMusicFile");
   const musicAudio = $("editorMusicAudio");
+  const audioTrackList = $("editorAudioTrackList");
+  const subtitleInput = $("editorSubtitleFile");
   if (!fileInput || !video || !frame || !exportButton || !clipList) return;
 
   const MAX_CLIPS = 8;
@@ -21,8 +23,10 @@
   let clips = [];
   const archive = new Map();
   let selectedId = null;
-  let musicFile = null;
-  let musicUrl = "";
+  let audioTracks = [];
+  let subtitles = [];
+  let subtitleFileName = "";
+  let chromaCanvas = null;
   let exportUrl = "";
   let recorder = null;
   let recordingStream = null;
@@ -35,11 +39,9 @@
   let audioContext = null;
   let audioDestination = null;
   let videoSourceNode = null;
-  let musicSourceNode = null;
   let videoPreviewGain = null;
   let videoRecordGain = null;
-  let musicPreviewGain = null;
-  let musicRecordGain = null;
+  let lastAudioSync = 0;
 
   const startInput = $("editorStart");
   const endInput = $("editorEnd");
@@ -62,7 +64,9 @@
   const settingsIds = [
     "editorRatio","editorRotate","editorSpeed","editorTransition","editorFilterPreset",
     "editorBrightness","editorContrast","editorSaturation","editorText","editorTextColor",
-    "editorTextPosition","editorTextSize","editorMute","editorResolution","editorQuality"
+    "editorTextPosition","editorTextSize","editorTextAnimation","editorChromaEnabled",
+    "editorChromaColor","editorChromaTolerance","editorBackgroundColor",
+    "editorMute","editorResolution","editorQuality"
   ];
 
   function message(text, kind) {
@@ -75,7 +79,6 @@
       const el = $(id);
       if (el) settings[id] = el.type === "checkbox" ? el.checked : el.value;
     });
-    settings.editorMusicVolume = $("editorMusicVolume").value;
     return settings;
   }
   function setSettings(settings) {
@@ -87,13 +90,13 @@
       if (el.type === "checkbox") el.checked = !!settings[id];
       else el.value = String(settings[id]);
     });
-    if (settings.editorMusicVolume !== undefined) $("editorMusicVolume").value = String(settings.editorMusicVolume);
     updatePreview();
-    updateMusicVolume();
+    renderAudioTracks();
+    updateAudioGraphGains();
   }
   function snapshot() {
     return {
-      clips: clips.map(clip => ({ id:clip.id,start:clip.start,end:clip.end })),
+      clips: clips.map(clip => ({ id:clip.id,start:clip.start,end:clip.end,motion:clip.motion?{...clip.motion}:defaultMotion() })),
       selectedId,
       settings:getSettings()
     };
@@ -112,7 +115,7 @@
     if (!state) return;
     clips = state.clips.map(item => {
       const original = archive.get(item.id);
-      return original ? Object.assign({},original,{start:item.start,end:item.end}) : null;
+      return original ? Object.assign({},original,{start:item.start,end:item.end,motion:item.motion?{...item.motion}:defaultMotion()}) : null;
     }).filter(Boolean);
     selectedId = clips.some(clip => clip.id === state.selectedId) ? state.selectedId : (clips[0] && clips[0].id) || null;
     setSettings(state.settings);
