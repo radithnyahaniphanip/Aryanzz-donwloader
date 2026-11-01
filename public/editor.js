@@ -29,7 +29,6 @@
   let animationFrame = 0;
   let exporting = false;
   let exportError = "";
-  let pendingProject = null;
   let history = [];
   let future = [];
   let audioContext = null;
@@ -373,7 +372,10 @@
     const descriptors = project && Array.isArray(project.clips)
       ? project.clips.map(item => ({ file:fileByName.get(item.name),item })).filter(x=>x.file)
       : incoming.map(file => ({file,item:null}));
+    if (!project && clips.length) recordUndo();
     const remaining = Math.max(0,MAX_CLIPS-clips.length);
+    if (project) { clips = []; selectedId = null; history = []; future = []; }
+    if (project && !descriptors.length) { message("File video sumber tidak ditemukan. Pilih file proyek dan semua video sumber dalam satu kali pemilihan.","error"); return; }
     if (descriptors.length > remaining) {
       message("Maksimal " + MAX_CLIPS + " klip dalam satu proyek. " + remaining + " slot tersisa.","error");
     }
@@ -610,12 +612,12 @@
       recorder = null;
       return;
     }
-    if (!recorder || !recorder.mimeType || !window.MediaRecorder) {
+    if (!recorder || !window.MediaRecorder) {
       message("Browser tidak menghasilkan file ekspor.","error");
       recorder = null;
       return;
     }
-    const mime = recorder.mimeType || "video/webm";
+    const mime = recorder && recorder.mimeType ? recorder.mimeType : "video/webm";
     const blob = new Blob(exportChunks,{type:mime});
     if (!blob.size) {
       message("File hasil kosong. Coba ekspor ulang dengan resolusi lebih rendah.","error");
@@ -786,15 +788,18 @@
     setTimeout(()=>URL.revokeObjectURL(url),30000);
     message("File proyek berhasil disimpan. Simpan juga file video dan musik sumbernya.","ready");
   }
-  async function loadProjectFile(file) {
+  async function loadProjectFile(file,sourceFiles) {
     try {
       const project = JSON.parse(await file.text());
       if (project.app!=="ARYANZZ Creative Studio Pro" || !Array.isArray(project.clips) || project.clips.length>MAX_CLIPS) {
         throw new Error("File proyek ARYANZZ tidak valid atau jumlah klip melebihi batas.");
       }
-      pendingProject = project;
-      message("Pilih file video sumber dengan nama yang sama seperti saat proyek disimpan.","info");
-      fileInput.click();
+      const videoFiles = sourceFiles.filter(item=>item.type.startsWith("video/"));
+      const audioFile = sourceFiles.find(item=>item.type.startsWith("audio/"));
+      if (!videoFiles.length) throw new Error("Pilih file proyek dan video sumber yang digunakan di dalam proyek secara bersamaan.");
+      await addVideoFiles(videoFiles,project);
+      if (audioFile) addMusic(audioFile);
+      else if (project.musicName) message("Proyek dibuka. Pilih ulang musik latar: "+project.musicName,"info");
     } catch(error) {
       message(error.message||"File proyek tidak dapat dibuka.","error");
     }
@@ -836,9 +841,7 @@
   fileInput.addEventListener("change",async() => {
     const files = Array.from(fileInput.files||[]);
     if (!files.length) return;
-    const project = pendingProject;
-    pendingProject = null;
-    await addVideoFiles(files,project);
+    await addVideoFiles(files,null);
     fileInput.value = "";
   });
   musicInput.addEventListener("change",() => {
@@ -854,7 +857,7 @@
     endInput.max = String(clip.duration);
     startInput.value = String(clip.start);
     endInput.value = String(clip.end);
-    empty.hidden = false;
+    empty.hidden = true;
     updatePreview();
   });
   video.addEventListener("timeupdate",() => {
@@ -881,8 +884,6 @@
   video.addEventListener("pause",() => { if (!exporting) playButton.textContent="▶"; });
   $("editorJumpStart").addEventListener("click",()=>{const clip=selectedClip();if(clip){seekVideo(clip.start);}});
   scrub.addEventListener("input",()=>{if(!exporting)video.currentTime=Number(scrub.value)||0;});
-  startInput.addEventListener("pointerdown",recordUndo);
-  endInput.addEventListener("pointerdown",recordUndo);
   startInput.addEventListener("change",updateClipTrim);
   endInput.addEventListener("change",updateClipTrim);
   startInput.addEventListener("input",() => {
@@ -916,8 +917,11 @@
   $("editorSaveProject").addEventListener("click",saveProject);
   $("editorLoadProject").addEventListener("click",()=>$("editorProjectFile").click());
   $("editorProjectFile").addEventListener("change",() => {
-    const file=$("editorProjectFile").files&&$("editorProjectFile").files[0];
-    if(file)loadProjectFile(file);
+    const selected=Array.from($("editorProjectFile").files||[]);
+    const projectFile=selected.find(file=>file.name.toLowerCase().endsWith(".json")||file.type==="application/json");
+    const sourceFiles=selected.filter(file=>file!==projectFile);
+    if(projectFile)loadProjectFile(projectFile,sourceFiles);
+    else message("Pilih file proyek ARYANZZ berformat JSON.","error");
     $("editorProjectFile").value="";
   });
   $("editorRemoveMusic").addEventListener("click",removeMusic);
