@@ -1,9 +1,11 @@
 {
   "name": "aryanzz-downloader",
-  "version": "59.5.0",
+  "version": "66.0.0",
   "private": true,
   "type": "module",
-  "scripts": { "start": "node server/index.js" },
+  "scripts": {
+    "start": "node server/index.js"
+  },
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^4.21.2",
