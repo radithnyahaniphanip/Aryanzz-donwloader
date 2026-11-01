@@ -92,7 +92,7 @@
     a.className="music-result-link";a.textContent=label;container.append(a);
   }
   function getArtwork(result){
-    let raw=result.apple_music&&result.apple_music.artwork&&result.apple_music.artwork.url;
+    let raw=result.artwork_url||(result.apple_music&&result.apple_music.artwork&&result.apple_music.artwork.url);
     if(typeof raw==="string")raw=raw.replace("{w}","320").replace("{h}","320");
     if(!raw&&result.spotify&&result.spotify.album&&Array.isArray(result.spotify.album.images))
       raw=result.spotify.album.images[0]&&result.spotify.album.images[0].url;
@@ -126,7 +126,7 @@
     if(coverUrl){const img=document.createElement("img");img.className="music-cover";img.src=coverUrl;img.alt="Cover album";img.loading="lazy";card.append(img);}
     else{const cover=document.createElement("div");cover.className="music-cover music-cover-fallback";cover.textContent="♫";card.append(cover);}
     const details=document.createElement("div");details.className="music-match-details";
-    const badge=document.createElement("span");badge.className="music-match-badge";badge.textContent="LAGU DITEMUKAN";
+    const badge=document.createElement("span");badge.className="music-match-badge";badge.textContent="LAGU DITEMUKAN"+(result.provider?" · "+result.provider:"");
     const title=document.createElement("h3");title.textContent=result.title||"Unknown title";
     const artist=document.createElement("p");artist.className="music-artist";artist.textContent=result.artist||"Unknown artist";
     details.append(badge,title,artist);
@@ -168,7 +168,7 @@
     if(!tracks.length){setMessage(data.message||"Belum ada lagu yang cocok pada bagian video yang dipindai.",false);return;}
     const heading=document.createElement("div");heading.className="music-scan-summary";
     const title=document.createElement("b");title.textContent=tracks.length+" hasil lagu ditemukan";
-    const meta=document.createElement("small");meta.textContent="AudD Enterprise · "+(data.scannedChunks||0)+" segmen dipindai";
+    const meta=document.createElement("small");meta.textContent=(data.provider||"AudD Enterprise")+" · "+(data.scannedChunks||0)+" segmen dipindai";
     heading.append(title,meta);box.append(heading);
     tracks.forEach((track,index)=>{
       const row=document.createElement("article");row.className="music-track-row";
@@ -193,7 +193,7 @@
       row.append(links);box.append(row);remember(track);
     });
     const note=document.createElement("p");note.className="music-result-note";
-    note.textContent="Posisi waktu menunjukkan bagian video tempat lagu terdeteksi. AudD memindai sampel sesuai interval yang dipilih; lagu yang sangat singkat di antara sampel mungkin terlewat.";
+    note.textContent="Posisi waktu menunjukkan bagian video tempat lagu terdeteksi. Pemindaian mengambil sampel sesuai interval yang dipilih; lagu yang sangat singkat di antara sampel mungkin terlewat. Shazam fallback membatasi pemindaian hingga 30 sampel.";
     box.append(note);
   }
 
@@ -207,10 +207,10 @@
       const data=await readResponse(await fetch("/api/music/status",{cache:"no-store"}));
       apiReady=!!data.configured;videoUrlReady=!!data.videoUrlReady;
       status.className="music-status "+(apiReady?"is-ready":"is-warning");
-      status.textContent=apiReady?"Music Finder aktif · AudD terhubung · mode Shazam + pemindaian DJ":"Music Finder belum dapat mengenali lagu karena Worker belum membaca secret AUDD_API_TOKEN.";
+      status.textContent=apiReady?(data.auddConfigured?"AudD token terpasang"+(data.shazamFallbackReady?" · Shazam fallback tersedia":"") :"Shazam fallback terkonfigurasi"):"Music Finder belum aktif. Hubungkan AudD atau Cloudflare Container Shazam.";
       $("musicUrlHelp").textContent=videoUrlReady
-        ?"Tautan publik dipindai langsung oleh AudD Enterprise; tidak perlu server ekstraksi tambahan."
-        :"Setelah AudD aktif, tautan video dan DJ mix bisa dipindai langsung.";
+        ?(data.auddConfigured?(data.shazamFallbackReady?"Tautan publik dipindai AudD Enterprise; bila kuota/akses AudD gagal, Shazam Container menjadi cadangan.":"Tautan publik memerlukan akses AudD Enterprise yang aktif."):"Tautan publik dipindai oleh Shazam Container. Maksimum 30 sampel per pemindaian DJ.")
+        :"Tautan video memerlukan AudD Enterprise atau Cloudflare Container Shazam yang aktif.";
       refreshButtons();
     }catch(error){
       apiReady=false;videoUrlReady=false;status.className="music-status is-warning";
@@ -241,7 +241,7 @@
   $("musicFileScanButton").addEventListener("click",async()=>{
     if(!selectedFile||busy)return;
     const skip=Number($("musicScanSkip").value),limit=Number($("musicScanLimit").value);
-    busy=true;refreshButtons();setMessage("Mengirim file ke AudD Enterprise dan memindai lagu DJ mix…",false);
+    busy=true;refreshButtons();setMessage("Mengirim file ke pemindai lagu DJ mix…",false);
     try{renderEnterpriseTracks(await identifyFileScan(selectedFile,skip,limit));}
     catch(error){setMessage(error.message||"Gagal memindai video/DJ mix.",true);}
     finally{busy=false;refreshButtons();}
@@ -253,7 +253,7 @@
     try{const parsed=new URL(url);if(!["https:","http:"].includes(parsed.protocol))throw new Error("Gunakan tautan video HTTP atau HTTPS.");}
     catch(error){setMessage(error.message||"Tautan video tidak valid.",true);return;}
     const skip=Number($("musicScanSkip").value),limit=Number($("musicScanLimit").value);
-    busy=true;refreshButtons();setMessage("AudD sedang memindai video dan mencari beberapa lagu…",false);
+    busy=true;refreshButtons();setMessage("Memindai video/DJ mix dan mencari beberapa lagu…",false);
     try{renderEnterpriseTracks(await identifyVideoScan(url,skip,limit));}
     catch(error){setMessage(error.message||"Gagal memindai tautan video/DJ mix.",true);}
     finally{busy=false;refreshButtons();}

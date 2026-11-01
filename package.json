@@ -1,6 +1,6 @@
 {
   "name": "aryanzz-downloader",
-  "version": "67.1.0",
+  "version": "67.6.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -10,6 +10,7 @@
     "cors": "^2.8.5",
     "express": "^4.21.2",
     "express-rate-limit": "^7.5.0",
-    "helmet": "^8.0.0"
+    "helmet": "^8.0.0",
+    "@cloudflare/containers": "^0.3.7"
   }
 }

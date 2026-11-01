@@ -1,8 +1,8 @@
-# ARYANZZ V67.0 — Music Recognition, Video and DJ Mix Scanner
+# ARYANZZ V67.6 — Title Search, Music Fallback & Creative Studio
 
 Production website: https://aryanzz-donwloader.radithnyahaniphanip.workers.dev/
 
-ARYANZZ is a mobile-first creator workspace. The Cloudflare Worker serves the website and safely proxies supported platform requests to a separate Docker backend running yt-dlp and FFmpeg.
+ARYANZZ is a mobile-first creator workspace. The Cloudflare Worker serves the website and routes supported platform requests to a Cloudflare Container running yt-dlp, FFmpeg and ShazamIO.
 
 ## V65.0 release scope
 
@@ -17,7 +17,29 @@ ARYANZZ is a mobile-first creator workspace. The Cloudflare Worker serves the we
 | V60.0 | Multi-clip timeline, split/reorder/trim, audio track, caption styling, fade transition, undo/redo, project JSON and local export |
 | V65.0 | Premium wide editor workspace, three mixed audio tracks, per-clip zoom keyframes and pan, live/export chroma key, animated captions, SRT subtitle import and project restore |
 | V66.0 | Music Finder: single-track recognition from local video/audio and microphone, plus local search history |
-| V67.0 | Full video and DJ mix scanning through AudD Enterprise; direct public video URL processing; multiple matched tracks with timestamps; scan density and sample limits |
+| V67.0 | AudD Enterprise multi-track DJ/video recognition |
+| V67.1 | AudD provider error-code diagnostics |
+| V67.2 | Cloudflare Container backend for platform extraction; ShazamIO fallback for single-song recognition and multi-segment DJ scans when AudD quota/authentication fails |\n| V67.4 | Premium mobile UI refresh, simplified downloader home, searchable Tools Center and Color Studio |\n| V67.6 | Backend health cleanup, title-based YouTube search routed through yt-dlp, clearer AudD/Shazam status, and DJ scan fallback fixes |
+
+
+## V67.6 — Title search and recognition reliability\n\n- The downloader's **Cari judul** tab now queries YouTube through the existing Cloudflare Container and yt-dlp, displays up to eight results, and lets the user select a result to inspect downloadable formats. It does not use an extra search API key.\n- Search accepts plain text only (2–160 characters), runs a fixed `ytsearch8` extractor query, and returns a limited metadata response. It does not fetch arbitrary user-supplied URLs through the search route.\n- Music Finder status distinguishes an installed AudD token from the configured Shazam fallback. A configured token does not imply remaining AudD quota; AudD usage is still controlled by the provider.\n- Shazam DJ fallback samples now honor the consecutive-sample setting and remain capped at 30 segments per scan to limit container load. AudD Enterprise can process up to 100 segments where the account permits it.\n- Removed the duplicate Express health route so the container reports one current version and a consistent feature list.\n\n## V67.2 — Native Cloudflare downloader and Shazam fallback
+
+The project now includes a Cloudflare Container Durable Object using the repository Dockerfile. It runs the existing Express backend, yt-dlp, FFmpeg and ShazamIO. Platform URLs are routed from the Worker directly to this container; the old external PLATFORM_API_ORIGIN and PLATFORM_API_TOKEN configuration is no longer required for the Cloudflare Container path.
+
+Plan requirement: Cloudflare Containers are unavailable on the Workers Free plan and require the Workers Paid plan, which starts at US$5/month. That plan includes monthly container allowances; usage beyond the included CPU, memory and disk amounts is billed separately. The container uses the basic instance type (1/4 vCPU, 1 GiB RAM, 4 GB disk) and sleeps after 3 minutes idle. Container compute and resource usage may incur charges. The existing Worker-only deployment is not sufficient to run yt-dlp or FFmpeg.
+
+### Music recognition fallback
+
+- AudD remains the first provider when its token and quota are available.
+- If AudD returns authentication/quota errors (including 901/902), ARYANZZ automatically falls back to ShazamIO in the container.
+- If AudD is not configured, the Shazam fallback can still identify a single 12-second audio sample.
+- DJ/video multi-segment scans use AudD Enterprise first, then ShazamIO as a fallback. Shazam fallback samples at the selected interval and is capped at 30 segments per scan.
+- ShazamIO is an open-source, reverse-engineered client for Shazam's recognition endpoint, not an official Shazam API. Availability and rate limits are controlled by the upstream service; it may change without notice. It does not consume AudD credits.
+- The Worker never exposes provider credentials to the browser. The container's internal API is reachable through the Worker binding only.
+
+### Deployment checks
+
+The GitHub deployment workflow builds the Docker image, deploys the Worker and Container, then polls the container health endpoint. A first Cloudflare Container deployment can take several minutes to provision. If the account is on the Workers Free plan, Cloudflare Containers will not deploy; upgrade to Workers Paid before merging/deploying this configuration.
 
 ## Downloader
 

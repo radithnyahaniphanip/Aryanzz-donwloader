@@ -131,8 +131,8 @@
     const title = make("b", "", "Link belum dapat diproses");
     const note = make("p", "warning", error.message || "Terjadi kesalahan saat memeriksa tautan.");
     out.append(title, note);
-    if (/backend ekstraksi|server downloader|PLATFORM_API|belum dihubungkan|tidak dapat dijangkau/i.test(error.message || "")) {
-      const help = make("p", "muted", "Untuk link platform, hubungkan server yt-dlp + FFmpeg ke Cloudflare Worker. File media langsung tetap dapat diproses tanpa server ekstraksi.");
+    if (/backend ekstraksi|server downloader|PLATFORM_API|cloudflare container|belum dihubungkan|tidak dapat dijangkau/i.test(error.message || "")) {
+      const help = make("p", "muted", "Backend Cloudflare Container sedang dinyalakan atau belum siap. Tunggu beberapa saat lalu coba lagi. Tautan file media langsung tetap dapat diproses tanpa ekstraksi platform.");
       out.append(help);
     }
     if (url) {
@@ -246,7 +246,26 @@
       button.textContent = oldText;
     }
   }
+  async function refreshBackendStatus(){
+    const node=$("backendStatus");
+    if(!node)return;
+    try{
+      const response=await fetch("/api/health",{cache:"no-store"});
+      const data=await response.json().catch(()=>({}));
+      if(response.ok&&data.platformExtraction){
+        node.dataset.state="ok";
+        node.textContent="Cloudflare Downloader Container terpasang · yt-dlp + FFmpeg";
+      }else{
+        node.dataset.state="warn";
+        node.textContent="Ekstraksi tautan platform belum aktif. File media langsung tetap bisa diunduh.";
+      }
+    }catch{
+      node.dataset.state="warn";
+      node.textContent="Status backend belum dapat diperiksa. File media langsung tetap tersedia.";
+    }
+  }
   function init() {
+    refreshBackendStatus();
     const button = $("analyze");
     const input = $("url");
     if (!button || !input) return;
