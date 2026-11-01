@@ -100,11 +100,16 @@ async function scanShazamMedia(inputPath,skip,every,limit){
   if(!Number.isFinite(duration)||duration<=0)throw new Error("Durasi video/audio tidak dapat dibaca.");
   if(duration>MAX_DURATION)throw new Error("Durasi media melebihi batas 3 jam.");
   const interval=Math.max(12,(skip+1)*12);
+  const consecutive=Math.max(1,Math.min(3,every));
   const cap=Math.min(30,Math.max(1,limit));
   const samples=[];
-  for(let offset=0;offset<duration&&samples.length<cap;offset+=interval){
-    const audio=await runBinary("ffmpeg",["-hide_banner","-loglevel","error","-ss",String(offset),"-i",inputPath,"-t","12","-vn","-ac","1","-ar","16000","-f","mp3","pipe:1"],35000);
-    if(audio.length)samples.push({offset:formatOffset(offset),audio:audio.toString("base64")});
+  for(let base=0;base<duration&&samples.length<cap;base+=interval*consecutive){
+    for(let j=0;j<consecutive&&samples.length<cap;j++){
+      const offset=base+j*12;
+      if(offset>=duration)break;
+      const audio=await runBinary("ffmpeg",["-hide_banner","-loglevel","error","-ss",String(offset),"-i",inputPath,"-t","12","-vn","-ac","1","-ar","16000","-f","mp3","pipe:1"],35000);
+      if(audio.length)samples.push({offset:formatOffset(offset),audio:audio.toString("base64")});
+    }
   }
   if(!samples.length)throw new Error("Tidak ada segmen audio yang bisa dipindai.");
   const result=await runShazamPayload({samples},240000);
@@ -124,7 +129,7 @@ function requirePlatformToken(req,res,next){
 
 app.post("/api/search",requirePlatformToken,async(req,res)=>{
   try{
-    const query=String(req.body?.query||"").replace(/\\s+/g," ").trim();
+    const query=String(req.body?.query||"").replace(/\s+/g," ").trim();
     if(query.length<2)return res.status(400).json({error:"Masukkan minimal 2 karakter untuk mencari judul video."});
     if(query.length>160)return res.status(400).json({error:"Judul pencarian maksimal 160 karakter."});
     const raw=await run(["--dump-single-json","--flat-playlist","--no-warnings","--skip-download","ytsearch8:"+query],90000);
