@@ -4,6 +4,7 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+
 jobs:
   syntax:
     runs-on: ubuntu-latest
@@ -17,4 +18,9 @@ jobs:
           node --check src/index.js
           node --check server/index.js
           node --check public/advanced.js
-          node -e "const fs=require('fs');const h=fs.readFileSync('public/index.html','utf8');const s=h.indexOf('<script>')+8;const e=h.indexOf('</script>',s);if(s<8||e<s)throw Error('Inline script missing');new Function(h.slice(s,e));console.log('Inline browser script syntax OK')"
+          node --check public/v15.js
+          node --check public/sw.js
+          node --check tests/smoke.mjs
+          node -e "const fs=require('fs');const h=fs.readFileSync('public/index.html','utf8');const s=h.indexOf('<script>')+8;const e=h.indexOf('</script>',s);if(s<8||e<s)throw Error('Inline script missing');new Function(h.slice(s,e));console.log('Inline script syntax OK')"
+      - name: Smoke tests
+        run: node tests/smoke.mjs
