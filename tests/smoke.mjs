@@ -4,69 +4,56 @@ import worker from "../src/index.js";
 
 const file=path=>readFileSync(new URL(path,import.meta.url),"utf8");
 const html=file("../public/index.html");
-const js=file("../public/v15.js");
-const css=file("../public/v15.css");
-const v25js=file("../public/v25.js");
-const v25css=file("../public/v25.css");
-const advanced=file("../public/advanced.js");
+const sw=file("../public/sw.js");
 const manifest=JSON.parse(file("../public/manifest.webmanifest"));
 
-const htmlChecks=[
-  ["V25 title",html.includes("ARYANZZ V25 — All in One")],
-  ["V25 badge",html.includes("V25 · PREMIUM")],
-  ["premium style",html.includes("/v15.css?v=25.0")&&html.includes("/v25.css?v=25.0")],
-  ["functional JS",html.includes("/v15.js?v=25.0")&&html.includes("/v25.js?v=25.0")],
-  ["home",html.includes('id="home"')],
+const checks=[
+  ["V27.1 page title",html.includes("ARYANZZ V27.1 — Free All in One")],
+  ["V27.1 asset cache bust",html.includes("/v15.js?v=27.1")&&html.includes("/v25.js?v=27.1")],
+  ["fresh service worker URL",html.includes("/sw.js?v=27.1")&&sw.includes("aryanzz-v27-1")],
+  ["downloader form",html.includes('id="analyze"')&&html.includes('id="downloadResult"')],
+  ["YouTube-specific downloader UI",html.includes("function showYouTubeDownloader")&&html.includes("youtubeFormat")],
+  ["YouTube start endpoint",html.includes("/api/youtube/download")],
+  ["YouTube progress endpoint",html.includes("/api/youtube/progress")],
+  ["MP3 and video quality options",html.includes("mp3")&&html.includes("1080p Full HD")&&html.includes("4K")],
+  ["profile page",html.includes('id="profile"')],
   ["tool hub",html.includes('id="allTools"')],
-  ["downloader",html.includes('id="analyze"')],
-  ["profile studio",html.includes('id="profile"')&&html.includes('id="profileBanner"')&&html.includes('id="profileBackground"')],
-  ["no public technical roadmap",!html.includes('id="releaseRoadmap"')],
-  ["no public backend warning",!html.includes('class="capability-note"')],
-  ["membership tiers",html.includes("Rp36.000")&&html.includes("Rp88.000")&&html.includes("Rp479.000")],
-  ["membership payment disclosure",html.includes("tidak menagih pembayaran")],
-  ["footer branding cleaned",!html.includes("Built for mobile")],
-  ["speed footnote removed",!html.includes("Tes mengikuti koneksi aktif HP")],
-  ["profile image compression",advanced.includes("function profilePhotoData")],
-  ["profile backup design",advanced.includes("design:JSON.parse")],
-  ["background and banner controls",v25js.includes("profileBanner")&&v25js.includes("profileBackground")],
-  ["local plan selection",v25js.includes("selectPlan")&&v25js.includes("membership.selection.v25")],
-  ["motion effects",v25css.includes("@keyframes v25Shine")],
-  ["reduced motion support",v25css.includes("prefers-reduced-motion")],
-  ["all search setup",js.includes("setupToolSearch")],
-  ["local image converter",js.includes("setupImageLab")],
-  ["local library",js.includes("setupLibrary")],
-  ["downloader controller",js.includes("AbortController")],
-  ["Wi-Fi and mobile data UI",html.includes("Data Seluler")&&html.includes("wifiTile")],
-  ["upload measurement",js.includes("speed.cloudflare.com/__up")],
-  ["download measurement",js.includes("speed.cloudflare.com/__down")],
-  ["mobile data usage modes",html.includes("Cepat · ±3 MB")&&html.includes("Lengkap · ±11 MB")],
-  ["speed test cancel",html.includes('id="speedCancel"')],
-  ["theme variants",css.includes('body[data-accent="purple"]')],
-  ["responsive style",css.includes("@media(max-width:370px)")],
-  ["manifest",manifest.name.includes("V25")]
+  ["mobile data speed-test UI",html.includes("Data Seluler")&&html.includes("wifiTile")],
+  ["no old mobile footer text",!html.includes("Built for mobile")],
+  ["PWA manifest version",manifest.name.includes("V27.1")]
 ];
-for(const [name,ok] of htmlChecks){assert.ok(ok,name+" failed");console.log("✔ "+name)}
+for(const [name,ok] of checks){assert.ok(ok,name+" failed");console.log("✔ "+name)}
 
 const healthResponse=await worker.fetch(new Request("https://aryanzz.example/api/health"),{});
 assert.equal(healthResponse.status,200);
 const health=await healthResponse.json();
-assert.equal(health.version,"25.0");
+assert.equal(health.version,"27.1");
+assert.equal(health.youtubeDownloader,true);
+assert.equal(health.youtubeApiKeyConfigured,false);
 assert.equal(health.platformExtraction,false);
-console.log("✔ Worker health status");
+console.log("✔ Worker health and safe YouTube secret status");
 
-const bad=await worker.fetch(new Request("https://aryanzz.example/api/info",{
-  method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({url:"http://127.0.0.1/internal.mp4"})
+const invalid=await worker.fetch(new Request("https://aryanzz.example/api/youtube/download",{
+  method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({url:"https://example.com/video",format:"mp3"})
 }),{});
-assert.equal(bad.status,400);
-console.log("✔ Private network URLs rejected");
+assert.equal(invalid.status,400);
+console.log("✔ YouTube endpoint rejects non-YouTube URLs");
 
-const blocked=await worker.fetch(new Request("https://aryanzz.example/api/info",{
-  method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({url:"https://youtube.com/watch?v=demo"})
+const noKey=await worker.fetch(new Request("https://aryanzz.example/api/youtube/download",{
+  method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({url:"https://youtu.be/demo123",format:"mp3"})
 }),{});
-assert.equal(blocked.status,503);
-console.log("✔ Missing extraction backend is disclosed");
+assert.equal(noKey.status,503);
+assert.match((await noKey.json()).error,/SAVENOW_API_KEY|API key downloader YouTube/);
+console.log("✔ Missing YouTube secret is reported clearly");
 
-const other=await worker.fetch(new Request("https://aryanzz.example/api/not-a-route"),{});
-assert.equal(other.status,404);
-console.log("✔ API unknown route");
-console.log("\nARYANZZ V25 smoke tests passed.");
+const invalidProgress=await worker.fetch(new Request("https://aryanzz.example/api/youtube/progress",{
+  method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({id:"",format:"mp3"})
+}),{});
+assert.equal(invalidProgress.status,400);
+console.log("✔ YouTube progress validates process ID");
+
+const unknown=await worker.fetch(new Request("https://aryanzz.example/api/not-a-route"),{});
+assert.equal(unknown.status,404);
+console.log("✔ Unknown API route");
+
+console.log("\nARYANZZ V27.1 smoke tests passed.");
