@@ -173,7 +173,9 @@
     tracks.forEach((track,index)=>{
       const row=document.createElement("article");row.className="music-track-row";
       const top=document.createElement("div");top.className="music-track-top";
-      const time=document.createElement("span");time.className="music-track-time";time.textContent=track.offset||"Waktu tidak tersedia";
+      const time=document.createElement("span");time.className="music-track-time";
+      const detectedAt=Array.isArray(track.offsets)&&track.offsets.length?track.offsets.join(" · "):track.offset;
+      time.textContent=detectedAt||"Waktu tidak tersedia";
       const rank=document.createElement("small");rank.textContent=track.score!=null?"Kecocokan "+track.score+"%":"Track "+(index+1);
       top.append(time,rank);
       const name=document.createElement("h4");name.textContent=track.title||"Unknown title";
