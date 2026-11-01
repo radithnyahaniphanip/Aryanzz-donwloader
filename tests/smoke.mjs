@@ -27,7 +27,7 @@ const htmlChecks=[
   ["upload measurement",js.includes("speed.cloudflare.com/__up")],
   ["download measurement",js.includes("speed.cloudflare.com/__down")],
   ["mobile data usage modes",html.includes("Cepat · ±3 MB")&&html.includes("Lengkap · ±11 MB")],
-  ["speed test cancel",html.includes("id=\\"speedCancel\\"")],
+  ["speed test cancel",html.includes('id="speedCancel"')],
   ["theme variants",css.includes('body[data-accent="purple"]')],
   ["responsive style",css.includes("@media(max-width:370px)")],
   ["manifest",manifest.name.includes("V15")]
