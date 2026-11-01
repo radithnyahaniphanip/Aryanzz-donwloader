@@ -11,6 +11,7 @@
   }
   function refreshButtons(){
     $("musicFileButton").disabled=busy||!apiReady||!selectedFile;
+    $("musicFileScanButton").disabled=busy||!apiReady||!selectedFile;
     $("musicMicButton").disabled=busy||!apiReady;
     $("musicUrlButton").disabled=busy||!apiReady||!videoUrlReady;
   }
@@ -148,6 +149,52 @@
       method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({url,startSeconds}),cache:"no-store"
     }));
   }
+
+  async function identifyVideoScan(url,skip,limit){
+    return readResponse(await fetch("/api/music/scan-video",{
+      method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({url,skip,every:1,limit}),cache:"no-store"
+    }));
+  }
+  async function identifyFileScan(file,skip,limit){
+    if(file.size>50*1024*1024)throw new Error("File melebihi batas 50 MB untuk pemindaian DJ.");
+    const form=new FormData();form.append("file",file,file.name||"aryanzz-dj-scan.mp4");
+    form.append("skip",String(skip));form.append("every","1");form.append("limit",String(limit));
+    return readResponse(await fetch("/api/music/scan-video",{method:"POST",body:form,cache:"no-store"}));
+  }
+  function renderEnterpriseTracks(data){
+    const box=$("musicResult");box.replaceChildren();box.hidden=false;
+    const tracks=Array.isArray(data.tracks)?data.tracks:[];
+    if(!tracks.length){setMessage(data.message||"Belum ada lagu yang cocok pada bagian video yang dipindai.",false);return;}
+    const heading=document.createElement("div");heading.className="music-scan-summary";
+    const title=document.createElement("b");title.textContent=tracks.length+" hasil lagu ditemukan";
+    const meta=document.createElement("small");meta.textContent="AudD Enterprise · "+(data.scannedChunks||0)+" segmen dipindai";
+    heading.append(title,meta);box.append(heading);
+    tracks.forEach((track,index)=>{
+      const row=document.createElement("article");row.className="music-track-row";
+      const top=document.createElement("div");top.className="music-track-top";
+      const time=document.createElement("span");time.className="music-track-time";time.textContent=track.offset||"Waktu tidak tersedia";
+      const rank=document.createElement("small");rank.textContent=track.score!=null?"Kecocokan "+track.score+"%":"Track "+(index+1);
+      top.append(time,rank);
+      const name=document.createElement("h4");name.textContent=track.title||"Unknown title";
+      const artist=document.createElement("p");artist.className="music-artist";artist.textContent=track.artist||"Unknown artist";
+      row.append(top,name,artist);
+      if(track.album){const album=document.createElement("small");album.className="music-track-meta";album.textContent="Album: "+track.album;row.append(album);}
+      if(track.timecode){const tc=document.createElement("small");tc.className="music-track-meta";tc.textContent="Posisi pada lagu: "+track.timecode;row.append(tc);}
+      const links=document.createElement("div");links.className="music-result-links";
+      addLink(links,"Buka lagu ↗",track.song_link);
+      const apple=track.apple_music&&(track.apple_music.url||track.apple_music.url_canonical);
+      const spotify=track.spotify&&(track.spotify.url||(track.spotify.external_urls&&track.spotify.external_urls.spotify));
+      addLink(links,"Apple Music ↗",apple);addLink(links,"Spotify ↗",spotify);
+      const query=encodeURIComponent([track.title,track.artist].filter(Boolean).join(" "));
+      if(query)addLink(links,"YouTube ↗","https://www.youtube.com/results?search_query="+query);
+      row.append(links);box.append(row);remember(track);
+    });
+    const note=document.createElement("p");note.className="music-result-note";
+    note.textContent="Posisi waktu menunjukkan bagian video tempat lagu terdeteksi. AudD memindai sampel sesuai interval yang dipilih; lagu yang sangat singkat di antara sampel mungkin terlewat.";
+    box.append(note);
+  }
+
   function showOutcome(data){
     if(data.match&&data.result)renderMatch(data.result);
     else setMessage(data.message||"Belum ada lagu yang cocok. Coba cuplikan lain yang lebih jelas.",false);
@@ -158,10 +205,10 @@
       const data=await readResponse(await fetch("/api/music/status",{cache:"no-store"}));
       apiReady=!!data.configured;videoUrlReady=!!data.videoUrlReady;
       status.className="music-status "+(apiReady?"is-ready":"is-warning");
-      status.textContent=apiReady?"Music Recognition aktif · AudD terhubung · cuplikan maksimal 12 detik":"Music Finder belum aktif. Admin perlu memasang secret AUDD_API_TOKEN pada Cloudflare Worker.";
+      status.textContent=apiReady?"Music Finder aktif · AudD terhubung · mode Shazam + pemindaian DJ":"Music Finder belum dapat mengenali lagu karena Worker belum membaca secret AUDD_API_TOKEN.";
       $("musicUrlHelp").textContent=videoUrlReady
-        ?"Bisa mengambil cuplikan 12 detik dari tautan video publik yang didukung."
-        :"Tautan video memerlukan server ekstraksi ARYANZZ yang aktif. Upload file dari perangkat tetap bisa digunakan.";
+        ?"Tautan publik dipindai langsung oleh AudD Enterprise; tidak perlu server ekstraksi tambahan."
+        :"Setelah AudD aktif, tautan video dan DJ mix bisa dipindai langsung.";
       refreshButtons();
     }catch(error){
       apiReady=false;videoUrlReady=false;status.className="music-status is-warning";
@@ -188,15 +235,25 @@
     }catch(error){setMessage(error.message||"Gagal mengenali lagu dari file.",true);}
     finally{$("musicMicStatus").textContent="Tekan tombol untuk mulai mendengarkan.";busy=false;refreshButtons();}
   });
+
+  $("musicFileScanButton").addEventListener("click",async()=>{
+    if(!selectedFile||busy)return;
+    const skip=Number($("musicScanSkip").value),limit=Number($("musicScanLimit").value);
+    busy=true;refreshButtons();setMessage("Mengirim file ke AudD Enterprise dan memindai lagu DJ mix…",false);
+    try{renderEnterpriseTracks(await identifyFileScan(selectedFile,skip,limit));}
+    catch(error){setMessage(error.message||"Gagal memindai video/DJ mix.",true);}
+    finally{busy=false;refreshButtons();}
+  });
+
   $("musicUrlButton").addEventListener("click",async()=>{
     if(busy)return;const url=$("musicVideoUrl").value.trim();
     if(!url){setMessage("Tempel tautan video terlebih dahulu.",true);return;}
     try{const parsed=new URL(url);if(!["https:","http:"].includes(parsed.protocol))throw new Error("Gunakan tautan video HTTP atau HTTPS.");}
     catch(error){setMessage(error.message||"Tautan video tidak valid.",true);return;}
-    const startSeconds=Math.max(0,Number($("musicUrlOffset").value)||0);busy=true;refreshButtons();
-    setMessage("Mengambil audio dari video, lalu mencari lagu…",false);
-    try{showOutcome(await identifyVideoUrl(url,startSeconds));}
-    catch(error){setMessage(error.message||"Gagal mengenali lagu dari tautan video.",true);}
+    const skip=Number($("musicScanSkip").value),limit=Number($("musicScanLimit").value);
+    busy=true;refreshButtons();setMessage("AudD sedang memindai video dan mencari beberapa lagu…",false);
+    try{renderEnterpriseTracks(await identifyVideoScan(url,skip,limit));}
+    catch(error){setMessage(error.message||"Gagal memindai tautan video/DJ mix.",true);}
     finally{busy=false;refreshButtons();}
   });
   $("musicMicButton").addEventListener("click",async()=>{
