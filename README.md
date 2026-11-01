@@ -26,7 +26,7 @@ ARYANZZ is a mobile-first creator workspace. The Cloudflare Worker serves the we
 
 The project now includes a Cloudflare Container Durable Object using the repository Dockerfile. It runs the existing Express backend, yt-dlp, FFmpeg and ShazamIO. Platform URLs are routed from the Worker directly to this container; the old external PLATFORM_API_ORIGIN and PLATFORM_API_TOKEN configuration is no longer required for the Cloudflare Container path.
 
-Plan requirement: Cloudflare Containers are available on the Workers Paid plan. The account must have Workers Paid enabled before the container deployment can complete. Container compute and resource usage may incur charges under Cloudflare's pricing. The existing Worker-only deployment is not sufficient to run yt-dlp or FFmpeg.
+Plan requirement: Cloudflare Containers are unavailable on the Workers Free plan and require the Workers Paid plan, which starts at US$5/month. That plan includes monthly container allowances; usage beyond the included CPU, memory and disk amounts is billed separately. The container uses the basic instance type (1/4 vCPU, 1 GiB RAM, 4 GB disk) and sleeps after 3 minutes idle. Container compute and resource usage may incur charges. The existing Worker-only deployment is not sufficient to run yt-dlp or FFmpeg.
 
 ### Music recognition fallback
 
