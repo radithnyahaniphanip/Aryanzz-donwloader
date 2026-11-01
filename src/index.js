@@ -97,12 +97,12 @@ function savenowHeaders(){return {
   pragma:"no-cache",
   referer:"https://en.loader.to/"
 };}
-async function savenowRequest(path,env,{requireKey=true}={}){
+async function savenowRequest(path,env,{requireKey=true,redirect="follow"}={}){
   if(requireKey&&!env.SAVENOW_API_KEY)return {error:"API key downloader YouTube belum dipasang di Cloudflare Worker.",status:503};
   try{
     const response=await fetch(SAVENOW_BASE+path,{
       headers:savenowHeaders(),
-      redirect:"manual",
+      redirect,
       signal:AbortSignal.timeout(25000)
     });
     const raw=await response.text();let data;
@@ -134,7 +134,7 @@ async function youtubeInfo(request,env){
   });
 }
 function safeFilename(value,format){
-  const fallback="aryanzz-youtube."+(format==="mp3"?"mp3":YOUTUBE_AUDIO_FORMATS.has(format)?"audio":"mp4");
+  const fallback="aryanzz-youtube."+(YOUTUBE_AUDIO_FORMATS.has(format)?format:"mp4");
   const name=String(value||fallback).replace(/[\\/:"*?<>|\u0000-\u001f]/g,"_").replace(/\s+/g," ").trim().slice(0,150);
   return name||fallback;
 }
@@ -204,7 +204,7 @@ async function youtubeProgress(request,env){
   let format;try{format=normalizeYoutubeFormat(body?.format)}catch(e){return json({error:e.message},400)}
   if(!/^[a-zA-Z0-9_-]{1,300}$/.test(id))return json({error:"ID proses tidak valid."},400);
   const params=new URLSearchParams({id});
-  const response=await savenowRequest("/ajax/progress.php?"+params.toString(),env,{requireKey:false});
+  const response=await savenowRequest("/ajax/progress.php?"+params.toString(),env,{requireKey:false,redirect:"manual"});
   if(response.error)return json({error:response.error},response.status);
   const data=response.data,progress=Number(data.progress);
   if(!Number.isFinite(progress))return json({error:data.text||data.message||"Respons progres tidak memiliki nilai progress yang valid."},502);
@@ -230,7 +230,7 @@ async function youtubeFile(request,env){
   const u=new URL(request.url),id=String(u.searchParams.get("id")||"").trim();
   let format;try{format=normalizeYoutubeFormat(u.searchParams.get("format")||"mp3")}catch(e){return json({error:e.message},400)}
   if(!/^[a-zA-Z0-9_-]{1,300}$/.test(id))return json({error:"ID pekerjaan tidak valid."},400);
-  const progress=await savenowRequest("/ajax/progress.php?"+new URLSearchParams({id}).toString(),env,{requireKey:false});
+  const progress=await savenowRequest("/ajax/progress.php?"+new URLSearchParams({id}).toString(),env,{requireKey:false,redirect:"manual"});
   if(progress.error)return json({error:progress.error},progress.status);
   const data=progress.data,pct=Number(data.progress);
   if(!Number.isFinite(pct)||pct<1000)return json({error:"File belum siap. Periksa progres kembali.",progress:Number.isFinite(pct)?pct:0},409);
