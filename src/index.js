@@ -121,12 +121,32 @@ async function youtubeInfo(request,env){
   if(!env.SAVENOW_API_KEY)return json({error:"API key downloader YouTube belum dipasang di Cloudflare Worker."},503);
   const params=new URLSearchParams({function:"i",api:env.SAVENOW_API_KEY,u:url});
   const response=await savenowRequest("/ajax/api.php?"+params.toString(),env);
-  if(response.error)return json({error:response.error},response.status);
-  const data=response.data;
-  if(data.error||data.success===false)return json({error:data.error||data.message||"Video tidak dapat diperiksa."},502);
+  const data=response.data||{};
+  const providerError=response.error||data.error||(data.success===false?(data.message||data.text||"Video tidak dapat diperiksa."):"");
+  if(providerError){
+    if(/not enough balance|insufficient balance|low balance/i.test(providerError)){
+      try{
+        const oembedUrl=new URL("https://www.youtube.com/oembed");
+        oembedUrl.searchParams.set("url",url);
+        oembedUrl.searchParams.set("format","json");
+        const oembed=await fetch(oembedUrl.toString(),{headers:{accept:"application/json"},signal:AbortSignal.timeout(10000)});
+        if(oembed.ok){
+          const preview=await oembed.json();
+          if(preview.title)return json({
+            ok:true,providerReady:false,
+            providerMessage:"Saldo API SaveNow tidak mencukupi. Informasi video berhasil ditemukan, tetapi unduhan baru bisa dimulai setelah saldo provider diisi.",
+            title:String(preview.title).slice(0,300),
+            thumbnail:typeof preview.thumbnail_url==="string"?preview.thumbnail_url:null,
+            duration:null,source:"YouTube"
+          });
+        }
+      }catch{}
+    }
+    return json({error:providerError},response.status||502);
+  }
   if(!data.title&&!data.thumbnail&&!data.duration)return json({error:data.message||data.text||"Informasi video tidak tersedia dari penyedia."},502);
   return json({
-    ok:true,
+    ok:true,providerReady:true,
     title:String(data.title||"YouTube Content").slice(0,300),
     thumbnail:typeof data.thumbnail==="string"?data.thumbnail:null,
     duration:data.duration??null,
