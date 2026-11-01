@@ -24,6 +24,7 @@ jobs:
       - name: Install Wrangler
         run: npm install --global wrangler
 
+      # Keep the downloader provider key in sync with GitHub Actions secrets.
       - name: Configure YouTube downloader secret
         env:
           SAVENOW_API_KEY: ${{ secrets.SAVENOW_API_KEY }}
