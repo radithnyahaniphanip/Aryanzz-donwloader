@@ -76,8 +76,13 @@ try{
     if(url.pathname==="/ajax/api.php"){
       assert.equal(url.searchParams.get("function"),"i");
       assert.equal(url.searchParams.get("api"),"test-secret");
+      if(url.searchParams.get("u").includes("LOWBALANCE"))
+        return new Response(JSON.stringify({error:"Not enough balance"}),{status:200,headers:{"content-type":"application/json"}});
       assert.equal(url.searchParams.get("u"),"https://www.youtube.com/watch?v=K1Pu75yJUOE");
       return new Response(JSON.stringify({title:"Test YouTube Video",duration:125,thumbnail:"https://img.example/thumb.jpg"}),{status:200,headers:{"content-type":"application/json"}});
+    }
+    if(url.hostname==="www.youtube.com"&&url.pathname==="/oembed"){
+      return new Response(JSON.stringify({title:"Fallback YouTube Preview",thumbnail_url:"https://img.example/fallback.jpg",author_name:"Test Channel"}),{status:200,headers:{"content-type":"application/json"}});
     }
     if(url.pathname==="/ajax/download.php"){
       assert.equal(url.searchParams.get("apikey"),"test-secret");
@@ -100,6 +105,13 @@ try{
   assert.equal(infoData.title,"Test YouTube Video");
   assert.equal(infoData.duration,125);
   console.log("✔ Non-billable YouTube metadata lookup uses current /ajax/api.php endpoint");
+
+  const lowBalanceInfo=await worker.fetch(new Request("https://aryanzz.example/api/youtube/info?url="+encodeURIComponent("https://www.youtube.com/watch?v=LOWBALANCE")),{SAVENOW_API_KEY:"test-secret"});
+  assert.equal(lowBalanceInfo.status,200);
+  const lowBalanceData=await lowBalanceInfo.json();
+  assert.equal(lowBalanceData.providerReady,false);
+  assert.equal(lowBalanceData.title,"Fallback YouTube Preview");
+  console.log("✔ YouTube oEmbed preview remains visible when SaveNow wallet is low");
 
   const start=await worker.fetch(new Request("https://aryanzz.example/api/youtube/download",{
     method:"POST",headers:{"content-type":"application/json"},
