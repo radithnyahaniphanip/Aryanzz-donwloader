@@ -269,9 +269,113 @@
     window.addEventListener("storage",renderLibrary);
     renderLibrary();
   }
+
+  /* V15.1: Wi-Fi + mobile-data speed test using Cloudflare's public speed-test endpoints. */
+  function setupSpeedTest(){
+    const panel=$("speed");if(!panel)return;
+    const $s=id=>$(id);
+    const btn=$s("speedBtn"),cancel=$s("speedCancel"),mode=$s("speedMode");
+    const conn=navigator.connection||navigator.mozConnection||navigator.webkitConnection;
+    let controller=null;
+    const bytesLabel=n=>n>=1000000?(n/1000000).toFixed(0)+" MB":Math.round(n/1000)+" KB";
+    const setStep=(label,pct)=>{const step=$s("speedStep"),percent=$s("speedPercent"),bar=$s("speedProgressBar");if(step)step.textContent=label;if(percent)percent.textContent=pct+"%";if(bar)bar.style.width=pct+"%";};
+    function updateNetwork(){
+      const type=String(conn?.type||"").toLowerCase();
+      const known=type==="wifi"||type==="cellular";
+      const wifi=type==="wifi",mobile=type==="cellular";
+      $s("wifiTile")?.classList.toggle("is-active",wifi);
+      $s("mobileTile")?.classList.toggle("is-active",mobile);
+      if($s("wifiState"))$s("wifiState").textContent=wifi?"Terhubung":known?"Tidak aktif":"Didukung";
+      if($s("mobileState"))$s("mobileState").textContent=mobile?"Terhubung":known?"Tidak aktif":"Didukung";
+      const name=$s("speedNetworkName"),detail=$s("speedNetworkDetail");
+      if(name)name.textContent=!navigator.onLine?"Tidak ada koneksi":wifi?"Wi-Fi terdeteksi":mobile?"Data seluler terdeteksi":type&&type!=="unknown"?type.toUpperCase():"Wi-Fi / Data Seluler";
+      if(detail)detail.textContent=known?"Speed test akan memakai jaringan "+(wifi?"Wi-Fi":"data seluler")+" yang aktif.": "Browser tidak membuka detail jenis jaringan. Tes tetap mengikuti koneksi aktif HP.";
+      const online=$s("speedOnline");if(online){online.textContent=navigator.onLine?"ONLINE":"OFFLINE";online.classList.toggle("is-offline",!navigator.onLine);}
+      const extra=[];
+      if(conn?.effectiveType)extra.push(String(conn.effectiveType).toUpperCase());
+      if(Number.isFinite(conn?.downlink))extra.push("perkiraan "+conn.downlink+" Mbps");
+      if(Number.isFinite(conn?.rtt))extra.push("RTT browser "+conn.rtt+" ms");
+      if(conn?.saveData)extra.push("Data Saver aktif");
+      const networkDetail=$s("speedNetworkDetail");
+      if(networkDetail&&extra.length)networkDetail.textContent+=(known?" · ":" ")+extra.join(" · ");
+    }
+    function updateEstimate(){
+      if(!$s("speedDataEstimate"))return;
+      const down=mode.value==="full"?8000000:2000000,up=mode.value==="full"?3000000:1000000;
+      $s("speedDataEstimate").textContent="Perkiraan pemakaian kuota sekitar "+bytesLabel(down+up)+" (download + upload).";
+    }
+    async function request(url,options={},timeout=18000){
+      if(!controller)throw new Error("Pengujian tidak aktif.");
+      const local=controller,timer=setTimeout(()=>local.abort(),timeout);
+      try{return await fetch(url,{cache:"no-store",...options,signal:local.signal})}
+      finally{clearTimeout(timer)}
+    }
+    function median(values){const sorted=[...values].sort((a,b)=>a-b);return sorted[Math.floor(sorted.length/2)]}
+    function speedText(bytes,ms){const mbps=(bytes*8)/(ms/1000)/1000000;return Number.isFinite(mbps)&&mbps>0?mbps.toFixed(2):"0.00"}
+    async function run(){
+      if(controller)return;
+      if(!navigator.onLine){$s("speedMsg").textContent="HP sedang offline. Sambungkan Wi-Fi atau data seluler terlebih dahulu.";return}
+      const downloadBytes=mode.value==="full"?8000000:2000000;
+      const uploadBytes=mode.value==="full"?3000000:1000000;
+      controller=new AbortController();btn.disabled=true;btn.textContent="Sedang menguji…";cancel.hidden=false;
+      for(const id of ["downVal","pingVal","uploadVal","jitterVal"])if($s(id))$s(id).innerHTML="—"+(id==="downVal"?"":"");
+      $s("speedMsg").textContent="Mengukur latensi ke Cloudflare Edge…";setStep("Mengukur ping",5);
+      try{
+        const pings=[];
+        for(let i=0;i<4;i++){
+          const start=performance.now();
+          const response=await request("https://speed.cloudflare.com/__down?bytes=0&cb="+Date.now()+"-"+i,{method:"GET"},12000);
+          if(!response.ok)throw new Error("Server tes ping menjawab HTTP "+response.status);
+          await response.arrayBuffer();pings.push(performance.now()-start);
+          if($s("pingVal"))$s("pingVal").innerHTML=Math.round(median(pings))+" <em>ms</em>";
+          setStep("Mengukur ping · "+(i+1)+"/4",5+Math.round((i+1)/4*15));
+        }
+        const ping=median(pings),jitter=pings.length>1?pings.slice(1).reduce((sum,v,i)=>sum+Math.abs(v-pings[i]),0)/(pings.length-1):0;
+        $s("pingVal").innerHTML=Math.round(ping)+" <em>ms</em>";
+        $s("jitterVal").innerHTML=Math.round(jitter)+" <em>ms</em>";
+        $s("speedMsg").textContent="Ping selesai. Mengukur kecepatan download…";setStep("Mengukur download · "+bytesLabel(downloadBytes),25);
+        const downStart=performance.now();
+        const downResponse=await request("https://speed.cloudflare.com/__down?bytes="+downloadBytes+"&cb="+Date.now(),{method:"GET"},25000);
+        if(!downResponse.ok)throw new Error("Server download menjawab HTTP "+downResponse.status);
+        const downBuffer=await downResponse.arrayBuffer(),downDuration=performance.now()-downStart;
+        const actualDown=downBuffer.byteLength||downloadBytes;
+        if(!actualDown)throw new Error("Server tidak mengirim data pengujian.");
+        $s("downVal").textContent=speedText(actualDown,downDuration);
+        $s("speedMsg").textContent="Download "+$s("downVal").textContent+" Mbps. Mengukur upload…";setStep("Mengukur upload · "+bytesLabel(uploadBytes),60);
+        try{
+          const payload=new Uint8Array(uploadBytes);
+          const upStart=performance.now();
+          const upResponse=await request("https://speed.cloudflare.com/__up?cb="+Date.now(),{method:"POST",headers:{"content-type":"application/octet-stream"},body:payload},25000);
+          if(!upResponse.ok)throw new Error("Server upload menjawab HTTP "+upResponse.status);
+          await upResponse.arrayBuffer();
+          $s("uploadVal").innerHTML=speedText(uploadBytes,performance.now()-upStart)+" <em>Mbps</em>";
+          setStep("Pengujian selesai",100);
+          $s("speedMsg").textContent="Selesai! Hasil diukur melalui jaringan yang sedang aktif.";
+        }catch(uploadError){
+          if(controller?.signal.aborted)throw uploadError;
+          $s("uploadVal").innerHTML="Gagal <em>—</em>";
+          setStep("Download selesai · upload gagal",85);
+          $s("speedMsg").textContent="Ping dan download berhasil. Upload tidak dapat diukur oleh jaringan/server saat ini.";
+        }
+      }catch(error){
+        const aborted=controller?.signal.aborted;
+        $s("speedMsg").textContent=aborted?"Pengujian dibatalkan.":(error.message||"Tes gagal. Periksa koneksi lalu coba lagi.");
+        if(!aborted)setStep("Tes tidak selesai",0);
+      }finally{
+        controller=null;btn.disabled=false;btn.textContent="Ulangi Speed Test ↻";cancel.hidden=true;
+      }
+    }
+    btn?.addEventListener("click",run);
+    cancel?.addEventListener("click",()=>controller?.abort());
+    mode?.addEventListener("change",updateEstimate);
+    window.addEventListener("online",updateNetwork);window.addEventListener("offline",updateNetwork);
+    conn?.addEventListener?.("change",updateNetwork);
+    updateNetwork();updateEstimate();
+  }
+
   /* V15 finish. */
   function init(){
-    bindNavigation();setupProfile();setupToolSearch();setupDownloader();setupImageLab();setupTextExtras();setupLibrary();
+    bindNavigation();setupProfile();setupToolSearch();setupDownloader();setupImageLab();setupTextExtras();setupLibrary();setupSpeedTest();
     if("serviceWorker" in navigator)navigator.serviceWorker.ready.then(r=>r.update().catch(()=>{})).catch(()=>{});
     document.querySelector(".pill")?.setAttribute("title","ARYANZZ V15 Interface Edition");
   }
