@@ -4,6 +4,7 @@ import worker from "../src/index.js";
 
 const file=path=>readFileSync(new URL(path,import.meta.url),"utf8");
 const html=file("../public/index.html");
+const workerSource=file("../src/index.js");
 const sw=file("../public/sw.js");
 const v15=file("../public/v15.js");
 const downloader=file("../public/downloader.js");
@@ -47,8 +48,8 @@ const checks=[
   ["V65.0 chroma key live preview and export",html.includes('id="editorPreviewCanvas"')&&html.includes('id="editorChromaEnabled"')&&editor.includes("function applyChromaKey")&&editor.includes("drawFrame(previewCtx")],
   ["V65.0 animated captions",html.includes('id="editorTextAnimation"')&&editor.includes("function textAnimationState")&&editor.includes("overlay.dataset.animation")],
   ["Music Finder panel and tool card",html.includes('id="musicFinder"')&&html.includes('data-panel="musicFinder"')],
-  ["Music Finder assets and PWA cache",html.includes("/music-recognition.js?v=66.0")&&html.includes("/music-recognition.css?v=66.0")&&sw.includes("/music-recognition.js?v=66.0")&&sw.includes("/music-recognition.css?v=66.0")],
-  ["DJ mix scan uses AudD Enterprise endpoint",html.includes('id="musicFileScanButton"')&&html.includes('id="musicScanSkip"')&&musicJs.includes('/api/music/scan-video')&&worker.toString().includes("enterprise.audd.io")],
+  ["Music Finder assets and PWA cache",html.includes("/music-recognition.js?v=67.0")&&html.includes("/music-recognition.css?v=67.0")&&sw.includes("/music-recognition.js?v=67.0")&&sw.includes("/music-recognition.css?v=67.0")],
+  ["DJ mix scan uses AudD Enterprise endpoint",html.includes('id="musicFileScanButton"')&&html.includes('id="musicScanSkip"')&&musicJs.includes('/api/music/scan-video')&&workerSource.includes("enterprise.audd.io")],
   ["Music Finder supports file, video URL and microphone",musicJs.includes("captureMediaSample")&&musicJs.includes("getUserMedia")&&musicJs.includes("/api/music/recognize")&&musicJs.includes("musicVideoUrl")],
   ["Music Finder responsive styling",musicCss.includes(".music-grid")&&musicCss.includes("@media(max-width:620px)")],
   ["Video URL audio sample extraction uses yt-dlp sections",serverSource.includes('app.post("/api/music/sample"')&&serverSource.includes("--download-sections")],
@@ -109,6 +110,7 @@ assert.equal(musicStatusResponse.status,200);
 const musicStatus=await musicStatusResponse.json();
 assert.equal(musicStatus.configured,false);
 assert.equal(musicStatus.videoUrlReady,false);
+assert.equal(musicStatus.videoScanProvider,"AudD Enterprise");
 console.log("✔ Music Finder status reports missing AudD and video-extractor secrets");
 const musicNoToken=await worker.fetch(new Request("https://aryanzz.example/api/music/recognize",{method:"POST"}),{});
 assert.equal(musicNoToken.status,503);
