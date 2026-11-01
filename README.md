@@ -1,4 +1,4 @@
-# ARYANZZ V66.0 — Music Recognition & Creative Studio
+# ARYANZZ V67.0 — Music Recognition, Video and DJ Mix Scanner
 
 Production website: https://aryanzz-donwloader.radithnyahaniphanip.workers.dev/
 
@@ -16,7 +16,8 @@ ARYANZZ is a mobile-first creator workspace. The Cloudflare Worker serves the we
 | V55–V59.5 | Backend health status, PWA cache refresh, expanded smoke tests and deployment configuration |
 | V60.0 | Multi-clip timeline, split/reorder/trim, audio track, caption styling, fade transition, undo/redo, project JSON and local export |
 | V65.0 | Premium wide editor workspace, three mixed audio tracks, per-clip zoom keyframes and pan, live/export chroma key, animated captions, SRT subtitle import and project restore |
-| V66.0 | Music Finder: recognition from local video/audio, supported video URLs and microphone; DJ/remix-friendly audio fingerprint matching; local search history |
+| V66.0 | Music Finder: single-track recognition from local video/audio and microphone, plus local search history |
+| V67.0 | Full video and DJ mix scanning through AudD Enterprise; direct public video URL processing; multiple matched tracks with timestamps; scan density and sample limits |
 
 ## Downloader
 
@@ -106,7 +107,23 @@ Music Finder uses the AudD music-recognition API through the Cloudflare Worker. 
 
 The start-second field lets visitors choose a later part of a DJ mix or video. AudD describes use cases involving DJ mixes, but its standard endpoint is designed to identify a single song from a short sample. Matching a heavily edited remix, slowed/reverb, sped-up or pitch-shifted version is not guaranteed; the result may identify the underlying original track or return no match. Scanning an entire long DJ set and returning every track with timestamps requires AudD's enterprise endpoint.
 
-### Limits and privacy
+### Full video and DJ mix scanning — V67.0
+
+The **Pindai seluruh video / DJ mix** actions use AudD Enterprise directly. Public video-page URLs are sent to AudD; the browser does not need the separate yt-dlp extractor for this recognition mode. Uploaded video/audio files are sent to the Worker and forwarded to AudD Enterprise (maximum 50 MB).
+
+The enterprise endpoint returns multiple track matches with the offset in the submitted video/mix. The UI shows each detected track, artist, album, confidence score where available, and links to streaming/search services.
+
+The scan density is configurable:
+- **Hemat:** one 12-second sample every 120 seconds (`skip=9`, `every=1`).
+- **Seimbang:** one 12-second sample every 60 seconds (`skip=4`, `every=1`).
+- **Rapat:** one 12-second sample every 24 seconds (`skip=1`, `every=1`).
+- **Detail:** one 12-second sample every 12 seconds (`skip=0`, `every=1`).
+
+The scan is capped at 30, 60, or 100 sample chunks per request. AudD counts one Enterprise request per 12 seconds scanned; its docs currently advertise 300 free requests and plans starting at US$2 per 1,000 requests. A dense scan of a long DJ set can consume credits quickly. Review the current AudD dashboard pricing before using Detail mode. See [AudD Enterprise documentation](https://docs.audd.io/enterprise/).
+
+The standard single-song and microphone modes still use the standard AudD endpoint and send only a short sample. The Worker keeps `AUDD_API_TOKEN` server-side; never put it in browser JavaScript or commit it to GitHub.
+
+### Limits and privacy### Limits and privacy
 
 - Maximum uploaded audio sample: 10 MB.
 - Recognition sample: up to 12 seconds per request.
