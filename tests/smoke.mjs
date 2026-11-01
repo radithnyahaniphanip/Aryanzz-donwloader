@@ -157,29 +157,27 @@ try{
   assert.equal(noMatch.status,200);
   assert.equal((await noMatch.json()).match,false);
   console.log("✔ Music recognition handles an audio sample with no catalogue match");
-}
+}finally{globalThis.fetch=originalMusicFetch;}
 
-  const providerErrorFetch=globalThis.fetch;
-  try{
-    globalThis.fetch=async()=>new Response(JSON.stringify({status:"error",error:{error_code:901,error_message:"authorization failed: the limit was reached."}}),{status:200,headers:{"content-type":"application/json"}});
-    const deniedForm=new FormData();deniedForm.append("file",new Blob(["sample"],{type:"audio/webm"}),"sample.webm");
-    const denied=await worker.fetch(new Request("https://aryanzz.example/api/music/recognize",{method:"POST",body:deniedForm}),{AUDD_API_TOKEN:"test-audd-token"});
-    assert.equal(denied.status,502);
-    const deniedData=await denied.json();
-    assert.equal(deniedData.providerErrorCode,901);
-    assert.equal(deniedData.retryable,false);
-    assert.match(deniedData.error,/API token tidak diterima/);
-    globalThis.fetch=async()=>new Response(JSON.stringify({status:"error",error:{error_code:902,error_message:"quota exceeded"}}),{status:200,headers:{"content-type":"application/json"}});
-    const quotaForm=new FormData();quotaForm.append("file",new Blob(["sample"],{type:"audio/webm"}),"sample.webm");
-    const quota=await worker.fetch(new Request("https://aryanzz.example/api/music/recognize",{method:"POST",body:quotaForm}),{AUDD_API_TOKEN:"test-audd-token"});
-    assert.equal(quota.status,502);
-    const quotaData=await quota.json();
-    assert.equal(quotaData.providerErrorCode,902);
-    assert.match(quotaData.error,/Kuota akun AudD sudah habis/);
-    console.log("✔ AudD authentication and quota failures are identified without exposing the token");
-  }finally{globalThis.fetch=providerErrorFetch;}
-finally{globalThis.fetch=originalMusicFetch;}}finally{globalThis.fetch=originalMusicFetch;}
-
+const providerErrorFetch=globalThis.fetch;
+try{
+  globalThis.fetch=async()=>new Response(JSON.stringify({status:"error",error:{error_code:901,error_message:"authorization failed: the limit was reached."}}),{status:200,headers:{"content-type":"application/json"}});
+  const deniedForm=new FormData();deniedForm.append("file",new Blob(["sample"],{type:"audio/webm"}),"sample.webm");
+  const denied=await worker.fetch(new Request("https://aryanzz.example/api/music/recognize",{method:"POST",body:deniedForm}),{AUDD_API_TOKEN:"test-audd-token"});
+  assert.equal(denied.status,502);
+  const deniedData=await denied.json();
+  assert.equal(deniedData.providerErrorCode,901);
+  assert.equal(deniedData.retryable,false);
+  assert.match(deniedData.error,/API token tidak diterima/);
+  globalThis.fetch=async()=>new Response(JSON.stringify({status:"error",error:{error_code:902,error_message:"quota exceeded"}}),{status:200,headers:{"content-type":"application/json"}});
+  const quotaForm=new FormData();quotaForm.append("file",new Blob(["sample"],{type:"audio/webm"}),"sample.webm");
+  const quota=await worker.fetch(new Request("https://aryanzz.example/api/music/recognize",{method:"POST",body:quotaForm}),{AUDD_API_TOKEN:"test-audd-token"});
+  assert.equal(quota.status,502);
+  const quotaData=await quota.json();
+  assert.equal(quotaData.providerErrorCode,902);
+  assert.match(quotaData.error,/Kuota akun AudD sudah habis/);
+  console.log("✔ AudD authentication and quota failures are identified without exposing the token");
+}finally{globalThis.fetch=providerErrorFetch;}
 
 const originalEnterpriseFetch=globalThis.fetch;
 try{
