@@ -1,10 +1,10 @@
-name: Validate ARYANZZ V67.6
+name: Validate ARYANZZ V67.7
 
 on:
   pull_request:
     branches: [main]
   push:
-    branches: [fix/cloudflare-container-downloader-shazam-fallback]
+    branches: [feature/aryanzz-v67-7-to-v80-4]
 
 jobs:
   syntax:
@@ -23,6 +23,7 @@ jobs:
           node --check src/index.js
           node --check server/index.js
           node --check public/v674.js
+          node --check public/v677.js
           node --check public/music-recognition.js
           node --check public/downloader.js
           node --check public/editor.js
