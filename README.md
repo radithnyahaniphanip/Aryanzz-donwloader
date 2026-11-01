@@ -19,10 +19,10 @@ ARYANZZ is a mobile-first creator workspace. The Cloudflare Worker serves the we
 | V66.0 | Music Finder: single-track recognition from local video/audio and microphone, plus local search history |
 | V67.0 | AudD Enterprise multi-track DJ/video recognition |
 | V67.1 | AudD provider error-code diagnostics |
-| V67.2 | Cloudflare Container backend for platform extraction; ShazamIO fallback for single-song recognition and multi-segment DJ scans when AudD quota/authentication fails |
+| V67.2 | Cloudflare Container backend for platform extraction; ShazamIO fallback for single-song recognition and multi-segment DJ scans when AudD quota/authentication fails |\n| V67.4 | Premium mobile UI refresh, simplified downloader home, searchable Tools Center and Color Studio |\n| V67.6 | Backend health cleanup, title-based YouTube search routed through yt-dlp, clearer AudD/Shazam status, and DJ scan fallback fixes |
 
 
-## V67.2 — Native Cloudflare downloader and Shazam fallback
+## V67.6 — Title search and recognition reliability\n\n- The downloader's **Cari judul** tab now queries YouTube through the existing Cloudflare Container and yt-dlp, displays up to eight results, and lets the user select a result to inspect downloadable formats. It does not use an extra search API key.\n- Search accepts plain text only (2–160 characters), runs a fixed `ytsearch8` extractor query, and returns a limited metadata response. It does not fetch arbitrary user-supplied URLs through the search route.\n- Music Finder status distinguishes an installed AudD token from the configured Shazam fallback. A configured token does not imply remaining AudD quota; AudD usage is still controlled by the provider.\n- Shazam DJ fallback samples now honor the consecutive-sample setting and remain capped at 30 segments per scan to limit container load. AudD Enterprise can process up to 100 segments where the account permits it.\n- Removed the duplicate Express health route so the container reports one current version and a consistent feature list.\n\n## V67.2 — Native Cloudflare downloader and Shazam fallback
 
 The project now includes a Cloudflare Container Durable Object using the repository Dockerfile. It runs the existing Express backend, yt-dlp, FFmpeg and ShazamIO. Platform URLs are routed from the Worker directly to this container; the old external PLATFORM_API_ORIGIN and PLATFORM_API_TOKEN configuration is no longer required for the Cloudflare Container path.
 
