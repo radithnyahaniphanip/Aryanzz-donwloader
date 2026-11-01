@@ -340,16 +340,28 @@ body:before{content:"";position:fixed;z-index:-1;inset:-30%;pointer-events:none;
       <div class="music-file-name" id="musicFileName">Belum ada file dipilih</div>
       <label class="label" for="musicFileOffset">Mulai deteksi dari detik ke</label>
       <input class="field" id="musicFileOffset" type="number" min="0" max="10800" step="1" value="0" inputmode="numeric">
-      <button class="primary music-action" id="musicFileButton" type="button" disabled>♫ Kenali lagu dari file</button>
-      <small class="music-help">Untuk DJ mix, pilih detik ketika lagu terdengar jelas. Video diproses di perangkat; hanya cuplikan audio yang dikirim.</small>
+      <button class="primary music-action" id="musicFileButton" type="button" disabled>♫ Kenali satu lagu (12 detik)</button>
+      <button class="tag music-action-secondary" id="musicFileScanButton" type="button" disabled>♬ Pindai seluruh video / DJ mix</button>
+      <small class="music-help">Mode satu lagu mengirim cuplikan 12 detik. Mode DJ memindai seluruh file dan membuat daftar lagu beserta posisi waktunya.</small>
     </section>
     <section class="music-card">
       <div class="music-card-kicker">02 · LINK VIDEO</div><h3>Tempel tautan video</h3>
       <input class="field music-url" id="musicVideoUrl" type="url" inputmode="url" placeholder="https://youtu.be/...">
-      <label class="label" for="musicUrlOffset">Mulai deteksi dari detik ke</label>
-      <input class="field" id="musicUrlOffset" type="number" min="0" max="10800" step="1" value="0" inputmode="numeric">
-      <button class="primary music-action" id="musicUrlButton" type="button" disabled>↗ Kenali dari link video</button>
-      <small class="music-help" id="musicUrlHelp">Memerlukan server ekstraksi ARYANZZ yang aktif.</small>
+      <label class="label" for="musicScanSkip">Kerapatan pemindaian DJ mix</label>
+      <select class="field" id="musicScanSkip">
+        <option value="9">Hemat · 1 sampel setiap 2 menit</option>
+        <option value="4" selected>Seimbang · 1 sampel setiap 60 detik</option>
+        <option value="1">Rapat · 1 sampel setiap 24 detik</option>
+        <option value="0">Detail · 1 sampel setiap 12 detik</option>
+      </select>
+      <label class="label" for="musicScanLimit">Batas sampel per pemindaian</label>
+      <select class="field" id="musicScanLimit">
+        <option value="30">30 sampel</option>
+        <option value="60" selected>60 sampel</option>
+        <option value="100">100 sampel</option>
+      </select>
+      <button class="primary music-action" id="musicUrlButton" type="button" disabled>↗ Pindai video / DJ mix</button>
+      <small class="music-help" id="musicUrlHelp">Tautan video akan dipindai langsung oleh AudD Enterprise.</small>
     </section>
     <section class="music-card music-mic-card">
       <div class="music-card-kicker">03 · SHAZAM MODE</div><h3>Dengarkan melalui mikrofon</h3>
@@ -363,7 +375,7 @@ body:before{content:"";position:fixed;z-index:-1;inset:-30%;pointer-events:none;
   <div class="music-history-head"><div><span class="section-kicker">YOUR DISCOVERIES</span><h3>Riwayat pencarian</h3></div>
     <button class="tag" id="musicClearHistory" type="button">Hapus riwayat</button></div>
   <div class="music-history" id="musicHistory"></div>
-  <p class="music-disclaimer">ARYANZZ mengirim cuplikan audio ke layanan pengenal lagu AudD untuk pencocokan. ARYANZZ tidak menyimpan file audio tersebut. Hasil remix dapat menampilkan lagu sumber/original jika versi edit tidak tercatat di katalog. Pemindaian seluruh video atau DJ set untuk menemukan banyak lagu sekaligus memerlukan layanan enterprise.</p>
+  <p class="music-disclaimer">Mode pengenal satu lagu mengirim cuplikan sekitar 12 detik ke AudD. Mode DJ mengirim file video/audio atau tautan publik ke AudD Enterprise untuk pemindaian beberapa segmen dan daftar lagu. ARYANZZ tidak menyimpan file tersebut. AudD menghitung 1 permintaan per 12 detik audio yang dipindai; interval hemat mengurangi jumlah sampel. Periksa biaya dan kebijakan privasi AudD sebelum memindai file panjang.</p>
 </div>
 
 <div class="panel card" id="queue"><h3>⇄ Smart Download Queue</h3><p class="muted">Masukkan beberapa URL, satu per baris. Antrean diproses satu per satu agar lebih stabil.</p><textarea id="queueUrls" class="field tool-input" rows="4" placeholder="https://..."></textarea><div class="feature-row"><button class="primary" id="queueAdd">Tambah ke antrean</button><button class="tag" id="queueRun">Mulai antrean</button><button class="tag" id="queueClear">Kosongkan</button></div><div id="queueList" class="result"></div></div>
