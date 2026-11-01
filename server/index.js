@@ -112,7 +112,7 @@ async function scanShazamMedia(inputPath,skip,every,limit){
 }
 
 app.get("/ping",(_req,res)=>res.status(200).send("ok"));
-app.get("/api/health",(_req,res)=>res.json({ok:true,service:"ARYANZZ Self-Hosted Downloader",version:"67.2",engine:"yt-dlp + FFmpeg + ShazamIO",maxFileMB:500,maxDurationMinutes:180,platforms:ALLOWED,features:["platform-info","mp4","mp3","quality-select","progress-stream","shazam-fallback","dj-mix-scan"]}));app.get("/api/health",(_req,res)=>res.json({ok:true,service:"ARYANZZ Self-Hosted Downloader",version:"59.5",engine:"yt-dlp + FFmpeg",maxFileMB:500,maxDurationMinutes:180,platforms:ALLOWED,features:["platform-info","mp4","mp3","quality-select","progress-stream"]}));
+app.get("/api/health",(_req,res)=>res.json({ok:true,service:"ARYANZZ Self-Hosted Downloader",version:"67.6",engine:"yt-dlp + FFmpeg + ShazamIO",maxFileMB:500,maxDurationMinutes:180,platforms:ALLOWED,features:["platform-info","title-search","mp4","mp3","quality-select","progress-stream","shazam-fallback","dj-mix-scan"]}));
 function requirePlatformToken(req,res,next){
   if(process.env.CONTAINER_INTERNAL_MODE==="true")return next();
   const supplied=String(req.headers.authorization||"").replace(/^Bearer\s+/i,"");
@@ -121,6 +121,25 @@ function requirePlatformToken(req,res,next){
   if(a.length!==b.length||!timingSafeEqual(a,b))return res.status(401).json({error:"Token backend tidak valid."});
   next();
 }
+
+app.post("/api/search",requirePlatformToken,async(req,res)=>{
+  try{
+    const query=String(req.body?.query||"").replace(/\\s+/g," ").trim();
+    if(query.length<2)return res.status(400).json({error:"Masukkan minimal 2 karakter untuk mencari judul video."});
+    if(query.length>160)return res.status(400).json({error:"Judul pencarian maksimal 160 karakter."});
+    const raw=await run(["--dump-single-json","--flat-playlist","--no-warnings","--skip-download","ytsearch8:"+query],90000);
+    const data=JSON.parse(raw);
+    const entries=Array.isArray(data.entries)?data.entries:[];
+    const results=entries.filter(item=>item&&item.id&&item.title).slice(0,8).map(item=>{
+      const videoUrl=typeof item.webpage_url==="string"&&item.webpage_url.startsWith("https://www.youtube.com/")?item.webpage_url:"https://www.youtube.com/watch?v="+encodeURIComponent(String(item.id));
+      const thumbs=Array.isArray(item.thumbnails)?item.thumbnails:[];
+      const thumbnail=item.thumbnail||thumbs.slice().reverse().find(x=>typeof x?.url==="string"&&x.url.startsWith("https://"))?.url||null;
+      return {id:String(item.id).slice(0,80),title:String(item.title).slice(0,300),channel:String(item.channel||item.uploader||"").slice(0,180),duration:Number.isFinite(Number(item.duration))?Number(item.duration):null,thumbnail, url:videoUrl};
+    });
+    res.json({ok:true,query,results});
+  }catch(error){res.status(502).json({error:error.message||"Pencarian judul gagal. Coba kata kunci lain."});}
+});
+
 app.post("/api/info",requirePlatformToken,async(req,res)=>{
   try {
     const url=validateUrl(req.body?.url);
