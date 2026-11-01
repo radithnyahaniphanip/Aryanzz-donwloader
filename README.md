@@ -1,4 +1,4 @@
-# ARYANZZ V67.9 — Downloader Reliability & Tools Center Redesign
+# ARYANZZ V68.0 — Gradient Studio, File Hash & Tools Center
 
 Production website: https://aryanzz-donwloader.radithnyahaniphanip.workers.dev/
 
