@@ -207,10 +207,10 @@
       const data=await readResponse(await fetch("/api/music/status",{cache:"no-store"}));
       apiReady=!!data.configured;videoUrlReady=!!data.videoUrlReady;
       status.className="music-status "+(apiReady?"is-ready":"is-warning");
-      status.textContent=apiReady?"Music Finder aktif · AudD terhubung · mode Shazam + pemindaian DJ":"Music Finder belum dapat mengenali lagu karena Worker belum membaca secret AUDD_API_TOKEN.";
+      status.textContent=apiReady?"Music Finder aktif · AudD terhubung"+(data.shazamFallbackReady?" · Shazam fallback aktif":""):"Music Finder belum aktif. Tambahkan secret AUDD_API_TOKEN atau hubungkan backend pengenal lagu.";
       $("musicUrlHelp").textContent=videoUrlReady
         ?"Tautan publik dipindai langsung oleh AudD Enterprise; tidak perlu server ekstraksi tambahan."
-        :"Setelah AudD aktif, tautan video dan DJ mix bisa dipindai langsung.";
+        :"Tautan video dan DJ mix memerlukan AudD Enterprise atau backend ekstraksi yang kompatibel.";
       refreshButtons();
     }catch(error){
       apiReady=false;videoUrlReady=false;status.className="music-status is-warning";
