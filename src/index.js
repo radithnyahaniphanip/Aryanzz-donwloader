@@ -29,7 +29,7 @@ async function getUpstream(parsed,method="HEAD"){
   }
   throw new Error("Terlalu banyak pengalihan URL.");
 }
-const PLATFORM_HOSTS=["youtube.com","youtu.be","youtube-nocookie.com","tiktok.com","instagram.com","facebook.com","fb.watch","pinterest.com","pin.it"];
+const PLATFORM_HOSTS=["youtube.com","youtu.be","youtube-nocookie.com","tiktok.com","instagram.com","threads.net","facebook.com","fb.watch","pinterest.com","pin.it","x.com","twitter.com","reddit.com","redd.it","vimeo.com","dailymotion.com","dai.ly","soundcloud.com","twitch.tv","streamable.com","tumblr.com","bilibili.com","b23.tv","vk.com","ok.ru","rutube.ru","likee.video","snapchat.com","imgur.com","bandcamp.com","mixcloud.com","ted.com","archive.org","loom.com","rumble.com","odysee.com","weibo.com","xiaohongshu.com"];
 function isPlatformLink(raw){
   try{const u=new URL(raw);const h=u.hostname.toLowerCase();return ["http:","https:"].includes(u.protocol)&&PLATFORM_HOSTS.some(d=>h===d||h.endsWith("."+d));}catch{return false;}
 }
@@ -38,11 +38,23 @@ async function proxyPlatform(request,env,path){
   if(!isPlatformLink(body?.url))return null;
   if(!env.PLATFORM_API_ORIGIN)return json({error:"Backend ekstraksi platform belum dihubungkan. Tautan file media langsung tetap bisa diunduh."},503);
   if(!env.PLATFORM_API_TOKEN)return json({error:"Token backend belum dikonfigurasi pada Cloudflare Worker."},503);
-  let origin;try{origin=new URL(env.PLATFORM_API_ORIGIN).origin}catch{return json({error:"Konfigurasi backend tidak valid."},500)}
+  let origin;try{const parsed=new URL(env.PLATFORM_API_ORIGIN);if(parsed.protocol!=="https:"||parsed.username||parsed.password)throw new Error("origin tidak aman");origin=parsed.origin}catch{return json({error:"Konfigurasi backend harus berupa URL HTTPS yang valid."},500)}
   try{
-    const response=await fetch(origin+path,{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+env.PLATFORM_API_TOKEN},body:JSON.stringify(body)});
+    const response=await fetch(origin+path,{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+env.PLATFORM_API_TOKEN},body:JSON.stringify(body),signal:AbortSignal.timeout(300000)});
     return new Response(response.body,{status:response.status,headers:{"content-type":response.headers.get("content-type")||"application/json","content-disposition":response.headers.get("content-disposition")||"","cache-control":"no-store"}});
   }catch{return json({error:"Backend ekstraksi sedang tidak dapat dijangkau."},502)}
+}
+async function platformStatus(env){
+  const configured=!!(env.PLATFORM_API_ORIGIN&&env.PLATFORM_API_TOKEN);
+  if(!configured)return json({ok:false,configured:false,engine:"yt-dlp + FFmpeg",platforms:PLATFORM_HOSTS,message:"Server ekstraksi belum dihubungkan."});
+  let origin;
+  try{const parsed=new URL(env.PLATFORM_API_ORIGIN);if(parsed.protocol!=="https:"||parsed.username||parsed.password)throw new Error("origin tidak aman");origin=parsed.origin}
+  catch{return json({ok:false,configured:true,error:"URL backend harus HTTPS."},500)}
+  try{
+    const response=await fetch(origin+"/api/health",{headers:{accept:"application/json","authorization":"Bearer "+env.PLATFORM_API_TOKEN},signal:AbortSignal.timeout(8000),cache:"no-store"});
+    const data=await response.json().catch(()=>({}));
+    return json({ok:response.ok&&data.ok===true,configured:true,engine:data.engine||"yt-dlp + FFmpeg",version:data.version||null,platforms:data.platforms||PLATFORM_HOSTS});
+  }catch{return json({ok:false,configured:true,error:"Server ekstraksi belum merespons.",engine:"yt-dlp + FFmpeg",platforms:PLATFORM_HOSTS},502)}
 }
 async function info(request){
   let body;try{body=await request.json()}catch{return json({error:"Body JSON tidak valid."},400)}
@@ -284,12 +296,13 @@ async function youtubeFile(request,env){
 export default {async fetch(request,env){
   const url=new URL(request.url);
   if(request.method==="OPTIONS"&&url.pathname.startsWith("/api/"))return new Response(null,{status:204,headers:{"access-control-allow-origin":url.origin,"access-control-allow-methods":"GET,POST,OPTIONS","access-control-allow-headers":"Content-Type"}});
+  if(url.pathname==="/api/platform/status"&&request.method==="GET")return platformStatus(env);
   if(url.pathname==="/api/youtube/status"&&request.method==="GET")return json({ok:true,service:"ARYANZZ YouTube Backend",youtubeDownloader:true,youtubeApiKeyConfigured:!!env.SAVENOW_API_KEY,supportedAudio:[...YOUTUBE_AUDIO_FORMATS],supportedVideo:["360","720","1080","1440","4k"]});
   if(url.pathname==="/api/youtube/info"&&request.method==="GET")return youtubeInfo(request,env);
   if(url.pathname==="/api/youtube/download"&&request.method==="POST")return youtubeStart(request,env);
   if(url.pathname==="/api/youtube/progress"&&request.method==="POST")return youtubeProgress(request,env);
   if(url.pathname==="/api/youtube/file"&&request.method==="GET")return youtubeFile(request,env);
-  if(url.pathname==="/api/health"&&request.method==="GET")return json({ok:true,service:"ARYANZZ",version:"29.0",mode:"cloudflare-worker",directMediaDownload:true,youtubeDownloader:true,youtubeApiKeyConfigured:!!env.SAVENOW_API_KEY,platformExtraction:!!(env.PLATFORM_API_ORIGIN&&env.PLATFORM_API_TOKEN),platformBackend:env.PLATFORM_API_ORIGIN&&env.PLATFORM_API_TOKEN?"configured":"not-configured"});
+  if(url.pathname==="/api/health"&&request.method==="GET")return json({ok:true,service:"ARYANZZ",version:"59.5",mode:"cloudflare-worker",directMediaDownload:true,selfHostedDownloader:true,youtubeDownloader:true,youtubeApiKeyConfigured:!!env.SAVENOW_API_KEY,platformExtraction:!!(env.PLATFORM_API_ORIGIN&&env.PLATFORM_API_TOKEN),platformBackend:env.PLATFORM_API_ORIGIN&&env.PLATFORM_API_TOKEN?"configured":"not-configured"});
   if(url.pathname==="/api/info"&&request.method==="POST"){const proxied=await proxyPlatform(request,env,"/api/info");if(proxied)return proxied;return info(request);}
   if(url.pathname==="/api/download"&&request.method==="POST"){const proxied=await proxyPlatform(request,env,"/api/download");if(proxied)return proxied;return download(request);}
   if(url.pathname.startsWith("/api/"))return json({error:"Endpoint tidak ditemukan."},404);
