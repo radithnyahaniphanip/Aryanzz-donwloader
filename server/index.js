@@ -175,7 +175,7 @@ app.post("/api/download",requirePlatformToken,async(req,res)=>{
     await run(args,240000);
     if(!existsSync(output))throw new Error("File hasil tidak ditemukan.");
     const size=statSync(output).size;
-    if(size>MAX_FILE_BYTES)throw new Error("File melebihi batas 100 MB.");
+    if(size>MAX_FILE_BYTES)throw new Error("File melebihi batas 500 MB.");
     const filename=cleanTitle(mode==="audio"?"aryanzz-audio.mp3":"aryanzz-video-"+height+"p.mp4");
     res.download(output,filename,()=>{try{if(existsSync(output))unlinkSync(output);}catch{}});
   } catch(e){
@@ -245,5 +245,5 @@ app.post("/api/music/scan",requirePlatformToken,express.raw({type:"application/o
   finally{try{if(inputPath&&existsSync(inputPath))unlinkSync(inputPath);}catch{}}
 });
 
-app.use(express.static(path.join(process.cwd(),"public")));app.use(express.static(path.join(process.cwd(),"public")));
+app.use(express.static(path.join(process.cwd(),"public")));
 app.listen(PORT,()=>console.log("ARYANZZ listening on "+PORT));

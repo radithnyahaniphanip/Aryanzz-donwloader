@@ -54,7 +54,7 @@ const checks=[
   ["DJ mix scan uses AudD Enterprise endpoint",html.includes('id="musicFileScanButton"')&&html.includes('id="musicScanSkip"')&&musicJs.includes('/api/music/scan-video')&&workerSource.includes("enterprise.audd.io")],
   ["Music Finder supports file, video URL and microphone",musicJs.includes("captureMediaSample")&&musicJs.includes("getUserMedia")&&musicJs.includes("/api/music/recognize")&&musicJs.includes("musicVideoUrl")],
   ["AudD errors expose provider code and actionable quota guidance",workerSource.includes("function auddFailure")&&workerSource.includes("providerErrorCode")&&workerSource.includes("kode 901")&&workerSource.includes("kode 902")],
-  ["Cloudflare container Durable Object is wired into the Worker",workerSource.includes("class DownloaderContainer")&&workerSource.includes("DOWNLOADER_CONTAINER")&&workerSource.includes("callDownloaderContainer")&&file("../wrangler.toml").includes("new_sqlite_classes = [\"DownloaderContainer\"]")],
+  ["External yt-dlp backend is wired into the Worker",workerSource.includes("PLATFORM_API_ORIGIN")&&workerSource.includes("PLATFORM_API_TOKEN")&&workerSource.includes("external-yt-dlp")&&!workerSource.includes("DOWNLOADER_CONTAINER")&&!file("../wrangler.toml").includes("[[containers]]")],
   ["Shazam fallback covers standard AudD auth/quota failures",workerSource.includes("shazamRecognize(audioBlob,env)")&&workerSource.includes("providerErrorCode")&&serverSource.includes("/api/music/recognize")&&serverSource.includes("shazam_recognize.py")],
   ["DJ mix scans fall back to Shazam when AudD Enterprise errors",workerSource.includes("shazamScan(fallbackSource")&&serverSource.includes("/api/music/scan")&&serverSource.includes("scanShazamMedia")],
   ["Docker backend includes yt-dlp, FFmpeg and ShazamIO",file("../Dockerfile").includes("yt-dlp")&&file("../Dockerfile").includes("shazamio==0.9.0")&&serverSource.includes("ffprobe")],
@@ -202,39 +202,6 @@ try{
 }finally{globalThis.fetch=providerErrorFetch;}
 
 
-const fallbackStub={
-  startAndWaitForPorts:async()=>{},
-  fetch:async request=>{
-    const path=new URL(request.url).pathname;
-    if(path==="/api/search")return new Response(JSON.stringify({ok:true,results:[{id:"SEARCH123",title:"Search Result Track",channel:"ARYANZZ Test",duration:125,thumbnail:"https://img.example/search.jpg",url:"https://www.youtube.com/watch?v=SEARCH123"}]}),{status:200,headers:{"content-type":"application/json"}});
-    if(path==="/api/music/recognize")return new Response(JSON.stringify({
-      ok:true,match:true,provider:"Shazam",
-      result:{title:"Fallback Track",artist:"Fallback Artist",provider:"Shazam",song_link:"https://www.shazam.com/track/123"}
-    }),{status:200,headers:{"content-type":"application/json"}});
-    if(path==="/api/music/scan")return new Response(JSON.stringify({
-      ok:true,match:true,provider:"Shazam",scannedChunks:2,
-      tracks:[{title:"DJ Fallback Track",artist:"DJ Fallback Artist",offset:"00:00",offsets:["00:00","01:00"]}]
-    }),{status:200,headers:{"content-type":"application/json"}});
-    if(path==="/api/health")return new Response(JSON.stringify({ok:true,engine:"yt-dlp + FFmpeg + ShazamIO",version:"67.9"}),{status:200,headers:{"content-type":"application/json"}});
-    return new Response(JSON.stringify({ok:false,error:"Unknown container route"}),{status:404,headers:{"content-type":"application/json"}});
-  }
-};
-const fakeContainerBinding={getByName:name=>{assert.equal(name,"aryanzz-extractor-primary");return fallbackStub;}};
-const titleSearchResponse=await worker.fetch(new Request("https://aryanzz.example/api/search",{
-  method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({query:"lofi beats"})
-}),{DOWNLOADER_CONTAINER:fakeContainerBinding});
-assert.equal(titleSearchResponse.status,200);
-const titleSearchData=await titleSearchResponse.json();
-assert.equal(titleSearchData.ok,true);
-assert.equal(titleSearchData.results[0].title,"Search Result Track");
-assert.equal(titleSearchData.results[0].url,"https://www.youtube.com/watch?v=SEARCH123");
-console.log("✔ V67.6 title search forwards to Cloudflare Container and returns safe YouTube results");
-const emptyTitleSearch=await worker.fetch(new Request("https://aryanzz.example/api/search",{
-  method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({query:"x"})
-}),{});
-assert.equal(emptyTitleSearch.status,400);
-console.log("✔ Title search validates short queries before using the Container");
-
 const originalSearchFetch=globalThis.fetch;
 try{
   globalThis.fetch=async(input,init={})=>{
@@ -300,31 +267,49 @@ try{
 
 const originalFallbackFetch=globalThis.fetch;
 try{
-  globalThis.fetch=async()=>new Response(JSON.stringify({status:"error",error:{error_code:902,error_message:"quota exceeded"}}),{status:200,headers:{"content-type":"application/json"}});
+  globalThis.fetch=async(input,init={})=>{
+    const url=new URL(typeof input==="string"?input:input.url);
+    if(url.href==="https://api.audd.io/"||url.href==="https://enterprise.audd.io/")
+      return new Response(JSON.stringify({status:"error",error:{error_code:902,error_message:"quota exceeded"}}),{status:200,headers:{"content-type":"application/json"}});
+    if(url.href==="https://extractor.example/api/music/recognize"){
+      assert.equal(init.headers.authorization,"Bearer test-platform-token");
+      return new Response(JSON.stringify({ok:true,match:true,provider:"Shazam",result:{title:"Fallback Track",artist:"Fallback Artist",song_link:"https://www.shazam.com/track/123"}}),{status:200,headers:{"content-type":"application/json"}});
+    }
+    if(url.href==="https://extractor.example/api/music/scan"){
+      assert.equal(init.headers.authorization,"Bearer test-platform-token");
+      return new Response(JSON.stringify({ok:true,match:true,provider:"Shazam",scannedChunks:2,tracks:[{title:"DJ Fallback Track",artist:"DJ Fallback Artist",offset:"00:00",offsets:["00:00","01:00"]}]}),{status:200,headers:{"content-type":"application/json"}});
+    }
+    if(url.href==="https://extractor.example/api/health")
+      return new Response(JSON.stringify({ok:true,engine:"yt-dlp + FFmpeg + ShazamIO",version:"68.1"}),{status:200,headers:{"content-type":"application/json"}});
+    throw new Error("Unexpected fetch: "+url.href);
+  };
+  const backendEnv={AUDD_API_TOKEN:"test-audd-token",PLATFORM_API_ORIGIN:"https://extractor.example",PLATFORM_API_TOKEN:"test-platform-token"};
   const fallbackForm=new FormData();fallbackForm.append("file",new Blob(["sample audio"],{type:"audio/webm"}),"sample.webm");
-  const fallbackResponse=await worker.fetch(new Request("https://aryanzz.example/api/music/recognize",{method:"POST",body:fallbackForm}),{
-    AUDD_API_TOKEN:"test-audd-token",DOWNLOADER_CONTAINER:fakeContainerBinding
-  });
+  const fallbackResponse=await worker.fetch(new Request("https://aryanzz.example/api/music/recognize",{method:"POST",body:fallbackForm}),backendEnv);
   assert.equal(fallbackResponse.status,200);
   const fallbackData=await fallbackResponse.json();
   assert.equal(fallbackData.provider,"Shazam");
   assert.equal(fallbackData.result.title,"Fallback Track");
-  console.log("✔ AudD quota exhaustion automatically falls back to ShazamIO");
+  console.log("✔ AudD quota exhaustion falls back to ShazamIO through the external backend");
 
   const djResponse=await worker.fetch(new Request("https://aryanzz.example/api/music/scan-video",{
     method:"POST",headers:{"content-type":"application/json"},
     body:JSON.stringify({url:"https://www.youtube.com/watch?v=demo123",skip:4,every:1,limit:10})
-  }),{AUDD_API_TOKEN:"test-audd-token",DOWNLOADER_CONTAINER:fakeContainerBinding});
+  }),backendEnv);
   assert.equal(djResponse.status,200);
   const djData=await djResponse.json();
   assert.equal(djData.provider,"Shazam fallback");
   assert.equal(djData.tracks[0].title,"DJ Fallback Track");
-  console.log("✔ AudD Enterprise DJ quota exhaustion falls back to Shazam multi-segment scanning");
+  console.log("✔ AudD Enterprise quota exhaustion falls back to external Shazam multi-segment scanning");
 
-  const containerStatus=await worker.fetch(new Request("https://aryanzz.example/api/platform/status"),{DOWNLOADER_CONTAINER:fakeContainerBinding});
-  assert.equal(containerStatus.status,200);
-  assert.equal((await containerStatus.json()).ok,true);
-  console.log("✔ Cloudflare Container health is checked through the Worker binding");
+  const externalStatus=await worker.fetch(new Request("https://aryanzz.example/api/platform/status"),backendEnv);
+  assert.equal(externalStatus.status,200);
+  assert.equal((await externalStatus.json()).ok,true);
+  const health=await worker.fetch(new Request("https://aryanzz.example/api/health"),backendEnv);
+  const healthData=await health.json();
+  assert.equal(healthData.platformBackend,"external");
+  assert.equal(healthData.platformExtraction,true);
+  console.log("✔ External yt-dlp backend health and platform routing are reported correctly");
 }finally{globalThis.fetch=originalFallbackFetch;}
 
 const originalEnterpriseFetch=globalThis.fetch;

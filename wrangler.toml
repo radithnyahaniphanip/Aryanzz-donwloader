@@ -7,19 +7,6 @@ directory = "./public"
 binding = "ASSETS"
 run_worker_first = ["/api/*"]
 
-[[containers]]
-class_name = "DownloaderContainer"
-image = "./Dockerfile"
-instance_type = "basic"
-max_instances = 1
-
-[[durable_objects.bindings]]
-name = "DOWNLOADER_CONTAINER"
-class_name = "DownloaderContainer"
-
-[[migrations]]
-tag = "v1"
-new_sqlite_classes = ["DownloaderContainer"]
 
 [observability]
 enabled = true

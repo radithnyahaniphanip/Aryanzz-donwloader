@@ -24,12 +24,6 @@ jobs:
       - name: Install Worker dependencies
         run: npm install --no-audit --no-fund
 
-      - name: Enable Docker Buildx for Cloudflare Containers
-        uses: docker/setup-buildx-action@v3
-
-      - name: Verify Docker engine
-        run: docker info
-
       - name: Configure AudD music recognition secret
         env:
           AUDD_API_TOKEN: ${{ secrets.AUDD_API_TOKEN }}
@@ -41,6 +35,21 @@ jobs:
           else
             printf '%s' "$AUDD_API_TOKEN" | wrangler secret put AUDD_API_TOKEN
           fi
+
+      - name: Configure external yt-dlp backend secrets
+        env:
+          PLATFORM_API_ORIGIN: ${{ secrets.PLATFORM_API_ORIGIN }}
+          PLATFORM_API_TOKEN: ${{ secrets.PLATFORM_API_TOKEN }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          if [ -z "$PLATFORM_API_ORIGIN" ] || [ -z "$PLATFORM_API_TOKEN" ]; then
+            echo "::warning::External yt-dlp backend secrets are missing. The website will deploy, but social-platform extraction will remain offline."
+          else
+            printf '%s' "$PLATFORM_API_ORIGIN" | wrangler secret put PLATFORM_API_ORIGIN
+            printf '%s' "$PLATFORM_API_TOKEN" | wrangler secret put PLATFORM_API_TOKEN
+          fi
+
 
       - name: Deploy Worker and static assets
         run: wrangler deploy
@@ -57,8 +66,8 @@ jobs:
           const healthResponse = await fetch(base + "/api/health", { cache: "no-store" });
           if (!healthResponse.ok) throw new Error("Live Worker health check failed: HTTP " + healthResponse.status);
           const health = await healthResponse.json();
-          if (health.version !== "68.0" || !health.selfHostedDownloader || !health.platformExtraction || !health.musicFallbackReady || !health.directMediaDownload) {
-            throw new Error("Live Worker or Cloudflare Container backend is not configured: " + JSON.stringify(health));
+          if (health.version !== "68.0" || !health.directMediaDownload) {
+            throw new Error("Live Worker V68.0 health check failed: " + JSON.stringify(health));
           }
           console.log("Live Worker health OK: V" + health.version + ".");
 
@@ -76,24 +85,19 @@ jobs:
           if (!musicResponse.ok) throw new Error("Music Finder status endpoint failed.");
           const music = await musicResponse.json();
           if (!music.configured || !music.videoUrlReady) {
-            throw new Error("Live Worker cannot read AUDD_API_TOKEN. Check the secret binding on the production Worker service.");
+            console.warn("Music recognition is not configured yet. Add AUDD_API_TOKEN or connect the external backend.");
+          } else {
+            console.log("Music recognition provider is configured.");
           }
-          console.log("Music Finder recognition provider is configured on the live Worker.");
 
-          let status = null;
-          for (let attempt = 0; attempt < 18; attempt++) {
-            try {
-              const statusResponse = await fetch(base + "/api/platform/status", { cache: "no-store", signal: AbortSignal.timeout(75000) });
-              status = await statusResponse.json();
-              if (status.ok) break;
-            } catch {}
-            await new Promise(resolve => setTimeout(resolve, 10000));
+          const statusResponse = await fetch(base + "/api/platform/status", { cache: "no-store", signal: AbortSignal.timeout(15000) });
+          const status = await statusResponse.json();
+          if (status.configured && !status.ok) {
+            throw new Error("External yt-dlp backend is configured but unhealthy: " + JSON.stringify(status));
           }
-          if (!status?.ok) throw new Error("Cloudflare yt-dlp + FFmpeg container did not become healthy: " + JSON.stringify(status));
-          console.log("Cloudflare downloader container is online.");
-
-          const musicStatusResponse = await fetch(base + "/api/music/status", { cache: "no-store" });
-          const musicStatus = await musicStatusResponse.json();
-          if (!musicStatus.shazamFallbackReady) throw new Error("Shazam fallback container is not ready.");
-          console.log("Shazam fallback provider is available.");
+          if (!status.configured) {
+            console.warn("External yt-dlp backend is not connected yet. Add PLATFORM_API_ORIGIN and PLATFORM_API_TOKEN secrets.");
+          } else {
+            console.log("External yt-dlp + FFmpeg backend is online.");
+          }
           NODE
