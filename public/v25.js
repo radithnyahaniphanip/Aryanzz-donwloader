@@ -1,19 +1,13 @@
-/* ARYANZZ V16–V25 — profile studio, membership selector, personalization and motion */
+/* ARYANZZ V26 — free profile studio, personalization and motion */
 (() => {
   "use strict";
   const $=id=>document.getElementById(id);
   const DESIGN_KEY="aryanzz.profile.design.v25";
-  const PLAN_KEY="aryanzz.membership.selection.v25";
   const SURFACE_KEY="aryanzz.surface.v25";
   const HISTORY_KEYS=["aryanzz.history.v2","aryanzz-download-history-v1"];
   const FAV_KEYS=["aryanzz.favorites.v2","aryanzz.favorites.v2"];
   const read=(key,fallback)=>{try{return JSON.parse(localStorage.getItem(key)||JSON.stringify(fallback))}catch{return fallback}};
   const write=(key,value)=>{try{localStorage.setItem(key,JSON.stringify(value));return true}catch{return false}};
-  const plans={
-    basic:{name:"ARYANZZ Basic",price:"Rp36.000",benefit:"Pengalaman praktis untuk aktivitas harian.",features:["Tools utama","Downloader media langsung","Speed test & web utilities","Riwayat dan favorit","Profil dan backup lokal"]},
-    pro:{name:"ARYANZZ Pro",price:"Rp88.000",benefit:"Personalisasi lebih luas dan akses awal pengembangan.",features:["Semua benefit Basic","Preset tema dan efek visual","Personalisasi banner & background","Akses awal tools baru","Prioritas usulan fitur"]},
-    elite:{name:"ARYANZZ Elite",price:"Rp479.000",benefit:"Pengalaman paling personal dan kesempatan mencoba fitur lebih awal.",features:["Semua benefit Pro","Badge Elite","Preset visual eksklusif","Akses beta fitur pilihan","Personalisasi tingkat lanjut"]}
-  };
   let toastTimer;
   function toast(message){
     let el=$("v25Toast");if(!el){el=document.createElement("div");el.id="v25Toast";el.className="v25-toast";el.setAttribute("role","status");el.setAttribute("aria-live","polite");document.body.append(el);}
@@ -76,31 +70,8 @@
     $("profileReset")?.addEventListener("click",()=>setTimeout(()=>{update();toast("Informasi profil direset.");},60));
     $("profilePhoto")?.addEventListener("change",()=>setTimeout(()=>toast("Foto profil diperbarui."),350));
   }
-  async function copyText(value){
-    try{await navigator.clipboard.writeText(value);toast("Ringkasan paket disalin.");}
-    catch{const area=document.createElement("textarea");area.value=value;document.body.append(area);area.select();try{document.execCommand("copy");toast("Ringkasan paket disalin.");}catch{toast("Tidak dapat menyalin otomatis.");}area.remove();}
-  }
-  function selectPlan(id,quiet=false){
-    const p=plans[id];if(!p)return;
-    localStorage.setItem(PLAN_KEY,id);
-    document.querySelectorAll("[data-plan-card]").forEach(card=>card.classList.toggle("is-selected",card.dataset.planCard===id));
-    const status=$("planSelectionStatus");if(status){
-      status.innerHTML="";
-      const title=document.createElement("b");title.textContent=p.name+" · "+p.price;
-      const detail=document.createElement("p");detail.textContent="Paket ini tersimpan sebagai pilihanmu di perangkat. Ini belum mengaktifkan langganan atau melakukan pembayaran.";
-      const copy=document.createElement("button");copy.type="button";copy.className="tag";copy.textContent="Salin ringkasan paket";
-      copy.addEventListener("click",()=>copyText("Saya tertarik dengan "+p.name+" ("+p.price+").\nBenefit: "+p.features.join(", ")+".\nMohon informasi resmi mengenai periode dan metode pembayaran ARYANZZ."));
-      status.append(title,detail,copy);
-    }
-    const badge=document.querySelector(".v25-member-badge");if(badge)badge.textContent="✦ "+p.name.toUpperCase()+" · DIPILIH";
-    if(!quiet)toast(p.name+" dipilih. Belum ada pembayaran yang dilakukan.");
-  }
-  function setupPlans(){
-    document.querySelectorAll("[data-select-plan]").forEach(b=>b.addEventListener("click",()=>selectPlan(b.dataset.selectPlan)));
-    const saved=localStorage.getItem(PLAN_KEY);if(saved&&plans[saved])selectPlan(saved,true);
-  }
   function setupReveal(){
-    const targets=document.querySelectorAll(".v25-profile-card,.v25-plan-card,.v25-plan-compare,.v25-profile-stats>div");
+    const targets=document.querySelectorAll(".v25-profile-card,.v25-profile-stats>div");
     if(!("IntersectionObserver" in window)||window.matchMedia("(prefers-reduced-motion: reduce)").matches){targets.forEach(el=>el.classList.add("v25-visible"));return;}
     targets.forEach(el=>el.classList.add("v25-reveal"));
     const observer=new IntersectionObserver(entries=>entries.forEach(entry=>{if(entry.isIntersecting){entry.target.classList.add("v25-visible");observer.unobserve(entry.target);}}),{threshold:.08});
@@ -108,7 +79,7 @@
   }
   function setupPremiumEffects(){
     if(window.matchMedia("(pointer:fine)").matches&&!window.matchMedia("(prefers-reduced-motion: reduce)").matches){
-      document.querySelectorAll(".v25-plan-card,.v25-profile-card").forEach(card=>{
+      document.querySelectorAll(".v25-profile-card").forEach(card=>{
         card.addEventListener("pointermove",e=>{const r=card.getBoundingClientRect(),x=(e.clientX-r.left)/r.width-.5,y=(e.clientY-r.top)/r.height-.5;card.style.transform="perspective(900px) rotateX("+(-y*2.4)+"deg) rotateY("+(x*2.4)+"deg) translateY(-2px)";});
         card.addEventListener("pointerleave",()=>{card.style.transform="";});
       });
@@ -117,7 +88,7 @@
   function init(){
     if(!$("profile"))return;
     applyDesign();storeImage("profileBanner","banner",1500,520,.78,"Banner");storeImage("profileBackground","background",1600,1000,.72,"Background");
-    setupSurface();setupProfilePreview();profileCounts();setupPlans();setupReveal();setupPremiumEffects();
+    setupSurface();setupProfilePreview();profileCounts();setupReveal();setupPremiumEffects();
     window.addEventListener("storage",profileCounts);
   }
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init,{once:true});else init();
