@@ -293,27 +293,36 @@
     }
   }
   function updatePreview() {
-    const brightness = Number($("editorBrightness").value) || 100;
-    const contrast = Number($("editorContrast").value) || 100;
-    const saturation = Number($("editorSaturation").value) || 100;
-    const rotate = Number($("editorRotate").value) || 0;
-    video.style.filter = "brightness(" + brightness + "%) contrast(" + contrast + "%) saturate(" + saturation + "%)";
-    video.style.transform = "rotate(" + rotate + "deg)";
-    frame.dataset.ratio = $("editorRatio").value;
-    overlay.textContent = textInput.value.trim();
-    overlay.hidden = !textInput.value.trim();
-    overlay.dataset.position = $("editorTextPosition").value;
-    overlay.style.color = $("editorTextColor").value;
-    overlay.style.fontSize = $("editorTextSize").value + "px";
-    video.playbackRate = Number($("editorSpeed").value) || 1;
-    $("editorBrightnessValue").textContent = brightness + "%";
-    $("editorContrastValue").textContent = contrast + "%";
-    $("editorSaturationValue").textContent = saturation + "%";
-    $("editorTextSizeValue").textContent = $("editorTextSize").value + " px";
-    $("editorPreviewMeta").textContent = $("editorRatio").value + " · " + $("editorResolution").value + "p canvas";
+    const brightness=Number($("editorBrightness").value)||100;
+    const contrast=Number($("editorContrast").value)||100;
+    const saturation=Number($("editorSaturation").value)||100;
+    const rotate=Number($("editorRotate").value)||0;
+    const clip=selectedClip();
+    const motion=motionAt(clip,video.currentTime||0);
+    video.style.filter="brightness("+brightness+"%) contrast("+contrast+"%) saturate("+saturation+"%)";
+    video.style.transform="translate("+motion.panX*.35+"%, "+motion.panY*.35+"%) scale("+motion.zoom+") rotate("+rotate+"deg)";
+    frame.dataset.ratio=$("editorRatio").value;
+    const projectTime=clip?timelineOffset(clip)+Math.max(0,(video.currentTime||clip.start)-clip.start):0;
+    const caption=captionAt(projectTime,clip);
+    overlay.textContent=caption.text;
+    overlay.hidden=!caption.text;
+    overlay.dataset.position=$("editorTextPosition").value;
+    overlay.dataset.animation=$("editorTextAnimation").value;
+    const animated=textAnimationState(caption,projectTime);
+    overlay.style.opacity=String(animated.opacity);
+    overlay.style.transform=animated.transform;
+    overlay.style.color=$("editorTextColor").value;
+    overlay.style.fontSize=$("editorTextSize").value+"px";
+    video.playbackRate=Number($("editorSpeed").value)||1;
+    $("editorBrightnessValue").textContent=brightness+"%";
+    $("editorContrastValue").textContent=contrast+"%";
+    $("editorSaturationValue").textContent=saturation+"%";
+    $("editorTextSizeValue").textContent=$("editorTextSize").value+" px";
+    $("editorPreviewMeta").textContent=$("editorRatio").value+" · "+$("editorResolution").value+"p canvas";
     updateLabels();
+    updateMotionLabels();
   }
-  function preset(name) {
+    function preset(name) {
     const values = {
       none:[100,100,100], vivid:[108,112,135], cinematic:[96,118,82],
       mono:[100,112,0], warm:[106,105,118], cool:[103,108,112]
@@ -566,66 +575,111 @@
     if (ratio === "4:5") return [Math.round(resolution*4/5),resolution];
     return [Math.round(resolution*16/9),resolution];
   }
-  function drawCaption(ctx,width,height) {
-    const caption = textInput.value.trim();
-    if (!caption) return;
-    const fontSize = Math.max(18,Number($("editorTextSize").value)||42);
-    const position = $("editorTextPosition").value;
-    const y = position==="top" ? height*0.12 : position==="middle" ? height*0.5 : height*0.88;
-    const maxWidth = width*0.86;
+  function drawCaption(ctx,width,height,clip,projectTime) {
+    const caption=captionAt(projectTime||0,clip);
+    if(!caption.text)return;
+    const fontSize=Math.max(18,Number($("editorTextSize").value)||42);
+    const position=$("editorTextPosition").value;
+    const y=position==="top"?height*.12:position==="middle"?height*.5:height*.88;
+    const maxWidth=width*.86;
+    const animated=textAnimationState(caption,projectTime||0);
     ctx.save();
-    ctx.font = "900 " + fontSize + "px system-ui, sans-serif";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillStyle = $("editorTextColor").value || "#fff";
-    ctx.strokeStyle = "rgba(0,0,0,.86)";
-    ctx.lineWidth = Math.max(3,fontSize*0.13);
-    ctx.lineJoin = "round";
-    ctx.shadowColor = "rgba(0,0,0,.7)";
-    ctx.shadowBlur = 10;
-    const words = caption.split(/\s+/);
-    const lines = [];
-    let line = "";
-    words.forEach(word => {
-      const test = line ? line + " " + word : word;
-      if (line && ctx.measureText(test).width > maxWidth) {
-        lines.push(line);
-        line = word;
-      } else line = test;
+    ctx.globalAlpha=animated.opacity;
+    ctx.translate(width/2,height/2);
+    if($("editorTextAnimation").value==="slide")ctx.translate(0,(1-animated.opacity)*20);
+    if($("editorTextAnimation").value==="pop")ctx.scale(.72+animated.opacity*.28,.72+animated.opacity*.28);
+    ctx.translate(-width/2,-height/2);
+    ctx.font="900 "+fontSize+"px system-ui, sans-serif";
+    ctx.textAlign="center";
+    ctx.textBaseline="middle";
+    ctx.fillStyle=$("editorTextColor").value||"#fff";
+    ctx.strokeStyle="rgba(0,0,0,.9)";
+    ctx.lineWidth=Math.max(3,fontSize*.14);
+    ctx.lineJoin="round";
+    ctx.shadowColor="rgba(0,0,0,.75)";
+    ctx.shadowBlur=10;
+    const words=caption.text.split(/\\s+/);
+    const lines=[];
+    let line="";
+    words.forEach(word=>{
+      const test=line?line+" "+word:word;
+      if(line&&ctx.measureText(test).width>maxWidth){lines.push(line);line=word;}
+      else line=test;
     });
-    if (line) lines.push(line);
-    const lineHeight = fontSize*1.16;
-    const firstY = y - ((lines.length-1)*lineHeight)/2;
-    lines.slice(0,3).forEach((text,index) => {
-      const lineY = firstY + index*lineHeight;
+    if(line)lines.push(line);
+    const lineHeight=fontSize*1.16;
+    const firstY=y-((lines.length-1)*lineHeight)/2;
+    if(caption.isSubtitle){
+      const boxWidth=Math.min(maxWidth,Math.max(...lines.map(item=>ctx.measureText(item).width))+30);
+      ctx.fillStyle="rgba(0,0,0,.56)";
+      ctx.fillRect((width-boxWidth)/2,firstY-lineHeight*.55,boxWidth,lines.length*lineHeight+lineHeight*.1);
+      ctx.fillStyle=$("editorTextColor").value||"#fff";
+    }
+    lines.slice(0,3).forEach((text,index)=>{
+      const lineY=firstY+index*lineHeight;
       ctx.strokeText(text,width/2,lineY,maxWidth);
       ctx.fillText(text,width/2,lineY,maxWidth);
     });
     ctx.restore();
   }
-  function drawFrame(ctx,canvas,fadeAlpha) {
-    const width = canvas.width, height = canvas.height;
-    const rotate = ((Number($("editorRotate").value)||0)%360+360)%360;
-    const rotatedWidth = rotate===90||rotate===270 ? video.videoHeight : video.videoWidth;
-    const rotatedHeight = rotate===90||rotate===270 ? video.videoWidth : video.videoHeight;
-    const scale = Math.max(width/rotatedWidth,height/rotatedHeight);
+  function drawVideoLayer(target,width,height,clip) {
+    const rotate=((Number($("editorRotate").value)||0)%360+360)%360;
+    const rotatedWidth=rotate===90||rotate===270?video.videoHeight:video.videoWidth;
+    const rotatedHeight=rotate===90||rotate===270?video.videoWidth:video.videoHeight;
+    const baseScale=Math.max(width/rotatedWidth,height/rotatedHeight);
+    const motion=motionAt(clip,video.currentTime||0);
+    const scale=baseScale*motion.zoom;
+    const panX=motion.panX*width/300;
+    const panY=motion.panY*height/300;
+    target.save();
+    target.clearRect(0,0,width,height);
+    target.filter="brightness("+$("editorBrightness").value+"%) contrast("+$("editorContrast").value+"%) saturate("+$("editorSaturation").value+"%)";
+    target.translate(width/2+panX,height/2+panY);
+    target.rotate(rotate*Math.PI/180);
+    target.drawImage(video,-video.videoWidth*scale/2,-video.videoHeight*scale/2,video.videoWidth*scale,video.videoHeight*scale);
+    target.restore();
+    target.filter="none";
+  }
+  function applyChromaKey(sourceCanvas) {
+    const source=sourceCanvas.getContext("2d",{willReadFrequently:true});
+    const image=source.getImageData(0,0,sourceCanvas.width,sourceCanvas.height);
+    const pixels=image.data;
+    const hex=$("editorChromaColor").value||"#00ff00";
+    const key=[parseInt(hex.slice(1,3),16),parseInt(hex.slice(3,5),16),parseInt(hex.slice(5,7),16)];
+    const tolerance=Number($("editorChromaTolerance").value)||65;
+    const feather=22;
+    for(let i=0;i<pixels.length;i+=4){
+      const dr=pixels[i]-key[0],dg=pixels[i+1]-key[1],db=pixels[i+2]-key[2];
+      const distance=Math.sqrt(dr*dr+dg*dg+db*db);
+      if(distance<=tolerance)pixels[i+3]=0;
+      else if(distance<tolerance+feather)pixels[i+3]=Math.round(pixels[i+3]*(distance-tolerance)/feather);
+    }
+    source.putImageData(image,0,0);
+  }
+  function drawFrame(ctx,canvas,fadeAlpha,clip,projectTime) {
+    const width=canvas.width,height=canvas.height;
     ctx.save();
     ctx.clearRect(0,0,width,height);
-    ctx.fillStyle = "#000";
+    ctx.fillStyle=$("editorBackgroundColor").value||"#101827";
     ctx.fillRect(0,0,width,height);
-    ctx.filter = "brightness("+$("editorBrightness").value+"%) contrast("+$("editorContrast").value+"%) saturate("+$("editorSaturation").value+"%)";
-    ctx.translate(width/2,height/2);
-    ctx.rotate(rotate*Math.PI/180);
-    ctx.drawImage(video,-video.videoWidth*scale/2,-video.videoHeight*scale/2,video.videoWidth*scale,video.videoHeight*scale);
-    ctx.restore();
-    ctx.filter = "none";
-    drawCaption(ctx,width,height);
-    if (fadeAlpha !== undefined && fadeAlpha < 1) {
-      ctx.fillStyle = "rgba(0,0,0," + Math.max(0,Math.min(1,1-fadeAlpha)) + ")";
+    if($("editorChromaEnabled").checked){
+      if(!chromaCanvas)chromaCanvas=document.createElement("canvas");
+      if(chromaCanvas.width!==width||chromaCanvas.height!==height){chromaCanvas.width=width;chromaCanvas.height=height;}
+      const chromaCtx=chromaCanvas.getContext("2d",{willReadFrequently:true});
+      drawVideoLayer(chromaCtx,width,height,clip);
+      try{applyChromaKey(chromaCanvas);ctx.drawImage(chromaCanvas,0,0);}
+      catch(error){ctx.drawImage(chromaCanvas,0,0);message("Chroma key tidak dapat diproses pada perangkat ini. Coba resolusi 720p.","error");}
+    }else{
+      drawVideoLayer(ctx,width,height,clip);
+    }
+    drawCaption(ctx,width,height,clip,projectTime||0);
+    if(fadeAlpha!==undefined&&fadeAlpha<1){
+      ctx.fillStyle="rgba(0,0,0,"+Math.max(0,Math.min(1,1-fadeAlpha))+")";
       ctx.fillRect(0,0,width,height);
     }
+    ctx.restore();
   }
-  function setupAudioGraph() {
+    function setupAudioGraph() {
     const AudioContextClass = window.AudioContext || window.webkitAudioContext;
     if (!AudioContextClass) return null;
     if (!audioContext) audioContext = new AudioContextClass();
