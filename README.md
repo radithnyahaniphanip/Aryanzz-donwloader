@@ -36,7 +36,8 @@ Profile images are resized/compressed in the browser before saving. Large source
 ## Downloader status
 
 - Direct media-file URLs in supported formats are handled by the Cloudflare Worker.
-- Platform-page extraction (TikTok, Instagram, YouTube, Facebook and similar) still requires a separately hosted extraction backend configured with `PLATFORM_API_ORIGIN` and `PLATFORM_API_TOKEN`.
+- YouTube links are handled by the dedicated `/api/youtube/download` and `/api/youtube/progress` routes using the `SAVENOW_API_KEY` Worker secret.
+- TikTok, Instagram, Facebook and other platform-page extraction still requires a separately hosted extraction backend configured with `PLATFORM_API_ORIGIN` and `PLATFORM_API_TOKEN`.
 - The site does not bypass login walls, private content, DRM, or platform access restrictions. Only download content you own or are authorized to save.
 
 ## Development
