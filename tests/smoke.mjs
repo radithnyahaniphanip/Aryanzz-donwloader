@@ -9,15 +9,16 @@ const v15=file("../public/v15.js");
 const downloader=file("../public/downloader.js");
 const editor=file("../public/editor.js");
 const v59css=file("../public/v59.css");
+const editorProCss=file("../public/editor-pro.css");
 const ownerJs=file("../public/owner.js");
 const ownerCss=file("../public/owner.css");
 const downloaderCss=file("../public/downloader.css");
 const manifest=JSON.parse(file("../public/manifest.webmanifest"));
 
 const checks=[
-  ["V59.5 page title",html.includes("ARYANZZ V59.5 — Creator Studio")],
-  ["V59.5 versioned assets",html.includes("/v15.js?v=59.5")&&html.includes("/owner.js?v=59.5")&&html.includes("/downloader.js?v=59.5")&&html.includes("/downloader.css?v=59.5")&&html.includes("/v59.css?v=59.5")&&html.includes("/editor.js?v=59.5")],
-  ["service worker cache and V59.5 assets",html.includes("/sw.js?v=59.5")&&sw.includes("aryanzz-v59-5")&&sw.includes("/editor.js?v=59.5")&&sw.includes("/v59.css?v=59.5")],
+  ["V60.0 page title",html.includes("ARYANZZ V60.0 — Creator Studio Pro")],
+  ["V59.5 versioned assets",html.includes("/v15.js?v=59.5")&&html.includes("/owner.js?v=59.5")&&html.includes("/downloader.js?v=59.5")&&html.includes("/downloader.css?v=59.5")&&html.includes("/v59.css?v=59.5")&&html.includes("/editor-pro.css?v=60.0")&&html.includes("/editor.js?v=60.0")],
+  ["service worker cache and V59.5 assets",html.includes("/sw.js?v=60.0")&&sw.includes("aryanzz-v60-0")&&sw.includes("/editor.js?v=60.0")&&sw.includes("/editor-pro.css?v=60.0")&&sw.includes("/v59.css?v=59.5")],
   ["downloader input, result and backend status",html.includes('id="analyze"')&&html.includes('id="downloadResult"')&&html.includes('id="backendStatus"')],
   ["unified self-hosted downloader API",downloader.includes('postJson("/api/info"')&&downloader.includes('fetch("/api/download"')&&downloader.includes("PLATFORM_NAMES")&&!downloader.toLowerCase().includes("savenow")],
   ["single capture-phase universal URL handler",downloader.includes('button.addEventListener("click"')&&downloader.includes("event.stopImmediatePropagation()")&&downloader.includes("}, true);")],
@@ -30,9 +31,14 @@ const checks=[
   ["Tools Hub banner has speed, checker and queue shortcuts",html.includes('class="tools-banner"')&&html.includes('data-panel="speed"')&&html.includes('data-panel="checker"')&&html.includes('data-panel="queue"')],
   ["Video Editor panel and controls",html.includes('id="editor"')&&html.includes('id="editorFile"')&&html.includes('id="editorStart"')&&html.includes('id="editorExport"')],
   ["Local editor has trim, filters, canvas export and MediaRecorder",editor.includes("MediaRecorder")&&editor.includes("captureStream")&&editor.includes("selectedStart")&&editor.includes("editorSaturation")],
-  ["V59.5 banner and editor responsive styles",v59css.includes(".tools-banner")&&v59css.includes(".editor-layout")&&v59css.includes("@media(max-width:700px)")],
+  ["V59.5 tools banner remains responsive",v59css.includes(".tools-banner")&&v59css.includes("@media(max-width:700px)")],
+  ["V60.0 editor pro responsive design",editorProCss.includes(".editor-pro-workspace")&&editorProCss.includes(".editor-clip-card")&&editorProCss.includes("@media(max-width:600px)")],
+  ["V60.0 multi-clip timeline and clip operations",editor.includes("MAX_CLIPS = 8")&&editor.includes("function splitClip")&&editor.includes("function moveClip")&&editor.includes("function updateClipTrim")],
+  ["V60.0 background music and audio mixing",editor.includes("createMediaStreamDestination")&&editor.includes("editorMusicVolume")&&editor.includes("editorMute")],
+  ["V60.0 project save and restore",editor.includes("function saveProject")&&editor.includes("async function loadProjectFile")&&editor.includes("ARYANZZ Creative Studio Pro")],
+  ["V60.0 fade transition and caption styling",editor.includes("fadeDuration")&&editor.includes("editorTextColor")&&editor.includes("editorTextSize")],
   ["tool hub remains available",html.includes('id="allTools"')],
-  ["PWA manifest version",manifest.name.includes("V59.5")]
+  ["PWA manifest version",manifest.name.includes("V60.0")]
 ];
 for(const [name,ok] of checks){assert.ok(ok,name+" failed");console.log("✔ "+name)}
 
@@ -180,4 +186,4 @@ try{
   globalThis.fetch=originalFetch;
 }
 
-console.log("\nARYANZZ V59.5 smoke tests passed.");
+console.log("\nARYANZZ V60.0 Creative Studio Pro smoke tests passed.");
