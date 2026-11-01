@@ -14,7 +14,6 @@
   const progressBar = $("editorProgressFill");
   const clipList = $("editorClipList");
   const musicInput = $("editorMusicFile");
-  const musicAudio = $("editorMusicAudio");
   const audioTrackList = $("editorAudioTrackList");
   const subtitleInput = $("editorSubtitleFile");
   if (!fileInput || !video || !frame || !exportButton || !clipList) return;
@@ -60,7 +59,7 @@
     return h ? [h,String(m).padStart(2,"0"),String(s).padStart(2,"0")].join(":") : [m,String(s).padStart(2,"0")].join(":");
   };
   const seconds = value => Math.max(0, Number(value) || 0);
-  function defaultMotion() { return {zoomStart:1,zoomEnd:1.15,panX:0,panY:0,easing:"ease"}; }
+  function defaultMotion() { return {zoomStart:1,zoomEnd:1,panX:0,panY:0,easing:"ease"}; }
   function timelineOffset(clip) {
     const index=clips.findIndex(item=>item.id===clip?.id);
     const speed=Number($("editorSpeed").value)||1;
