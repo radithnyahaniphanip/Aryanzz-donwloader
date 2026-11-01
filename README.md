@@ -19,10 +19,20 @@ ARYANZZ is a mobile-first creator workspace. Cloudflare Workers serves the websi
 | V66.0 | Music Finder: single-track recognition from local video/audio and microphone, plus local search history |
 | V67.0 | AudD Enterprise multi-track DJ/video recognition |
 | V67.1 | AudD provider error-code diagnostics |
-| V67.2 | external backend backend for platform extraction; ShazamIO fallback for single-song recognition and multi-segment DJ scans when AudD quota/authentication fails |\n| V67.4 | Premium mobile UI refresh, simplified downloader home, searchable Tools Center and Color Studio |\n| V67.6 | Backend health cleanup, title-based YouTube search routed through yt-dlp, clearer AudD/Shazam status, and DJ scan fallback fixes |
+| V67.2 | external backend for platform extraction; ShazamIO fallback for single-song recognition and multi-segment DJ scans when AudD quota/authentication fails |
+| V67.4 | Premium mobile UI refresh, simplified downloader home, searchable Tools Center and Color Studio |
+| V67.6 | Backend health cleanup, title-based YouTube search routed through yt-dlp, clearer AudD/Shazam status, and DJ scan fallback fixes |
 
 
-## V67.6 — Title search and recognition reliability\n\n- The downloader's **Cari judul** tab now queries YouTube through the configured external yt-dlp backend, displays up to eight results, and lets the user select a result to inspect downloadable formats. It does not use an extra search API key.\n- Search accepts plain text only (2–160 characters), runs a fixed `ytsearch8` extractor query, and returns a limited metadata response. It does not fetch arbitrary user-supplied URLs through the search route.\n- Music Finder status distinguishes an installed AudD token from the configured Shazam fallback. A configured token does not imply remaining AudD quota; AudD usage is still controlled by the provider.\n- Shazam DJ fallback samples now honor the consecutive-sample setting and remain capped at 30 segments per scan to limit container load. AudD Enterprise can process up to 100 segments where the account permits it.\n- Removed the duplicate Express health route so the container reports one current version and a consistent feature list.\n\n## V68.1 — External extraction server
+## V67.6 — Title search and recognition reliability
+
+- The downloader's **Cari judul** tab now queries YouTube through the configured external yt-dlp backend, displays up to eight results, and lets the user select a result to inspect downloadable formats. It does not use an extra search API key.
+- Search accepts plain text only (2–160 characters), runs a fixed `ytsearch8` extractor query, and returns a limited metadata response. It does not fetch arbitrary user-supplied URLs through the search route.
+- Music Finder status distinguishes an installed AudD token from the configured Shazam fallback. A configured token does not imply remaining AudD quota; AudD usage is still controlled by the provider.
+- Shazam DJ fallback samples now honor the consecutive-sample setting and remain capped at 30 segments per scan to limit server load. AudD Enterprise can process up to 100 segments where the account permits it.
+- Removed the duplicate Express health route so the backend reports one current version and a consistent feature list.
+
+## V68.1 — External extraction server
 
 The downloader now uses a separate Docker backend instead of Cloudflare Containers. Cloudflare Worker handles the website, URL validation and secure API proxy. The external server runs yt-dlp, FFmpeg and ShazamIO. The backend token stays in Cloudflare Worker secrets and is never sent to the browser.
 
