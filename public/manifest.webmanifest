@@ -1,10 +1,10 @@
 {
-  "name": "ARYANZZ V59.5 — Creator Studio",
+  "name": "ARYANZZ V60.0 — Creator Studio Pro",
   "short_name": "ARYANZZ",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "background_color": "#070b16",
   "theme_color": "#070b16",
-  "description": "ARYANZZ V59.5: multi-platform self-hosted downloader, local video editor, internet speed test, website checker, smart queue, and creator tools."
+  "description": "ARYANZZ V60.0: multi-clip Creative Studio Pro with timeline editing, audio track, captions, filters, transitions, project files and local export."
 }
