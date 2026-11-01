@@ -62,8 +62,9 @@
   const seconds = value => Math.max(0, Number(value) || 0);
   function defaultMotion() { return {zoomStart:1,zoomEnd:1.15,panX:0,panY:0,easing:"ease"}; }
   function timelineOffset(clip) {
-    const index = clips.findIndex(item=>item.id===clip?.id);
-    return clips.slice(0,Math.max(0,index)).reduce((sum,item)=>sum+Math.max(0,item.end-item.start),0);
+    const index=clips.findIndex(item=>item.id===clip?.id);
+    const speed=Number($("editorSpeed").value)||1;
+    return clips.slice(0,Math.max(0,index)).reduce((sum,item)=>sum+Math.max(0,item.end-item.start)/speed,0);
   }
   function motionAt(clip,localTime) {
     const motion = clip && clip.motion ? clip.motion : defaultMotion();
@@ -307,7 +308,8 @@
     video.style.filter="brightness("+brightness+"%) contrast("+contrast+"%) saturate("+saturation+"%)";
     video.style.transform="translate("+motion.panX*.35+"%, "+motion.panY*.35+"%) scale("+motion.zoom+") rotate("+rotate+"deg)";
     frame.dataset.ratio=$("editorRatio").value;
-    const projectTime=clip?timelineOffset(clip)+Math.max(0,(video.currentTime||clip.start)-clip.start):0;
+    const speed=Number($("editorSpeed").value)||1;
+    const projectTime=clip?timelineOffset(clip)+Math.max(0,(video.currentTime||clip.start)-clip.start)/speed:0;
     const caption=captionAt(projectTime,clip);
     overlay.textContent=caption.text;
     const chromaPreview=$("editorChromaEnabled").checked;
@@ -787,7 +789,8 @@
       audioTracks.forEach(track=>track.audio.pause());
       return;
     }
-    const projectTime=timelineOffset(clip)+Math.max(0,video.currentTime-clip.start);
+    const speed=Number($("editorSpeed").value)||1;
+    const projectTime=timelineOffset(clip)+Math.max(0,video.currentTime-clip.start)/speed;
     const now=Date.now();
     if(!force&&now-lastAudioSync<800)return;
     lastAudioSync=now;
