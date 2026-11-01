@@ -326,7 +326,7 @@
     overlay.dataset.animation=$("editorTextAnimation").value;
     const animated=textAnimationState(caption,projectTime);
     overlay.style.opacity=String(animated.opacity);
-    overlay.style.transform=animated.transform;
+    overlay.style.transform=($("editorTextPosition").value==="middle"?"translateY(-50%) ":"")+animated.transform;
     overlay.style.color=$("editorTextColor").value;
     overlay.style.fontSize=$("editorTextSize").value+"px";
     video.playbackRate=Number($("editorSpeed").value)||1;
