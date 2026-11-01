@@ -90,7 +90,7 @@ body:before{content:"";position:fixed;z-index:-1;inset:-30%;pointer-events:none;
 <div class="card download v6-download"><div class="download-heading"><div><span class="section-kicker">ARYANZZ DOWNLOADER</span><h2>Mulai unduh</h2></div><span class="download-mark">↗</span></div>
 <label class="label" for="url">TEMPEL LINK MEDIA</label><div class="inputrow"><input class="field" id="url" type="url" inputmode="url" placeholder="https://..." autocomplete="url"><button class="primary" id="analyze">Periksa link <span aria-hidden="true">↗</span></button></div>
 <div class="format-strip" aria-label="Format media langsung yang didukung"><span>MP4</span><span>WEBM</span><span>MOV</span><span>MP3</span><span>M4A</span><span>WAV</span></div>
-<div id="downloadResult" class="result" hidden></div><div id="historyBox" class="result" hidden></div><div id="backendStatus" class="backend-status" data-state="warn" role="status">Memeriksa server downloader…</div></div>
+<div id="downloadResult" class="result" hidden></div><div id="historyBox" class="result" hidden></div><div id="backendStatus" class="backend-status" data-state="warn" role="status">Memeriksa Cloudflare Downloader Container…</div></div>
 <div class="home-shortcuts" aria-label="Akses cepat">
 <button class="shortcut" data-panel="queue"><span class="shortcut-icon">⇄</span><span><b>Smart Queue</b><small>Antrean unduhan</small></span><span class="shortcut-arrow">›</span></button>
 <button class="shortcut shortcut-featured" data-panel="allTools"><span class="shortcut-icon">✦</span><span><b>Semua Tools</b><small>Jelajahi fitur</small></span><span class="shortcut-arrow">›</span></button>
@@ -375,7 +375,7 @@ body:before{content:"";position:fixed;z-index:-1;inset:-30%;pointer-events:none;
   <div class="music-history-head"><div><span class="section-kicker">YOUR DISCOVERIES</span><h3>Riwayat pencarian</h3></div>
     <button class="tag" id="musicClearHistory" type="button">Hapus riwayat</button></div>
   <div class="music-history" id="musicHistory"></div>
-  <p class="music-disclaimer">Mode pengenal satu lagu mengirim cuplikan sekitar 12 detik ke AudD. Mode DJ mengirim file video/audio atau tautan publik ke AudD Enterprise untuk pemindaian beberapa segmen dan daftar lagu. ARYANZZ tidak menyimpan file tersebut. AudD menghitung 1 permintaan per 12 detik audio yang dipindai; interval hemat mengurangi jumlah sampel. Periksa biaya dan kebijakan privasi AudD sebelum memindai file panjang.</p>
+  <p class="music-disclaimer">Mode satu lagu mencoba AudD terlebih dahulu, lalu otomatis memakai Shazam fallback jika kuota atau autentikasi AudD gagal. Mode DJ memindai beberapa segmen melalui AudD Enterprise, lalu memakai Shazam fallback jika perlu. Pemindaian fallback dibatasi maksimal 30 segmen per proses. File sementara dihapus setelah diproses; Shazam adalah layanan pihak ketiga dengan batas penggunaan tersendiri.</p>
 </div>
 
 <div class="panel card" id="queue"><h3>⇄ Smart Download Queue</h3><p class="muted">Masukkan beberapa URL, satu per baris. Antrean diproses satu per satu agar lebih stabil.</p><textarea id="queueUrls" class="field tool-input" rows="4" placeholder="https://..."></textarea><div class="feature-row"><button class="primary" id="queueAdd">Tambah ke antrean</button><button class="tag" id="queueRun">Mulai antrean</button><button class="tag" id="queueClear">Kosongkan</button></div><div id="queueList" class="result"></div></div>
