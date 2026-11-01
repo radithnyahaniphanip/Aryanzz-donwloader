@@ -95,3 +95,60 @@ body[data-view="tool"] .panel.active{display:block}
 body[data-view="tool"] .panel:not(.active){display:none}
 @media(max-width:700px){.all-tools-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.top .brand{font-size:19px}.hero-v6{padding-block:16px 15px}.hero-v6 p{font-size:13px}.home-bottom{margin-top:20px}}
 @media(max-width:370px){.all-tools-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.all-tools-grid .tool{min-height:112px;padding:10px}.all-tools-grid .tool b{font-size:11px}.all-tools-grid .tool small{font-size:9px}.home-shortcuts{grid-template-columns:repeat(3,minmax(0,1fr))}.shortcut{flex-direction:column;text-align:center;gap:4px}.shortcut-arrow{display:none}.shortcut b{font-size:9px}.shortcut small{font-size:8px}.top .brand{font-size:16px}.top .pill{font-size:8px}.v15-two-col{grid-template-columns:1fr}}
+
+
+/* ARYANZZ V15.1 — redesigned Wi-Fi and mobile-data speed test */
+.speed-panel{overflow:hidden;position:relative}
+.speed-heading{display:flex;align-items:center;justify-content:space-between;gap:14px}
+.speed-heading h2{font-size:22px;letter-spacing:-.7px;margin:4px 0}
+.speed-heading p{margin:4px 0 0}
+.speed-heading-icon{width:54px;height:54px;flex:0 0 54px;border-radius:18px;display:grid;place-items:center;background:linear-gradient(145deg,var(--a1),var(--a2));color:white;box-shadow:0 9px 26px color-mix(in srgb,var(--a1) 30%,transparent)}
+.speed-heading-icon svg{width:36px;height:36px}
+.speed-network-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px}
+.speed-network-tile{display:flex;align-items:center;gap:10px;min-width:0;padding:12px;border:1px solid #2a4262;border-radius:15px;background:linear-gradient(145deg,#14243a,#0b1627);transition:border-color .2s,background .2s,transform .2s}
+.speed-network-tile.is-active{border-color:var(--a2);background:linear-gradient(145deg,color-mix(in srgb,var(--a1) 20%,#14243a),#0b1627);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--a2) 22%,transparent)}
+.speed-network-icon{width:39px;height:39px;flex:0 0 39px;display:grid;place-items:center;border-radius:12px;background:#203b60;color:#8edcff}
+.speed-network-icon svg{width:27px;height:27px}
+.speed-network-tile b,.speed-network-tile small{display:block}
+.speed-network-tile b{font-size:12px}
+.speed-network-tile small{font-size:10px;color:var(--muted);margin-top:2px}
+.speed-network-dot{width:7px;height:7px;border-radius:50%;margin-left:auto;background:#526681;flex:0 0 7px}
+.speed-network-tile.is-active .speed-network-dot{background:#5ce6b7;box-shadow:0 0 11px #5ce6b7}
+.speed-active{display:flex;align-items:center;gap:10px;padding:12px 13px;margin-top:13px;border:1px solid #2a4262;border-radius:14px;background:#091625}
+.speed-active-pulse{width:9px;height:9px;flex:0 0 9px;border-radius:50%;background:#5ce6b7;box-shadow:0 0 0 5px #5ce6b71c}
+.speed-active>div{min-width:0;flex:1}
+.speed-active small,.speed-active b,.speed-active span:not(.speed-active-pulse){display:block}
+.speed-active small{font-size:9px;letter-spacing:1.2px;color:#82a5cc;font-weight:800}
+.speed-active b{font-size:12px;margin:2px 0}
+.speed-active div>span{font-size:10px;color:var(--muted);line-height:1.4}
+.speed-online{font-size:9px!important;font-weight:900;color:#5ce6b7!important;letter-spacing:.8px}
+.speed-online.is-offline{color:#f4a36c!important}
+.speed-main{position:relative;text-align:center;margin:17px 0 12px;padding:22px 12px 19px;border-radius:18px;border:1px solid #2a4365;background:radial-gradient(circle at 50% 10%,color-mix(in srgb,var(--a1) 21%,transparent),transparent 67%),#0a1526}
+.speed-main:before{content:"";position:absolute;inset:8px;border:1px dashed #36527355;border-radius:13px;pointer-events:none}
+.speed-main-label{font-size:10px;letter-spacing:1.7px;font-weight:900;color:#8fb7e3}
+.speed-main-value{display:flex;align-items:baseline;justify-content:center;gap:8px;margin:4px 0}
+.speed-main-value strong{font-size:clamp(48px,13vw,66px);line-height:1.1;letter-spacing:-2px;background:linear-gradient(110deg,#fff,var(--a1),var(--a2));background-clip:text;color:transparent;font-variant-numeric:tabular-nums}
+.speed-main-value span{font-size:14px;font-weight:800;color:#a9c5e7}
+.speed-main-caption{font-size:10px;color:var(--muted)}
+.speed-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+.speed-stat{min-width:0;position:relative;padding:12px 9px;text-align:left;border:1px solid #2a4262;border-radius:13px;background:linear-gradient(145deg,#12223a,#0a1525)}
+.speed-stat-icon{display:grid;place-items:center;width:25px;height:25px;border-radius:8px;background:#203b60;color:#8edcff;font-size:15px;margin-bottom:8px}
+.speed-stat small{display:block;color:var(--muted);font-size:10px}
+.speed-stat b{display:block;margin-top:3px;font-size:16px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.speed-stat em{font-size:9px;font-style:normal;color:#91a9c8;font-weight:600}
+.speed-control{display:grid;grid-template-columns:1fr 1fr;align-items:center;gap:8px;margin-top:15px}
+.speed-control label{font-size:11px;color:#c6d8ef;font-weight:800}
+.speed-control select{min-height:42px;padding:9px 10px;font-size:11px}
+.speed-control small{grid-column:1/-1;color:var(--muted);font-size:10px}
+.speed-progress{margin-top:15px}
+.speed-progress-head{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:10px;color:#9eb6d5}
+.speed-progress-head b{color:var(--a2);font-variant-numeric:tabular-nums}
+.speed-progress-track{height:8px;background:#1c2e47;border-radius:30px;overflow:hidden;margin-top:7px}
+.speed-progress-track>div{height:100%;width:0;border-radius:30px;background:linear-gradient(90deg,var(--a1),var(--a2));box-shadow:0 0 14px color-mix(in srgb,var(--a2) 40%,transparent);transition:width .35s ease}
+.speed-actions{display:flex;gap:9px;margin-top:15px}
+.speed-actions .primary{flex:1;min-height:47px}
+.speed-cancel{padding:10px 15px;border-radius:12px;border:1px solid #68495b;background:#2b1928;color:#ffc3d1;font-size:12px;font-weight:800}
+.speed-message{margin-top:12px;padding:12px 13px;border:1px solid #2a4262;border-radius:12px;background:#091625;color:#bcd2ee;font-size:11px;line-height:1.55}
+.speed-footnote{margin:11px 2px 0;color:#879bb8;font-size:10px;line-height:1.6}
+@media(max-width:390px){.speed-network-grid{gap:7px}.speed-network-tile{padding:9px;gap:7px}.speed-network-icon{width:32px;height:32px;flex-basis:32px}.speed-network-icon svg{width:23px;height:23px}.speed-network-tile b{font-size:11px}.speed-network-tile small{font-size:9px}.speed-stat{padding:10px 7px}.speed-stat b{font-size:14px}.speed-heading h2{font-size:19px}.speed-heading-icon{width:47px;height:47px;flex-basis:47px}}
+@media(prefers-reduced-motion:reduce){.speed-progress-track>div,.speed-network-tile{transition:none}}
