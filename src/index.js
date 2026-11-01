@@ -135,7 +135,7 @@ async function info(request){
     if(!response.ok)return json({error:"Server sumber menjawab HTTP "+response.status+"."},502);
     const size=Number(response.headers.get("content-length")||0);
     if(size>MAX_BYTES)return json({error:"File melebihi batas 100 MB."},413);
-    return json({ok:true,title:fileName(final.url,final.ext),filename:fileName(final.url,final.ext),extension:final.ext,type:["mp3","m4a","aac","wav","ogg","oga","flac"].includes(final.ext)?"audio":"video",size:size||null,mime:response.headers.get("content-type")||null,source:final.url.hostname});
+    return json({ok:true,title:fileName(final.url,final.ext),filename:fileName(final.url,final.ext),extension:final.ext,type:["mp3","m4a","aac","wav","ogg","oga","flac","opus","wma","aiff","aif"].includes(final.ext)?"audio":"video",size:size||null,mime:response.headers.get("content-type")||null,source:final.url.hostname});
   }catch(e){return json({error:e.message||"Gagal memeriksa file."},502)}
 }
 async function download(request){
