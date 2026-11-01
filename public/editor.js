@@ -4,6 +4,7 @@
   const $ = id => document.getElementById(id);
   const fileInput = $("editorFile");
   const video = $("editorPreview");
+  const previewCanvas = $("editorPreviewCanvas");
   const frame = $("editorPreviewFrame");
   const empty = $("editorEmpty");
   const status = $("editorStatus");
@@ -103,7 +104,7 @@
   }
   function parseSrtTime(value) {
     const match=value.trim().match(/(\\d{2}):(\\d{2}):(\\d{2})[,\.](\\d{1,3})/);
-    return match ? Number(match[1])*3600+Number(match[2])*60+Number(match[3])+Number(("0."+match[4]).replace(/\\.$/,"")) : 0;
+    return match ? Number(match[1])*3600+Number(match[2])*60+Number(match[3])+Number(match[4].padEnd(3,"0"))/1000 : 0;
   }
   function parseSrt(source) {
     return String(source||"").replace(/\\r/g,"").split(/\\n\\s*\\n/).map(block=>{
@@ -261,6 +262,9 @@
     musicInput.disabled=exporting||audioTracks.length>=3;
     subtitleInput.disabled=exporting;
     $("editorAudioCount").textContent=audioTracks.length+"/3";
+    $("editorClearSubtitles").disabled=!subtitles.length||exporting;
+    $("editorSubtitleStatus").textContent=subtitles.length?subtitles.length+" cue · "+subtitleFileName:"Belum ada subtitle";
+    $("editorSubtitleDetail").textContent=subtitles.length?subtitles.length+" subtitle dimuat dari "+subtitleFileName+".":"Import file SRT untuk menampilkan subtitle otomatis pada timeline.";
     $("editorClipCount").textContent=clips.length+" klip · "+totalDuration().toFixed(1)+" detik";
     const uniqueFiles=new Set(clips.map(item=>item.file));
     $("editorFileName").textContent=hasClips?clips.length+" klip dimuat · "+formatBytes(Array.from(uniqueFiles).reduce((sum,file)=>sum+file.size,0)):"Belum ada klip";
@@ -305,7 +309,17 @@
     const projectTime=clip?timelineOffset(clip)+Math.max(0,(video.currentTime||clip.start)-clip.start):0;
     const caption=captionAt(projectTime,clip);
     overlay.textContent=caption.text;
-    overlay.hidden=!caption.text;
+    const chromaPreview=$("editorChromaEnabled").checked;
+    overlay.hidden=!caption.text||chromaPreview;
+    previewCanvas.hidden=!chromaPreview;
+    video.style.visibility=chromaPreview?"hidden":"visible";
+    if(chromaPreview&&video.readyState>=2&&video.videoWidth){
+      const ratio=$("editorRatio").value;
+      const size=ratio==="9:16"?[304,540]:ratio==="1:1"?[480,480]:ratio==="4:5"?[432,540]:[540,304];
+      if(previewCanvas.width!==size[0]||previewCanvas.height!==size[1]){previewCanvas.width=size[0];previewCanvas.height=size[1];}
+      const previewCtx=previewCanvas.getContext("2d",{alpha:false});
+      drawFrame(previewCtx,previewCanvas,1,clip,projectTime);
+    }
     overlay.dataset.position=$("editorTextPosition").value;
     overlay.dataset.animation=$("editorTextAnimation").value;
     const animated=textAnimationState(caption,projectTime);
@@ -634,6 +648,7 @@
     const panX=motion.panX*width/300;
     const panY=motion.panY*height/300;
     target.save();
+    if(target.canvas===chromaCanvas)target.clearRect(0,0,width,height);
     target.filter="brightness("+$("editorBrightness").value+"%) contrast("+$("editorContrast").value+"%) saturate("+$("editorSaturation").value+"%)";
     target.translate(width/2+panX,height/2+panY);
     target.rotate(rotate*Math.PI/180);
@@ -1029,6 +1044,13 @@
     updateEditorState();
     message("Audio track dihapus.","info");
   }
+  function clearSubtitles() {
+    subtitles=[];subtitleFileName="";
+    $("editorSubtitleStatus").textContent="Belum ada subtitle";
+    $("editorSubtitleDetail").textContent="Import file SRT untuk menampilkan subtitle otomatis pada timeline.";
+    updatePreview();updateEditorState();
+    message("Subtitle dihapus dari proyek.","info");
+  }
   async function importSubtitles(file) {
     if(!file)return;
     if(file.size>5*1024*1024){message("File subtitle maksimal 5 MB.","error");return;}
@@ -1037,6 +1059,8 @@
       if(!parsed.length)throw new Error("File SRT tidak memiliki cue subtitle yang valid.");
       subtitles=parsed;
       subtitleFileName=file.name;
+      $("editorSubtitleStatus").textContent=parsed.length+" cue · "+file.name;
+      $("editorSubtitleDetail").textContent=parsed.length+" subtitle siap ditampilkan sesuai timestamp SRT.";
       updatePreview();
       message(parsed.length+" subtitle berhasil dimuat dari "+file.name+".","ready");
     }catch(error){message(error.message||"Subtitle tidak dapat dibaca.","error");}
@@ -1099,6 +1123,7 @@
     if(file)importSubtitles(file);
     subtitleInput.value="";
   });
+  $("editorClearSubtitles").addEventListener("click",clearSubtitles);
   video.addEventListener("loadedmetadata",() => {
     const clip = selectedClip();
     if (!clip || video.src!==clip.url) return;
