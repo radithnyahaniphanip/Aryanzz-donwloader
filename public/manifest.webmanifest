@@ -1,9 +1,10 @@
 {
-  "name": "ARYANZZ V6 — All in One Tools",
+  "name": "ARYANZZ V15 — All in One Tools",
   "short_name": "ARYANZZ",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#070b16",
   "theme_color": "#070b16",
-  "description": "ARYANZZ V6 downloader, smart queue, image tools, PDF, QR and profile"
+  "description": "ARYANZZ V15: media downloader, searchable tool hub, image converter, offline-ready utility workspace, and device-local personalization."
 }
