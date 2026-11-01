@@ -187,28 +187,7 @@
     paste.addEventListener("click",async()=>{try{const text=await navigator.clipboard.readText();input.value=text.trim();input.focus();toast("Link ditempel.")}catch{input.focus();toast("Tekan lama di kolom untuk menempel link.")}});
     const clear=node("button","v15-action","× Hapus");clear.type="button";clear.addEventListener("click",()=>{input.value="";out.hidden=true;out.replaceChildren();input.focus()});
     actions.append(paste,clear);const strip=document.querySelector(".v6-download .format-strip");strip?.after(actions);
-    button.onclick=async()=>{
-      const raw=input.value.trim();out.hidden=false;out.replaceChildren();if(!raw){out.append(node("p","v15-note","Masukkan link media terlebih dahulu."));return}
-      let url;try{url=safeURL(raw).href}catch(e){out.append(node("p","v15-note",e.message));return}
-      const host=url.hostname.toLowerCase();
-      const isYouTube=host==="youtu.be"||host==="www.youtu.be"||host==="youtube.com"||host.endsWith(".youtube.com")||host==="youtube-nocookie.com"||host.endsWith(".youtube-nocookie.com");
-      const isTikTok=host==="tiktok.com"||host.endsWith(".tiktok.com");
-      if(isYouTube){
-        if(typeof window.showYouTubeDownloader==="function"){window.showYouTubeDownloader(url);return;}
-        out.textContent="Panel YouTube belum termuat. Muat ulang halaman dan coba lagi.";return;
-      }
-      if(isTikTok){
-        if(typeof window.showPlatformGuide==="function"){window.showPlatformGuide(url,"tiktok");return;}
-        out.textContent="Gunakan opsi Simpan Video yang disediakan TikTok oleh kreator.";return;
-      }
-      button.disabled=true;out.append(node("p","v15-note","Memeriksa link…"));
-      try{const data=await apiInfo(url);showMedia(url,data)}
-      catch(e){out.replaceChildren();const box=node("div","v15-box");box.append(node("b","","Tidak dapat memproses link"),node("p","v15-note",e.message));
-        if(/youtube|youtu\.be|tiktok|instagram|facebook|pinterest|pin\.it/i.test(new URL(url).hostname)){const detail=node("details","v15-disclosure");detail.append(node("summary","","Kenapa link ini belum bisa?"),node("p","","Ekstraksi halaman platform memerlukan backend terpisah. ARYANZZ saat ini mendukung URL file media langsung. Tidak ada format atau unduhan palsu yang ditampilkan."));box.append(detail)}
-        else if(mediaExtension.test(new URL(url).pathname)){const ext=new URL(url).pathname.match(mediaExtension)?.[1]?.toLowerCase();const proceed=node("button","v15-action","Coba unduh file langsung");proceed.type="button";proceed.addEventListener("click",()=>showMedia(url,{title:safeName(new URL(url).pathname.split("/").pop()),filename:safeName(new URL(url).pathname.split("/").pop()),extension:ext,type:audioExtensions.has(ext)?"audio":"video",source:new URL(url).hostname}));box.append(proceed)}
-        out.append(box)
-      }finally{button.disabled=false}
-    };
+    /* The V29 downloader controller owns the single analyze click handler. */
     input.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();button.click()}});
   }
   /* V10 convert and resize images entirely on the device. */
