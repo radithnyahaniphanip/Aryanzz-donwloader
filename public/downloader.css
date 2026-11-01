@@ -1,0 +1,24 @@
+/* ARYANZZ V29 YouTube downloader result panel */
+.youtube-result{display:flex;flex-direction:column;gap:12px;margin-top:12px;color:#edf4ff}
+.youtube-heading{display:flex;align-items:flex-start;gap:12px;min-width:0}
+.youtube-thumbnail{width:116px;max-width:36%;aspect-ratio:16/9;object-fit:cover;flex:0 0 auto;border:1px solid #365276;border-radius:12px;background:#050b14}
+.youtube-details{min-width:0;display:flex;flex-direction:column;gap:5px}
+.youtube-title{font-size:15px;line-height:1.45;color:#f5f8ff;overflow-wrap:anywhere}
+.youtube-details small{font-size:11px;color:#9eb2ce}
+.youtube-result .label{margin:4px 0 -4px;color:#a9bfdc}
+.youtube-result select.field{width:100%;background:#081321;color:#edf4ff;border:1px solid #385578;border-radius:12px;padding:12px}
+.youtube-result optgroup{background:#0e1a2c;color:#79dcea}
+.youtube-result option{background:#0d192b;color:#edf4ff}
+.youtube-note{margin:0;color:#91a6c4;font-size:10px;line-height:1.6}
+.youtube-actions{display:flex;flex-wrap:wrap;gap:9px;align-items:center}
+.youtube-actions .primary,.youtube-download{display:inline-flex;align-items:center;justify-content:center;min-height:46px;padding:12px 18px;border-radius:12px;text-decoration:none}
+.youtube-start{width:100%}
+.youtube-download{width:100%;background:linear-gradient(110deg,#16b981,#21c5d4);color:#06131d!important;font-weight:900;box-shadow:0 8px 22px #11b9812c}
+.youtube-progress-wrap{margin-top:2px}
+.youtube-progress-wrap .progress-track{height:9px;background:#1a2c45;border-radius:20px;overflow:hidden}
+.youtube-progress-wrap .progress-fill{height:100%;width:0;background:linear-gradient(90deg,#347cff,#24d6c4);border-radius:20px;transition:width .25s ease}
+.youtube-result .muted{margin:0;font-size:11px;line-height:1.55;color:#a0b3ce}
+.youtube-result .warning{margin:0;padding:10px 12px;border:1px solid #785e35;border-left:3px solid #e7b65c;border-radius:9px;background:#261e13;color:#f0d6a5;font-size:11px;line-height:1.55}
+.youtube-result .tag{border:1px solid #385578;border-radius:10px;background:#152943;color:#d9eaff;padding:10px 13px;font-size:11px;font-weight:800;text-decoration:none;cursor:pointer}
+.youtube-result .tag:hover{border-color:#62cfe0}
+@media(max-width:420px){.youtube-thumbnail{width:100px}.youtube-title{font-size:13px}.youtube-actions .primary,.youtube-download{font-size:12px}}
