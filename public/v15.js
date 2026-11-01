@@ -377,7 +377,7 @@
   function init(){
     bindNavigation();setupProfile();setupToolSearch();setupDownloader();setupImageLab();setupTextExtras();setupLibrary();setupSpeedTest();
     if("serviceWorker" in navigator)navigator.serviceWorker.ready.then(r=>r.update().catch(()=>{})).catch(()=>{});
-    document.querySelector(".pill")?.setAttribute("title","ARYANZZ V15 Interface Edition");
+    document.querySelector(".pill")?.setAttribute("title","ARYANZZ V25 Premium Experience");
   }
   init();
 })();
