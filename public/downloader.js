@@ -102,7 +102,7 @@
       const actions=make("div","youtube-actions");
       actions.append(start);
       box.append(actions,progressWrap,progressText);
-      let currentJob=null,stopped=false;
+      let currentJob=null,currentInfo={title:info.title,thumbnail:info.thumbnail},stopped=false;
       const createDownloadLink=(jobId,format,result)=>{
         progressBar.style.width="100%";
         setStatus(progressText,"File sudah siap. Tekan tombol di bawah untuk mengunduh.");
@@ -151,11 +151,11 @@
             return;
           }
           if(!job.id)throw new Error("ID pekerjaan tidak diterima dari penyedia.");
-          currentJob=job.id;
+          currentJob=job.id;currentInfo=job.info||currentInfo;
           start.remove();select.disabled=true;
           setStatus(progressText,"Job dibuat. Menunggu proses konversi… Jangan buat job kedua untuk link yang sama.");
-          await poll(currentJob,format,job.info||{title:info.title,thumbnail:info.thumbnail});
-        }catch(error){setStatus(progressText,error.message||"Unduhan gagal.",true);actions.replaceChildren();if(currentJob){const resume=make("button","tag youtube-resume","Lanjut cek progres");resume.onclick=()=>poll(currentJob,format,job?.info||{title:info.title,thumbnail:info.thumbnail}).catch(e=>setStatus(progressText,e.message||"Pengecekan gagal.",true));actions.append(resume);}else{const retry=make("button","tag youtube-retry","Coba lagi");retry.onclick=()=>{select.disabled=false;start.disabled=false;start.click();};actions.append(retry);}}
+          await poll(currentJob,format,currentInfo);
+        }catch(error){setStatus(progressText,error.message||"Unduhan gagal.",true);actions.replaceChildren();if(currentJob){const resume=make("button","tag youtube-resume","Lanjut cek progres");resume.onclick=()=>poll(currentJob,format,currentInfo).catch(e=>setStatus(progressText,e.message||"Pengecekan gagal.",true));actions.append(resume);}else{const retry=make("button","tag youtube-retry","Coba lagi");retry.onclick=()=>{select.disabled=false;start.disabled=false;start.click();};actions.append(retry);}}
         finally{if(!currentJob){start.disabled=false;select.disabled=false;}}
       };
     }catch(error){
