@@ -20,9 +20,9 @@ const downloaderCss=file("../public/downloader.css");
 const manifest=JSON.parse(file("../public/manifest.webmanifest"));
 
 const checks=[
-  ["V67.2 page title",html.includes("ARYANZZ V67.2 — Music Recognition & Creative Studio")],
+  ["V67.6 page title",html.includes("ARYANZZ V67.6 — All-in-One Creative Space")],
   ["V59.5 versioned assets",html.includes("/v15.js?v=59.5")&&html.includes("/owner.js?v=59.5")&&html.includes("/downloader.js?v=59.5")&&html.includes("/downloader.css?v=59.5")&&html.includes("/v59.css?v=59.5")&&html.includes("/editor-pro.css?v=65.0")&&html.includes("/editor.js?v=65.0")],
-  ["service worker cache and V59.5 assets",html.includes("/sw.js?v=65.0")&&sw.includes("aryanzz-v67-2")&&sw.includes("/editor.js?v=65.0")&&sw.includes("/editor-pro.css?v=65.0")&&sw.includes("/v59.css?v=59.5")],
+  ["service worker cache and V59.5 assets",html.includes("/sw.js?v=67.6")&&sw.includes("aryanzz-v67-6")&&sw.includes("/editor.js?v=65.0")&&sw.includes("/editor-pro.css?v=65.0")&&sw.includes("/v59.css?v=59.5")],
   ["downloader input, result and backend status",html.includes('id="analyze"')&&html.includes('id="downloadResult"')&&html.includes('id="backendStatus"')],
   ["unified self-hosted downloader API",downloader.includes('postJson("/api/info"')&&downloader.includes('fetch("/api/download"')&&downloader.includes("PLATFORM_NAMES")&&!downloader.toLowerCase().includes("savenow")],
   ["single capture-phase universal URL handler",downloader.includes('button.addEventListener("click"')&&downloader.includes("event.stopImmediatePropagation()")&&downloader.includes("}, true);")],
@@ -48,7 +48,7 @@ const checks=[
   ["V65.0 chroma key live preview and export",html.includes('id="editorPreviewCanvas"')&&html.includes('id="editorChromaEnabled"')&&editor.includes("function applyChromaKey")&&editor.includes("drawFrame(previewCtx")],
   ["V65.0 animated captions",html.includes('id="editorTextAnimation"')&&editor.includes("function textAnimationState")&&editor.includes("overlay.dataset.animation")],
   ["Music Finder panel and tool card",html.includes('id="musicFinder"')&&html.includes('data-panel="musicFinder"')],
-  ["Music Finder assets and PWA cache",html.includes("/music-recognition.js?v=67.2")&&html.includes("/music-recognition.css?v=67.2")&&sw.includes("/music-recognition.js?v=67.2")&&sw.includes("/music-recognition.css?v=67.2")],
+  ["Music Finder assets and PWA cache",html.includes("/music-recognition.js?v=67.6")&&html.includes("/music-recognition.css?v=67.6")&&sw.includes("/music-recognition.js?v=67.6")&&sw.includes("/music-recognition.css?v=67.6")],
   ["DJ mix scan uses AudD Enterprise endpoint",html.includes('id="musicFileScanButton"')&&html.includes('id="musicScanSkip"')&&musicJs.includes('/api/music/scan-video')&&workerSource.includes("enterprise.audd.io")],
   ["Music Finder supports file, video URL and microphone",musicJs.includes("captureMediaSample")&&musicJs.includes("getUserMedia")&&musicJs.includes("/api/music/recognize")&&musicJs.includes("musicVideoUrl")],
   ["AudD errors expose provider code and actionable quota guidance",workerSource.includes("function auddFailure")&&workerSource.includes("providerErrorCode")&&workerSource.includes("kode 901")&&workerSource.includes("kode 902")],
@@ -59,19 +59,19 @@ const checks=[
   ["Music Finder responsive styling",musicCss.includes(".music-grid")&&musicCss.includes("@media(max-width:620px)")],
   ["Video URL DJ scanning goes directly through AudD Enterprise",workerSource.includes('fetch("https://enterprise.audd.io/"')&&!musicJs.includes("identifyVideoUrl(url,startSeconds)")],
   ["tool hub remains available",html.includes('id="allTools"')],
-  ["PWA manifest version",manifest.name.includes("V67.2")]
+  ["PWA manifest version",manifest.name.includes("V67.6")]
 ];
 for(const [name,ok] of checks){assert.ok(ok,name+" failed");console.log("✔ "+name)}
 
 const healthResponse=await worker.fetch(new Request("https://aryanzz.example/api/health"),{});
 assert.equal(healthResponse.status,200);
 const health=await healthResponse.json();
-assert.equal(health.version,"67.2");
+assert.equal(health.version,"67.6");
 assert.equal(health.selfHostedDownloader,false);
 assert.equal(health.youtubeDownloader,true);
 assert.equal(health.musicRecognitionConfigured,false);
 assert.equal(health.youtubeApiKeyConfigured,false);
-console.log("✔ V66.0 Worker health and self-hosted downloader status");
+console.log("✔ V67.6 Worker health and self-hosted downloader status");
 const platformStatusResponse=await worker.fetch(new Request("https://aryanzz.example/api/platform/status"),{});
 assert.equal(platformStatusResponse.status,200);
 const platformStatus=await platformStatusResponse.json();
@@ -115,7 +115,7 @@ assert.equal(musicStatusResponse.status,200);
 const musicStatus=await musicStatusResponse.json();
 assert.equal(musicStatus.configured,false);
 assert.equal(musicStatus.videoUrlReady,false);
-assert.equal(musicStatus.videoScanProvider,"Shazam multi-segment fallback");
+assert.equal(musicStatus.videoScanProvider,"Unavailable");
 assert.equal(musicStatus.shazamFallbackReady,false);
 console.log("✔ Music Finder status reports missing AudD and video-extractor secrets");
 const noTokenForm=new FormData();noTokenForm.append("file",new Blob(["sample"],{type:"audio/webm"}),"sample.webm");
@@ -190,6 +190,7 @@ const fallbackStub={
   startAndWaitForPorts:async()=>{},
   fetch:async request=>{
     const path=new URL(request.url).pathname;
+    if(path==="/api/search")return new Response(JSON.stringify({ok:true,results:[{id:"SEARCH123",title:"Search Result Track",channel:"ARYANZZ Test",duration:125,thumbnail:"https://img.example/search.jpg",url:"https://www.youtube.com/watch?v=SEARCH123"}]}),{status:200,headers:{"content-type":"application/json"}});
     if(path==="/api/music/recognize")return new Response(JSON.stringify({
       ok:true,match:true,provider:"Shazam",
       result:{title:"Fallback Track",artist:"Fallback Artist",provider:"Shazam",song_link:"https://www.shazam.com/track/123"}
@@ -198,11 +199,26 @@ const fallbackStub={
       ok:true,match:true,provider:"Shazam",scannedChunks:2,
       tracks:[{title:"DJ Fallback Track",artist:"DJ Fallback Artist",offset:"00:00",offsets:["00:00","01:00"]}]
     }),{status:200,headers:{"content-type":"application/json"}});
-    if(path==="/api/health")return new Response(JSON.stringify({ok:true,engine:"yt-dlp + FFmpeg + ShazamIO",version:"67.2"}),{status:200,headers:{"content-type":"application/json"}});
+    if(path==="/api/health")return new Response(JSON.stringify({ok:true,engine:"yt-dlp + FFmpeg + ShazamIO",version:"67.6"}),{status:200,headers:{"content-type":"application/json"}});
     return new Response(JSON.stringify({ok:false,error:"Unknown container route"}),{status:404,headers:{"content-type":"application/json"}});
   }
 };
 const fakeContainerBinding={getByName:name=>{assert.equal(name,"aryanzz-extractor-primary");return fallbackStub;}};
+const titleSearchResponse=await worker.fetch(new Request("https://aryanzz.example/api/search",{
+  method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({query:"lofi beats"})
+}),{DOWNLOADER_CONTAINER:fakeContainerBinding});
+assert.equal(titleSearchResponse.status,200);
+const titleSearchData=await titleSearchResponse.json();
+assert.equal(titleSearchData.ok,true);
+assert.equal(titleSearchData.results[0].title,"Search Result Track");
+assert.equal(titleSearchData.results[0].url,"https://www.youtube.com/watch?v=SEARCH123");
+console.log("✔ V67.6 title search forwards to Cloudflare Container and returns safe YouTube results");
+const emptyTitleSearch=await worker.fetch(new Request("https://aryanzz.example/api/search",{
+  method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({query:"x"})
+}),{});
+assert.equal(emptyTitleSearch.status,400);
+console.log("✔ Title search validates short queries before using the Container");
+
 const originalFallbackFetch=globalThis.fetch;
 try{
   globalThis.fetch=async()=>new Response(JSON.stringify({status:"error",error:{error_code:902,error_message:"quota exceeded"}}),{status:200,headers:{"content-type":"application/json"}});
@@ -373,4 +389,4 @@ try{
   globalThis.fetch=originalFetch;
 }
 
-console.log("\nARYANZZ V67.0 Music Recognition & DJ Mix Scanner smoke tests passed.");
+console.log("\nARYANZZ V67.6 downloader, title search and music recognition smoke tests passed.");
