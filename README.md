@@ -1,76 +1,48 @@
-# ARYANZZ V5 — All in One
+# ARYANZZ V15 — All-in-One Web Tools
 
-Dark, mobile-first downloader and utility website with a Node.js API powered by yt-dlp and FFmpeg.
+Dark, mobile-first web utility workspace. The production app remains deployed from the **existing GitHub `main` branch** to **Cloudflare Workers**.
 
-## Deploy on Render
-1. In Render choose **New → Blueprint** and connect this repository.
-2. Render reads `render.yaml` and builds the Dockerfile.
-3. Wait until deploy completes.
-4. Test `https://YOUR-SERVICE.onrender.com/api/health`.
-5. Open the service root URL to use ARYANZZ.
+**Production URL:** https://aryanzz-donwloader.radithnyahaniphanip.workers.dev/
 
-## API
-- `GET /api/health`
-- `POST /api/info` with JSON `{"url":"https://..." }`
-- `POST /api/download` with JSON `{"url":"https://...","mode":"video"}` or mode audio.
+## What is actually implemented (V7–V15)
 
-## Important
-Only download content you own, have permission to download, or that is explicitly permitted. Platform restrictions may prevent extraction. This starter does not support account cookies or login-only content. The free Render plan is for testing and may sleep when idle; heavy media processing may exceed free resource limits. Before a public launch, add user authentication, quotas, stronger SSRF/network controls, file-size limits, and abuse monitoring. The heart camera is a demo only and does not provide validated BPM measurement.
+| Milestone | Shipped capability |
+| --- | --- |
+| V7 | Four selectable accent themes with persistent browser settings |
+| V8 | Searchable tool hub and category filters |
+| V9 | Downloader UX refresh: file metadata, original-format selection, progress, cancellation, favorites |
+| V10 | Local image studio: PNG/JPEG/WebP conversion, resize, original-dimension option |
+| V11 | QR input character counter and improved tool organization (QR generation still depends on its CDN library) |
+| V12 | Live text statistics and JSON format/minify tools |
+| V13 | Searchable local library, history/favorites counters and safe source links |
+| V14 | Motion toggle, share website, local profile preferences |
+| V15 | Mobile navigation, keyboard shortcuts, PWA shell caching, accessibility and responsive polish |
 
-## Deploy the website on Cloudflare Pages (static frontend)
-This repository also contains a static frontend in `public/`. To deploy the website without a paid server:
+Additional existing V2–V6 functions are retained: direct-media file downloading, queued downloads, favorites, history, local profile/photos, backup/restore, browser-local image compression, PDF print workflow, QR, text tools, password generator, internet speed estimate, URL checker, and experimental camera lab.
 
-1. Open the Cloudflare dashboard and go to **Workers & Pages**.
-2. Choose **Create application → Pages → Connect to Git**.
-3. Authorize GitHub and select `Aryanzz-donwloader`.
-4. Set production branch to `main`.
-5. Leave the build command blank (or use `exit 0`).
-6. Set the build output directory to `public`.
-7. Save and deploy. Cloudflare will provide a `*.pages.dev` address.
+### Real downloader scope
 
-The Pages website is static and can stay available independently of a laptop. This does **not** run the Node/yt-dlp Docker backend. Platform extraction endpoints require a separate server runtime; the frontend now explains this rather than pretending extraction is available. Direct media URLs (for example a public MP4/MP3 URL) can be opened/downloaded when the source host permits it.
+The Cloudflare Worker handles publicly accessible **direct-file links** ending in supported extensions: MP4, WebM, MOV, M4V, MP3, M4A, AAC, WAV, OGG, OGA, and FLAC. It checks remote metadata where permitted, streams files up to a configured 100 MB cap, and may fail when the source host denies access or redirects incompatibly. The frontend does **not** claim to transcode direct files.
 
-Cloudflare Pages Git integration docs: https://developers.cloudflare.com/pages/get-started/git-integration/
+A YouTube/TikTok/Instagram/Facebook/Pinterest *page link* is **not** equivalent to a direct media file. Platform-page extraction depends on the separate **Node.js + yt-dlp + FFmpeg** backend in `server/index.js`, deployed elsewhere with `PLATFORM_API_ORIGIN` and `PLATFORM_API_TOKEN` configured as Cloudflare Worker secrets. **That backend is not presently deployed**. The Worker health endpoint reports whether the environment is configured, but configuration alone does not prove the extraction service works. No free 24/7 backend is promised.
 
+Only download media you own or are authorized to download. Some services prohibit extraction and DRM-protected media are unsupported.
 
-## Cloudflare Worker runtime
-The Cloudflare Worker entrypoint is `src/index.js`, configured by `wrangler.toml`. The Worker serves the static app from `public/` and exposes:
-- `GET /api/health` — service health.
-- `POST /api/download` — streams a public, direct media-file URL through the Worker to avoid browser CORS restrictions.
+### Privacy and persistence
 
-The direct-download endpoint accepts file URLs ending in common media extensions (MP4, WebM, MOV, MP3, M4A, AAC, WAV, OGG, FLAC), rejects local/private network destinations and non-media page URLs, validates redirects, and applies a 100 MB declared-size limit. It streams rather than buffering the media.
+User profile/photo, theme preferences, downloaded-link history, favorites, and app backups are browser-local. They are **not cross-device accounts**. Browser storage may be cleared. Backup/restore exports JSON for manual transfer. Image conversion, text formatting, and password generation are browser-local. QR generation loads a script from cdnjs when first requested, so first-time offline QR generation is not assured.
 
-**Platform-page extraction is not included in the Cloudflare Worker.** Links to TikTok, Instagram, YouTube, Facebook, etc. are web pages rather than direct media files and require a separate extraction backend/runtime. The UI must not claim those downloads work until such a backend is deployed and tested. Download only content you own or have permission to save.
+### Deployment
 
+The repo already includes `.github/workflows/deploy-cloudflare.yml` and `wrangler.toml`. GitHub Actions deploys pushes on `main` using repository secrets `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN`. **Do not commit secrets**. The server remains unchanged on Cloudflare Worker-only hosting.
 
-## V2–V5 release status
-- V2 foundation: direct-media metadata endpoint, streamed download with a 100 MB cap, platform metadata/MP4/MP3 quality selection in the Node + yt-dlp backend.
-- V3 foundation: local history, favorites, sequential batch queue and download progress in the browser.
-- V4 foundation: browser-local image compression, text conversion, password generation and print-to-PDF.
-- V5 foundation: local profile with optional photo and JSON backup/restore. Cloud account authentication and cross-device sync are intentionally not enabled until a database/auth provider is configured.
-- Cloudflare Worker currently handles public direct-media file URLs. Platform-page extraction (TikTok, Instagram, YouTube, Facebook) is NOT active on the Worker-only deployment because no separate Node + yt-dlp backend is configured. The health endpoint reports this honestly as `platformExtraction: false`.
+```sh
+npm install -g wrangler
+wrangler deploy
+```
 
+Local UI can also be served from `public/` with a static file server, but /api/ endpoints require the Cloudflare Worker runtime. The optional Node extraction backend uses `npm start` and Dockerfile dependencies.
 
+## Verification
 
-### Backend connection
-The platform extractor is implemented in `server/index.js` and packaged by the existing Dockerfile (Node 20, yt-dlp, FFmpeg). Deploy that service on a Node/Docker host, then set the Cloudflare Worker environment variable `PLATFORM_API_ORIGIN` to the backend's HTTPS origin. The Worker proxies only allow-listed platform URLs to this backend. Without that environment variable, platform-page extraction correctly returns a not-connected message; do not represent it as live.
-
-### Local account scope
-The profile, favorites, history, and backup/restore currently use browser local storage. They are device-local, not cloud accounts and do not sync across browsers. Cross-device accounts require a configured auth/database service and explicit credentials/bindings.
-
-
-## ARYANZZ V5 deployment (Cloudflare Worker)
-- Production Worker name: `aryanzz-donwloader`.
-- Expected public address: `https://aryanzz-donwloader.radithnyahaniphanip.workers.dev/` (confirm in Cloudflare > Worker > Overview before sharing).
-- The Worker serves `public/` through the `ASSETS` binding and exposes direct-media download endpoints.
-- V2–V5 browser features are included in the static app: direct media download, local queue/history/favorites, image compression, text/PDF/QR/password tools, local profile/photo, and JSON backup/restore.
-- Profile, history, and favorites remain local to each browser; no cloud account or cross-device sync is configured.
-- Platform-page extraction is disabled until a compatible backend is hosted and its URL/token are configured. No paid host or card is assumed.
-- After updating files on GitHub, deploy the latest `main` revision to the existing Cloudflare Worker to publish the new site at the same URL.
-
-
-## V5.1 visible refresh
-- Updated the visual system across the existing dark interface: stronger hierarchy, spacing, card treatment, responsive workspace, and mobile navigation.
-- Added a visible V2–V5 release roadmap and an explicit downloader capability notice so platform-page extraction is not confused with direct media URL support.
-- Added versioned asset URLs and a new service-worker cache name to make browser updates more reliable.
-- Connected the existing platform-backend proxy handler to both /api/info and /api/download; it remains inactive until PLATFORM_API_ORIGIN and PLATFORM_API_TOKEN are configured.
+GitHub Actions runs `node --check` for all JavaScript and `node tests/smoke.mjs` for static UI checks and Worker API safety checks. A successful CI/deployment result confirms code publication; individual third-party media downloads still depend on the source and should be tested separately.
