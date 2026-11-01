@@ -97,7 +97,7 @@
       const progressWrap=make("div","youtube-progress-wrap");
       const progressTrack=make("div","progress-track");
       const progressBar=make("div","progress-fill");progressBar.style.width="0%";
-      progressTrack.append(progressBar);
+      progressTrack.append(progressBar);progressWrap.append(progressTrack);
       const progressText=make("p","muted","Pilih format, lalu mulai download.");
       const actions=make("div","youtube-actions");
       actions.append(start);
@@ -152,10 +152,11 @@
           }
           if(!job.id)throw new Error("ID pekerjaan tidak diterima dari penyedia.");
           currentJob=job.id;
-          setStatus(progressText,"Job dibuat. Menunggu proses konversi… Jangan tutup halaman.");
+          start.remove();select.disabled=true;
+          setStatus(progressText,"Job dibuat. Menunggu proses konversi… Jangan buat job kedua untuk link yang sama.");
           await poll(currentJob,format,job.info||{title:info.title,thumbnail:info.thumbnail});
-        }catch(error){setStatus(progressText,error.message||"Unduhan gagal.",true);actions.replaceChildren();const retry=make("button","tag youtube-retry","Coba lagi");retry.onclick=()=>{select.disabled=false;start.disabled=false;start.click();};actions.append(retry);}
-        finally{if(currentJob||start.isConnected){start.disabled=false;select.disabled=false;}}
+        }catch(error){setStatus(progressText,error.message||"Unduhan gagal.",true);actions.replaceChildren();if(currentJob){const resume=make("button","tag youtube-resume","Lanjut cek progres");resume.onclick=()=>poll(currentJob,format,job?.info||{title:info.title,thumbnail:info.thumbnail}).catch(e=>setStatus(progressText,e.message||"Pengecekan gagal.",true));actions.append(resume);}else{const retry=make("button","tag youtube-retry","Coba lagi");retry.onclick=()=>{select.disabled=false;start.disabled=false;start.click();};actions.append(retry);}}
+        finally{if(!currentJob){start.disabled=false;select.disabled=false;}}
       };
     }catch(error){
       box.replaceChildren(make("b","","Link YouTube belum bisa diperiksa"),make("p","warning",error.message||"Terjadi kesalahan saat memeriksa video."));
