@@ -11,8 +11,8 @@ const manifest=JSON.parse(file("../public/manifest.webmanifest"));
 const htmlChecks=[
   ["V15 title",html.includes("ARYANZZ V15 — All in One")],
   ["V15 badge",html.includes("V15 · PREMIUM")],
-  ["premium style",html.includes("/v15.css?v=15.0")],
-  ["functional JS",html.includes("/v15.js?v=15.0")],
+  ["premium style",html.includes("/v15.css?v=15.1")],
+  ["functional JS",html.includes("/v15.js?v=15.1")],
   ["home",html.includes('id="home"')],
   ["tool hub",html.includes('id="allTools"')],
   ["downloader",html.includes('id="analyze"')],
@@ -23,6 +23,11 @@ const htmlChecks=[
   ["local image converter",js.includes("setupImageLab")],
   ["local library",js.includes("setupLibrary")],
   ["downloader controller",js.includes("AbortController")],
+  ["Wi-Fi and mobile data UI",html.includes("Data Seluler")&&html.includes("wifiTile")],
+  ["upload measurement",js.includes("speed.cloudflare.com/__up")],
+  ["download measurement",js.includes("speed.cloudflare.com/__down")],
+  ["mobile data usage modes",html.includes("Cepat · ±3 MB")&&html.includes("Lengkap · ±11 MB")],
+  ["speed test cancel",html.includes("id=\\"speedCancel\\"")],
   ["theme variants",css.includes('body[data-accent="purple"]')],
   ["responsive style",css.includes("@media(max-width:370px)")],
   ["manifest",manifest.name.includes("V15")]
