@@ -1,7 +1,7 @@
-const CACHE="aryanzz-v60-0";
+const CACHE="aryanzz-v65-0";
 const SHELL=[
-  "/?v=60.0",
-  "/manifest.webmanifest?v=60.0",
+  "/?v=65.0",
+  "/manifest.webmanifest?v=65.0",
   "/advanced.js?v=59.5",
   "/v15.js?v=59.5",
   "/v15.css?v=59.5",
@@ -13,8 +13,8 @@ const SHELL=[
   "/downloader.js?v=59.5",
   "/v59.css?v=59.5",
   "/v59.js?v=59.5",
-  "/editor-pro.css?v=60.0",
-  "/editor.js?v=60.0"
+  "/editor-pro.css?v=65.0",
+  "/editor.js?v=65.0"
 ];
 self.addEventListener("install",event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(SHELL)).then(()=>self.skipWaiting())));
 self.addEventListener("activate",event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));
@@ -25,5 +25,5 @@ self.addEventListener("fetch",event=>{
   event.respondWith(fetch(event.request).then(response=>{
     if(response.ok){const copy=response.clone();event.waitUntil(caches.open(CACHE).then(cache=>cache.put(event.request,copy)));}
     return response;
-  }).catch(()=>caches.match(event.request).then(match=>match||(/navigate/.test(event.request.mode)?caches.match("/?v=60.0"):Response.error()))));
+  }).catch(()=>caches.match(event.request).then(match=>match||(/navigate/.test(event.request.mode)?caches.match("/?v=65.0"):Response.error()))));
 });
