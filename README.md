@@ -108,7 +108,13 @@ Music Finder uses the AudD music-recognition API through the Cloudflare Worker. 
 ### Remix and DJ recognition
 
 AudD's fingerprinting can match altered recordings such as remixes, slowed/reverb, pitch shifts and edits, but a match is not guaranteed. For one song, use the 12-second standard mode. For a full DJ mix or video with multiple songs, use the Enterprise scan below.
-### Full video and DJ mix scanning — V67.0
+### V67.1 — AudD authentication and quota diagnostics
+
+The Worker now preserves AudD's numeric `error_code` in API responses without exposing the API token. Codes 901, 902, 900, 903, 904 and 905 receive separate user-facing explanations. In particular, 901 indicates that AudD did not receive/accept an API token or the no-token free limit was reached; 902 indicates that the account's token quota was exceeded. A present Cloudflare Secret only proves the Worker has a value; it does not prove AudD accepts that value.
+
+The standard microphone recognition sends one short sample and costs one standard request. It does not use the Enterprise multi-segment scanner. Do not retry repeatedly after an authorization/quota error; check the AudD dashboard's token and Usage/Billing details first.
+
+### Full video and DJ mix scanning — V67.0### Full video and DJ mix scanning — V67.0
 
 The **Pindai seluruh video / DJ mix** actions use AudD Enterprise directly. Public video-page URLs are sent to AudD; the browser does not need the separate yt-dlp extractor for this recognition mode. Uploaded video/audio files are sent to the Worker and forwarded to AudD Enterprise (maximum 50 MB).
 
