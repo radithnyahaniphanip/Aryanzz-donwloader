@@ -1,10 +1,10 @@
-# ARYANZZ V60.0 — Creator Studio Pro
+# ARYANZZ V65.0 — Ultimate Creative Studio
 
 Production website: https://aryanzz-donwloader.radithnyahaniphanip.workers.dev/
 
 ARYANZZ is a mobile-first creator workspace. The Cloudflare Worker serves the website and safely proxies supported platform requests to a separate Docker backend running yt-dlp and FFmpeg.
 
-## V60.0 release scope
+## V65.0 release scope
 
 | Release stage | Scope |
 | --- | --- |
@@ -14,7 +14,8 @@ ARYANZZ is a mobile-first creator workspace. The Cloudflare Worker serves the we
 | V45–V49 | Video filters, brightness/contrast/saturation, text overlays, mute and export controls |
 | V50–V54 | Creator workspace integration, mobile layout, local-only editing and clearer feature states |
 | V55–V59.5 | Backend health status, PWA cache refresh, expanded smoke tests and deployment configuration |
-| V60.0 | Multi-clip timeline, split/reorder/trim, music track, caption styling, fade transition, undo/redo, project JSON and local export |
+| V60.0 | Multi-clip timeline, split/reorder/trim, audio track, caption styling, fade transition, undo/redo, project JSON and local export |
+| V65.0 | Premium wide editor workspace, three mixed audio tracks, per-clip zoom keyframes and pan, live/export chroma key, animated captions, SRT subtitle import and project restore |
 
 ## Downloader
 
@@ -44,41 +45,46 @@ Until both platform secrets are configured and the backend is reachable, `/api/p
 
 The Render free plan may sleep when idle and may have CPU, memory, bandwidth and execution limits. A production service with frequent or large downloads may need a paid always-on host.
 
-## Video Editor — Creative Studio Pro V60.0
+## Video Editor — Ultimate Creative Studio V65.0
 
-The editor runs locally in the browser. Source media is not uploaded to ARYANZZ servers.
+The editor runs locally in the browser. Source media is not uploaded to ARYANZZ servers. The editor UI uses the ARYANZZ dark navy, blue, cyan and violet design system with a wider preview/timeline workspace and a sticky inspector on desktop.
 
-### Timeline and clips
+### Video timeline
 - Import up to 8 local video clips, each up to 300 MB.
-- Preview the selected clip and scrub its playhead.
-- Trim the in/out points of each clip independently.
-- Split the selected clip at the preview playhead.
-- Reorder clips, remove clips, and undo/redo timeline changes.
-- Export plays clips sequentially in timeline order.
+- Preview, scrub, trim, split, reorder and delete clips.
+- Undo/redo for timeline and editing settings.
+- Export clips sequentially in timeline order.
+- 16:9, 9:16, 1:1 and 4:5 canvas ratios; 720p or 1080p output canvas.
+- 0.5× to 2× playback speed, rotation, color presets, brightness, contrast and saturation.
 
-### Audio and captions
-- Add one local background music file (up to 300 MB).
-- Adjust background music volume.
-- Optionally mute the original audio from the video clips.
-- Add a caption overlay with editable text, color, size and placement.
+### Motion keyframes
+- Per-clip start and end zoom values (100–200%).
+- Per-clip horizontal and vertical pan offsets.
+- Linear or smooth-ease interpolation between the two zoom keyframes.
+- Motion settings are stored in the project JSON and rendered in preview/export.
 
-### Image treatment and export
-- 16:9, 9:16, 1:1 and 4:5 canvas ratios.
-- 90°, 180° and 270° rotation.
-- 0.5× to 2× playback speed.
-- Original, vivid, cinematic, monochrome, warm and cool presets.
-- Brightness, contrast and saturation adjustments.
-- Cut or fade-to-black transition between clips.
-- 720p or 1080p canvas and low/standard/high bitrate presets.
-- Browser-based MediaRecorder export, usually WebM in Chrome Android; MP4 is offered only when supported by the browser.
+### Audio layers
+- Mix up to 3 local audio files (music, voice-over or sound effects).
+- Independent volume slider and remove control for each audio track.
+- Audio tracks loop to cover the exported timeline; original video audio can be muted.
+- Audio mixing uses the browser Web Audio API. If a browser does not support it, multi-track audio is not included in export.
 
-### Project files
-- Save a project as JSON with clip order, trim points and editing settings.
-- Reopen a project by selecting the project JSON together with its original source videos (and optional music file).
-- The project JSON does not contain the video/audio media itself; keep the original source files.
+### Chroma key and text
+- Green-screen/chroma key with a selectable key color, tolerance and solid replacement background color.
+- Live chroma preview and export compositing use a canvas pixel-keying pass; this can be CPU-intensive, especially at 1080p on mobile devices.
+- Caption text supports editable color, size, position and fade, slide-up or pop animation.
+- Import SRT subtitles; cues are displayed according to their timestamps on the combined timeline and included in export.
+
+### Export and project files
+- Cut or fade-to-black clip transitions.
+- Low/standard/high bitrate presets and browser-based MediaRecorder export.
+- Chrome Android commonly exports WebM. MP4 is offered only when the browser supports it; the app does not transcode WebM to MP4.
+- Save project JSON containing clip order, trim points, motion settings, editing settings, audio track names/volumes and subtitle cues.
+- Reopen a project by selecting its JSON file together with the original video and audio files. Subtitle cues are embedded in the JSON.
+- Project files do not embed the source video/audio media. Keep the original files and select them again when reopening.
 
 ### Current limitations
-V60.0 is a lightweight local editor, not a complete replacement for CapCut or Alight Motion. It currently has one video track arranged as sequential clips and one background music track. It does not yet include keyframes, multi-layer overlays, multiple audio tracks, animated stickers, motion tracking, advanced transitions, cloud project sync or guaranteed MP4 export. Browser memory, codec support and device performance determine practical file sizes and export speed.
+V65.0 is a lightweight local browser editor, not a full replacement for CapCut or Alight Motion. It still uses one sequential video track and up to three audio tracks. Motion editing currently provides two zoom keyframes plus a fixed pan offset per clip; it is not a general-purpose multi-property keyframe graph. Chroma key replaces the keyed area with a solid color, not a background image/video. Advanced multi-layer compositing, animated stickers, motion tracking, waveform editing, cloud project sync and guaranteed MP4 export are not included. Browser codec support, available memory and device performance determine practical file sizes and export speed.
 
 ## Tools Hub
 
