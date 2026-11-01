@@ -117,7 +117,7 @@ async function scanShazamMedia(inputPath,skip,every,limit){
 }
 
 app.get("/ping",(_req,res)=>res.status(200).send("ok"));
-app.get("/api/health",(_req,res)=>res.json({ok:true,service:"ARYANZZ Self-Hosted Downloader",version:"67.6",engine:"yt-dlp + FFmpeg + ShazamIO",maxFileMB:500,maxDurationMinutes:180,platforms:ALLOWED,features:["platform-info","title-search","mp4","mp3","quality-select","progress-stream","shazam-fallback","dj-mix-scan"]}));
+app.get("/api/health",(_req,res)=>res.json({ok:true,service:"ARYANZZ Self-Hosted Downloader",version:"67.7",engine:"yt-dlp + FFmpeg + ShazamIO",maxFileMB:500,maxDurationMinutes:180,platforms:ALLOWED,features:["platform-info","title-search","mp4","mp3","quality-select","progress-stream","shazam-fallback","dj-mix-scan"]}));
 function requirePlatformToken(req,res,next){
   if(process.env.CONTAINER_INTERNAL_MODE==="true")return next();
   const supplied=String(req.headers.authorization||"").replace(/^Bearer\s+/i,"");
