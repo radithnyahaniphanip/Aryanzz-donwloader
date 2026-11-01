@@ -4,6 +4,7 @@ import worker from "../src/index.js";
 
 const file=path=>readFileSync(new URL(path,import.meta.url),"utf8");
 const html=file("../public/index.html");
+const workerSource=file("../src/index.js");
 const sw=file("../public/sw.js");
 const v15=file("../public/v15.js");
 const downloader=file("../public/downloader.js");
@@ -19,9 +20,9 @@ const downloaderCss=file("../public/downloader.css");
 const manifest=JSON.parse(file("../public/manifest.webmanifest"));
 
 const checks=[
-  ["V66.0 page title",html.includes("ARYANZZ V66.0 — Music Recognition & Creative Studio")],
+  ["V67.0 page title",html.includes("ARYANZZ V67.0 — Music Recognition & Creative Studio")],
   ["V59.5 versioned assets",html.includes("/v15.js?v=59.5")&&html.includes("/owner.js?v=59.5")&&html.includes("/downloader.js?v=59.5")&&html.includes("/downloader.css?v=59.5")&&html.includes("/v59.css?v=59.5")&&html.includes("/editor-pro.css?v=65.0")&&html.includes("/editor.js?v=65.0")],
-  ["service worker cache and V59.5 assets",html.includes("/sw.js?v=65.0")&&sw.includes("aryanzz-v66-0")&&sw.includes("/editor.js?v=65.0")&&sw.includes("/editor-pro.css?v=65.0")&&sw.includes("/v59.css?v=59.5")],
+  ["service worker cache and V59.5 assets",html.includes("/sw.js?v=65.0")&&sw.includes("aryanzz-v67-0")&&sw.includes("/editor.js?v=65.0")&&sw.includes("/editor-pro.css?v=65.0")&&sw.includes("/v59.css?v=59.5")],
   ["downloader input, result and backend status",html.includes('id="analyze"')&&html.includes('id="downloadResult"')&&html.includes('id="backendStatus"')],
   ["unified self-hosted downloader API",downloader.includes('postJson("/api/info"')&&downloader.includes('fetch("/api/download"')&&downloader.includes("PLATFORM_NAMES")&&!downloader.toLowerCase().includes("savenow")],
   ["single capture-phase universal URL handler",downloader.includes('button.addEventListener("click"')&&downloader.includes("event.stopImmediatePropagation()")&&downloader.includes("}, true);")],
@@ -47,19 +48,20 @@ const checks=[
   ["V65.0 chroma key live preview and export",html.includes('id="editorPreviewCanvas"')&&html.includes('id="editorChromaEnabled"')&&editor.includes("function applyChromaKey")&&editor.includes("drawFrame(previewCtx")],
   ["V65.0 animated captions",html.includes('id="editorTextAnimation"')&&editor.includes("function textAnimationState")&&editor.includes("overlay.dataset.animation")],
   ["Music Finder panel and tool card",html.includes('id="musicFinder"')&&html.includes('data-panel="musicFinder"')],
-  ["Music Finder assets and PWA cache",html.includes("/music-recognition.js?v=66.0")&&html.includes("/music-recognition.css?v=66.0")&&sw.includes("/music-recognition.js?v=66.0")&&sw.includes("/music-recognition.css?v=66.0")],
+  ["Music Finder assets and PWA cache",html.includes("/music-recognition.js?v=67.0")&&html.includes("/music-recognition.css?v=67.0")&&sw.includes("/music-recognition.js?v=67.0")&&sw.includes("/music-recognition.css?v=67.0")],
+  ["DJ mix scan uses AudD Enterprise endpoint",html.includes('id="musicFileScanButton"')&&html.includes('id="musicScanSkip"')&&musicJs.includes('/api/music/scan-video')&&workerSource.includes("enterprise.audd.io")],
   ["Music Finder supports file, video URL and microphone",musicJs.includes("captureMediaSample")&&musicJs.includes("getUserMedia")&&musicJs.includes("/api/music/recognize")&&musicJs.includes("musicVideoUrl")],
   ["Music Finder responsive styling",musicCss.includes(".music-grid")&&musicCss.includes("@media(max-width:620px)")],
-  ["Video URL audio sample extraction uses yt-dlp sections",serverSource.includes('app.post("/api/music/sample"')&&serverSource.includes("--download-sections")],
+  ["Video URL DJ scanning goes directly through AudD Enterprise",workerSource.includes('fetch("https://enterprise.audd.io/"')&&!musicJs.includes("identifyVideoUrl(url,startSeconds)")],
   ["tool hub remains available",html.includes('id="allTools"')],
-  ["PWA manifest version",manifest.name.includes("V66.0")]
+  ["PWA manifest version",manifest.name.includes("V67.0")]
 ];
 for(const [name,ok] of checks){assert.ok(ok,name+" failed");console.log("✔ "+name)}
 
 const healthResponse=await worker.fetch(new Request("https://aryanzz.example/api/health"),{});
 assert.equal(healthResponse.status,200);
 const health=await healthResponse.json();
-assert.equal(health.version,"66.0");
+assert.equal(health.version,"67.0");
 assert.equal(health.selfHostedDownloader,true);
 assert.equal(health.youtubeDownloader,true);
 assert.equal(health.musicRecognitionConfigured,false);
@@ -108,13 +110,16 @@ assert.equal(musicStatusResponse.status,200);
 const musicStatus=await musicStatusResponse.json();
 assert.equal(musicStatus.configured,false);
 assert.equal(musicStatus.videoUrlReady,false);
+assert.equal(musicStatus.videoScanProvider,"AudD Enterprise");
 console.log("✔ Music Finder status reports missing AudD and video-extractor secrets");
 const musicNoToken=await worker.fetch(new Request("https://aryanzz.example/api/music/recognize",{method:"POST"}),{});
 assert.equal(musicNoToken.status,503);
 assert.match((await musicNoToken.json()).error,/AUDD_API_TOKEN/);
 console.log("✔ Music recognition stays disabled until the AudD secret is configured");
 const musicConfigured=await worker.fetch(new Request("https://aryanzz.example/api/music/status"),{AUDD_API_TOKEN:"test-audd-token"});
-assert.equal((await musicConfigured.json()).configured,true);
+const configuredStatus=await musicConfigured.json();
+assert.equal(configuredStatus.configured,true);
+assert.equal(configuredStatus.videoUrlReady,true);
 console.log("✔ Music Finder status detects the configured AudD secret");
 const originalMusicFetch=globalThis.fetch;
 try{
@@ -152,6 +157,49 @@ try{
   assert.equal((await noMatch.json()).match,false);
   console.log("✔ Music recognition handles an audio sample with no catalogue match");
 }finally{globalThis.fetch=originalMusicFetch;}
+
+
+const originalEnterpriseFetch=globalThis.fetch;
+try{
+  globalThis.fetch=async(input,init={})=>{
+    const url=new URL(typeof input==="string"?input:input.url);
+    assert.equal(url.href,"https://enterprise.audd.io/");
+    assert.equal(init.method,"POST");
+    assert.ok(init.body instanceof FormData);
+    assert.equal(init.body.get("api_token"),"test-audd-token");
+    assert.equal(init.body.get("url"),"https://www.youtube.com/watch?v=DJMIX123456");
+    assert.equal(init.body.get("accurate_offsets"),"true");
+    assert.equal(init.body.get("skip"),"4");
+    assert.equal(init.body.get("every"),"1");
+    assert.equal(init.body.get("limit"),"60");
+    return new Response(JSON.stringify({status:"success",result:[
+      {offset:"00:00",songs:[
+        {title:"DJ Track One",artist:"DJ Artist",album:"Mix One",timecode:"00:34",score:100,song_link:"https://lis.tn/one"},
+        {title:"DJ Track Two",artist:"DJ Artist Two",offset:"00:00",timecode:"01:12",score:96}
+      ]},
+      {offset:"01:00",songs:[{title:"DJ Track Three",artist:"DJ Artist Three",timecode:"00:21",score:99}]}
+    ]}),{status:200,headers:{"content-type":"application/json"}});
+  };
+  const scanned=await worker.fetch(new Request("https://aryanzz.example/api/music/scan-video",{
+    method:"POST",headers:{"content-type":"application/json"},
+    body:JSON.stringify({url:"https://www.youtube.com/watch?v=DJMIX123456",skip:4,every:1,limit:60})
+  }),{AUDD_API_TOKEN:"test-audd-token"});
+  assert.equal(scanned.status,200);
+  const scanData=await scanned.json();
+  assert.equal(scanData.provider,"AudD Enterprise");
+  assert.equal(scanData.match,true);
+  assert.equal(scanData.scannedChunks,2);
+  assert.equal(scanData.tracks.length,3);
+  assert.equal(scanData.tracks[0].offset,"00:00");
+  assert.equal(scanData.tracks[2].title,"DJ Track Three");
+  console.log("✔ DJ mix URL scan uses AudD Enterprise and returns track timestamps");
+  const invalidScan=await worker.fetch(new Request("https://aryanzz.example/api/music/scan-video",{
+    method:"POST",headers:{"content-type":"application/json"},
+    body:JSON.stringify({url:"https://example.com/not-supported.mp4"})
+  }),{AUDD_API_TOKEN:"test-audd-token"});
+  assert.equal(invalidScan.status,400);
+  console.log("✔ DJ mix scan rejects unsupported or untrusted video domains");
+}finally{globalThis.fetch=originalEnterpriseFetch;}
 
 const unknown=await worker.fetch(new Request("https://aryanzz.example/api/not-a-route"),{});
 assert.equal(unknown.status,404);
@@ -252,4 +300,4 @@ try{
   globalThis.fetch=originalFetch;
 }
 
-console.log("\nARYANZZ V66.0 Music Recognition & Creative Studio smoke tests passed.");
+console.log("\nARYANZZ V67.0 Music Recognition & DJ Mix Scanner smoke tests passed.");

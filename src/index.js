@@ -298,8 +298,9 @@ async function youtubeFile(request,env){
 
 function musicStatus(env){
   return json({ok:true,provider:"AudD",configured:!!env.AUDD_API_TOKEN,
-    videoUrlReady:!!(env.PLATFORM_API_ORIGIN&&env.PLATFORM_API_TOKEN),
-    sampleSeconds:12,maxUploadBytes:AUDD_MAX_BYTES});
+    videoUrlReady:!!env.AUDD_API_TOKEN,videoScanProvider:"AudD Enterprise",
+    extractorRequiredForMusicScan:false,sampleSeconds:12,maxUploadBytes:AUDD_MAX_BYTES,
+    maxEnterpriseUploadBytes:50*1024*1024});
 }
 function musicRateLimited(request){
   const ip=request.headers.get("cf-connecting-ip")||"unknown",now=Date.now();
@@ -398,9 +399,94 @@ async function recognizeMusic(request,env){
   }
 }
 
+
+async function recognizeMusicVideo(request,env){
+  if(!env.AUDD_API_TOKEN)return json({error:"Music Finder belum aktif pada Worker ini. Secret AUDD_API_TOKEN belum terbaca."},503);
+  if(musicRateLimited(request))return json({error:"Batas pemindaian sementara tercapai. Coba lagi sekitar satu menit."},429);
+  const contentLength=Number(request.headers.get("content-length")||0);
+  const maxBytes=50*1024*1024;
+  if(contentLength>maxBytes+1024*1024)return json({error:"File video/audio melebihi batas 50 MB untuk pemindaian DJ."},413);
+  const form=new FormData();
+  form.append("api_token",env.AUDD_API_TOKEN);
+  form.append("accurate_offsets","true");
+  let skip=4,every=1,limit=60;
+  const contentType=(request.headers.get("content-type")||"").toLowerCase();
+  if(contentType.includes("application/json")){
+    let body;try{body=await request.json();}catch{return json({error:"Body JSON tidak valid."},400);}
+    const url=String(body?.url||"").trim();
+    if(!isPlatformLink(url))return json({error:"Tautan video tidak valid atau platform belum didukung."},400);
+    skip=Number(body?.skip??4);every=Number(body?.every??1);limit=Number(body?.limit??60);
+    form.append("url",url);
+  }else{
+    let incoming;try{incoming=await request.formData();}catch{return json({error:"Form upload tidak valid."},400);}
+    const file=incoming.get("file");
+    if(!file||typeof file.arrayBuffer!=="function")return json({error:"Pilih file video/audio untuk dipindai."},400);
+    const extension=String(file.name||"").split(".").pop().toLowerCase();
+    const allowed=new Set(["mp4","mov","m4v","webm","mkv","avi","mp3","m4a","aac","wav","ogg","oga","flac","opus"]);
+    if(!String(file.type||"").toLowerCase().startsWith("audio/")&&
+       !String(file.type||"").toLowerCase().startsWith("video/")&&!allowed.has(extension))
+      return json({error:"File harus berupa video atau audio yang didukung."},415);
+    if(!file.size)return json({error:"File video/audio kosong."},400);
+    if(file.size>maxBytes)return json({error:"File video/audio melebihi batas 50 MB."},413);
+    skip=Number(incoming.get("skip")??4);every=Number(incoming.get("every")??1);limit=Number(incoming.get("limit")??60);
+    const safeName=String(file.name||"aryanzz-dj-scan.mp4").replace(/[^a-zA-Z0-9._-]/g,"_").slice(0,90);
+    form.append("file",file,safeName);
+  }
+  if(!Number.isInteger(skip)||skip<0||skip>29)return json({error:"Interval pemindaian tidak valid."},400);
+  if(!Number.isInteger(every)||every<1||every>3)return json({error:"Jumlah segmen berurutan tidak valid."},400);
+  if(!Number.isInteger(limit)||limit<1||limit>100)return json({error:"Batas pemindaian harus 1 sampai 100 segmen."},400);
+  form.append("skip",String(skip));
+  form.append("every",String(every));
+  form.append("limit",String(limit));
+  let response;
+  try{
+    response=await fetch("https://enterprise.audd.io/",{
+      method:"POST",body:form,signal:AbortSignal.timeout(240000),cache:"no-store"
+    });
+  }catch(error){
+    return json({error:error?.name==="TimeoutError"?"Pemindaian video terlalu lama. Coba interval lebih hemat atau video lebih pendek.":"Tidak dapat menghubungi layanan pemindaian AudD."},502);
+  }
+  const data=await response.json().catch(()=>null);
+  if(!response.ok||!data||data.status!=="success"){
+    const detail=data?.error?.error_message||data?.error?.message||data?.error||data?.message;
+    return json({error:String(detail||"AudD tidak dapat memindai video/audio tersebut.")},502);
+  }
+  const groups=Array.isArray(data.result)?data.result:[];
+  const tracks=[];
+  for(const group of groups){
+    const offset=String(group?.offset||"");
+    const songs=Array.isArray(group?.songs)?group.songs:(group?.title?[group]:[]);
+    for(const song of songs){
+      if(!song||!song.title)continue;
+      tracks.push({
+        offset,
+        title:String(song.title||"Unknown title").slice(0,300),
+        artist:String(song.artist||"Unknown artist").slice(0,300),
+        album:String(song.album||"").slice(0,300),
+        release_date:String(song.release_date||"").slice(0,40),
+        timecode:String(song.timecode||"").slice(0,40),
+        score:Number.isFinite(Number(song.score))?Number(song.score):null,
+        song_link:typeof song.song_link==="string"?song.song_link:null,
+        apple_music:song.apple_music||null,spotify:song.spotify||null
+      });
+    }
+  }
+  const grouped=new Map();
+  for(const track of tracks){
+    const key=[track.title.toLowerCase(),track.artist.toLowerCase()].join("|");
+    if(!grouped.has(key))grouped.set(key,{...track,offsets:track.offset?[track.offset]:[]});
+    else if(track.offset&&!grouped.get(key).offsets.includes(track.offset))grouped.get(key).offsets.push(track.offset);
+  }
+  const unique=[...grouped.values()];
+  return json({ok:true,match:unique.length>0,provider:"AudD Enterprise",
+    scannedChunks:groups.length,tracks:unique.slice(0,300),
+    message:unique.length?"Pemindaian selesai.":"Belum ada lagu yang cocok pada segmen yang dipindai."});
+}
+
 export default {async fetch(request,env){
   const url=new URL(request.url);
   if(request.method==="OPTIONS"&&url.pathname.startsWith("/api/"))return new Response(null,{status:204,headers:{"access-control-allow-origin":url.origin,"access-control-allow-methods":"GET,POST,OPTIONS","access-control-allow-headers":"Content-Type"}});
+  if(url.pathname==="/api/music/scan-video"&&request.method==="POST")return recognizeMusicVideo(request,env);
   if(url.pathname==="/api/music/status"&&request.method==="GET")return musicStatus(env);
   if(url.pathname==="/api/music/recognize"&&request.method==="POST")return recognizeMusic(request,env);
   if(url.pathname==="/api/platform/status"&&request.method==="GET")return platformStatus(env);
@@ -409,7 +495,7 @@ export default {async fetch(request,env){
   if(url.pathname==="/api/youtube/download"&&request.method==="POST")return youtubeStart(request,env);
   if(url.pathname==="/api/youtube/progress"&&request.method==="POST")return youtubeProgress(request,env);
   if(url.pathname==="/api/youtube/file"&&request.method==="GET")return youtubeFile(request,env);
-  if(url.pathname==="/api/health"&&request.method==="GET")return json({ok:true,service:"ARYANZZ",version:"66.0",mode:"cloudflare-worker",directMediaDownload:true,selfHostedDownloader:true,youtubeDownloader:true,youtubeApiKeyConfigured:!!env.SAVENOW_API_KEY,musicRecognitionConfigured:!!env.AUDD_API_TOKEN,musicVideoRecognitionReady:!!(env.PLATFORM_API_ORIGIN&&env.PLATFORM_API_TOKEN),platformExtraction:!!(env.PLATFORM_API_ORIGIN&&env.PLATFORM_API_TOKEN),platformBackend:env.PLATFORM_API_ORIGIN&&env.PLATFORM_API_TOKEN?"configured":"not-configured"});
+  if(url.pathname==="/api/health"&&request.method==="GET")return json({ok:true,service:"ARYANZZ",version:"67.0",mode:"cloudflare-worker",directMediaDownload:true,selfHostedDownloader:true,youtubeDownloader:true,youtubeApiKeyConfigured:!!env.SAVENOW_API_KEY,musicRecognitionConfigured:!!env.AUDD_API_TOKEN,musicVideoRecognitionReady:!!(env.PLATFORM_API_ORIGIN&&env.PLATFORM_API_TOKEN),platformExtraction:!!(env.PLATFORM_API_ORIGIN&&env.PLATFORM_API_TOKEN),platformBackend:env.PLATFORM_API_ORIGIN&&env.PLATFORM_API_TOKEN?"configured":"not-configured"});
   if(url.pathname==="/api/info"&&request.method==="POST"){const proxied=await proxyPlatform(request,env,"/api/info");if(proxied)return proxied;return info(request);}
   if(url.pathname==="/api/download"&&request.method==="POST"){const proxied=await proxyPlatform(request,env,"/api/download");if(proxied)return proxied;return download(request);}
   if(url.pathname.startsWith("/api/"))return json({error:"Endpoint tidak ditemukan."},404);
