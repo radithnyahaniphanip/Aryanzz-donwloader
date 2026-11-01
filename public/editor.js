@@ -26,6 +26,7 @@
   let exportUrl = "";
   let recorder = null;
   let recordingStream = null;
+  let transientAudioTracks = [];
   let animationFrame = 0;
   let exporting = false;
   let exportError = "";
@@ -602,7 +603,9 @@
     exporting = false;
     setAudioExportMode(false);
     if (musicAudio) { musicAudio.pause(); musicAudio.currentTime=0; }
-    if (recordingStream) recordingStream.getTracks().forEach(track=>track.stop());
+    if (recordingStream) recordingStream.getVideoTracks().forEach(track=>track.stop());
+    transientAudioTracks.forEach(track=>{try{track.stop();}catch{}});
+    transientAudioTracks = [];
     recordingStream = null;
     exportButton.disabled = false;
     updateEditorState();
@@ -678,7 +681,8 @@
         const capture = video.captureStream || video.mozCaptureStream;
         if (capture) {
           const fallback = capture.call(video);
-          fallback.getAudioTracks().forEach(track=>canvasStream.addTrack(track));
+          transientAudioTracks = fallback.getAudioTracks();
+          transientAudioTracks.forEach(track=>canvasStream.addTrack(track));
         }
       }
     } catch(error) {
@@ -696,7 +700,9 @@
       recorder = new MediaRecorder(recordingStream,mime?{mimeType:mime,videoBitsPerSecond:bitrate}:{videoBitsPerSecond:bitrate});
     } catch(error) {
       setAudioExportMode(false);
-      canvasStream.getTracks().forEach(track=>track.stop());
+      canvasStream.getVideoTracks().forEach(track=>track.stop());
+      transientAudioTracks.forEach(track=>{try{track.stop();}catch{}});
+      transientAudioTracks = [];
       recordingStream = null;
       message("Browser tidak dapat membuat file ekspor dengan format yang didukung.","error");
       return;
@@ -945,7 +951,7 @@
   window.addEventListener("pagehide",() => {
     video.pause();
     musicAudio.pause();
-    clips.forEach(clip=>{try{URL.revokeObjectURL(clip.url);}catch{}});
+    archive.forEach(clip=>{try{URL.revokeObjectURL(clip.url);}catch{}});
     if(musicUrl)URL.revokeObjectURL(musicUrl);
     if(exportUrl)URL.revokeObjectURL(exportUrl);
     if(audioContext)audioContext.close().catch(()=>{});
