@@ -38,3 +38,26 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Smoke test live Worker and non-billable YouTube metadata
+        env:
+          WORKER_URL: https://aryanzz-donwloader.radithnyahaniphanip.workers.dev
+        run: |
+          node --input-type=module <<'NODE'
+          const base = process.env.WORKER_URL;
+          const healthResponse = await fetch(base + "/api/health", { cache: "no-store" });
+          if (!healthResponse.ok) throw new Error("Live Worker health check failed: HTTP " + healthResponse.status);
+          const health = await healthResponse.json();
+          if (health.version !== "29.0" || !health.youtubeApiKeyConfigured) {
+            throw new Error("Live Worker version or YouTube secret status is incorrect: " + JSON.stringify(health));
+          }
+          console.log("Live Worker health OK: V" + health.version + ", API key configured.");
+
+          const sample = "https://www.youtube.com/watch?v=K1Pu75yJUOE";
+          const infoResponse = await fetch(base + "/api/youtube/info?url=" + encodeURIComponent(sample), { cache: "no-store" });
+          const info = await infoResponse.json();
+          if (!infoResponse.ok || !info.ok || !info.title) {
+            throw new Error("SaveNow metadata check failed: " + (info.error || "No video title returned."));
+          }
+          console.log("SaveNow non-billable metadata check OK: " + info.title);
+          NODE
