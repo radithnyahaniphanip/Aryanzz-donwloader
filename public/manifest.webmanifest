@@ -1,10 +1,10 @@
 {
-  "name": "ARYANZZ V65.0 — Ultimate Creative Studio",
-  "short_name": "ARYANZZ",
+  "name": "ARYANZZ V66.0 — Music Recognition & Creative Studio",
+  "short_name": "ARYANZZ V66",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "background_color": "#070b16",
   "theme_color": "#070b16",
-  "description": "ARYANZZ V65.0: motion keyframes, three audio tracks, chroma key, animated captions, SRT subtitles and local video export."
+  "description": "Downloader, creative studio, and music recognition tools."
 }
