@@ -397,7 +397,7 @@ async function platformMusicSample(url,startSeconds,env){
 }
 async function shazamRecognize(audioBlob,env){
   if(!env.PLATFORM_API_ORIGIN||!env.PLATFORM_API_TOKEN)return null;
-  const origin=new URL(env.PLATFORM_API_ORIGIN).origin;
+  const backendUrl=new URL(env.PLATFORM_API_ORIGIN);if(backendUrl.protocol!=="https:"||backendUrl.username||backendUrl.password)throw new Error("URL backend harus HTTPS.");const origin=backendUrl.origin;
   const bytes=await audioBlob.arrayBuffer();
   const response=await fetch(origin+"/api/music/recognize",{
     method:"POST",headers:{"content-type":"application/octet-stream","authorization":"Bearer "+env.PLATFORM_API_TOKEN},body:bytes,
@@ -410,7 +410,7 @@ async function shazamRecognize(audioBlob,env){
 async function shazamScan(source,skip,every,limit,env,reason){
   if(!env.PLATFORM_API_ORIGIN||!env.PLATFORM_API_TOKEN)
     return json({error:"AudD Enterprise tidak tersedia dan server Shazam cadangan belum terhubung."},503);
-  let origin;try{origin=new URL(env.PLATFORM_API_ORIGIN).origin;}catch{return json({error:"URL backend tidak valid."},500);}
+  let origin;try{const backendUrl=new URL(env.PLATFORM_API_ORIGIN);if(backendUrl.protocol!=="https:"||backendUrl.username||backendUrl.password)throw new Error("URL backend tidak aman");origin=backendUrl.origin;}catch{return json({error:"URL backend harus HTTPS dan valid."},500);}
   let response;
   try{
     if(source.url){
@@ -605,7 +605,7 @@ export default {async fetch(request,env){
   if(url.pathname==="/api/youtube/download"&&request.method==="POST")return youtubeStart(request,env);
   if(url.pathname==="/api/youtube/progress"&&request.method==="POST")return youtubeProgress(request,env);
   if(url.pathname==="/api/youtube/file"&&request.method==="GET")return youtubeFile(request,env);
-  if(url.pathname==="/api/health"&&request.method==="GET")return json({ok:true,service:"ARYANZZ",version:"68.0",mode:"cloudflare-worker+external-yt-dlp",directMediaDownload:true,selfHostedDownloader:!!(env.PLATFORM_API_ORIGIN&&env.PLATFORM_API_TOKEN)||!!(env.PLATFORM_API_ORIGIN&&env.PLATFORM_API_TOKEN),youtubeDownloader:true,youtubeApiKeyConfigured:!!env.SAVENOW_API_KEY,musicRecognitionConfigured:!!env.AUDD_API_TOKEN,musicFallbackReady:!!(env.PLATFORM_API_ORIGIN&&env.PLATFORM_API_TOKEN),musicVideoRecognitionReady:!!(env.PLATFORM_API_ORIGIN&&env.PLATFORM_API_TOKEN)||!!(env.PLATFORM_API_ORIGIN&&env.PLATFORM_API_TOKEN),platformExtraction:!!(env.PLATFORM_API_ORIGIN&&env.PLATFORM_API_TOKEN)||!!(env.PLATFORM_API_ORIGIN&&env.PLATFORM_API_TOKEN),platformBackend:(env.PLATFORM_API_ORIGIN&&env.PLATFORM_API_TOKEN)?"cloudflare-container":env.PLATFORM_API_ORIGIN&&env.PLATFORM_API_TOKEN?"external":"not-configured"});
+  if(url.pathname==="/api/health"&&request.method==="GET")return json({ok:true,service:"ARYANZZ",version:"68.0",mode:"cloudflare-worker+external-yt-dlp",directMediaDownload:true,selfHostedDownloader:!!(env.PLATFORM_API_ORIGIN&&env.PLATFORM_API_TOKEN),youtubeDownloader:true,youtubeApiKeyConfigured:!!env.SAVENOW_API_KEY,musicRecognitionConfigured:!!env.AUDD_API_TOKEN,musicFallbackReady:!!(env.PLATFORM_API_ORIGIN&&env.PLATFORM_API_TOKEN),musicVideoRecognitionReady:!!(env.PLATFORM_API_ORIGIN&&env.PLATFORM_API_TOKEN),platformExtraction:!!(env.PLATFORM_API_ORIGIN&&env.PLATFORM_API_TOKEN),platformBackend:env.PLATFORM_API_ORIGIN&&env.PLATFORM_API_TOKEN?"external":"not-configured"});
   if(url.pathname==="/api/info"&&request.method==="POST"){const proxied=await proxyPlatform(request,env,"/api/info");if(proxied)return proxied;return info(request);}
   if(url.pathname==="/api/download"&&request.method==="POST"){const proxied=await proxyPlatform(request,env,"/api/download");if(proxied)return proxied;return download(request);}
   if(url.pathname.startsWith("/api/"))return json({error:"Endpoint tidak ditemukan."},404);
