@@ -1,31 +1,5 @@
-const CACHE="aryanzz-v67-2";
-const SHELL=[
-  "/?v=67.2",
-  "/manifest.webmanifest?v=67.2",
-  "/advanced.js?v=59.5",
-  "/v15.js?v=59.5",
-  "/v15.css?v=59.5",
-  "/v25.css?v=59.5",
-  "/v25.js?v=59.5",
-  "/owner.css?v=59.5",
-  "/owner.js?v=59.5",
-  "/downloader.css?v=59.5",
-  "/downloader.js?v=59.5",
-  "/v59.css?v=59.5",
-  "/v59.js?v=59.5",
-  "/editor-pro.css?v=65.0",
-  "/editor.js?v=65.0",
-  "/music-recognition.css?v=67.2",
-  "/music-recognition.js?v=67.2"
-];
-self.addEventListener("install",event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(SHELL)).then(()=>self.skipWaiting())));
-self.addEventListener("activate",event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));
-self.addEventListener("fetch",event=>{
-  if(event.request.method!=="GET")return;
-  const url=new URL(event.request.url);
-  if(url.origin!==location.origin||url.pathname.startsWith("/api/"))return;
-  event.respondWith(fetch(event.request).then(response=>{
-    if(response.ok){const copy=response.clone();event.waitUntil(caches.open(CACHE).then(cache=>cache.put(event.request,copy)));}
-    return response;
-  }).catch(()=>caches.match(event.request).then(match=>match||(/navigate/.test(event.request.mode)?caches.match("/?v=67.2"):Response.error()))));
-});
+const CACHE="aryanzz-v67-4";
+const SHELL=["/?v=67.4","/manifest.webmanifest?v=67.4","/v674.css?v=67.4","/v674.js?v=67.4","/advanced.js?v=59.5","/v15.js?v=59.5","/v15.css?v=59.5","/v25.css?v=59.5","/v25.js?v=59.5","/owner.css?v=59.5","/owner.js?v=59.5","/downloader.css?v=59.5","/downloader.js?v=59.5","/v59.css?v=59.5","/v59.js?v=59.5","/editor-pro.css?v=65.0","/editor.js?v=65.0","/music-recognition.css?v=67.4","/music-recognition.js?v=67.4"];
+self.addEventListener("install",e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting())));
+self.addEventListener("activate",e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
+self.addEventListener("fetch",e=>{if(e.request.method!=="GET")return;const u=new URL(e.request.url);if(u.origin!==location.origin||u.pathname.startsWith("/api/"))return;e.respondWith(fetch(e.request).then(r=>{if(r.ok){const cp=r.clone();e.waitUntil(caches.open(CACHE).then(c=>c.put(e.request,cp)))}return r}).catch(()=>caches.match(e.request).then(r=>r||(/navigate/.test(e.request.mode)?caches.match("/?v=67.4"):Response.error()))))});
