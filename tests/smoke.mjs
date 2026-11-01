@@ -232,7 +232,7 @@ try{
   console.log("✔ Cloudflare Container health is checked through the Worker binding");
 }finally{globalThis.fetch=originalFallbackFetch;}
 
-const originalEnterpriseFetch=globalThis.fetch;const originalEnterpriseFetch=globalThis.fetch;
+const originalEnterpriseFetch=globalThis.fetch;
 try{
   globalThis.fetch=async(input,init={})=>{
     const url=new URL(typeof input==="string"?input:input.url);
