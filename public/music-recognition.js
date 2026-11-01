@@ -78,7 +78,12 @@
   }
   async function readResponse(response){
     const data=await response.json().catch(()=>({}));
-    if(!response.ok)throw new Error(data.error||"Pencarian lagu gagal. Coba lagi.");
+    if(!response.ok){
+      const error=new Error(data.error||"Pencarian lagu gagal. Coba lagi.");
+      error.providerErrorCode=data.providerErrorCode??null;
+      error.retryable=data.retryable??true;
+      throw error;
+    }
     return data;
   }
   function addLink(container,label,raw){
