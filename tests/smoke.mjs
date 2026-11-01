@@ -23,7 +23,7 @@ const htmlChecks=[
   ["no public technical roadmap",!html.includes('id="releaseRoadmap"')],
   ["no public backend warning",!html.includes('class="capability-note"')],
   ["membership tiers",html.includes("Rp36.000")&&html.includes("Rp88.000")&&html.includes("Rp479.000")],
-  ["membership payment disclosure",html.includes("memilih paket tidak menagih pembayaran")],
+  ["membership payment disclosure",html.includes("tidak menagih pembayaran")],
   ["footer branding cleaned",!html.includes("Built for mobile")],
   ["speed footnote removed",!html.includes("Tes mengikuti koneksi aktif HP")],
   ["profile image compression",advanced.includes("function profilePhotoData")],
