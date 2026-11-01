@@ -86,10 +86,10 @@ try{
     }
     if(url.pathname==="/ajax/download.php"){
       assert.equal(url.searchParams.get("apikey"),"test-secret");
-      assert.equal(url.searchParams.get("format"),"mp44k");
       assert.equal(url.searchParams.get("allow_extended_duration"),"0");
       if(url.searchParams.get("url").includes("LOWBALANCE"))
         return new Response(JSON.stringify({success:false,error:"Not enough balance"}),{status:200,headers:{"content-type":"application/json"}});
+      assert.equal(url.searchParams.get("format"),"mp44k");
       return new Response(JSON.stringify({success:true,id:"job-123",progress:0,info:{title:"Test YouTube Video",image:"https://img.example/thumb.jpg"}}),{status:200,headers:{"content-type":"application/json"}});
     }
     if(url.pathname==="/ajax/progress.php"){
