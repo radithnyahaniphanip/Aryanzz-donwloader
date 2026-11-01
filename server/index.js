@@ -14,8 +14,8 @@ const YTDLP = process.env.YTDLP_PATH || "yt-dlp";
 const API_TOKEN = process.env.PLATFORM_API_TOKEN || "";
 const ORIGINS = (process.env.ALLOWED_ORIGINS || "*").split(",").map(x => x.trim());
 const TEMP = path.join(os.tmpdir(), "aryanzz-downloads");
-const MAX_FILE_BYTES = 100 * 1024 * 1024;
-const MAX_DURATION = 2 * 60 * 60;
+const MAX_FILE_BYTES = 500 * 1024 * 1024;
+const MAX_DURATION = 3 * 60 * 60;
 mkdirSync(TEMP, { recursive: true });
 
 app.set("trust proxy", 1);
@@ -27,7 +27,7 @@ app.use(cors({ origin(origin, cb) {
 app.use(express.json({ limit: "20kb" }));
 app.use("/api", rateLimit({ windowMs: 60_000, limit: 8, standardHeaders: true, legacyHeaders: false }));
 
-const ALLOWED = ["youtube.com","youtu.be","youtube-nocookie.com","tiktok.com","instagram.com","facebook.com","fb.watch","pinterest.com","pin.it"];
+const ALLOWED = ["youtube.com","youtu.be","youtube-nocookie.com","tiktok.com","instagram.com","threads.net","facebook.com","fb.watch","pinterest.com","pin.it","x.com","twitter.com","reddit.com","redd.it","vimeo.com","dailymotion.com","dai.ly","soundcloud.com","twitch.tv","streamable.com","tumblr.com","bilibili.com","b23.tv","vk.com","ok.ru","rutube.ru","likee.video","snapchat.com","imgur.com","bandcamp.com","mixcloud.com","ted.com","archive.org","loom.com","rumble.com","odysee.com","weibo.com","xiaohongshu.com"];
 function validateUrl(raw) {
   let u;
   try { u = new URL(raw); } catch { throw new Error("URL tidak valid."); }
@@ -51,7 +51,7 @@ function run(args, timeout = 180000) {
 }
 function cleanTitle(s){return String(s||"aryanzz-media").replace(/[\\/:*?"<>|\r\n]+/g,"_").slice(0,100);}
 function qualityHeight(q){const n=Number(q);return [360,480,720,1080,1440,2160].includes(n)?n:720;}
-app.get("/api/health",(_req,res)=>res.json({ok:true,service:"ARYANZZ Downloader API",features:["platform-info","mp4","mp3","quality-select"]}));
+app.get("/api/health",(_req,res)=>res.json({ok:true,service:"ARYANZZ Self-Hosted Downloader",version:"59.5",engine:"yt-dlp + FFmpeg",maxFileMB:500,maxDurationMinutes:180,platforms:ALLOWED,features:["platform-info","mp4","mp3","quality-select","progress-stream"]}));
 function requirePlatformToken(req,res,next){
   const supplied=String(req.headers.authorization||"").replace(/^Bearer\s+/i,"");
   if(!API_TOKEN)return res.status(503).json({error:"PLATFORM_API_TOKEN belum dikonfigurasi pada backend."});
