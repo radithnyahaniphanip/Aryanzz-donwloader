@@ -72,7 +72,7 @@ const checks=[
 
   ["V68.0 service worker cache and missing tool assets",sw.includes("aryanzz-v68-0")&&sw.includes("/v680.css?v=68.0")&&sw.includes("/v680.js?v=68.0")&&html.includes("/v680.js?v=68.0")],
   ["V67.9 downloader preserves direct-source details",downloader.includes("function responseFilename")&&downloader.includes("const directMedia=!!info.extension&&!info.extractor")&&downloader.includes("/api/platform/status")],
-  ["V67.9 title search supports external yt-dlp backend",workerSource.includes('fetch(origin+"/api/search"')&&workerSource.includes('authorization:"Bearer "+env.PLATFORM_API_TOKEN')],
+  ["V67.9 title search supports external yt-dlp backend",workerSource.includes('fetch(origin+"/api/search"')&&workerSource.includes('"authorization":"Bearer "+env.PLATFORM_API_TOKEN')],
   ["V67.9 direct media whitelist includes common formats",workerSource.includes('"mkv"')&&workerSource.includes('"avi"')&&workerSource.includes('"aiff"')&&workerSource.includes('"opus"')],
   ["V68.0 Gradient Studio controls are wired",html.includes('id="gradientStudio"')&&html.includes('id="gradientRandom"')&&html.includes('id="gradientPng"')&&file("../public/v680.js").includes("function renderGradient")],
   ["V68.0 File Hash Checker uses local Web Crypto",html.includes('id="fileHash"')&&html.includes('id="hashCompute"')&&file("../public/v680.js").includes("crypto.subtle.digest")],
