@@ -59,7 +59,86 @@
     return h ? [h,String(m).padStart(2,"0"),String(s).padStart(2,"0")].join(":") : [m,String(s).padStart(2,"0")].join(":");
   };
   const seconds = value => Math.max(0, Number(value) || 0);
-  const makeId = () => (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : "clip-" + Date.now() + "-" + Math.random().toString(36).slice(2);
+  function defaultMotion() { return {zoomStart:1,zoomEnd:1.15,panX:0,panY:0,easing:"ease"}; }
+  function timelineOffset(clip) {
+    const index = clips.findIndex(item=>item.id===clip?.id);
+    return clips.slice(0,Math.max(0,index)).reduce((sum,item)=>sum+Math.max(0,item.end-item.start),0);
+  }
+  function motionAt(clip,localTime) {
+    const motion = clip && clip.motion ? clip.motion : defaultMotion();
+    let t = clip ? Math.max(0,Math.min(1,(localTime-clip.start)/Math.max(.1,clip.end-clip.start))) : 0;
+    if (motion.easing==="ease") t=t*t*(3-2*t);
+    return {
+      zoom:(Number(motion.zoomStart)||1)+((Number(motion.zoomEnd)||1)-(Number(motion.zoomStart)||1))*t,
+      panX:Number(motion.panX)||0,
+      panY:Number(motion.panY)||0
+    };
+  }
+  function setMotionControls(clip) {
+    const motion=clip&&clip.motion?clip.motion:defaultMotion();
+    $("editorZoomStart").value=String(Math.round((Number(motion.zoomStart)||1)*100));
+    $("editorZoomEnd").value=String(Math.round((Number(motion.zoomEnd)||1)*100));
+    $("editorPanX").value=String(motion.panX||0);
+    $("editorPanY").value=String(motion.panY||0);
+    $("editorMotionEasing").value=motion.easing||"ease";
+    updateMotionLabels();
+  }
+  function updateMotionLabels() {
+    $("editorZoomStartValue").textContent=$("editorZoomStart").value+"%";
+    $("editorZoomEndValue").textContent=$("editorZoomEnd").value+"%";
+    $("editorPanXValue").textContent=$("editorPanX").value;
+    $("editorPanYValue").textContent=$("editorPanY").value;
+  }
+  function applyMotionControls() {
+    const clip=selectedClip(); if(!clip)return;
+    clip.motion={
+      zoomStart:Number($("editorZoomStart").value)/100,
+      zoomEnd:Number($("editorZoomEnd").value)/100,
+      panX:Number($("editorPanX").value),
+      panY:Number($("editorPanY").value),
+      easing:$("editorMotionEasing").value
+    };
+    updateMotionLabels();
+    updatePreview();
+  }
+  function parseSrtTime(value) {
+    const match=value.trim().match(/(\\d{2}):(\\d{2}):(\\d{2})[,\.](\\d{1,3})/);
+    return match ? Number(match[1])*3600+Number(match[2])*60+Number(match[3])+Number(("0."+match[4]).replace(/\\.$/,"")) : 0;
+  }
+  function parseSrt(source) {
+    return String(source||"").replace(/\\r/g,"").split(/\\n\\s*\\n/).map(block=>{
+      const lines=block.split("\\n").map(line=>line.trim()).filter(Boolean);
+      const timing=lines.findIndex(line=>line.includes("-->"));
+      if(timing<0)return null;
+      const parts=lines[timing].split("-->");
+      const start=parseSrtTime(parts[0]||"");
+      const end=parseSrtTime(parts[1]||"");
+      const text=lines.slice(timing+1).join("\\n").replace(/<[^>]*>/g,"");
+      return end>start&&text?{start,end,text}:null;
+    }).filter(Boolean).sort((a,b)=>a.start-b.start);
+  }
+  function captionAt(projectTime) {
+    const subtitle=subtitles.find(item=>projectTime>=item.start&&projectTime<=item.end);
+    return subtitle ? {text:subtitle.text,start:subtitle.start,end:subtitle.end,isSubtitle:true} :
+      {text:textInput.value.trim(),start:timelineOffset(selectedClip()),end:totalDuration(),isSubtitle:false};
+  }
+  function textAnimationState(caption,projectTime) {
+    const mode=$("editorTextAnimation").value;
+    const duration=.5;
+    const t=Math.max(0,Math.min(1,(projectTime-caption.start)/duration));
+    if(mode==="fade")return {opacity:t,transform:"translateY(0) scale(1)"};
+    if(mode==="slide")return {opacity:t,transform:"translateY("+(1-t)*20+"px) scale(1)"};
+    if(mode==="pop")return {opacity:t,transform:"translateY(0) scale("+(0.72+t*.28)+")"};
+    return {opacity:1,transform:"none"};
+  }
+  function updateAudioGraphGains() {
+    if(!audioContext)return;
+    audioTracks.forEach(track=>{
+      if(track.previewGain)track.previewGain.gain.setTargetAtTime(exporting?0:track.volume,audioContext.currentTime,.02);
+      if(track.recordGain)track.recordGain.gain.setTargetAtTime(exporting?track.volume:0,audioContext.currentTime,.02);
+    });
+  }
+  function makeId = () => (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : "clip-" + Date.now() + "-" + Math.random().toString(36).slice(2);
   const selectedClip = () => clips.find(clip => clip.id === selectedId) || null;
   const settingsIds = [
     "editorRatio","editorRotate","editorSpeed","editorTransition","editorFilterPreset",
@@ -162,29 +241,33 @@
     return clips.reduce((sum,clip) => sum + Math.max(0,clip.end - clip.start),0);
   }
   function updateEditorState() {
-    const hasClips = clips.length > 0;
-    const clip = selectedClip();
-    const enabledIds = [
+    const hasClips=clips.length>0;
+    const clip=selectedClip();
+    const enabledIds=[
       "editorPlay","editorJumpStart","editorScrub","editorStart","editorEnd",
       "editorRatio","editorRotate","editorSpeed","editorTransition","editorFilterPreset",
       "editorBrightness","editorContrast","editorSaturation","editorText","editorTextColor",
-      "editorTextPosition","editorTextSize","editorMute","editorResolution","editorQuality",
-      "editorReset","editorExport"
+      "editorTextPosition","editorTextSize","editorTextAnimation","editorMute",
+      "editorZoomStart","editorZoomEnd","editorPanX","editorPanY","editorMotionEasing",
+      "editorChromaEnabled","editorChromaColor","editorChromaTolerance","editorBackgroundColor",
+      "editorResolution","editorQuality","editorReset","editorExport"
     ];
-    enabledIds.forEach(id => { const el=$(id); if(el) el.disabled = !hasClips || exporting; });
-    $("editorSplit").disabled = !clip || exporting;
-    $("editorMoveUp").disabled = !clip || clips.findIndex(item=>item.id===selectedId)<=0 || exporting;
-    $("editorMoveDown").disabled = !clip || clips.findIndex(item=>item.id===selectedId)>=clips.length-1 || exporting;
-    $("editorRemoveClip").disabled = !clip || exporting;
-    $("editorMusicVolume").disabled = !musicFile || exporting;
-    $("editorRemoveMusic").disabled = !musicFile || exporting;
-    $("editorSaveProject").disabled = !hasClips || exporting;
-    $("editorClipCount").textContent = clips.length + " klip · " + totalDuration().toFixed(1) + " detik";
-    const uniqueFiles = new Set(clips.map(clip=>clip.file));
-    $("editorFileName").textContent = hasClips ? clips.length + " klip dimuat · " + formatBytes(Array.from(uniqueFiles).reduce((sum,file)=>sum+file.size,0)) : "Belum ada klip";
-    $("editorSelectedClipName").textContent = clip ? clip.file.name : "Belum ada klip dipilih";
-    $("editorPreviewMeta").textContent = $("editorRatio").value + " · " + $("editorResolution").value + "p canvas";
-    empty.hidden = hasClips;
+    enabledIds.forEach(id=>{const el=$(id);if(el)el.disabled=!hasClips||exporting;});
+    $("editorSplit").disabled=!clip||exporting;
+    $("editorMoveUp").disabled=!clip||clips.findIndex(item=>item.id===selectedId)<=0||exporting;
+    $("editorMoveDown").disabled=!clip||clips.findIndex(item=>item.id===selectedId)>=clips.length-1||exporting;
+    $("editorRemoveClip").disabled=!clip||exporting;
+    $("editorSaveProject").disabled=!hasClips||exporting;
+    musicInput.disabled=exporting||audioTracks.length>=3;
+    subtitleInput.disabled=exporting;
+    $("editorAudioCount").textContent=audioTracks.length+"/3";
+    $("editorClipCount").textContent=clips.length+" klip · "+totalDuration().toFixed(1)+" detik";
+    const uniqueFiles=new Set(clips.map(item=>item.file));
+    $("editorFileName").textContent=hasClips?clips.length+" klip dimuat · "+formatBytes(Array.from(uniqueFiles).reduce((sum,file)=>sum+file.size,0)):"Belum ada klip";
+    $("editorSelectedClipName").textContent=clip?clip.file.name:"Belum ada klip dipilih";
+    $("editorPreviewMeta").textContent=$("editorRatio").value+" · "+$("editorResolution").value+"p canvas";
+    empty.hidden=hasClips;
+    renderAudioTracks();
     updateHistoryButtons();
   }
   function selectedStart() {
