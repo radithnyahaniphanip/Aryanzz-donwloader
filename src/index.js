@@ -12,7 +12,7 @@ export class DownloaderContainer extends ContainerBase {
   pingEndpoint="localhost/ping";
 }
 
-const MEDIA_EXT = new Set(["mp4","webm","mov","m4v","mp3","m4a","aac","wav","ogg","oga","flac"]);
+const MEDIA_EXT = new Set(["mp4","webm","mov","m4v","mkv","avi","mpeg","mpg","m2ts","mts","ts","3gp","ogv","asf","wmv","mp3","m4a","aac","wav","ogg","oga","flac","opus","wma","aiff","aif","mka"]);
 const MAX_BYTES = 100 * 1024 * 1024;
 function json(data,status=200){return new Response(JSON.stringify(data),{status,headers:{"content-type":"application/json; charset=utf-8","cache-control":"no-store"}})}
 
@@ -385,12 +385,34 @@ async function searchYouTube(request,env){
   const query=String(body?.query||"").replace(/\s+/g," ").trim();
   if(query.length<2)return json({error:"Masukkan minimal 2 karakter untuk mencari judul video."},400);
   if(query.length>160)return json({error:"Judul pencarian maksimal 160 karakter."},400);
-  if(!env.DOWNLOADER_CONTAINER)return json({error:"Pencarian judul membutuhkan Cloudflare Container yt-dlp yang aktif."},503);
+  if(env.DOWNLOADER_CONTAINER){
+    try{
+      const response=await callDownloaderContainer(env,"/api/search",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({query})});
+      const data=await response.json().catch(()=>({}));
+      return json(data,response.status);
+    }catch{return json({error:"Layanan pencarian judul belum siap. Container sedang dinyalakan atau belum merespons; coba lagi sebentar."},502)}
+  }
+  if(!env.PLATFORM_API_ORIGIN||!env.PLATFORM_API_TOKEN)
+    return json({error:"Pencarian judul membutuhkan backend yt-dlp aktif. Hubungkan Cloudflare Container atau backend HTTPS melalui PLATFORM_API_ORIGIN dan PLATFORM_API_TOKEN."},503);
+  let origin;
   try{
-    const response=await callDownloaderContainer(env,"/api/search",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({query})});
+    const parsed=new URL(env.PLATFORM_API_ORIGIN);
+    if(parsed.protocol!=="https:"||parsed.username||parsed.password)throw new Error("origin tidak aman");
+    origin=parsed.origin;
+  }catch{return json({error:"Konfigurasi backend pencarian harus berupa URL HTTPS yang valid."},500)}
+  try{
+    const response=await fetch(origin+"/api/search",{
+      method:"POST",
+      headers:{"content-type":"application/json","accept":"application/json","authorization":"Bearer "+env.PLATFORM_API_TOKEN},
+      body:JSON.stringify({query}),
+      signal:AbortSignal.timeout(90000),
+      cache:"no-store"
+    });
     const data=await response.json().catch(()=>({}));
-    return json(data,response.status);
-  }catch{return json({error:"Layanan pencarian judul belum siap. Tunggu container aktif lalu coba lagi."},502)}
+    if(!response.ok)return json({error:data.error||"Backend pencarian menjawab HTTP "+response.status+"."},response.status);
+    const results=Array.isArray(data.results)?data.results.filter(item=>item&&typeof item.title==="string"&&isYouTubeUrl(item.url)).slice(0,8):[];
+    return json({ok:true,query,results});
+  }catch{return json({error:"Backend pencarian judul tidak dapat dijangkau. Periksa layanan yt-dlp dan coba lagi."},502)}
 }
 function musicRateLimited(request){
   const ip=request.headers.get("cf-connecting-ip")||"unknown",now=Date.now();
