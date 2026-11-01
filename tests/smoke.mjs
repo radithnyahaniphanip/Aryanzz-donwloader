@@ -7,36 +7,54 @@ const html=file("../public/index.html");
 const sw=file("../public/sw.js");
 const v15=file("../public/v15.js");
 const downloader=file("../public/downloader.js");
+const editor=file("../public/editor.js");
+const v59css=file("../public/v59.css");
 const ownerJs=file("../public/owner.js");
 const ownerCss=file("../public/owner.css");
 const downloaderCss=file("../public/downloader.css");
 const manifest=JSON.parse(file("../public/manifest.webmanifest"));
 
 const checks=[
-  ["V29 page title",html.includes("ARYANZZ V29.0 — Free All in One")],
-  ["V29 assets and downloader stylesheet",html.includes("/v15.js?v=29.0")&&html.includes("/owner.js?v=29.0")&&html.includes("/downloader.js?v=29.0")&&html.includes("/downloader.css?v=29.0")],
-  ["service worker cache and downloader assets",html.includes("/sw.js?v=29.0")&&sw.includes("aryanzz-v29-0")&&sw.includes("/downloader.js")&&sw.includes("/downloader.css")],
-  ["downloader input and result panel",html.includes('id="analyze"')&&html.includes('id="downloadResult"')],
-  ["YouTube preview, job and file UI",downloader.includes("/api/youtube/info?url=")&&downloader.includes("/api/youtube/download")&&downloader.includes("/api/youtube/progress")&&downloader.includes("/api/youtube/file")&&downloader.includes("video-download-api.com/dashboard")],
-  ["single capture-phase YouTube click handler",downloader.includes('button.addEventListener("click"')&&downloader.includes("event.stopImmediatePropagation()")],
-  ["supported video formats match provider",downloader.includes('["360","360p"]')&&downloader.includes('["720","720p HD"]')&&downloader.includes('["1080","1080p Full HD"]')&&downloader.includes('["4k","4K · MP4"]')],
+  ["V59.5 page title",html.includes("ARYANZZ V59.5 — Creator Studio")],
+  ["V59.5 versioned assets",html.includes("/v15.js?v=59.5")&&html.includes("/owner.js?v=59.5")&&html.includes("/downloader.js?v=59.5")&&html.includes("/downloader.css?v=59.5")&&html.includes("/v59.css?v=59.5")&&html.includes("/editor.js?v=59.5")],
+  ["service worker cache and V59.5 assets",html.includes("/sw.js?v=59.5")&&sw.includes("aryanzz-v59-5")&&sw.includes("/editor.js?v=59.5")&&sw.includes("/v59.css?v=59.5")],
+  ["downloader input, result and backend status",html.includes('id="analyze"')&&html.includes('id="downloadResult"')&&html.includes('id="backendStatus"')],
+  ["unified self-hosted downloader API",downloader.includes('postJson("/api/info"')&&downloader.includes('fetch("/api/download"')&&downloader.includes("PLATFORM_NAMES")&&!downloader.toLowerCase().includes("savenow")],
+  ["single capture-phase universal URL handler",downloader.includes('button.addEventListener("click"')&&downloader.includes("event.stopImmediatePropagation()")&&downloader.includes("}, true);")],
+  ["video quality options available",downloader.includes('[360,"360p"]')&&downloader.includes('[720,"720p HD"]')&&downloader.includes('[1080,"1080p Full HD"]')&&downloader.includes('[2160,"2160p · 4K"]')],
   ["legacy competing downloader handler removed",!v15.includes("button.onclick=async()=>{")],
   ["owner header controls are real buttons",html.includes('class="owner-menu-mark" type="button" data-panel="allTools"')&&html.includes('aria-label="Buka riwayat unduhan"')&&html.includes('aria-label="Buka personalisasi profil"')],
   ["owner view hides home and uses dark palette",ownerCss.includes('body[data-view="owner"] #home{display:none!important}')&&ownerCss.includes("background:linear-gradient(145deg,#13223a,#0d1728)")],
   ["owner social cards use requested contacts",ownerJs.includes("https://wa.me/6282110767071")&&ownerJs.includes("https://www.tiktok.com/@azazeuu?_r=1&_t=ZS-9B2FU0QemSi")],
   ["owner profile and edit controls",html.includes('id="owner"')&&html.includes('id="ownerEditProfile"')&&ownerJs.includes("renderOwnerProfile")],
+  ["Tools Hub banner has speed, checker and queue shortcuts",html.includes('class="tools-banner"')&&html.includes('data-panel="speed"')&&html.includes('data-panel="checker"')&&html.includes('data-panel="queue"')],
+  ["Video Editor panel and controls",html.includes('id="editor"')&&html.includes('id="editorFile"')&&html.includes('id="editorStart"')&&html.includes('id="editorExport"')],
+  ["Local editor has trim, filters, canvas export and MediaRecorder",editor.includes("MediaRecorder")&&editor.includes("captureStream")&&editor.includes("selectedStart")&&editor.includes("editorSaturation")],
+  ["V59.5 banner and editor responsive styles",v59css.includes(".tools-banner")&&v59css.includes(".editor-layout")&&v59css.includes("@media(max-width:700px)")],
   ["tool hub remains available",html.includes('id="allTools"')],
-  ["PWA manifest version",manifest.name.includes("V29.0")]
+  ["PWA manifest version",manifest.name.includes("V59.5")]
 ];
 for(const [name,ok] of checks){assert.ok(ok,name+" failed");console.log("✔ "+name)}
 
 const healthResponse=await worker.fetch(new Request("https://aryanzz.example/api/health"),{});
 assert.equal(healthResponse.status,200);
 const health=await healthResponse.json();
-assert.equal(health.version,"29.0");
+assert.equal(health.version,"59.5");
+assert.equal(health.selfHostedDownloader,true);
 assert.equal(health.youtubeDownloader,true);
 assert.equal(health.youtubeApiKeyConfigured,false);
-console.log("✔ Worker health and secret is not exposed");
+console.log("✔ V59.5 Worker health and self-hosted downloader status");
+const platformStatusResponse=await worker.fetch(new Request("https://aryanzz.example/api/platform/status"),{});
+assert.equal(platformStatusResponse.status,200);
+const platformStatus=await platformStatusResponse.json();
+assert.equal(platformStatus.configured,false);
+assert.ok(platformStatus.platforms.includes("youtube.com"));
+console.log("✔ Platform status clearly reports missing self-hosted backend");
+const disconnected=await worker.fetch(new Request("https://aryanzz.example/api/info",{
+  method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({url:"https://www.youtube.com/watch?v=demo123"})
+}),{});
+assert.equal(disconnected.status,503);
+console.log("✔ Platform links fail clearly until backend is configured");
 
 const invalid=await worker.fetch(new Request("https://aryanzz.example/api/youtube/download",{
   method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({url:"https://example.com/video",format:"mp3"})
@@ -162,4 +180,4 @@ try{
   globalThis.fetch=originalFetch;
 }
 
-console.log("\nARYANZZ V29.0 smoke tests passed.");
+console.log("\nARYANZZ V59.5 smoke tests passed.");

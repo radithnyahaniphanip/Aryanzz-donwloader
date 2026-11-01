@@ -1,4 +1,4 @@
-name: Deploy ARYANZZ to Cloudflare Workers
+name: Deploy ARYANZZ V59.5 to Cloudflare Workers
 
 on:
   push:
@@ -20,17 +20,28 @@ jobs:
       - name: Install Wrangler
         run: npm install --global wrangler
 
-      # Keep the downloader provider key in sync with GitHub Actions secrets.
-      - name: Configure YouTube downloader secret
+      - name: Configure self-hosted extractor origin
         env:
-          SAVENOW_API_KEY: ${{ secrets.SAVENOW_API_KEY }}
+          PLATFORM_API_ORIGIN: ${{ secrets.PLATFORM_API_ORIGIN }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          if [ -z "$SAVENOW_API_KEY" ]; then
-            echo "::warning::SAVENOW_API_KEY is not configured. YouTube extraction will remain disabled."
+          if [ -z "$PLATFORM_API_ORIGIN" ]; then
+            echo "::warning::PLATFORM_API_ORIGIN is not configured. Platform-page extraction will remain offline; direct media URLs still work."
           else
-            printf '%s' "$SAVENOW_API_KEY" | wrangler secret put SAVENOW_API_KEY
+            printf '%s' "$PLATFORM_API_ORIGIN" | wrangler secret put PLATFORM_API_ORIGIN
+          fi
+
+      - name: Configure self-hosted extractor token
+        env:
+          PLATFORM_API_TOKEN: ${{ secrets.PLATFORM_API_TOKEN }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          if [ -z "$PLATFORM_API_TOKEN" ]; then
+            echo "::warning::PLATFORM_API_TOKEN is not configured. Platform-page extraction will remain offline; direct media URLs still work."
+          else
+            printf '%s' "$PLATFORM_API_TOKEN" | wrangler secret put PLATFORM_API_TOKEN
           fi
 
       - name: Deploy Worker and static assets
@@ -39,7 +50,7 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
-      - name: Smoke test live Worker and non-billable YouTube metadata
+      - name: Smoke test live V59.5 Worker and editor assets
         env:
           WORKER_URL: https://aryanzz-donwloader.radithnyahaniphanip.workers.dev
         run: |
@@ -48,23 +59,24 @@ jobs:
           const healthResponse = await fetch(base + "/api/health", { cache: "no-store" });
           if (!healthResponse.ok) throw new Error("Live Worker health check failed: HTTP " + healthResponse.status);
           const health = await healthResponse.json();
-          if (health.version !== "29.0" || !health.youtubeApiKeyConfigured) {
-            throw new Error("Live Worker version or YouTube secret status is incorrect: " + JSON.stringify(health));
+          if (health.version !== "59.5" || !health.selfHostedDownloader || !health.directMediaDownload) {
+            throw new Error("Live Worker version or downloader status is incorrect: " + JSON.stringify(health));
           }
-          console.log("Live Worker health OK: V" + health.version + ", API key configured.");
+          console.log("Live Worker health OK: V" + health.version + ".");
 
-          const sample = "https://www.youtube.com/watch?v=K1Pu75yJUOE";
-          const infoResponse = await fetch(base + "/api/youtube/info?url=" + encodeURIComponent(sample), { cache: "no-store" });
-          const info = await infoResponse.json();
-          if (!infoResponse.ok || !info.ok || !info.title) {
-            if (/not enough balance|insufficient balance|low balance/i.test(info.error || "")) {
-              console.warn("SaveNow API key is reachable, but its wallet needs a top-up before downloads can be created.");
-            } else {
-              throw new Error("SaveNow metadata check failed: " + (info.error || "No video title returned."));
-            }
-          } else if (info.providerReady === false) {
-            console.warn("YouTube preview is available, but SaveNow wallet balance is insufficient. Paid download jobs remain disabled.");
+          for (const path of ["/editor.js?v=59.5", "/v59.js?v=59.5", "/v59.css?v=59.5"]) {
+            const response = await fetch(base + path, { cache: "no-store" });
+            if (!response.ok) throw new Error("Static asset unavailable: " + path + " HTTP " + response.status);
+          }
+          console.log("V59.5 editor and visual assets are available.");
+
+          const statusResponse = await fetch(base + "/api/platform/status", { cache: "no-store" });
+          const status = await statusResponse.json();
+          if (!status.configured) {
+            console.warn("Self-hosted extractor is not connected yet. Add PLATFORM_API_ORIGIN and PLATFORM_API_TOKEN secrets after deploying the Render backend.");
+          } else if (!status.ok) {
+            console.warn("Extractor is configured but did not respond healthy. Check the backend service.");
           } else {
-            console.log("SaveNow non-billable metadata check OK: " + info.title);
+            console.log("Self-hosted extractor is online.");
           }
           NODE

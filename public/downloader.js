@@ -1,192 +1,277 @@
-/* ARYANZZ V29 — single YouTube link-check and download controller */
+/* ARYANZZ V59.5 — unified self-hosted downloader controller */
 (() => {
   "use strict";
   const $ = id => document.getElementById(id);
-  const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
-  const formats = [
-    {group:"Audio",items:[["mp3","MP3 · 320 kbps"],["m4a","M4A"],["aac","AAC"],["flac","FLAC"],["opus","OPUS"],["ogg","OGG"],["wav","WAV"],["webm","WEBM Audio"]]},
-    {group:"Video MP4",items:[["360","360p"],["720","720p HD"],["1080","1080p Full HD"],["1440","1440p · 2K"],["4k","4K · MP4"]]}
+  const FORMATS = {
+    audio: [["mp3","MP3 Audio"],["m4a","M4A Audio"]],
+    video: [[360,"360p"],[480,"480p"],[720,"720p HD"],[1080,"1080p Full HD"],[1440,"1440p · 2K"],[2160,"2160p · 4K"]]
+  };
+  const PLATFORM_NAMES = [
+    ["youtube.com","YouTube"],["youtu.be","YouTube"],["tiktok.com","TikTok"],
+    ["instagram.com","Instagram"],["facebook.com","Facebook"],["fb.watch","Facebook"],
+    ["pinterest.com","Pinterest"],["pin.it","Pinterest"],["x.com","X"],["twitter.com","X"],
+    ["reddit.com","Reddit"],["redd.it","Reddit"],["v.redd.it","Reddit"],
+    ["vimeo.com","Vimeo"],["dailymotion.com","Dailymotion"],["soundcloud.com","SoundCloud"],
+    ["twitch.tv","Twitch"],["streamable.com","Streamable"],["tumblr.com","Tumblr"],
+    ["bilibili.com","Bilibili"],["b23.tv","Bilibili"],["vk.com","VK"],["ok.ru","OK.ru"],
+    ["rutube.ru","Rutube"],["likee.video","Likee"],["snapchat.com","Snapchat"],
+    ["imgur.com","Imgur"],["bandcamp.com","Bandcamp"],["mixcloud.com","Mixcloud"],
+    ["ted.com","TED"],["archive.org","Internet Archive"]
   ];
-  const make = (tag,cls,text) => {
-    const el=document.createElement(tag);
-    if(cls)el.className=cls;
-    if(text!==undefined)el.textContent=text;
+  const make = (tag, cls, text) => {
+    const el = document.createElement(tag);
+    if (cls) el.className = cls;
+    if (text !== undefined) el.textContent = text;
     return el;
   };
-  const safeYouTube = value => {
+  function safeUrl(raw) {
     try {
-      const u=new URL(value),h=u.hostname.toLowerCase();
-      const hosts=["youtube.com","youtu.be","youtube-nocookie.com"];
-      return ["https:","http:"].includes(u.protocol)&&hosts.some(x=>h===x||h.endsWith("."+x))?u:null;
+      const url = new URL(raw);
+      if (!["https:", "http:"].includes(url.protocol) || url.username || url.password) return null;
+      return url;
     } catch { return null; }
-  };
-  const safeTikTok = value => {
-    try { const u=new URL(value),h=u.hostname.toLowerCase();return ["tiktok.com"].some(x=>h===x||h.endsWith("."+x))?u:null; }
-    catch { return null; }
-  };
-  const setStatus=(el,message,isError=false)=>{
-    el.textContent=message;
-    el.className=isError?"warning":"muted";
-    el.setAttribute("role","status");
-    el.setAttribute("aria-live","polite");
-  };
-  const formatDuration=value=>{
-    const n=Number(value);
-    if(!Number.isFinite(n)||n<=0)return "";
-    const s=Math.floor(n),h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sec=s%60;
-    return h?[h,m.toString().padStart(2,"0"),sec.toString().padStart(2,"0")].join(":"):[m,sec.toString().padStart(2,"0")].join(":");
-  };
-  const remember=(url,name,format)=>{
-    try{
-      const key="aryanzz.history.v2",old=JSON.parse(localStorage.getItem(key)||"[]");
-      const next=[{url,name,mode:format==="mp3"?"audio":"video",quality:format,at:Date.now()},...old.filter(x=>x.url!==url)].slice(0,40);
-      localStorage.setItem(key,JSON.stringify(next));
-    }catch{}
-  };
-  function renderTikTok(url){
-    const out=$("downloadResult");out.hidden=false;out.replaceChildren();
-    const title=make("b","","TikTok terdeteksi");
-    const intro=make("p","muted","Gunakan fitur Simpan Video yang disediakan TikTok oleh kreator.");
-    const steps=make("p","muted","Buka video → Bagikan → Simpan video. Jika tombol Simpan Video tidak muncul, kreator menonaktifkan unduhan untuk postingan tersebut.");
-    const link=make("a","tag","Buka video TikTok ↗");link.href=url.href;link.target="_blank";link.rel="noopener noreferrer";link.style.display="inline-block";
-    const note=make("p","warning","ARYANZZ tidak menghapus watermark atau mengakali pembatasan unduhan.");
-    out.append(title,intro,steps,link,note);
   }
-  async function checkYouTube(url,button){
-    const out=$("downloadResult");out.hidden=false;out.replaceChildren();
-    const box=make("section","youtube-result");
-    const title=make("b","","Memeriksa video YouTube…");
-    const status=make("p","muted","Mengambil judul, thumbnail, dan durasi. Tahap ini belum membuat pekerjaan unduhan.");
-    box.append(title,status);out.append(box);
-    button.disabled=true;const oldText=button.textContent;button.textContent="Memeriksa…";
-    try{
-      const response=await fetch("/api/youtube/info?url="+encodeURIComponent(url.href),{headers:{accept:"application/json"},cache:"no-store"});
-      const info=await response.json().catch(()=>({}));
-      if(!response.ok||!info.ok)throw new Error(info.error||"Video YouTube tidak dapat diperiksa.");
-      box.replaceChildren();
-      const heading=make("div","youtube-heading");
-      if(info.thumbnail){
-        try{
-          const imageUrl=new URL(info.thumbnail);
-          if(imageUrl.protocol==="https:"){
-            const img=make("img","youtube-thumbnail");img.src=imageUrl.href;img.alt="Thumbnail video YouTube";img.loading="lazy";heading.append(img);
-          }
-        }catch{}
+  function platformName(url) {
+    const host = url.hostname.toLowerCase();
+    const item = PLATFORM_NAMES.find(([domain]) => host === domain || host.endsWith("." + domain));
+    return item ? item[1] : "Direct Media URL";
+  }
+  function status(el, text, error) {
+    el.textContent = text;
+    el.className = error ? "warning" : "muted";
+    el.setAttribute("role", "status");
+    el.setAttribute("aria-live", "polite");
+  }
+  function duration(value) {
+    const n = Number(value);
+    if (!Number.isFinite(n) || n <= 0) return "";
+    const s = Math.floor(n), h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+    return h ? [h, String(m).padStart(2,"0"), String(sec).padStart(2,"0")].join(":") : [m, String(sec).padStart(2,"0")].join(":");
+  }
+  function remember(url, name, mode, quality) {
+    try {
+      const key = "aryanzz.history.v2";
+      const old = JSON.parse(localStorage.getItem(key) || "[]");
+      localStorage.setItem(key, JSON.stringify([{url,name,mode,quality,at:Date.now()}, ...old.filter(x => x.url !== url)].slice(0,40)));
+    } catch {}
+  }
+  function favorite(url, name, button) {
+    try {
+      const key = "aryanzz.favorites.v2";
+      const list = JSON.parse(localStorage.getItem(key) || "[]");
+      const exists = list.some(x => x.url === url);
+      const next = exists ? list.filter(x => x.url !== url) : [{url,name,at:Date.now()}, ...list].slice(0,40);
+      localStorage.setItem(key, JSON.stringify(next));
+      button.textContent = exists ? "♡ Favorit" : "♥ Tersimpan";
+    } catch { button.textContent = "Favorit tidak tersimpan"; }
+  }
+  async function postJson(path, body) {
+    const response = await fetch(path, {
+      method: "POST",
+      headers: {"Content-Type":"application/json","Accept":"application/json"},
+      body: JSON.stringify(body),
+      cache: "no-store"
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "Server downloader tidak dapat memproses tautan.");
+    return data;
+  }
+  async function downloadFile(url, mode, quality, bar, progressText) {
+    const response = await fetch("/api/download", {
+      method: "POST",
+      headers: {"Content-Type":"application/json","Accept":"application/octet-stream"},
+      body: JSON.stringify({url,mode,quality}),
+      cache: "no-store"
+    });
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.error || "Unduhan gagal. Coba lagi atau pilih kualitas lebih rendah.");
+    }
+    const total = Number(response.headers.get("content-length") || 0);
+    const reader = response.body && response.body.getReader ? response.body.getReader() : null;
+    let blob;
+    if (!reader) {
+      blob = await response.blob();
+    } else {
+      const chunks = [];
+      let loaded = 0;
+      while (true) {
+        const part = await reader.read();
+        if (part.done) break;
+        chunks.push(part.value);
+        loaded += part.value.byteLength;
+        const pct = total ? Math.min(99, Math.round(loaded / total * 100)) : null;
+        if (pct !== null) bar.style.width = pct + "%";
+        progressText.textContent = pct === null
+          ? "Mengunduh " + (loaded / 1048576).toFixed(1) + " MB…"
+          : "Mengunduh… " + pct + "% · " + (loaded / 1048576).toFixed(1) + " MB";
       }
-      const details=make("div","youtube-details");
-      details.append(make("b","youtube-title",info.title||"YouTube Content"));
-      const meta=[formatDuration(info.duration), "YouTube"].filter(Boolean).join(" · ");
-      details.append(make("small","muted",meta));
-      heading.append(details);box.append(heading);
-      const label=make("label","label","PILIH FORMAT DAN KUALITAS");
-      const select=make("select","field");select.id="youtubeFormat";
-      formats.forEach(group=>{
-        const optgroup=document.createElement("optgroup");optgroup.label=group.group;
-        group.items.forEach(([value,text])=>{
-          const option=document.createElement("option");option.value=value;option.textContent=text;
-          if(value==="mp3")option.selected=true;
-          optgroup.append(option);
-        });
-        select.append(optgroup);
-      });
-      box.append(label,select);
-      const note=make("p",info.providerReady===false?"warning":"youtube-note",info.providerReady===false?(info.providerMessage||"Saldo API provider tidak mencukupi untuk membuat file unduhan."):"Catatan: membuat file unduhan dapat menggunakan saldo API provider. Pemeriksaan link tidak membuat job.");
-      box.append(note);
-      if(info.providerReady===false){
-        const wallet=make("a","tag","Buka dashboard saldo API ↗");
-        wallet.href="https://video-download-api.com/dashboard";wallet.target="_blank";wallet.rel="noopener noreferrer";wallet.style.display="inline-block";
-        box.append(wallet);
-      }
-      const start=make("button","primary youtube-start",info.providerReady===false?"Saldo API belum cukup":"Mulai download");
-      start.type="button";
-      start.disabled=info.providerReady===false;
-      const progressWrap=make("div","youtube-progress-wrap");
-      const progressTrack=make("div","progress-track");
-      const progressBar=make("div","progress-fill");progressBar.style.width="0%";
-      progressTrack.append(progressBar);progressWrap.append(progressTrack);
-      const progressText=make("p","muted",info.providerReady===false?"Isi saldo API SaveNow sebelum memulai unduhan.":"Pilih format, lalu mulai download.");
-      const actions=make("div","youtube-actions");
-      actions.append(start);
-      box.append(actions,progressWrap,progressText);
-      let currentJob=null,currentInfo={title:info.title,thumbnail:info.thumbnail},stopped=false;
-      const createDownloadLink=(jobId,format,result)=>{
-        progressBar.style.width="100%";
-        setStatus(progressText,"File sudah siap. Tekan tombol di bawah untuk mengunduh.");
-        const link=make("a","primary youtube-download","Unduh "+(format==="mp3"?"MP3":format==="4k"?"Video 4K":"Video "+format+"p"));
-        link.href="/api/youtube/file?id="+encodeURIComponent(jobId)+"&format="+encodeURIComponent(format);
-        link.setAttribute("download",result?.filename||"aryanzz-youtube");
-        link.setAttribute("aria-label","Unduh file YouTube yang sudah selesai");
-        actions.replaceChildren(link);
-        remember(url.href,result?.filename||info.title||"YouTube",format);
-      };
-      const poll=async(job,format,jobInfo)=>{
-        stopped=false;
-        const pause=make("button","tag youtube-pause","Hentikan pengecekan");
-        actions.replaceChildren(pause);
-        pause.onclick=()=>{stopped=true;actions.replaceChildren();const resume=make("button","tag","Lanjut cek progres");resume.onclick=()=>poll(job,format,jobInfo);actions.append(resume);setStatus(progressText,"Pengecekan dihentikan. Pekerjaan di server tetap berjalan; lanjutkan tanpa membuat job baru.");};
-        for(let attempt=0;attempt<120&&!stopped;attempt++){
-          await sleep(5000);if(stopped)return;
-          const response=await fetch("/api/youtube/progress",{method:"POST",headers:{"Content-Type":"application/json","Accept":"application/json"},body:JSON.stringify({id:job,format,info:jobInfo}),cache:"no-store"});
-          const state=await response.json().catch(()=>({}));
-          if(!response.ok)throw new Error(state.error||"Gagal memeriksa progres unduhan.");
-          if(state.result){createDownloadLink(job,format,state.result);return;}
-          const pct=Number(state.progress);
-          if(Number.isFinite(pct))progressBar.style.width=Math.max(1,Math.min(99.5,pct/10))+"%";
-          setStatus(progressText,(state.text||"Sedang menyiapkan file…")+" "+(Number.isFinite(pct)?Math.floor(pct/10)+"%":""));
-        }
-        if(!stopped){
-          actions.replaceChildren();
-          const resume=make("button","tag youtube-resume","Lanjut cek progres");
-          resume.onclick=()=>poll(job,format,jobInfo);
-          actions.append(resume);
-          setStatus(progressText,"Server masih memproses. Job tidak dibuat ulang agar tidak menagih saldo dua kali. Kamu bisa lanjut memeriksa progres.");
-        }
-      };
-      start.onclick=async()=>{
-        const format=select.value;
-        start.disabled=true;select.disabled=true;
-        setStatus(progressText,"Mengirim satu permintaan ke penyedia…");
-        try{
-          const response=await fetch("/api/youtube/download",{method:"POST",headers:{"Content-Type":"application/json","Accept":"application/json"},body:JSON.stringify({url:url.href,format}),cache:"no-store"});
-          const job=await response.json().catch(()=>({}));
-          if(!response.ok||!job.status)throw new Error(job.error||"Penyedia tidak menerima permintaan unduhan.");
-          if(job.result?.url){
-            const direct=make("a","primary youtube-download","Buka file siap unduh ↗");
-            direct.href=job.result.url;direct.target="_blank";direct.rel="noopener noreferrer";actions.replaceChildren(direct);
-            setStatus(progressText,"File siap dari penyedia.");
-            return;
-          }
-          if(!job.id)throw new Error("ID pekerjaan tidak diterima dari penyedia.");
-          currentJob=job.id;currentInfo=job.info||currentInfo;
-          start.remove();select.disabled=true;
-          setStatus(progressText,"Job dibuat. Menunggu proses konversi… Jangan buat job kedua untuk link yang sama.");
-          await poll(currentJob,format,currentInfo);
-        }catch(error){setStatus(progressText,error.message||"Unduhan gagal.",true);actions.replaceChildren();if(currentJob){const resume=make("button","tag youtube-resume","Lanjut cek progres");resume.onclick=()=>poll(currentJob,format,currentInfo).catch(e=>setStatus(progressText,e.message||"Pengecekan gagal.",true));actions.append(resume);}else{const retry=make("button","tag youtube-retry","Coba lagi");retry.onclick=()=>{select.disabled=false;start.disabled=false;start.click();};actions.append(retry);}}
-        finally{if(!currentJob){start.disabled=false;select.disabled=false;}}
-      };
-    }catch(error){
-      box.replaceChildren(make("b","","Link YouTube belum bisa diperiksa"),make("p","warning",error.message||"Terjadi kesalahan saat memeriksa video."));
-      const retry=make("button","tag","Periksa lagi");retry.type="button";retry.onclick=()=>checkYouTube(url,button);box.append(retry);
-    }finally{
-      button.disabled=false;button.textContent=oldText;
+      blob = new Blob(chunks, {type:response.headers.get("content-type") || (mode === "audio" ? "audio/mpeg" : "video/mp4")});
+    }
+    if (!blob.size) throw new Error("File hasil kosong. Coba ulangi proses.");
+    const mime = blob.type || "";
+    const ext = mode === "audio" ? (mime.includes("mp4") ? "m4a" : "mp3") : (mime.includes("webm") ? "webm" : "mp4");
+    const filename = "aryanzz-" + (mode === "audio" ? "audio" : "video-" + quality + "p") + "." + ext;
+    const objectUrl = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = objectUrl;
+    anchor.download = filename;
+    document.body.append(anchor);
+    anchor.click();
+    anchor.remove();
+    setTimeout(() => URL.revokeObjectURL(objectUrl), 90000);
+    bar.style.width = "100%";
+    progressText.textContent = "Selesai · " + (blob.size / 1048576).toFixed(1) + " MB";
+    remember(url, filename, mode, quality);
+    return filename;
+  }
+  function showError(out, error, url) {
+    out.hidden = false;
+    out.replaceChildren();
+    const title = make("b", "", "Link belum dapat diproses");
+    const note = make("p", "warning", error.message || "Terjadi kesalahan saat memeriksa tautan.");
+    out.append(title, note);
+    if (/backend ekstraksi|server downloader|PLATFORM_API|belum dihubungkan|tidak dapat dijangkau/i.test(error.message || "")) {
+      const help = make("p", "muted", "Untuk link platform, hubungkan server yt-dlp + FFmpeg ke Cloudflare Worker. File media langsung tetap dapat diproses tanpa server ekstraksi.");
+      out.append(help);
+    }
+    if (url) {
+      const link = make("a", "tag", "Buka sumber ↗");
+      link.href = url;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      link.style.display = "inline-block";
+      out.append(link);
     }
   }
-  function init(){
-    const button=$("analyze"),input=$("url");
-    if(!button||!input)return;
-    button.addEventListener("click",event=>{
-      const raw=input.value.trim(),url=safeYouTube(raw),tiktok=safeTikTok(raw);
-      if(!url&&!tiktok)return;
-      event.preventDefault();event.stopImmediatePropagation();
-      if(url)checkYouTube(url,button);else renderTikTok(tiktok);
-    },true);
-    input.addEventListener("keydown",event=>{
-      if(event.key==="Enter"){
-        const url=safeYouTube(input.value.trim());
-        if(url){event.preventDefault();event.stopImmediatePropagation();button.click();}
+  async function checkLink(url, button) {
+    const out = $("downloadResult");
+    out.hidden = false;
+    out.replaceChildren();
+    const box = make("section", "youtube-result");
+    const heading = make("b", "", "Memeriksa " + platformName(url) + "…");
+    const intro = make("p", "muted", "Mengambil informasi media dari backend ARYANZZ.");
+    box.append(heading, intro);
+    out.append(box);
+    const oldText = button.textContent;
+    button.disabled = true;
+    button.textContent = "Memeriksa…";
+    try {
+      const info = await postJson("/api/info", {url:url.href});
+      box.replaceChildren();
+      const header = make("div", "youtube-heading");
+      if (info.thumbnail) {
+        try {
+          const imageUrl = new URL(info.thumbnail);
+          if (imageUrl.protocol === "https:" || imageUrl.protocol === "http:") {
+            const img = make("img", "youtube-thumbnail");
+            img.src = imageUrl.href;
+            img.alt = "Thumbnail media";
+            img.loading = "lazy";
+            header.append(img);
+          }
+        } catch {}
       }
-    },true);
+      const details = make("div", "youtube-details");
+      details.append(make("b", "youtube-title", info.title || info.filename || "Media siap diunduh"));
+      details.append(make("small", "muted", [info.extractor || info.source || platformName(url), duration(info.duration), info.size ? (info.size / 1048576).toFixed(1) + " MB" : ""].filter(Boolean).join(" · ")));
+      header.append(details);
+      box.append(header);
+
+      const formatLabel = make("label", "label", "PILIH FORMAT");
+      const mode = make("select", "field");
+      mode.id = "aryMode";
+      [["video","Video"],["audio","Audio MP3"]].forEach(([value,label]) => {
+        const option = make("option", "", label);
+        option.value = value;
+        mode.append(option);
+      });
+      if (info.type === "audio") mode.value = "audio";
+      const qualityLabel = make("label", "label", "KUALITAS VIDEO");
+      qualityLabel.style.marginTop = "12px";
+      const quality = make("select", "field");
+      quality.id = "aryQuality";
+      const heights = Array.isArray(info.formats)
+        ? [...new Set(info.formats.map(item => Number(typeof item === "number" ? item : item.height)).filter(n => [360,480,720,1080,1440,2160].includes(n)))].sort((a,b) => a-b)
+        : [];
+      const available = heights.length ? heights : [360,480,720,1080,1440,2160];
+      FORMATS.video.filter(item => available.includes(Number(item[0]))).forEach(([value,label]) => {
+        const option = make("option", "", label);
+        option.value = String(value);
+        if (Number(value) === 720) option.selected = true;
+        quality.append(option);
+      });
+      const audioHint = make("p", "muted", "Audio akan diekspor sebagai MP3. Kualitas video hanya berlaku untuk mode video.");
+      const note = make("p", "youtube-note", "Unduh hanya media milik sendiri atau konten yang memang diizinkan. Ketersediaan format mengikuti sumber dan dukungan yt-dlp.");
+      box.append(formatLabel, mode, qualityLabel, quality, audioHint, note);
+
+      const progress = make("div", "progress-track");
+      const bar = make("div", "progress-fill");
+      bar.style.width = "0%";
+      progress.append(bar);
+      const progressText = make("p", "muted", "Siap. Pilih format dan kualitas, lalu mulai unduh.");
+      const actions = make("div", "feature-row");
+      const start = make("button", "primary youtube-start", "Mulai download");
+      start.type = "button";
+      const fav = make("button", "tag youtube-favorite", "♡ Favorit");
+      fav.type = "button";
+      fav.addEventListener("click", () => favorite(url.href, info.title || url.href, fav));
+      actions.append(start, fav);
+      box.append(progress, progressText, actions);
+      mode.addEventListener("change", () => {
+        quality.disabled = mode.value === "audio";
+        qualityLabel.style.opacity = mode.value === "audio" ? ".45" : "1";
+      });
+      start.addEventListener("click", async () => {
+        start.disabled = true;
+        mode.disabled = true;
+        quality.disabled = true;
+        start.textContent = "Memproses…";
+        try {
+          const filename = await downloadFile(url.href, mode.value, Number(quality.value) || 720, bar, progressText);
+          progressText.textContent = "Berhasil disimpan: " + filename;
+          start.textContent = "Unduhan selesai ✓";
+        } catch (error) {
+          status(progressText, error.message || "Unduhan gagal.", true);
+          start.disabled = false;
+          mode.disabled = false;
+          quality.disabled = mode.value === "audio";
+          start.textContent = "Coba lagi";
+        }
+      });
+    } catch (error) {
+      showError(out, error, url.href);
+    } finally {
+      button.disabled = false;
+      button.textContent = oldText;
+    }
   }
-  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init,{once:true});
+  function init() {
+    const button = $("analyze");
+    const input = $("url");
+    if (!button || !input) return;
+    button.addEventListener("click", event => {
+      const raw = input.value.trim();
+      const url = safeUrl(raw);
+      if (!url) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        const out = $("downloadResult");
+        out.hidden = false;
+        out.replaceChildren(make("b", "", "URL tidak valid"), make("p", "warning", "Masukkan tautan HTTP atau HTTPS yang benar."));
+        return;
+      }
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      checkLink(url, button);
+    }, true);
+    input.addEventListener("keydown", event => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        button.click();
+      }
+    }, true);
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init, {once:true});
   else init();
 })();

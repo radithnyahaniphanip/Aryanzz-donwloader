@@ -1,4 +1,4 @@
-name: Validate ARYANZZ
+name: Validate ARYANZZ V59.5
 on:
   push:
     branches: [main]
@@ -19,6 +19,9 @@ jobs:
           node --check server/index.js
           node --check public/advanced.js
           node --check public/v15.js
+          node --check public/v25.js
+          node --check public/v59.js
+          node --check public/editor.js
           node --check public/owner.js
           node --check public/downloader.js
           node --check public/sw.js
