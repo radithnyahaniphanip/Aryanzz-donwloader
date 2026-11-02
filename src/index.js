@@ -70,17 +70,6 @@ async function proxyPlatform(request,env,path){
   }catch{return json({error:"Backend ekstraksi sedang tidak dapat dijangkau."},502)}
 }
 async function platformStatus(env){return json({ok:true,configured:false,backend:"community-handoff",mode:"zero-server",engine:"browser direct download + community provider handoff",platforms:PLATFORM_HOSTS,message:"ARYANZZ tidak menjalankan server ekstraksi sendiri. Tautan file langsung dapat diunduh; tautan media sosial diarahkan ke provider komunitas."});}
-  const configured=!!(env.PLATFORM_API_ORIGIN&&env.PLATFORM_API_TOKEN);
-  if(!configured)return json({ok:false,configured:false,engine:"yt-dlp + FFmpeg",platforms:PLATFORM_HOSTS,message:"Server ekstraksi belum dihubungkan."});
-  let origin;
-  try{const parsed=new URL(env.PLATFORM_API_ORIGIN);if(parsed.protocol!=="https:"||parsed.username||parsed.password)throw new Error("origin tidak aman");origin=parsed.origin}
-  catch{return json({ok:false,configured:true,error:"URL backend harus HTTPS."},500)}
-  try{
-    const response=await fetch(origin+"/api/health",{headers:{accept:"application/json","authorization":"Bearer "+env.PLATFORM_API_TOKEN},signal:AbortSignal.timeout(8000),cache:"no-store"});
-    const data=await response.json().catch(()=>({}));
-    return json({ok:response.ok&&data.ok===true,configured:true,engine:data.engine||"yt-dlp + FFmpeg",version:data.version||null,platforms:data.platforms||PLATFORM_HOSTS});
-  }catch{return json({ok:false,configured:true,error:"Server ekstraksi belum merespons.",engine:"yt-dlp + FFmpeg",platforms:PLATFORM_HOSTS},502)}
-}
 async function info(request){
   let body;try{body=await request.json()}catch{return json({error:"Body JSON tidak valid."},400)}
   let parsed;try{parsed=parseMediaUrl(body?.url)}catch(e){return json({error:e.message},400)}
