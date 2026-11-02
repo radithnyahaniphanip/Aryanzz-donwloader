@@ -1,8 +1,8 @@
-# ARYANZZ V72.9 — Mobile-resumable YouTube Downloader
+# ARYANZZ V73.0 — Mobile-resilient media downloader
 
 Production website: https://aryanzz-donwloader.radithnyahaniphanip.workers.dev/
 
-ARYANZZ is a mobile-first creator workspace hosted on Cloudflare Workers. V72.9 builds on the zero-server YouTube flow with resumable range downloads, mobile-aware MP4 memory limits, quality fallback, download speed modes, and a safe thumbnail proxy. No Cobalt, Docker Desktop, private extraction server, or paid downloader provider is required.
+ARYANZZ is a mobile-first creator workspace hosted on Cloudflare Workers. V73.0 improves mobile download checkpoints, Chrome background-resume support for direct files, adaptive MP4 progress, speed modes, and thumbnail actions. No Cobalt, Docker Desktop, private extraction server, or paid downloader provider is required.
 
 ## V65.0 release scope
 
@@ -24,10 +24,19 @@ ARYANZZ is a mobile-first creator workspace hosted on Cloudflare Workers. V72.9 
 | V67.6 | Backend health cleanup, title-based YouTube search routed through yt-dlp, clearer AudD/Shazam status, and DJ scan fallback fixes |
 
 
+## V73.0 — Mobile download reliability
+
+- Reduces adaptive download checkpoints from 4 MiB to 1 MiB and streams progress while each range is arriving, so a slow 360p transfer no longer appears frozen until a large block finishes.
+- Keeps completed 1 MiB chunks in IndexedDB. If Android closes the page, reopen ARYANZZ, analyze the same video again, and press Download to reuse completed chunks when the provider instance and format still match.
+- Adds byte-range forwarding to direct-media downloads, including HTTP 206, Content-Range, Accept-Ranges, ETag and Last-Modified headers. Chrome's native download manager can resume these direct files when the source supports Range.
+- Keeps Speed (1 lane), Max Speed (3 lanes), and Mega Speed (5 lanes) visible for YouTube video downloads. Parallel lanes only help when the source supports Range and has available throughput; they cannot exceed the carrier or Wi-Fi connection.
+- Places the “Unduh thumbnail” action directly over the video thumbnail preview for easier access.
+- Clarifies that adaptive video/audio remuxing still needs the page open while FFmpeg assembles the final MP4. Browsers cannot guarantee background JavaScript after a tab is closed.
+
 ## V72.9 — Mobile download resilience
 
 - Adds **Speed (1 lane)**, **Max Speed (3 lanes)**, and **Mega Speed (5 lanes)** for adaptive streams when the provider supports HTTP Range requests. This can improve throughput on a capable source, but it cannot increase the user's carrier or Wi-Fi bandwidth.
-- Downloads adaptive audio/video components in 4 MiB byte ranges and stores completed chunks in IndexedDB. If the page is suspended or closed, a later retry of the same video can reuse completed chunks when the provider and format are unchanged.
+- Downloads adaptive audio/video components in 1 MiB byte ranges and stores completed chunks in IndexedDB. If the page is suspended or closed, a later retry of the same video can reuse completed chunks when the provider and format are unchanged.
 - Reads the provider's actual total byte count from `Content-Range` before starting resumable range transfers.
 - Scales the in-browser FFmpeg memory budget using `navigator.deviceMemory`; if a selected adaptive quality is too large, it tries an available lower-quality MP4 instead of stopping at the first memory error.
 - Releases JavaScript media buffers after copying tracks into FFmpeg's virtual filesystem and allows a longer remux window for large files.
