@@ -470,9 +470,10 @@ try{
   assert.equal(hybridData.providerReady,true);
   assert.equal(hybridData.provider,"Piped");
   assert.equal(hybridData.title,"Hybrid Piped Test Video");
-  assert.deepEqual(hybridData.formats.filter(x=>x.mode==="video").map(x=>x.height),[360,720]);
+  assert.deepEqual(hybridData.formats.filter(x=>x.mode==="video").map(x=>x.height),[360,720,1080]);
+  assert.ok(hybridData.formats.some(x=>x.mode==="video"&&x.videoOnly===true&&x.height===1080),"Piped adaptive 1080p stream should be kept for browser muxing");
   assert.equal(hybridData.formats.find(x=>x.mode==="audio").ext,"m4a");
-  console.log("✔ Hybrid primary Piped API returns only actual progressive MP4 and audio formats");
+  console.log("✔ Hybrid primary Piped API returns progressive and adaptive MP4 plus audio formats");
 
   const hybridFileUrl="https://aryanzz.example/api/youtube/hybrid/file?url="+encodeURIComponent("https://pipedproxy-bom.kavin.rocks/videoplayback?itag=22&sig=test")+"&ext=mp4&title="+encodeURIComponent("Hybrid Piped Test Video");
   const hybridFile=await worker.fetch(new Request(hybridFileUrl),{});
