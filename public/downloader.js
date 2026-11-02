@@ -136,12 +136,7 @@
       remember(url,filename,mode,quality);
       return filename;
     }catch(browserError){
-      const target="/api/youtube/hybrid/file?url="+encodeURIComponent(direct.href)+"&ext="+encodeURIComponent(selected.ext)+"&title="+encodeURIComponent(info.title||"aryanzz-youtube");
-      const a=document.createElement("a");a.href=target;a.download=filename;a.style.display="none";
-      document.body.append(a);a.click();a.remove();
-      progressText.textContent="Akses browser ditolak ("+String(browserError.message||"CORS")+".) Tautan cadangan Worker dikirim ke Chrome; jika gagal, instance tidak mendukung unduhan dari jaringan ini.";
-      remember(url,filename,mode,quality);
-      return filename;
+      throw new Error("Browser tidak dapat membaca stream langsung ("+String(browserError.message||"CORS") + "). Instance komunitas mungkin membatasi CORS atau koneksi. Coba instance lain atau ulangi beberapa saat lagi.");
     }
   }
   async function downloadFile(url, mode, quality, bar, progressText, info={}) {
@@ -247,43 +242,39 @@
     const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),ms);
     return {signal:controller.signal,clear:()=>clearTimeout(timer),abort:()=>controller.abort()};
   }
-  async function browserPipedInfo(instance,id){
-    const t=browserProviderTimeout(4500);
-    try{
-      const data=await browserProviderJson(instance+"/streams/"+encodeURIComponent(id),t.signal);
+  async function browserPipedInfo(instance,id,signal){
+    const data=await browserProviderJson(instance+"/streams/"+encodeURIComponent(id),signal);
       const formats=browserDedupeFormats([...(Array.isArray(data.videoStreams)?data.videoStreams.map(browserVideoFormat).filter(Boolean):[]),...(Array.isArray(data.audioStreams)?data.audioStreams.map(browserAudioFormat).filter(Boolean):[])]);
       if(!data.title||!formats.length)throw new Error("Tidak ada stream progresif yang kompatibel");
       return {ok:true,providerReady:true,providerName:"Hybrid",provider:"Piped",instance,title:String(data.title).slice(0,300),thumbnail:typeof data.thumbnailUrl==="string"?data.thumbnailUrl:null,duration:Number(data.duration)||null,uploader:String(data.uploader||"").slice(0,160),formats,message:"Stream diperoleh langsung dari browser melalui instance komunitas."};
-    }finally{t.clear();}
   }
-  async function browserInvidiousInfo(instance,id){
-    const t=browserProviderTimeout(4500);
-    try{
-      const data=await browserProviderJson(instance+"/api/v1/videos/"+encodeURIComponent(id)+"?fields=title,videoId,author,lengthSeconds,videoThumbnails,formatStreams,adaptiveFormats",t.signal);
+  async function browserInvidiousInfo(instance,id,signal){
+    const data=await browserProviderJson(instance+"/api/v1/videos/"+encodeURIComponent(id)+"?fields=title,videoId,author,lengthSeconds,videoThumbnails,formatStreams,adaptiveFormats",signal);
       const formats=browserDedupeFormats([...(Array.isArray(data.formatStreams)?data.formatStreams.map(browserVideoFormat).filter(Boolean):[]),...(Array.isArray(data.adaptiveFormats)?data.adaptiveFormats.map(browserAudioFormat).filter(Boolean):[])]);
       if(!data.title||!formats.length)throw new Error("Tidak ada stream progresif yang kompatibel");
       const thumb=Array.isArray(data.videoThumbnails)?data.videoThumbnails.find(x=>x.quality==="maxresdefault")||data.videoThumbnails[0]:null;
       return {ok:true,providerReady:true,providerName:"Hybrid",provider:"Invidious",instance,title:String(data.title).slice(0,300),thumbnail:typeof thumb?.url==="string"?thumb.url:null,duration:Number(data.lengthSeconds)||null,uploader:String(data.author||"").slice(0,160),formats,message:"Stream diperoleh langsung dari browser melalui instance komunitas."};
-    }finally{t.clear();}
   }
   async function browserHybridYoutubeInfo(raw){
     const match=(()=>{try{const u=new URL(raw);if(["youtu.be","www.youtu.be"].includes(u.hostname))return u.pathname.split("/").filter(Boolean)[0]||null;return u.searchParams.get("v")||u.pathname.match(/^\/(?:shorts|embed|live|v)\/([A-Za-z0-9_-]{6,20})/)?.[1]||null;}catch{return null;}})();
     if(!match||! /^[A-Za-z0-9_-]{6,20}$/.test(match))throw new Error("ID video YouTube tidak valid.");
     const tryGroup=async(instances,fn)=>{
       const controllers=instances.map(()=>browserProviderTimeout(4500));
-      try{return await Promise.any(instances.map((instance,i)=>fn(instance,match).finally(()=>controllers[i].clear())));}
+      try{return await Promise.any(instances.map((instance,i)=>fn(instance,match,controllers[i].signal).finally(()=>controllers[i].clear())));}
       catch{throw new Error("Semua instance pada kelompok ini gagal atau tidak mengizinkan akses browser.");}
       finally{controllers.forEach(t=>t.abort());}
     };
-    try{return await tryGroup(BROWSER_PIPED_INSTANCES,browserPipedInfo);}
-    catch(pipedError){
-      try{return await tryGroup(BROWSER_INVIDIOUS_INSTANCES,browserInvidiousInfo);}
-      catch(invidiousError){
+    let pipedError;
+    for(let offset=0;offset<BROWSER_PIPED_INSTANCES.length;offset+=5){
+      try{return await tryGroup(BROWSER_PIPED_INSTANCES.slice(offset,offset+5),browserPipedInfo);}
+      catch(error){pipedError=error;}
+    }
+    try{return await tryGroup(BROWSER_INVIDIOUS_INSTANCES,browserInvidiousInfo);}
+    catch(invidiousError){
         const response=await fetch("/api/youtube/hybrid/info?url="+encodeURIComponent(raw),{cache:"no-store",signal:AbortSignal.timeout(35000)});
         const fallback=await response.json().catch(()=>({}));
         if(response.ok&&fallback.providerReady)return fallback;
-        throw new Error("Browser dan server belum menemukan instance komunitas yang berfungsi. Piped: "+pipedError.message+" · Invidious: "+invidiousError.message);
-      }
+        throw new Error("Browser dan server belum menemukan instance komunitas yang berfungsi. Piped: "+(pipedError?.message||"gagal")+" · Invidious: "+invidiousError.message);
     }
   }
   async function checkLink(url, button) {
