@@ -160,7 +160,7 @@ function hybridFromPiped(data,instance){
 }
 function hybridFromInvidious(data,instance){
   const formats=dedupeHybridFormats([...(Array.isArray(data.formatStreams)?data.formatStreams.map(item=>hybridVideoFormat(item,instance)).filter(Boolean):[]),...(Array.isArray(data.adaptiveFormats)?data.adaptiveFormats.map(hybridAudioFormat).filter(Boolean):[])]);
-  if(!formats.length||!data.title)return null;const thumb=Array.isArray(data.videoThumbnails)?data.videoThumbnails.find(x=>x.quality==="maxresdefault")||data.videoThumbnails[0]:null;
+  if(!formats.some(item=>item.mode==="video"&&item.ext==="mp4")||!data.title)return null;const thumb=Array.isArray(data.videoThumbnails)?data.videoThumbnails.find(x=>x.quality==="maxresdefault")||data.videoThumbnails[0]:null;
   return {ok:true,providerReady:true,providerName:"Hybrid",provider:"Invidious",instance,title:String(data.title).slice(0,300),thumbnail:typeof thumb?.url==="string"?thumb.url:null,duration:Number(data.lengthSeconds)||null,uploader:String(data.author||"").slice(0,160),formats:formats.map((f,i)=>({...f,id:"f"+i})),message:"Stream progresif tersedia dari instance komunitas."};
 }
 async function hybridYoutubeInfo(request){
