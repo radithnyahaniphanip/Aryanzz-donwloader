@@ -184,7 +184,7 @@
     ["Buka direktori instance Cobalt dan pilih frontend yang aktif serta mendukung platform sumber.","Tempel URL yang sama pada halaman downloader komunitas tersebut.","Unduh file dari halaman provider. ARYANZZ tidak menerima atau menyimpan media itu."].forEach(t=>steps.append(make("li","",t)));
     box.append(steps);
     box.append(make("p","v690-note","Ketersediaan instance, batas pemakaian, dan kebijakan privasi ditentukan pemiliknya. Jangan masukkan kata sandi atau tautan privat. Jika instance tidak tersedia, coba instance lain di direktori."));
-    if(error?.message)box.append(make("p","v690-debug","Info: "+error.message));
+    if(error?.message)box.append(make("p","v690-debug","Info: "+(platformName(url)==="Direct Media URL"?error.message:"Postingan sosial memerlukan extractor; URL file MP4/MP3 langsung tetap didukung.")));
     out.append(box);
   }
   async function checkLink(url, button) {
