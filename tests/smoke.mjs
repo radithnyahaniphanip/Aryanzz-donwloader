@@ -56,7 +56,7 @@ const checks=[
   ["MP4 quality options are derived from actual available video streams",downloader.includes("const hasVideo=")&&downloader.includes("if(videoOption)videoOption.disabled=!hasVideo")],
 
   ["Browser download shows byte progress and caps in-memory downloads at 250 MB",downloader.includes("new Blob(chunks")&&downloader.includes("250*1024*1024")&&downloader.includes("Mengunduh ")],
-  ["Browser CORS failure is reported instead of claiming a successful download",downloader.includes("browserMediaContentType")&&downloader.includes("Jalur Worker juga gagal")],
+  ["Browser CORS failure is reported instead of claiming a successful download",downloader.includes("browserMediaContentType")&&downloader.includes('"Browser: "')&&downloader.includes('"Worker: "')],
   ["legacy competing downloader handler removed",!v15.includes("button.onclick=async()=>{")],
   ["owner header controls are real buttons",html.includes('class="owner-menu-mark" type="button" data-panel="allTools"')&&html.includes('aria-label="Buka riwayat unduhan"')&&html.includes('aria-label="Buka personalisasi profil"')],
   ["owner view hides home and uses dark palette",ownerCss.includes('body[data-view="owner"] #home{display:none!important}')&&ownerCss.includes("background:linear-gradient(145deg,#13223a,#0d1728)")],
