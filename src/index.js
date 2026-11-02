@@ -150,15 +150,26 @@ function freeProviderMediaInfo(data,rawUrl,requestUrl){
 async function freePublicMediaInfo(rawUrl,requestUrl){
   const key=freePlatformKey(rawUrl);
   if(!key)return json({error:"Platform belum didukung oleh provider gratis."},400);
+  const labels={tiktok:"TikTok",instagram:"Instagram",snackvideo:"SnackVideo",capcut:"CapCut"};
+  const label=labels[key]||key;
+  const guidance={
+    tiktok:"Gunakan tautan video publik, bukan halaman profil atau LIVE.",
+    instagram:"Pastikan Reels/postingan berupa video dan dapat dilihat publik. Akun privat, Story yang dibatasi, atau konten yang memerlukan login tidak dapat diekstrak.",
+    snackvideo:"Gunakan tautan share video publik, bukan halaman profil atau halaman aplikasi.",
+    capcut:"Gunakan tautan share hasil video yang dapat diputar publik. Draft pribadi dan template/proyek yang belum diekspor bukan file MP4 yang bisa diunduh."
+  };
   const endpoint=FREE_MEDIA_API+"/api/download/"+key+"?url="+encodeURIComponent(rawUrl);
   try{
     const response=await fetch(endpoint,{headers:{accept:"application/json"},signal:AbortSignal.timeout(28000),cache:"no-store"});
     const data=await response.json().catch(()=>({}));
-    if(!response.ok||data?.success===false)return json({error:data?.error?.message||data?.error||"Provider gratis menjawab HTTP "+response.status+"."},response.status===429?429:502);
+    if(!response.ok||data?.success===false){
+      const detail=data?.error?.message||data?.error||"Provider gratis menjawab HTTP "+response.status+".";
+      return json({error:label+" belum bisa diproses oleh provider gratis. "+String(detail).slice(0,180)+" "+(guidance[key]||"Periksa kembali tautan publik.")},response.status===429?429:502);
+    }
     const normalized=freeProviderMediaInfo(data,rawUrl,requestUrl);
-    if(!normalized)return json({error:"Provider mengenali tautan, tetapi belum mengembalikan file video/audio yang bisa diputar."},502);
+    if(!normalized)return json({error:label+" mengenali tautan, tetapi belum mengembalikan stream video/audio yang bisa diputar. "+(guidance[key]||"Gunakan tautan publik langsung.")},502);
     return json(normalized);
-  }catch(error){return json({error:"Provider komunitas gratis sedang tidak tersedia. Coba lagi sebentar. Detail: "+String(error?.message||error).slice(0,120)},502)}
+  }catch(error){return json({error:"Provider "+label+" sedang tidak dapat dijangkau. Coba lagi sebentar. Detail: "+String(error?.message||error).slice(0,120)},502)}
 }
 
 function mediaAsciiAt(bytes,offset,value){
