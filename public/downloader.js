@@ -472,8 +472,7 @@
       const results=await Promise.all(groups.map(group=>group.promise));
       groups.forEach(group=>group.abort());
       available.push(...results.flat().filter(Boolean));
-      // Return after the first healthy batch; later instances are only needed for download failover.
-      if(available.length)break;
+      // Only the first five instances per provider are checked for a fast first result.
     }
     if(available.length){
       const primary=available.find(item=>item.provider==="Piped")||available[0];
