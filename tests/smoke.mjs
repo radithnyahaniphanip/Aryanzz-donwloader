@@ -418,14 +418,14 @@ try{
   assert.equal(noKeyPreviewData.title,"Fallback YouTube Preview");
   console.log("✔ YouTube link shows public oEmbed preview without configuring or charging a downloader provider");
 
-  const info=await worker.fetch(new Request("https://aryanzz.example/api/youtube/info?url="+encodeURIComponent("https://www.youtube.com/watch?v=K1Pu75yJUOE")),{SAVENOW_API_KEY:"test-secret"});
+  const info=await worker.fetch(new Request("https://aryanzz.example/api/youtube/info?url="+encodeURIComponent("https://www.youtube.com/watch?v=K1Pu75yJUOE")),{SAVENOW_API_KEY:"test-secret",ALLOW_PAID_YOUTUBE_PROVIDER:"true"});
   assert.equal(info.status,200);
   const infoData=await info.json();
   assert.equal(infoData.title,"Test YouTube Video");
   assert.equal(infoData.duration,125);
   console.log("✔ Non-billable YouTube metadata lookup uses current /ajax/api.php endpoint");
 
-  const lowBalanceInfo=await worker.fetch(new Request("https://aryanzz.example/api/youtube/info?url="+encodeURIComponent("https://www.youtube.com/watch?v=LOWBALANCE")),{SAVENOW_API_KEY:"test-secret"});
+  const lowBalanceInfo=await worker.fetch(new Request("https://aryanzz.example/api/youtube/info?url="+encodeURIComponent("https://www.youtube.com/watch?v=LOWBALANCE")),{SAVENOW_API_KEY:"test-secret",ALLOW_PAID_YOUTUBE_PROVIDER:"true"});
   assert.equal(lowBalanceInfo.status,200);
   const lowBalanceData=await lowBalanceInfo.json();
   assert.equal(lowBalanceData.providerReady,false);
@@ -445,7 +445,7 @@ try{
   const lowBalanceStart=await worker.fetch(new Request("https://aryanzz.example/api/youtube/download",{
     method:"POST",headers:{"content-type":"application/json"},
     body:JSON.stringify({url:"https://www.youtube.com/watch?v=LOWBALANCE",format:"mp3"})
-  }),{SAVENOW_API_KEY:"test-secret"});
+  }),{SAVENOW_API_KEY:"test-secret",ALLOW_PAID_YOUTUBE_PROVIDER:"true"});
   assert.equal(lowBalanceStart.status,502);
   assert.match((await lowBalanceStart.json()).error,/Not enough balance/);
   console.log("✔ Provider low-balance response is surfaced without pretending a job was created");
