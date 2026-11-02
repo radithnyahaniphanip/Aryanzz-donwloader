@@ -414,7 +414,7 @@
     return {mode:"audio",height:0,quality:String(item.quality||item.audioQuality||item.bitrate||"Audio"),ext,mimeType:mime.split(";")[0],url:url.href,bitrate:Number(item.bitrate)||0};
   }
   function browserDedupeFormats(formats){
-    const seen=new Set();return formats.filter(f=>{const key=f.mode+":"+f.height+":"+f.ext+":"+(f.videoOnly?"video-only":"muxed")+":"+f.url.split("?")[0];if(seen.has(key))return false;seen.add(key);return true;}).sort((a,b)=>a.mode===b.mode?(a.mode==="video"?a.height-b.height:b.bitrate-a.bitrate):a.mode==="video"?-1:1).map((f,i)=>({...f,id:"f"+i}));
+    const seen=new Set();return formats.filter(f=>{const key=f.mode+":"+f.height+":"+f.ext+":"+(f.videoOnly?"video-only":"muxed")+":"+(f.instance||"")+":"+f.url.split("?")[0];if(seen.has(key))return false;seen.add(key);return true;}).sort((a,b)=>a.mode===b.mode?(a.mode==="video"?a.height-b.height:b.bitrate-a.bitrate):a.mode==="video"?-1:1).map((f,i)=>({...f,id:"f"+i}));
   }
   async function browserProviderJson(url,signal){
     const response=await fetch(url,{mode:"cors",credentials:"omit",headers:{accept:"application/json"},cache:"no-store",signal});
@@ -451,8 +451,8 @@
       const controllers=instances.map(()=>browserProviderTimeout(6500));
       const promise=Promise.all(instances.map((instance,i)=>fn(instance,match,controllers[i].signal)
         .then(result=>({...result,instance:result.instance||instance,formats:(result.formats||[]).map(format=>({...format,instance:format.instance||instance,provider:format.provider||result.provider}))}))
-        .catch(()=>null)));
-      return {promise,abort:()=>controllers.forEach(controller=>controller.abort())};
+        .catch(()=>null).finally(()=>controllers[i].clear())));
+      return {promise,abort:()=>controllers.forEach(controller=>{controller.clear();controller.abort();})};
     };
     const [invidiousInstances,pipedInstances]=await Promise.all([currentInvidiousInstances(),currentPipedInstances()]);
     const batches=Math.max(Math.ceil(invidiousInstances.length/5),Math.ceil(pipedInstances.length/5));
