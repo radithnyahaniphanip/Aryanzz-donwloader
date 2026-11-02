@@ -430,7 +430,7 @@
       if(code!==0)throw new Error("Mesin MP4 tidak dapat menyatukan format sumber (kode "+code+").");
       const result=await ffmpeg.readFile(output);
       if(!result||result.length<1024)throw new Error("Hasil MP4 kosong atau tidak lengkap.");
-      const blob=new Blob([result],{type:"video/mp4"}),filename=safeFilename((info.outputName||info.title||"aryanzz-youtube").replace(/\\.(?:mp4|mp3|m4a|webm|mov)$/i,"")+".mp4");
+      const blob=new Blob([result],{type:"video/mp4"}),filename=safeFilename((info.outputName||info.title||"aryanzz-youtube").replace(/\.(?:mp4|mp3|m4a|webm|mov)$/i,"")+".mp4");
       progressText.textContent="MP4 selesai dirakit.";
       progressMeta.textContent="Ukuran file "+formatDownloadSize(blob.size)+" · tekan tombol unduh di bawah.";
       await saveBrowserBlob(blob,filename,progressText.parentElement);
@@ -461,7 +461,7 @@
     });
   }
   async function downloadYoutubeProgressiveCandidate(url,mode,selected,info,bar,progressText,progressMeta,quality){
-    const filename=safeFilename((info.outputName||info.title||"aryanzz-youtube").replace(/\\.(?:mp4|mp3|m4a|webm|mov)$/i,"")+"."+selected.ext);
+    const filename=safeFilename((info.outputName||info.title||"aryanzz-youtube").replace(/\.(?:mp4|mp3|m4a|webm|mov)$/i,"")+"."+selected.ext);
     const instance=selected.instance||info.instance;
     const direct=browserHybridMediaUrl(selected.url,instance);
     if(!direct)throw new Error("Alamat stream tidak lolos pemeriksaan keamanan.");
@@ -698,7 +698,7 @@
       const ready=safeUrl(selected.downloadUrl);
       if(!ready)throw new Error("Provider mengirim alamat unduhan yang tidak valid.");
       const ext=selected.ext|| (mode==="audio"?"mp3":"mp4");
-      const filename=safeFilename((info.outputName||info.title||"aryanzz-media").replace(/\\.(?:mp4|mp3|m4a|webm|mov)$/i,"")+"."+ext);
+      const filename=safeFilename((info.outputName||info.title||"aryanzz-media").replace(/\.(?:mp4|mp3|m4a|webm|mov)$/i,"")+"."+ext);
       addReadyDownloadLink(bar.parentElement?.parentElement,ready.href,filename,mode==="audio"?"⬇ Unduh MP3 sekarang":"⬇ Unduh MP4 sekarang");
       bar.style.width="100%";bar.parentElement?.classList.remove("is-indeterminate");bar.parentElement?.setAttribute("aria-valuenow","100");
       progressText.textContent="File siap diunduh · "+filename;
