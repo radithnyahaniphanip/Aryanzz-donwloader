@@ -344,6 +344,21 @@ function socialSearchUrl(platform,query){
   url.searchParams.set("q",site+" "+query);
   return url;
 }
+async function verifySocialSearchResult(result,requestUrl){
+  const key=freePlatformKey(result.url);
+  if(!key)return null;
+  const endpoint=FREE_MEDIA_API+"/api/download/"+key+"?url="+encodeURIComponent(result.url);
+  try{
+    const response=await fetch(endpoint,{headers:{accept:"application/json"},signal:AbortSignal.timeout(9000),cache:"no-store"});
+    if(!response.ok)return null;
+    const data=await response.json().catch(()=>({}));
+    if(data?.success===false)return null;
+    const info=freeProviderMediaInfo(data,result.url,requestUrl);
+    const playable=info?.formats?.some(item=>item.mode==="video"&&!item.videoOnly&&item.previewUrl&&item.downloadUrl);
+    if(!playable)return null;
+    return {...result,title:info.title||result.title,thumbnail:info.thumbnail||null,duration:info.duration||null,verified:true,downloadable:true};
+  }catch{return null}
+}
 async function searchSocial(request){
   let body;try{body=await request.json()}catch{return json({error:"Body JSON tidak valid."},400)}
   const platform=String(body?.platform||"").toLowerCase(),query=String(body?.query||"").replace(/\s+/g," ").trim();
@@ -352,9 +367,9 @@ async function searchSocial(request){
   if(socialRateLimited(request))return json({error:"Batas pencarian gratis tercapai. Tunggu satu menit lalu coba lagi."},429);
   const searchUrl=socialSearchUrl(platform,query);
   try{
-    const response=await fetch(searchUrl.href,{headers:{accept:"text/html","user-agent":"Mozilla/5.0 (compatible; ARYANZZ/73.7; +https://aryanzz-donwloader.radithnyahaniphanip.workers.dev)"} ,signal:AbortSignal.timeout(12000),cache:"no-store"});
+    const response=await fetch(searchUrl.href,{headers:{accept:"text/html","user-agent":"Mozilla/5.0 (compatible; ARYANZZ/77.0; +https://aryanzz-donwloader.radithnyahaniphanip.workers.dev)"},signal:AbortSignal.timeout(12000),cache:"no-store"});
     if(!response.ok)return json({error:"Pencarian publik sedang tidak tersedia (HTTP "+response.status+")."},502);
-    const html=await response.text(),results=[],seen=new Set();
+    const html=await response.text(),candidates=[],seen=new Set();
     const re=/<a[^>]+class=["'][^"']*result__a[^"']*["'][^>]+href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
     for(const match of html.matchAll(re)){
       let link;try{link=new URL(match[1],"https://html.duckduckgo.com")}catch{continue}
@@ -366,10 +381,12 @@ async function searchSocial(request){
       if(platform==="tiktok"&&!/\/video\//i.test(link.pathname))continue;
       if(platform==="pinterest"&&!/\/pin\//i.test(link.pathname))continue;
       const snippetMatch=html.slice(match.index,match.index+1600).match(/class=["']result__snippet["'][^>]*>([\s\S]*?)<\/[^>]+>/i);
-      results.push({title,url:href,snippet:decodeSearchHtml(snippetMatch?.[1]||"")});
-      if(results.length>=8)break;
+      candidates.push({title,url:href,snippet:decodeSearchHtml(snippetMatch?.[1]||"")});
+      if(candidates.length>=8)break;
     }
-    return json({ok:true,platform,query,results});
+    const checked=await Promise.all(candidates.map(item=>verifySocialSearchResult(item,request.url)));
+    const results=checked.filter(Boolean);
+    return json({ok:true,platform,query,results,verifiedCount:results.length,unavailableCount:candidates.length-results.length,verification:"provider-metadata"});
   }catch(error){return json({error:"Pencarian publik gagal dijangkau. Coba lagi nanti. "+String(error?.message||error).slice(0,100)},502)}
 }
 async function info(request){
