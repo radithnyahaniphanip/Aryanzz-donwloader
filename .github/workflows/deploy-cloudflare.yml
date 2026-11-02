@@ -65,7 +65,7 @@ jobs:
             } catch {}
             await new Promise(resolve => setTimeout(resolve, 2500));
           }
-          if (health?.version !== "71.2" || health?.mode !== "cloudflare-worker-zero-server-hybrid" || !health?.directMediaDownload) {
+          if (health?.version !== "71.3" || health?.mode !== "cloudflare-worker-zero-server-hybrid" || !health?.directMediaDownload) {
             throw new Error("Live Worker has not propagated the V71.3 zero-server deployment: " + JSON.stringify(health));
           }
           console.log("Live Worker health OK: V" + health.version + " in zero-server mode.");
