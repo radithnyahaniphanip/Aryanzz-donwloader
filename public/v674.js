@@ -35,21 +35,21 @@ const note=document.createElement("p");note.textContent="Provider pencarian grat
 const open=document.createElement("a");open.className="primary";open.href=target.url(q);open.target="_blank";open.rel="noopener noreferrer";open.textContent="Buka pencarian "+target.name+" ↗";
 card.append(title,note,open);results.append(card);
 }
-function render(items,target,q){
+function render(items,target,q,unavailableCount=0){
 results.replaceChildren();
-if(!items.length){showFallback(target,q);if(help)help.textContent="Belum ada hasil dari provider gratis. Coba kata kunci lain.";return}
+if(!items.length){showFallback(target,q);if(help)help.textContent="Belum ada video yang lolos pemeriksaan provider gratis. Tautan yang tidak bisa diputar atau diunduh sengaja disembunyikan. Coba kata kunci lain.";return}
 items.forEach(item=>{
 const card=document.createElement("article");card.className="v674-search-result v737-media-result";
 if(item.thumbnail){try{const u=new URL(item.thumbnail);if(u.protocol==="https:"){const img=document.createElement("img");img.src=u.href;img.alt="Pratinjau "+(item.title||"media");img.loading="lazy";card.append(img)}}catch{}}
 const info=document.createElement("div"),title=document.createElement("h3"),meta=document.createElement("p"),snippet=document.createElement("p"),pick=document.createElement("button");
 title.textContent=item.title||"Video tanpa judul";
-meta.textContent=[item.channel,target.name,duration(item.duration)].filter(Boolean).join(" · ");
+meta.textContent=[item.channel,target.name,duration(item.duration),item.verified?"✓ Tautan terverifikasi":""].filter(Boolean).join(" · ");
 snippet.textContent=item.snippet||"Pilih hasil ini untuk memeriksa pratinjau dan format unduhan.";
 pick.type="button";pick.className="primary";pick.textContent="Lihat & unduh";
 pick.addEventListener("click",()=>{const input=$("url");if(!input)return;input.value=item.url;setMode("link");$("analyze")?.click();$("downloadResult")?.scrollIntoView({behavior:"smooth",block:"nearest"})});
 info.append(title,meta,snippet,pick);card.append(info);results.append(card);
 });
-if(help)help.textContent=items.length+" hasil ditemukan · pilih video untuk melihat pratinjau di ARYANZZ.";
+if(help)help.textContent=items.length+" video lolos pemeriksaan"+(Number(unavailableCount)>0?" · "+Number(unavailableCount)+" tautan mati/tidak menyediakan video dilewati":"")+" · pilih hasil untuk memutar dan mengunduh di ARYANZZ.";
 }
 const go=async()=>{
 const q=(searchInput?.value||"").trim();if(!q){if(help)help.textContent="Masukkan judul yang ingin dicari.";return}if(q.length<2){if(help)help.textContent="Masukkan minimal 2 karakter.";return}
@@ -64,7 +64,7 @@ const response=await fetch(endpoint,{method:"POST",headers:{"content-type":"appl
 const data=await response.json().catch(()=>({}));
 if(!response.ok)throw Error(data.error||"Provider pencarian menjawab HTTP "+response.status+".");
 const items=Array.isArray(data.results)?data.results:[];
-render(items,target,q);
+render(items,target,q,Number(data.unavailableCount)||0);
 }catch(error){
 if(error?.name==="AbortError")return;
 results.replaceChildren();showFallback(target,q);
