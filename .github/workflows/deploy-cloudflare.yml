@@ -36,6 +36,14 @@ jobs:
             printf '%s' "$AUDD_API_TOKEN" | wrangler secret put AUDD_API_TOKEN
           fi
 
+      - name: Remove legacy self-hosted extractor secrets
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          wrangler secret delete PLATFORM_API_ORIGIN || true
+          wrangler secret delete PLATFORM_API_TOKEN || true
+
       - name: Deploy Worker and static assets
         run: wrangler deploy
         env:
