@@ -117,7 +117,7 @@
     if(!selected)throw new Error("Kualitas/format yang dipilih tidak tersedia dari sumber komunitas.");
     const filename=safeFilename((info.title||"aryanzz-youtube")+"."+selected.ext);
     progressText.textContent="Mengambil stream langsung dari browser…";
-    const direct=browserHybridMediaUrl(selected.url);
+    const direct=browserHybridMediaUrl(selected.url,info.instance);
     if(!direct)throw new Error("Alamat stream tidak lolos pemeriksaan keamanan.");
     try{
       const controller=new AbortController();
@@ -247,18 +247,29 @@
     "https://inv.nadeko.net","https://invidious.nerdvpn.de","https://yt.chocolatemoo53.com","https://invidious.tiekoetter.com"
   ];
   const BROWSER_MEDIA_ROOTS=["kavin.rocks","leptons.xyz","nosebs.ru","privacy.com.de","adminforge.de","piped.yt","drgns.space","owo.si","ducks.party","codespace.cz","reallyaweso.me","private.coffee","darkness.services","orangenet.cc"];
-  function browserHybridMediaUrl(raw){
-    try{const u=new URL(raw);if(u.protocol!=="https:"||u.username||u.password)return null;const h=u.hostname.toLowerCase();if(h==="googlevideo.com"||h.endsWith(".googlevideo.com"))return u;if(BROWSER_MEDIA_ROOTS.some(root=>h.endsWith("."+root)))return u;return null;}catch{return null;}
+  function browserHybridMediaUrl(raw,trustedOrigin){
+    try{
+      const u=new URL(raw,trustedOrigin||undefined);
+      if(u.protocol!=="https:"||u.username||u.password)return null;
+      const h=u.hostname.toLowerCase();
+      if(h==="googlevideo.com"||h.endsWith(".googlevideo.com"))return u;
+      if(BROWSER_MEDIA_ROOTS.some(root=>h===root||h.endsWith("."+root)))return u;
+      if(trustedOrigin&&u.origin===new URL(trustedOrigin).origin)return u;
+      return null;
+    }catch{return null;}
   }
-  function browserVideoFormat(item){
-    const mime=String(item?.mimeType||item?.type||"").toLowerCase(),container=String(item?.format||item?.container||"").toLowerCase();
-    const height=Number(item?.height)||Number((String(item?.qualityLabel||item?.quality||item?.resolution||"").match(/(\d{3,4})p?/i)||[])[1])||0;
-    const url=browserHybridMediaUrl(item?.url||"");
-    if(!url||![144,240,360,480,720,1080,1440,2160].includes(height)||item?.videoOnly===true||!(mime.includes("video/mp4")||container.includes("mpeg_4")||container==="mp4"||mime.includes("video/x-m4v")))return null;
-    return {mode:"video",height,quality:height+"p",ext:"mp4",mimeType:"video/mp4",url:url.href,bitrate:Number(item.bitrate)||0};
+  function browserVideoFormat(item,providerInstance,progressiveSource=false){
+    const mime=String(item?.mimeType||item?.type||item?.mime_type||item?.mime||"").toLowerCase();
+    const container=String(item?.format||item?.container||item?.ext||"").toLowerCase();
+    const qualityText=String(item?.qualityLabel||item?.quality||item?.resolution||item?.size||"");
+    const height=Number(item?.height)||Number((qualityText.match(/(\d{3,4})\s*p?/i)||[])[1])||0;
+    const url=browserHybridMediaUrl(item?.url||item?.urlTemplate||"",providerInstance);
+    const mp4=mime.includes("video/mp4")||mime.includes("video/x-m4v")||container.includes("mpeg_4")||container==="mp4"||container==="m4v"||(progressiveSource&&/\.mp4(?:$|[?#])/i.test(url?.pathname||""));
+    if(!url||![144,240,360,480,720,1080,1440,2160].includes(height)||item?.videoOnly===true||!mp4)return null;
+    return {mode:"video",height,quality:height+"p",ext:"mp4",mimeType:"video/mp4",url:url.href,bitrate:Number(item.bitrate)||0,progressive:true};
   }
-  function browserAudioFormat(item){
-    const mime=String(item?.mimeType||item?.type||"").toLowerCase(),container=String(item?.format||item?.container||"").toLowerCase(),url=browserHybridMediaUrl(item?.url||"");
+  function browserAudioFormat(item,providerInstance){
+    const mime=String(item?.mimeType||item?.type||item?.mime_type||item?.mime||"").toLowerCase(),container=String(item?.format||item?.container||item?.ext||"").toLowerCase(),url=browserHybridMediaUrl(item?.url||"",providerInstance);
     if(!url||!(mime.startsWith("audio/")||["m4a","mp3","webm","opus","ogg"].includes(container)))return null;
     let ext=container==="mpeg"?"mp3":container==="mp4"?"m4a":container;
     if(!["m4a","mp3","webm","opus","ogg","wav","flac"].includes(ext)){if(mime.includes("audio/mp4"))ext="m4a";else if(mime.includes("audio/mpeg"))ext="mp3";else if(mime.includes("audio/webm"))ext="webm";else return null;}
@@ -279,13 +290,13 @@
   }
   async function browserPipedInfo(instance,id,signal){
     const data=await browserProviderJson(instance+"/streams/"+encodeURIComponent(id),signal);
-      const formats=browserDedupeFormats([...(Array.isArray(data.videoStreams)?data.videoStreams.map(browserVideoFormat).filter(Boolean):[]),...(Array.isArray(data.audioStreams)?data.audioStreams.map(browserAudioFormat).filter(Boolean):[])]);
+      const formats=browserDedupeFormats([...(Array.isArray(data.videoStreams)?data.videoStreams.map(item=>browserVideoFormat(item,instance)).filter(Boolean):[]),...(Array.isArray(data.audioStreams)?data.audioStreams.map(item=>browserAudioFormat(item,instance)).filter(Boolean):[])]);
       if(!data.title||!formats.length)throw new Error("Tidak ada stream progresif yang kompatibel");
       return {ok:true,providerReady:true,providerName:"Hybrid",provider:"Piped",instance,title:String(data.title).slice(0,300),thumbnail:typeof data.thumbnailUrl==="string"?data.thumbnailUrl:null,duration:Number(data.duration)||null,uploader:String(data.uploader||"").slice(0,160),formats,message:"Stream diperoleh langsung dari browser melalui instance komunitas."};
   }
   async function browserInvidiousInfo(instance,id,signal){
     const data=await browserProviderJson(instance+"/api/v1/videos/"+encodeURIComponent(id)+"?fields=title,videoId,author,lengthSeconds,videoThumbnails,formatStreams,adaptiveFormats",signal);
-      const formats=browserDedupeFormats([...(Array.isArray(data.formatStreams)?data.formatStreams.map(browserVideoFormat).filter(Boolean):[]),...(Array.isArray(data.adaptiveFormats)?data.adaptiveFormats.map(browserAudioFormat).filter(Boolean):[])]);
+      const formats=browserDedupeFormats([...(Array.isArray(data.formatStreams)?data.formatStreams.map(item=>browserVideoFormat(item,instance,true)).filter(Boolean):[]),...(Array.isArray(data.adaptiveFormats)?data.adaptiveFormats.map(item=>browserAudioFormat(item,instance)).filter(Boolean):[])]);
       if(!data.title||!formats.length)throw new Error("Tidak ada stream progresif yang kompatibel");
       const thumb=Array.isArray(data.videoThumbnails)?data.videoThumbnails.find(x=>x.quality==="maxresdefault")||data.videoThumbnails[0]:null;
       return {ok:true,providerReady:true,providerName:"Hybrid",provider:"Invidious",instance,title:String(data.title).slice(0,300),thumbnail:typeof thumb?.url==="string"?thumb.url:null,duration:Number(data.lengthSeconds)||null,uploader:String(data.author||"").slice(0,160),formats,message:"Stream diperoleh langsung dari browser melalui instance komunitas."};
