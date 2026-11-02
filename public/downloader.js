@@ -1194,7 +1194,7 @@
       const formatLabel = make("label", "label", "FORMAT");
       const mode = make("select", "field");
       mode.id = "aryMode";
-      [["video",isYouTube?"Video MP4":"Video"],["audio",isYouTube?"Audio saja":"Audio MP3 / M4A"]].forEach(([value,label]) => {
+      [["video","Video MP4"],["audio",isYouTube?"Audio saja":"Audio MP3 / M4A"]].forEach(([value,label]) => {
         const option = make("option", "", label);
         option.value = value;
         mode.append(option);
