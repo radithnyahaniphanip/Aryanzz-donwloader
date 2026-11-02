@@ -28,6 +28,9 @@ const manifest=JSON.parse(file("../public/manifest.webmanifest"));
 const deployWorkflow=file("../.github/workflows/deploy-cloudflare.yml");
 
 const checks=[
+  ["V81.0 social image extraction, image search, and safe proxy endpoints are registered",workerSource.includes("async function socialImageInfo")&&workerSource.includes("async function socialImageSearch")&&workerSource.includes("async function socialImageFile")&&workerSource.includes('url.pathname==="/api/social/images"')&&workerSource.includes('url.pathname==="/api/social/image-search"')&&workerSource.includes('url.pathname==="/api/social-image-file"')],
+  ["V81.0 Image Studio supports public image links, multi-image posts, custom ratios, and local export",html.includes('id="imageStudio"')&&html.includes('id="socialImageAnalyze"')&&html.includes('id="socialImageSearchBtn"')&&html.includes('id="imageStudioPreview"')&&html.includes('id="imageStudioExport"')&&file("../public/image-studio.js").includes("createImageBitmap")&&file("../public/image-studio.js").includes("/api/social/images")],
+  ["V81.0 image assets are included in the PWA cache",sw.includes("/image-studio.js?v=81.0")&&sw.includes("/image-studio.css?v=81.0")&&html.includes('/image-studio.js?v=81.0')&&html.includes('/image-studio.css?v=81.0')],
 
   ["V73.7 presents a visible tap-to-download link for completed browser files",downloader.includes("function addReadyDownloadLink")&&downloader.includes("youtube-ready-link")&&downloader.includes("Unduh MP4 sekarang")&&!downloader.includes("document.body.append(anchor);anchor.click();anchor.remove();")],
   ["V73.7 adaptive MP4 shows three clear stages and only reaches 100% after the file is ready",downloader.includes("Tahap 1/3 · Video")&&downloader.includes("Tahap 2/3 · Audio")&&downloader.includes("Tahap 3/3 · Menyatukan MP4")&&downloader.includes('bar.style.width="100%"')],
@@ -987,10 +990,10 @@ try{
 
   const health=await worker.fetch(new Request("https://aryanzz.example/api/health"),{});
   const healthData=await health.json();
-  assert.equal(healthData.version,"80.0");
+  assert.equal(healthData.version,"81.0");
   assert.equal(healthData.cobalt,false);
   assert.equal(healthData.paidYoutubeProvider,false);
-  console.log("✔ Worker health reports V73.7 with no Cobalt or paid YouTube provider");
+  console.log("✔ Worker health reports V81.0 with no Cobalt or paid YouTube provider");
 
 }finally{
   globalThis.fetch=originalFetch;
