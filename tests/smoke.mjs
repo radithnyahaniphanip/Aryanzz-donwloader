@@ -22,7 +22,7 @@ const downloaderCss=file("../public/downloader.css");
 const manifest=JSON.parse(file("../public/manifest.webmanifest"));
 
 const checks=[
-  ["V73.1 adaptive MP4 writes tracks sequentially after size preflight",downloader.includes("const [videoProbe,audioProbe]=await Promise.all")&&downloader.includes("await ffmpeg.writeFile(inputVideo,videoBytes);videoBytes=null;")&&downloader.includes("await ffmpeg.writeFile(inputAudio,audioBytes);audioBytes=null;")],
+  ["V73.1 adaptive MP4 writes tracks sequentially after size preflight",downloader.includes("const [videoProbe,audioProbe]=await Promise.all")&&downloader.indexOf("videoBytes=await fetchYoutubeTrack")<downloader.indexOf("ffmpeg=await loadBrowserFfmpeg")&&downloader.includes("await ffmpeg.writeFile(inputVideo,videoBytes);videoBytes=null;")&&downloader.includes("await ffmpeg.writeFile(inputAudio,audioBytes);audioBytes=null;")],
   ["V73.1 direct media proxy forwards byte ranges and preserves resume headers",workerSource.includes('getUpstream(parsed,"GET",range)')&&workerSource.includes('request.headers.get("range")')&&workerSource.includes('"content-range"')&&workerSource.includes('status:upstream.status')],
   ["V73.1 adaptive progress updates while each 1 MiB chunk is streamed",downloader.includes("reader=response.body?.getReader()")&&downloader.includes("received:received+inFlight")&&downloader.includes("Potongan 1 MB disimpan lokal")],
   ["V73.1 page title",html.includes("ARYANZZ V73.1 — All-in-One Creative Space")],
