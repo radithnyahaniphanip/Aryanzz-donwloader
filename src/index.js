@@ -105,13 +105,10 @@ async function download(request){
 const PIPED_INSTANCES=[
   {id:"kavin",api:"https://pipedapi.kavin.rocks",domain:"kavin.rocks"},
   {id:"adminforge",api:"https://pipedapi.adminforge.de",domain:"adminforge.de"},
-  {id:"leptons",api:"https://pipedapi.leptons.xyz",domain:"leptons.xyz"}
 ];
 const INVIDIOUS_INSTANCES=[
   {id:"tiekoetter",api:"https://invidious.tiekoetter.com",domain:"tiekoetter.com"},
   {id:"nerdvpn",api:"https://invidious.nerdvpn.de",domain:"nerdvpn.de"},
-  {id:"chocolate",api:"https://yt.chocolatemoo53.com",domain:"chocolatemoo53.com"},
-  {id:"nadeko",api:"https://inv.nadeko.net",domain:"nadeko.net"}
 ];
 const MAX_YOUTUBE_BYTES=500*1024*1024;
 const AUDD_MAX_BYTES=10*1024*1024;
@@ -163,7 +160,7 @@ function invidiousFormatList(data,instance){
   return {formats,audioFormats};
 }
 async function fetchCommunityJson(url){
-  const response=await fetch(url,{headers:{accept:"application/json","user-agent":"ARYANZZ/71.0 (public API client)"},redirect:"error",signal:AbortSignal.timeout(6500)});
+  const response=await fetch(url,{headers:{accept:"application/json","user-agent":"ARYANZZ/71.0 (public API client)"},redirect:"error",signal:AbortSignal.timeout(4500)});
   if(!response.ok)throw new Error("HTTP "+response.status);
   const data=await response.json();if(!data||typeof data!=="object")throw new Error("JSON tidak valid");return data;
 }
@@ -190,7 +187,7 @@ async function youtubeInfo(request){
   for(const instance of PIPED_INSTANCES){try{return json(await tryPiped(videoId,instance));}catch(e){failures.push("Piped "+instance.id+": "+String(e.message||e).slice(0,100));}}
   for(const instance of INVIDIOUS_INSTANCES){try{return json(await tryInvidious(videoId,instance));}catch(e){failures.push("Invidious "+instance.id+": "+String(e.message||e).slice(0,100));}}
   let preview={};
-  try{const u=new URL("https://www.youtube.com/oembed");u.searchParams.set("url",raw);u.searchParams.set("format","json");const r=await fetch(u.toString(),{headers:{accept:"application/json"},signal:AbortSignal.timeout(7000)});if(r.ok)preview=await r.json();}catch{}
+  try{const u=new URL("https://www.youtube.com/oembed");u.searchParams.set("url",raw);u.searchParams.set("format","json");const r=await fetch(u.toString(),{headers:{accept:"application/json"},signal:AbortSignal.timeout(5000)});if(r.ok)preview=await r.json();}catch{}
   return json({ok:true,providerReady:false,providerName:null,title:String(preview.title||"Video YouTube").slice(0,300),thumbnail:typeof preview.thumbnail_url==="string"?preview.thumbnail_url:null,author:String(preview.author_name||"").slice(0,180),duration:null,formats:[],audioFormats:[],source:"YouTube preview",providerMessage:"Informasi video dapat ditampilkan, tetapi semua instance komunitas sedang tidak tersedia atau tidak menyediakan stream yang dapat diunduh. Tidak ada provider berbayar yang dipanggil.",providerFailures:failures.slice(0,7)},200);
 }
 function streamHostAllowed(provider,instanceId,raw){
