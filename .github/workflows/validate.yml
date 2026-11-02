@@ -1,4 +1,4 @@
-name: Validate ARYANZZ V71.7
+name: Validate ARYANZZ V72.0
 on:
   push:
     branches: [main]
@@ -27,6 +27,7 @@ jobs:
           node --check public/editor.js
           node --check public/owner.js
           node --check public/downloader.js
+          node --check public/ffmpeg-worker-bootstrap.js
           node --check public/v677.js
           node --check public/v680.js
           node --check public/v674.js
