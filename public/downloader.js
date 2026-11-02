@@ -217,6 +217,11 @@
     for(let i=0;i<identity.length;i++)hash=Math.imul(hash^identity.charCodeAt(i),16777619);
     return "v729:"+((hash>>>0).toString(36))+":";
   }
+  async function fetchWithHeaderTimeout(input,init={},timeout=30000){
+    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),timeout);
+    try{return await fetch(input,{...init,signal:controller.signal});}
+    finally{clearTimeout(timer);}
+  }
   async function fetchYoutubeTrackRanges(target,total,info,item,bar,progressText,progressMeta,label,base,span,speed){
     const chunkSize=4*1024*1024,count=Math.ceil(total/chunkSize),output=new Uint8Array(total);
     const prefix=downloadResumePrefix(info.url||"",item),concurrency=Math.max(1,Math.min(5,Number(speed)||3));
@@ -229,7 +234,7 @@
         try{
           let part=await readDownloadChunk(key);
           if(!part||part.byteLength!==expected){
-            const response=await fetch(target,{headers:{Range:"bytes="+start+"-"+end},cache:"no-store",signal:AbortSignal.timeout(120000)});
+            const response=await fetchWithHeaderTimeout(target,{headers:{Range:"bytes="+start+"-"+end},cache:"no-store"},45000);
             if(response.status!==206){
               if(response.body)await response.body.cancel().catch(()=>{});
               if(response.status===200)throw new Error("Server sumber tidak mendukung Range untuk mode paralel.");
@@ -276,11 +281,11 @@
     }
     let response,browserError;
     try{
-      response=await fetch(direct.href,{mode:"cors",credentials:"omit",cache:"no-store",signal:AbortSignal.timeout(180000)});
+      response=await fetchWithHeaderTimeout(direct.href,{mode:"cors",credentials:"omit",cache:"no-store"},45000);
       if(!response.ok)throw new Error("HTTP "+response.status);
     }catch(error){
       browserError=error;
-      response=await fetch(target,{cache:"no-store",signal:AbortSignal.timeout(180000)});
+      response=await fetchWithHeaderTimeout(target,{cache:"no-store"},45000);
       if(!response.ok){const detail=await response.json().catch(()=>({}));throw new Error(label+" tidak bisa diambil: "+(detail.error||browserError.message||"CORS"));}
     }
     const type=String(response.headers.get("content-type")||"").toLowerCase();
