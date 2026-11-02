@@ -46,7 +46,7 @@
 @keyframes aryanzzDownloadSweep{0%{transform:translateX(-105%);background-position:0% 50%}100%{transform:translateX(300%);background-position:100% 50%}}
 @media(prefers-reduced-motion:reduce){.youtube-result .progress-track.is-indeterminate .progress-fill{animation:none;transform:none}}
 
-/* V72.9 — mobile-friendly thumbnail actions and adaptive download controls */
+/* V73.0 — mobile-friendly thumbnail actions and adaptive download controls */
 .youtube-thumb-wrap{display:flex;flex:0 0 auto;flex-direction:column;align-items:stretch;gap:7px;width:116px;max-width:36%;min-width:0}
 .youtube-thumb-wrap .youtube-thumbnail{width:100%;max-width:none;margin:0}
 .youtube-thumb-download{display:flex;align-items:center;justify-content:center;min-height:32px;padding:7px 8px;border:1px solid #3b6389;border-radius:9px;background:linear-gradient(110deg,#183b5b,#153149);color:#cdeeff!important;font-size:10px;font-weight:850;text-align:center;text-decoration:none;white-space:nowrap}
@@ -54,3 +54,10 @@
 .youtube-result #aryDownloadSpeed{border-color:#4a6e99;background:linear-gradient(145deg,#11263e,#0a182a);font-weight:750}
 .youtube-result #aryDownloadSpeed:focus{border-color:#55d1e6;box-shadow:0 0 0 3px #38b9d522}
 @media(max-width:420px){.youtube-thumb-wrap{width:104px}.youtube-thumb-download{font-size:9px;padding:7px 5px}.youtube-result #aryDownloadSpeed{font-size:13px}}
+
+
+/* V73.0 — visible thumbnail action and mobile transfer controls */
+.youtube-thumb-wrap{position:relative;gap:0}
+.youtube-thumb-download{position:absolute;left:5px;right:5px;bottom:5px;z-index:2;min-height:27px;padding:6px 5px;border:1px solid #6a8db4;border-radius:8px;background:rgba(5,14,27,.9);backdrop-filter:blur(8px);box-shadow:0 3px 12px #0008;color:#f1f8ff!important;font-size:10px;font-weight:900;white-space:normal}
+.youtube-result #aryDownloadSpeed{min-height:46px;font-size:14px}
+.youtube-result .download-progress-meta{overflow-wrap:anywhere}
