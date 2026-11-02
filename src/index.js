@@ -56,14 +56,19 @@ async function getUpstream(parsed,method="HEAD",range=null){
   }
   throw new Error("Terlalu banyak pengalihan URL.");
 }
-const PLATFORM_HOSTS=["youtube.com","youtu.be","youtube-nocookie.com","tiktok.com","instagram.com","snackvideo.com","threads.net","facebook.com","fb.watch","pinterest.com","pin.it","x.com","twitter.com","reddit.com","redd.it","vimeo.com","dailymotion.com","dai.ly","soundcloud.com","twitch.tv","streamable.com","tumblr.com","bilibili.com","b23.tv","vk.com","ok.ru","rutube.ru","likee.video","snapchat.com","imgur.com","bandcamp.com","mixcloud.com","ted.com","archive.org","loom.com","rumble.com","odysee.com","weibo.com","xiaohongshu.com","capcut.com"];
+const PLATFORM_HOSTS=["youtube.com","youtu.be","youtube-nocookie.com","tiktok.com","instagram.com","snackvideo.com","sck.io","threads.net","facebook.com","fb.watch","pinterest.com","pin.it","x.com","twitter.com","reddit.com","redd.it","vimeo.com","dailymotion.com","dai.ly","soundcloud.com","twitch.tv","streamable.com","tumblr.com","bilibili.com","b23.tv","vk.com","ok.ru","rutube.ru","likee.video","snapchat.com","imgur.com","bandcamp.com","mixcloud.com","ted.com","archive.org","loom.com","rumble.com","odysee.com","weibo.com","xiaohongshu.com","capcut.com"];
 function isPlatformLink(raw){
-  try{const u=new URL(raw);const h=u.hostname.toLowerCase();return ["http:","https:"].includes(u.protocol)&&PLATFORM_HOSTS.some(d=>h===d||h.endsWith("."+d));}catch{return false;}
+  try{
+    const u=new URL(raw),h=u.hostname.toLowerCase();
+    if(!["http:","https:"].includes(u.protocol))return false;
+    if(h==="sck.io"||h==="www.sck.io")return /^\\/p\\/[A-Za-z0-9_-]+\\/?$/.test(u.pathname);
+    return PLATFORM_HOSTS.some(d=>h===d||h.endsWith("."+d));
+  }catch{return false;}
 }
 const FREE_MEDIA_API="https://btch-downloader-api-green.vercel.app";
 const FREE_PLATFORM_KEYS={
   "youtube.com":"youtube","youtu.be":"youtube","youtube-nocookie.com":"youtube","tiktok.com":"tiktok","instagram.com":"instagram",
-  "snackvideo.com":"snackvideo","pinterest.com":"pinterest","pin.it":"pinterest",
+  "snackvideo.com":"snackvideo","sck.io":"snackvideo","pinterest.com":"pinterest","pin.it":"pinterest",
   "facebook.com":"facebook","fb.watch":"facebook","x.com":"twitter","twitter.com":"twitter",
   "reddit.com":"reddit","redd.it":"reddit","vimeo.com":"vimeo","threads.net":"threads",
   "soundcloud.com":"soundcloud","capcut.com":"capcut"
@@ -89,33 +94,55 @@ function safePublicMediaUrl(raw){
   }catch{return null}
 }
 function freeProviderMediaInfo(data,rawUrl,requestUrl){
-  const normalized=data?.normalized;
-  const media=Array.isArray(normalized?.media)?normalized.media:[];
-  const mediaItems=media.slice();
-  const rawResult=data?.result||{};
-  for(const rawAudio of [rawResult.audio_url,rawResult.audioUrl,rawResult.music?.audio_url,rawResult.music?.url,rawResult.music?.download_url]){
-    if(typeof rawAudio==="string"&&!mediaItems.some(item=>item?.url===rawAudio))mediaItems.push({label:"Audio MP3",type:"audio",url:rawAudio});
+  const root=data?.normalized||data?.data?.normalized||data?.data||data?.result?.normalized||data?.result||data||{};
+  const rawResult=data?.result||root?.result||root?.video||root||{};
+  const mediaSources=[
+    data?.normalized?.media,data?.data?.normalized?.media,data?.data?.media,
+    data?.result?.media,root?.media,rawResult?.media,
+    data?.normalized?.formats,data?.data?.normalized?.formats,data?.data?.formats,
+    data?.result?.formats,root?.formats,rawResult?.formats
+  ];
+  const media=mediaSources.find(Array.isArray)||[];
+  const mediaItems=media.map(item=>typeof item==="string"?{url:item,type:"video",label:"Video MP4"}:item).filter(Boolean);
+  const appendCandidate=(value,type,label)=>{
+    if(typeof value==="string"&&value.trim()&&!mediaItems.some(item=>item?.url===value))mediaItems.push({url:value,type,label});
+    else if(value&&typeof value==="object"&&!Array.isArray(value)){
+      const url=value.url||value.src||value.download_url||value.downloadUrl||value.play_url||value.playUrl;
+      if(typeof url==="string"&&!mediaItems.some(item=>item?.url===url))mediaItems.push({...value,url,type:value.type||type,label:value.label||label});
+    }
+  };
+  for(const source of [data,root,rawResult]){
+    for(const key of ["video_url","videoUrl","play_url","playUrl","download_url","downloadUrl","play","video","no_watermark","noWatermark","watermark_free"]){
+      appendCandidate(source?.[key],"video","Video MP4");
+    }
+    for(const key of ["audio_url","audioUrl","music_url","musicUrl","audio_download","audioDownload"]){
+      appendCandidate(source?.[key],"audio","Audio MP3");
+    }
   }
-  const title=String(normalized?.title||rawResult.title||rawResult.caption||"Media siap diunduh").slice(0,300);
+  for(const rawAudio of [rawResult?.music?.audio_url,rawResult?.music?.url,rawResult?.music?.download_url,root?.music?.audio_url,root?.music?.url]){
+    appendCandidate(rawAudio,"audio","Audio MP3");
+  }
+  const title=String(root?.title||root?.desc||root?.description||rawResult?.title||rawResult?.caption||rawResult?.desc||data?.title||"Media siap diunduh").slice(0,300);
   const mimeExtensions={
     "video/mp4":"mp4","video/webm":"webm","video/quicktime":"mov","video/x-msvideo":"avi",
     "audio/mpeg":"mp3","audio/mp4":"m4a","audio/aac":"aac","audio/ogg":"ogg","audio/wav":"wav","audio/flac":"flac"
   };
   const formats=mediaItems.map(item=>{
-    const mediaUrl=safePublicMediaUrl(item?.url);if(!mediaUrl)return null;
-    const label=String(item?.label||item?.type||"Media").slice(0,100);
-    const kind=String(item?.type||item?.kind||label).toLowerCase();
-    const mime=String(item?.mimeType||item?.mime_type||item?.mimetype||item?.contentType||item?.content_type||"").split(";")[0].trim().toLowerCase();
+    const mediaUrl=safePublicMediaUrl(item?.url||item?.src||item?.download_url||item?.downloadUrl);if(!mediaUrl)return null;
+    const label=String(item?.label||item?.qualityLabel||item?.type||"Media").slice(0,100);
+    const kind=String(item?.type||item?.kind||item?.format||label).toLowerCase();
+    const mime=String(item?.mimeType||item?.mime_type||item?.mimetype||item?.contentType||item?.content_type||item?.mime||"").split(";")[0].trim().toLowerCase();
     const pathExt=(mediaUrl.pathname.match(/\.([a-z0-9]{2,5})$/i)?.[1]||"").toLowerCase();
     const declaredExt=String(item?.ext||item?.extension||item?.fileExtension||"").replace(/^\./,"").toLowerCase();
-    const ext=mimeExtensions[mime]||(["mp4","webm","mov","m4v","avi","3gp","mp3","m4a","aac","opus","ogg","wav","flac"].includes(pathExt)?pathExt:"")||(["mp4","webm","mov","m4v","avi","3gp","mp3","m4a","aac","opus","ogg","wav","flac"].includes(declaredExt)?declaredExt:"")||(/mp3/i.test(label)?"mp3":/m4a/i.test(label)?"m4a":/webm/i.test(label)?"webm":/mp4|video/i.test(label+ " "+kind)?"mp4":"");
+    const allowedExt=["mp4","webm","mov","m4v","avi","3gp","mp3","m4a","aac","opus","ogg","wav","flac"];
+    const ext=mimeExtensions[mime]||(allowedExt.includes(pathExt)?pathExt:"")||(allowedExt.includes(declaredExt)?declaredExt:"")||(/mp3/i.test(label)?"mp3":/m4a/i.test(label)?"m4a":/webm/i.test(label)?"webm":/mp4|video/i.test(label+" "+kind)?"mp4":"");
     const image=/image|photo|picture|thumbnail|cover/.test(kind+" "+label)||["jpg","jpeg","png","gif","webp","avif"].includes(pathExt)||["jpg","jpeg","png","gif","webp","avif"].includes(declaredExt);
     if(image)return null;
     const audio=mime.startsWith("audio/")||/audio|mp3|m4a|aac|opus|flac/.test(kind+" "+label)||["mp3","m4a","aac","opus","ogg","wav","flac"].includes(ext);
     const video=mime.startsWith("video/")||/video/.test(kind+" "+label)||["mp4","webm","mov","m4v","avi","3gp"].includes(ext);
     if(!audio&&!video)return null;
     const finalExt=ext||(audio?"mp3":"mp4");
-    const rawQuality=item?.height??item?.quality??item?.resolution??item?.qualityLabel??label;
+    const rawQuality=item?.height??item?.quality??item?.resolution??item?.qualityLabel??item?.quality_label??label;
     const qualityMatch=String(rawQuality||"").match(/(?:^|\D)(144|240|360|480|540|576|720|900|960|1080|1440|2160)\s*p?/i)||String(label).match(/(144|240|360|480|540|576|720|900|960|1080|1440|2160)p/i);
     const height=Number(rawQuality)>0?Number(rawQuality):Number(qualityMatch?.[1]||0);
     const videoOnly=video&&(item?.videoOnly===true||item?.video_only===true||item?.hasAudio===false||item?.has_audio===false||item?.audio===false);
@@ -127,28 +154,17 @@ function freeProviderMediaInfo(data,rawUrl,requestUrl){
     downloadUrl.searchParams.set("ext",finalExt);
     downloadUrl.searchParams.set("mode",audio?"audio":"video");
     const previewUrl=new URL(downloadUrl.href);previewUrl.searchParams.set("preview","1");
-    return {mode:audio?"audio":"video",type:audio?"audio":"video",ext:finalExt,height:audio?0:height,videoOnly,hasAudio:video?!videoOnly:undefined,mimeType:mime||null,url:mediaUrl.href,downloadUrl:downloadUrl.href,previewUrl:previewUrl.href,label,filesize:Number(item?.sizeBytes||item?.size_bytes||item?.filesize||item?.size||0)||null};
+    return {mode:audio?"audio":"video",type:audio?"audio":"video",ext:finalExt,height:audio?0:height,videoOnly,hasAudio:video?!videoOnly:undefined,mimeType:mime||null,url:mediaUrl.href,downloadUrl:downloadUrl.href,previewUrl:previewUrl.href,label,filesize:Number(item?.sizeBytes||item?.size_bytes||item?.filesize||item?.size||item?.contentLength||item?.content_length||0)||null};
   }).filter(Boolean);
-  const thumbnail=safePublicMediaUrl(normalized?.thumbnail||rawResult.thumbnail||rawResult.cover)?.href||null;
-  const duration=Number(normalized?.duration||rawResult.duration||rawResult.video?.duration||0)||null;
+  const thumbnail=safePublicMediaUrl(root?.thumbnail||root?.thumbnail_url||root?.cover||root?.cover_url||root?.coverUrl||rawResult?.thumbnail||rawResult?.cover)?.href||null;
+  const rawDuration=root?.duration||root?.duration_seconds||rawResult?.duration||rawResult?.video?.duration||data?.duration||0;
+  const durationNumber=Number(rawDuration);
+  const durationParts=String(rawDuration).match(/^(?:(\d+):)?(\d{1,2}):(\d{2})(?:\.(\d+))?$/);
+  const duration=Number.isFinite(durationNumber)&&durationNumber>0?durationNumber:durationParts?(Number(durationParts[1]||0)*3600+Number(durationParts[2])*60+Number(durationParts[3])):null;
   if(!formats.length)return null;
   formats.sort((a,b)=>a.mode===b.mode?(b.height-a.height):a.mode==="video"?-1:1);
   return {ok:true,providerName:"Public API",providerReady:true,provider:"Free public provider",source:"Provider komunitas gratis",title,filename:title,duration,thumbnail,type:formats.some(x=>x.mode==="video")?"video":"audio",formats};
 }
-async function freePublicMediaInfo(rawUrl,requestUrl){
-  const key=freePlatformKey(rawUrl);
-  if(!key)return json({error:"Platform belum didukung oleh provider gratis."},400);
-  const endpoint=FREE_MEDIA_API+"/api/download/"+key+"?url="+encodeURIComponent(rawUrl);
-  try{
-    const response=await fetch(endpoint,{headers:{accept:"application/json"},signal:AbortSignal.timeout(28000),cache:"no-store"});
-    const data=await response.json().catch(()=>({}));
-    if(!response.ok||data?.success===false)return json({error:data?.error?.message||data?.error||"Provider gratis menjawab HTTP "+response.status+"."},response.status===429?429:502);
-    const normalized=freeProviderMediaInfo(data,rawUrl,requestUrl);
-    if(!normalized)return json({error:"Provider mengenali tautan, tetapi belum mengembalikan file video/audio yang bisa diputar."},502);
-    return json(normalized);
-  }catch(error){return json({error:"Provider komunitas gratis sedang tidak tersedia. Coba lagi sebentar. Detail: "+String(error?.message||error).slice(0,120)},502)}
-}
-
 function mediaAsciiAt(bytes,offset,value){
   if(offset<0||offset+value.length>bytes.length)return false;
   for(let i=0;i<value.length;i++)if(bytes[offset+i]!==value.charCodeAt(i))return false;
