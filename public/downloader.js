@@ -1,4 +1,4 @@
-/* ARYANZZ V69.0 — zero-server direct downloader and community handoff */
+/* ARYANZZ V72.6 — zero-server direct downloader and community handoff */
 (() => {
   "use strict";
   const $ = id => document.getElementById(id);
@@ -157,7 +157,7 @@
         const mod=await import(moduleUrl);
         const ffmpeg=new mod.FFmpeg();
         [coreURL,wasmURL]=await Promise.all([loadBlob(coreBase+"/ffmpeg-core.js","text/javascript"),loadBlob(coreBase+"/ffmpeg-core.wasm","application/wasm")]);
-        await ffmpeg.load({coreURL,wasmURL,classWorkerURL:new URL("/ffmpeg-worker-bootstrap.js?v=72.5",location.origin).href});
+        await ffmpeg.load({coreURL,wasmURL,classWorkerURL:new URL("/ffmpeg-worker-bootstrap.js?v=72.6",location.origin).href});
         return ffmpeg;
       }finally{
         if(coreURL)URL.revokeObjectURL(coreURL);
@@ -251,50 +251,29 @@
     const instance=selected.instance||info.instance;
     const direct=browserHybridMediaUrl(selected.url,instance);
     if(!direct)throw new Error("Alamat stream tidak lolos pemeriksaan keamanan.");
-    let browserError;
-    const targetName=mode==="video"?"1 file MP4":"1 file audio";
-    const consume=async response=>{
-      browserMediaContentType(response,mode);
-      const total=Number(response.headers.get("content-length")||0),maxBytes=250*1024*1024;
-      if(total>maxBytes)throw new Error("File lebih dari 250 MB; pilih kualitas lebih rendah.");
-      const reader=response.body?.getReader();
-      if(!reader)throw new Error("Browser tidak menyediakan stream pembacaan file.");
-      const chunks=[],startedAt=Date.now();let received=0;
-      while(true){
-        const part=await reader.read();if(part.done)break;
-        received+=part.value.byteLength;
-        if(received>maxBytes){await reader.cancel();throw new Error("File melebihi batas 250 MB untuk unduhan langsung di browser.");}
-        chunks.push(part.value);
-        updateDownloadProgress(bar,progressText,progressMeta,{stage:"Mengunduh "+(mode==="video"?"MP4":"audio"),received,total,startedAt,base:0,span:96,target:targetName});
-      }
-      if(!received)throw new Error("Stream media kosong.");
-      return new Blob(chunks,{type:selected.mimeType||(mode==="video"?"video/mp4":"audio/mp4")});
-    };
-    try{
-      const response=await fetch(direct.href,{mode:"cors",credentials:"omit",cache:"no-store",signal:AbortSignal.timeout(120000)});
-      if(!response.ok)throw new Error("HTTP "+response.status);
-      const blob=await consume(response);
-      progressText.textContent="Menyiapkan file untuk unduhan Chrome…";
-      progressMeta.textContent="Target: "+targetName+" · menyimpan hasil.";
-      await saveBrowserBlob(blob,filename);
-      bar.parentElement?.classList.remove("is-indeterminate");
-      bar.style.width="100%";bar.parentElement?.setAttribute("aria-valuenow","100");
-      progressText.textContent=(mode==="video"?"MP4":"Audio")+" siap · "+formatDownloadSize(blob.size)+" · dikirim ke Chrome.";
-      progressMeta.textContent="Selesai diproses · "+targetName+". Chrome mengelola penyimpanan.";
-      remember(url,filename,mode,quality);return filename;
-    }catch(error){browserError=error;}
     const target="/api/youtube/hybrid/file?url="+encodeURIComponent(direct.href)+"&ext="+encodeURIComponent(selected.ext)+"&title="+encodeURIComponent(info.title||"aryanzz-youtube")+"&instance="+encodeURIComponent(instance||"");
-    const fallback=await fetch(target,{cache:"no-store",signal:AbortSignal.timeout(120000)});
-    if(!fallback.ok){const detail=await fallback.json().catch(()=>({}));throw new Error("Browser: "+String(browserError.message||"CORS")+". Worker: "+String(detail.error||("HTTP "+fallback.status)));}
-    const blob=await consume(fallback);
-    progressText.textContent="Menyiapkan file untuk unduhan Chrome…";
-    progressMeta.textContent="Target: "+targetName+" · menyimpan hasil.";
-    await saveBrowserBlob(blob,filename);
+    const probeTarget=target+"&probe=1";
+    const targetName=mode==="video"?"1 file MP4":"1 file audio";
+    const probe=await fetch(probeTarget,{cache:"no-store",signal:AbortSignal.timeout(45000)});
+    const check=await probe.json().catch(()=>({}));
+    if(!probe.ok||!check.ok)throw new Error(check.error||"Pemeriksaan stream gagal (HTTP "+probe.status+").");
+    progressText.textContent="Stream tersedia · meneruskan unduhan langsung ke Chrome…";
+    progressMeta.textContent="Target: "+targetName+" · Chrome mengunduh langsung tanpa menampung seluruh file di memori HP.";
+    const anchor=make("a");
+    anchor.href=target;
+    anchor.download=filename;
+    anchor.rel="noopener";
+    anchor.style.display="none";
+    document.body.append(anchor);
+    anchor.click();
+    anchor.remove();
     bar.parentElement?.classList.remove("is-indeterminate");
-    bar.style.width="100%";bar.parentElement?.setAttribute("aria-valuenow","100");
-    progressText.textContent=(mode==="video"?"MP4":"Audio")+" siap · "+formatDownloadSize(blob.size)+" · dikirim ke Chrome.";
-    progressMeta.textContent="Selesai diproses · "+targetName+". Chrome mengelola penyimpanan.";
-    remember(url,filename,mode,quality);return filename;
+    bar.style.width="100%";
+    bar.parentElement?.setAttribute("aria-valuenow","100");
+    progressText.textContent=(mode==="video"?"MP4":"Audio")+" diserahkan ke Chrome · lihat progres asli di notifikasi unduhan.";
+    progressMeta.textContent="Unduhan berjalan langsung melalui stream Worker. Chrome menampilkan progres dan sisa waktu sebenarnya.";
+    remember(url,filename,mode,quality);
+    return filename;
   }
   async function downloadYouTube(url,mode,quality,bar,progressText,progressMeta,info={},audioFormat="m4a"){
     if(info.providerName!=="Hybrid"||!info.providerReady)throw new Error("Tidak ada stream gratis yang tersedia dari instance komunitas saat ini.");
@@ -349,7 +328,7 @@
         failures.push((selected.provider||"provider")+" "+(instance||"")+": "+String(error.message||error).slice(0,160));
       }
     }
-    throw new Error("Semua jalur MP4 yang tersedia gagal. "+(failures[0]||"Coba kualitas lebih rendah atau ulangi nanti."));
+    throw new Error("Semua jalur "+(mode==="video"?"MP4":"audio")+" yang tersedia gagal. "+(failures.slice(0,3).join(" | ")||"Coba kualitas lain atau ulangi nanti."));
   }
   async function downloadFile(url, mode, quality, bar, progressText, info={}) {
     const sourceExt=/^[a-z0-9]{2,8}$/i.test(info.extension||"")?info.extension.toLowerCase():"";
@@ -529,7 +508,7 @@
       return {ok:true,providerReady:true,providerName:"Hybrid",provider:"Piped",instance,title:String(data.title).slice(0,300),thumbnail:typeof data.thumbnailUrl==="string"?data.thumbnailUrl:null,duration:Number(data.duration)||null,uploader:String(data.uploader||"").slice(0,160),formats,message:"Stream diperoleh langsung dari browser melalui instance komunitas."};
   }
   async function browserInvidiousInfo(instance,id,signal){
-    const data=await browserProviderJson(instance+"/api/v1/videos/"+encodeURIComponent(id),signal);
+    const data=await browserProviderJson(instance+"/api/v1/videos/"+encodeURIComponent(id)+"?local=true",signal);
       const adaptive=Array.isArray(data.adaptiveFormats)?data.adaptiveFormats:Array.isArray(data.adaptive_formats)?data.adaptive_formats:[];
       const formats=browserDedupeFormats([...((Array.isArray(data.formatStreams)?data.formatStreams:Array.isArray(data.format_streams)?data.format_streams:[]).map(item=>browserVideoFormat(item,instance,true)).filter(Boolean)),...adaptive.map(item=>String(item?.type||item?.mimeType||"").toLowerCase().startsWith("video/")?browserVideoFormat(item,instance,true,true):browserAudioFormat(item,instance)).filter(Boolean)]);
       const rawVideo=Array.isArray(data.formatStreams)?data.formatStreams:Array.isArray(data.format_streams)?data.format_streams:[];
@@ -741,8 +720,10 @@
         start.textContent = "Memproses…";
         progress.classList.remove("is-idle");
         progress.classList.add("is-indeterminate");
-        bar.style.width="34%";
-        progressText.textContent="Menyiapkan unduhan…";
+        progress.classList.remove("is-failed");
+        bar.style.width="0%";
+        progress.setAttribute("aria-valuenow","0");
+        progressText.textContent="Memeriksa stream dan menyiapkan unduhan…";
         progressMeta.textContent="Target: "+(mode.value==="audio"?"1 file audio":"1 file MP4")+" · membaca ukuran sumber untuk menghitung estimasi.";
         try {
           const filename = isYouTube ? await downloadYouTube(url.href,mode.value,Number(quality.value)||480,bar,progressText,progressMeta,info,audioFormat.value) : await downloadFile(url.href, mode.value, Number(quality.value) || 480, bar, progressText, info);
@@ -755,8 +736,11 @@
           start.textContent = "Unduhan dikirim ✓";
         } catch (error) {
           progress.classList.remove("is-indeterminate");
+          progress.classList.add("is-failed");
+          bar.style.width="0%";
+          progress.setAttribute("aria-valuenow","0");
           status(progressText, error.message || "Unduhan gagal.", true);
-          progressMeta.textContent="Belum selesai · periksa kualitas atau coba lagi setelah provider tersedia.";
+          progressMeta.textContent="Belum ada file hasil yang diserahkan ke Chrome. Coba kualitas lain atau ulangi setelah provider tersedia.";
           start.disabled = false;
           mode.disabled = false;
           quality.disabled = mode.value === "audio"||directMedia;
