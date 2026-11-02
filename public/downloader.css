@@ -81,3 +81,7 @@
 .youtube-result .v737-media-preview{display:block;width:100%;max-height:420px;aspect-ratio:16/9;object-fit:contain;background:#050b14;border:1px solid #365276;border-radius:14px}
 .youtube-result .v737-audio-preview{display:block;width:100%;margin:4px 0 8px}
 .youtube-result .youtube-ready-link{overflow-wrap:anywhere}
+
+.youtube-result .progress-track.is-indeterminate{position:relative;overflow:hidden}
+.youtube-result .progress-track.is-indeterminate .progress-fill{width:34%!important;animation:aryanzzDownloadSweep 1.25s ease-in-out infinite}
+body[data-motion="off"] .youtube-result .progress-fill{animation:none!important;transition:none!important}
