@@ -729,13 +729,14 @@ function providerImageCandidates(data){
       const ext=String(item.ext||item.extension||imageExtensionFromUrl(url||"")).toLowerCase();
       const mime=String(item.mime_type||item.mime||item.content_type||"").toLowerCase();
       const explicit=String(item.type||item.kind||item.media_type||"").toLowerCase();
-      const inferred=assumeImage||explicit==="image"||explicit==="photo"||explicit==="picture"||mime.startsWith("image/")||SOCIAL_IMAGE_EXTENSIONS.has(ext);
-      output.push({...item,url,type:inferred?"image":explicit});
+      const isVideo=explicit==="video"||explicit==="audio"||mime.startsWith("video/")||mime.startsWith("audio/")||/\.(?:mp4|m4v|mov|webm|mkv|mp3|m4a|aac|opus)(?:[?#]|$)/i.test(String(url||""));
+      const inferred=!isVideo&&(assumeImage||explicit==="image"||explicit==="photo"||explicit==="picture"||mime.startsWith("image/")||SOCIAL_IMAGE_EXTENSIONS.has(ext));
+      output.push({...item,url,type:isVideo?"video":inferred?"image":explicit});
     }
   };
   for(const list of [n.images,n.photos,n.pictures,n.gallery,r.images,r.photos,r.pictures,r.gallery,n.carousel,r.carousel])add(list,true);
   for(const list of [n.media,r.media])add(list,false);
-  for(const item of [n.image,n.image_url,n.imageUrl,n.photo,n.photo_url,n.cover,r.image,r.image_url,r.imageUrl,r.photo,r.photo_url,r.cover]){
+  for(const item of [n.image,n.image_url,n.imageUrl,n.photo,n.photo_url,r.image,r.image_url,r.imageUrl,r.photo,r.photo_url]){
     if(typeof item==="string")output.push({url:item,type:"image"});
     else if(item&&typeof item==="object")output.push({...item,url:item.url||item.image_url||item.src,type:"image"});
   }
@@ -766,6 +767,8 @@ async function resolveSocialImagePost(rawUrl,requestUrl){
     const safe=safePublicMediaUrl(item.url);if(!safe||seen.has(safe.href))continue;
     const ext=String(item.ext||item.extension||imageExtensionFromUrl(safe.href)||"").toLowerCase();
     const type=String(item.type||item.kind||item.media_type||"").toLowerCase();
+    const mime=String(item.mime_type||item.mime||item.content_type||"").toLowerCase();
+    if(["video","audio"].includes(type)||mime.startsWith("video/")||mime.startsWith("audio/"))continue;
     if(ext&&!SOCIAL_IMAGE_EXTENSIONS.has(ext))continue;
     if(!SOCIAL_IMAGE_EXTENSIONS.has(ext)&&!["image","photo","picture"].includes(type))continue;
     seen.add(safe.href);
