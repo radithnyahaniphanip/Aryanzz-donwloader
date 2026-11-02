@@ -43,11 +43,11 @@ function fileName(u,ext){let n;try{n=decodeURIComponent(u.pathname.split("/").po
 async function getUpstream(parsed,method="HEAD",range=null){
   let current=parsed;
   for(let i=0;i<5;i++){
-    const headers={"user-agent":"ARYANZZ/73.1 media fetch"};
+    const headers={"user-agent":"ARYANZZ/73.2 media fetch"};
     if(method==="GET"&&range&&/^bytes=\d*-\d*(?:,\d*-\d*)*$/.test(range))headers.range=range;
     let response=await fetch(current.url.toString(),{method,redirect:"manual",headers});
     if(method==="HEAD"&&[403,405,501].includes(response.status)){
-      response=await fetch(current.url.toString(),{method:"GET",redirect:"manual",headers:{"user-agent":"ARYANZZ/73.1 media fetch","range":"bytes=0-0"}});
+      response=await fetch(current.url.toString(),{method:"GET",redirect:"manual",headers:{"user-agent":"ARYANZZ/73.2 media fetch","range":"bytes=0-0"}});
       if(response.body)response.body.cancel().catch(()=>{});
     }
     if(![301,302,303,307,308].includes(response.status))return {response,parsed:current};
@@ -199,7 +199,7 @@ async function hybridFetchJson(url,parentSignal){
   const abort=()=>controller.abort();
   if(parentSignal){if(parentSignal.aborted)controller.abort();else parentSignal.addEventListener("abort",abort,{once:true});}
   try{
-    const response=await fetch(url,{headers:{accept:"application/json","user-agent":"ARYANZZ/73.1 (public-instance failover)"},signal:controller.signal,cache:"no-store"});
+    const response=await fetch(url,{headers:{accept:"application/json","user-agent":"ARYANZZ/73.2 (public-instance failover)"},signal:controller.signal,cache:"no-store"});
     if(!response.ok)throw new Error("HTTP "+response.status);
     if(!(response.headers.get("content-type")||"").toLowerCase().includes("json"))throw new Error("Respons bukan JSON");
     return await response.json();
@@ -278,7 +278,7 @@ async function hybridYoutubeInfo(request){
   const diagnostics=[...pipedProbe.diagnostics,...invProbe.diagnostics];
   if(available.length){
     const primary=available.find(item=>item.provider==="Piped")||available[0];
-    const formats=dedupeHybridFormats(available.flatMap(result=>(result.formats||[]).map(format=>({...format,instance:result.instance,provider:result.provider}))));
+    const formats=dedupeHybridFormats([...invProbe.results,...pipedProbe.results].flatMap(result=>(result.formats||[]).map(format=>({...format,instance:result.instance,provider:result.provider}))));
     return json({...primary,providerReady:true,formats:formats.map((format,index)=>({...format,id:"f"+index})),providers:available.map(item=>({provider:item.provider,instance:item.instance,formatCount:item.formats?.length||0})),diagnostics:diagnostics.slice(0,20)});
   }
   {
@@ -312,22 +312,40 @@ async function hybridYoutubeFile(request){
   if(!stream)return json({error:"URL stream tidak berasal dari host media yang diizinkan atau instance komunitas tidak dikenal."},400);
   if(!["mp4","m4a","mp3","webm","opus","ogg","wav","flac"].includes(ext))return json({error:"Format file tidak didukung."},400);
   const probe=u.searchParams.get("probe")==="1";
-  const title=hybridFilename(u.searchParams.get("title"),ext),range=probe?"bytes=0-0":request.headers.get("range");let current=stream,response;
+  const title=hybridFilename(u.searchParams.get("title"),ext),range=probe?"bytes=0-0":request.headers.get("range");
+  const host=stream.hostname.toLowerCase();
+  const androidUA="Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36";
+  const desktopUA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36";
+  const trustedReferer=trustedInstance?trustedInstance+"/":null;
+  const profiles=host==="googlevideo.com"||host.endsWith(".googlevideo.com")
+    ?[{ua:androidUA,referer:"https://www.youtube.com/",origin:"https://www.youtube.com"},...(trustedReferer?[{ua:androidUA,referer:trustedReferer,origin:trustedInstance}]:[]),{ua:desktopUA}]
+    :host.includes("pipedproxy")
+      ?[...(trustedReferer?[{ua:androidUA,referer:trustedReferer,origin:trustedInstance}]:[]),{ua:androidUA,referer:"https://piped.video/",origin:"https://piped.video"},{ua:desktopUA}]
+      :[...(trustedReferer?[{ua:androidUA,referer:trustedReferer,origin:trustedInstance}]:[]),{ua:androidUA,referer:"https://www.youtube.com/",origin:"https://www.youtube.com"},{ua:desktopUA}];
+  let response,current=stream,lastStatus=0;
   try{
-    for(let i=0;i<4;i++){
-      const headers={accept:"*/*","user-agent":"Mozilla/5.0 (compatible; ARYANZZ/73.1)"};
-      if(range&&/^bytes=\d*-\d*(,\d*-\d*)*$/.test(range))headers.range=range;
-      const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),30000);
-      try{response=await fetch(current.toString(),{headers,redirect:"manual",signal:controller.signal});}
-      finally{clearTimeout(timer);}
-      if(![301,302,303,307,308].includes(response.status))break;
-      const loc=response.headers.get("location");if(!loc)break;
-      const next=hybridMediaUrl(new URL(loc,current).toString(),trustedInstance);
-      if(!next)return json({error:"Redirect stream menuju host yang tidak diizinkan."},502);
-      current=next;
+    for(let profileIndex=0;profileIndex<profiles.length;profileIndex++){
+      current=stream;
+      for(let redirect=0;redirect<4;redirect++){
+        const profile=profiles[profileIndex],headers={accept:"*/*","user-agent":profile.ua};
+        if(profile.referer)headers.referer=profile.referer;
+        if(profile.origin)headers.origin=profile.origin;
+        if(range&&/^bytes=\d*-\d*(?:,\d*-\d*)*$/.test(range))headers.range=range;
+        const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),30000);
+        try{response=await fetch(current.toString(),{headers,redirect:"manual",signal:controller.signal});}
+        finally{clearTimeout(timer);}
+        if(![301,302,303,307,308].includes(response.status))break;
+        const loc=response.headers.get("location");if(!loc)break;
+        const next=hybridMediaUrl(new URL(loc,current).toString(),trustedInstance);
+        if(!next)return json({error:"Redirect stream menuju host yang tidak diizinkan."},502);
+        current=next;
+      }
+      lastStatus=response?.status||0;
+      if(![403,429,500,502,503,504].includes(lastStatus)||profileIndex===profiles.length-1)break;
+      if(response?.body)await response.body.cancel().catch(()=>{});
     }
   }catch(e){return json({error:"Gagal mengambil stream dari instance komunitas: "+String(e.message||"network error").slice(0,160)},502)}
-  if(!response||![200,206].includes(response.status)||!response.body)return json({error:"Stream tidak tersedia atau ditolak (HTTP "+(response?.status||502)+"). Coba format/instance lain."},502);
+  if(!response||![200,206].includes(response.status)||!response.body)return json({error:"Stream tidak tersedia atau ditolak (HTTP "+(response?.status||502)+") dari "+current.hostname+" setelah "+profiles.length+" pola permintaan. Coba provider/instance lain."},502);  if(!response||![200,206].includes(response.status)||!response.body)return json({error:"Stream tidak tersedia atau ditolak (HTTP "+(response?.status||502)+"). Coba format/instance lain."},502);
   const size=Number(response.headers.get("content-length")||0);
   if(size>MAX_YOUTUBE_BYTES){await response.body.cancel();return json({error:"File melebihi batas 500 MB."},413)}
   if(probe){
@@ -687,7 +705,7 @@ export default {async fetch(request,env){
   if(url.pathname==="/api/youtube/hybrid/file"&&request.method==="GET")return hybridYoutubeFile(request);
    if(url.pathname==="/api/youtube/hybrid/thumbnail"&&request.method==="GET")return hybridYoutubeThumbnail(request);
   if(url.pathname==="/api/youtube/info"&&request.method==="GET")return youtubeInfo(request,env);
-    if(url.pathname==="/api/health"&&request.method==="GET")return json({ok:true,service:"ARYANZZ",version:"73.1",mode:"cloudflare-worker-zero-server-hybrid",directMediaDownload:true,selfHostedDownloader:false,youtubeDownloader:true,youtubeApiKeyConfigured:false,cobalt:false,paidYoutubeProvider:false,musicRecognitionConfigured:!!env.AUDD_API_TOKEN,musicFallbackReady:false,musicVideoRecognitionReady:false,platformExtraction:false,platformBackend:"community-handoff"});
+    if(url.pathname==="/api/health"&&request.method==="GET")return json({ok:true,service:"ARYANZZ",version:"73.2",mode:"cloudflare-worker-zero-server-hybrid",directMediaDownload:true,selfHostedDownloader:false,youtubeDownloader:true,youtubeApiKeyConfigured:false,cobalt:false,paidYoutubeProvider:false,musicRecognitionConfigured:!!env.AUDD_API_TOKEN,musicFallbackReady:false,musicVideoRecognitionReady:false,platformExtraction:false,platformBackend:"community-handoff"});
   if(url.pathname==="/api/info"&&request.method==="POST"){const proxied=await proxyPlatform(request,env,"/api/info");if(proxied)return proxied;return info(request);}
   if(url.pathname==="/api/direct-file"&&request.method==="GET")return download(request);
   if(url.pathname==="/api/download"&&request.method==="POST"){const proxied=await proxyPlatform(request,env,"/api/download");if(proxied)return proxied;return download(request);}
