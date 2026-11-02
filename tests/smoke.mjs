@@ -47,7 +47,7 @@ const checks=[
   ["V72.9 thumbnail download is placed beside the preview and uses the safe Worker proxy",downloader.includes("youtube-thumb-wrap")&&downloader.includes("youtube-thumb-download")&&downloader.includes("/api/youtube/hybrid/thumbnail")&&workerSource.includes("function hybridYoutubeThumbnail")],
   ["V72.9 Worker probe returns total bytes and range metadata for resumable chunks",workerSource.includes("totalBytes:totalBytes||null")&&workerSource.includes("contentRange:contentRange||null")&&workerSource.includes("headers.range=range")],
   ["V72.9 hides audio format and bitrate controls outside audio mode",downloaderCss.includes(".youtube-result [hidden]{display:none!important}")&&downloader.includes("audioLabel.hidden=audioFormat.hidden")],
-  ["V72.9 keeps FFmpeg warm after first use",downloader.includes("Keep the FFmpeg engine warm")&&!downloader.includes("ffmpeg.terminate();aryanzzFfmpegPromise=null")],
+  ["V72.9 keeps FFmpeg warm after first use",downloader.includes("let aryanzzFfmpegPromise=null")&&downloader.includes("if(aryanzzFfmpegPromise)")&&!downloader.includes("ffmpeg.terminate();aryanzzFfmpegPromise=null")],
   ["V72.9 browser retains provider errors without waiting for further batches",downloader.includes("Provider errors are retained")&&!downloader.includes("if(available.length)break")],
   ["V72.9 browser aggregates provider instances and retries same-quality streams",downloader.includes("const available=[]")&&downloader.includes("for(const selected of candidates)")&&downloader.includes("selected.instance||info.instance")],
   ["V72.9 Invidious requests its local proxy URLs in both Worker and browser paths",workerSource.includes("?local=true")&&downloader.includes("?local=true")],
