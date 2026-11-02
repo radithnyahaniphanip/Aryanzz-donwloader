@@ -995,6 +995,19 @@ try{
   assert.equal(healthData.paidYoutubeProvider,false);
   console.log("✔ Worker health reports V81.0 with no Cobalt or paid YouTube provider");
 
+  const invalidImagePost=await worker.fetch(new Request("https://aryanzz.example/api/social/images",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({url:"https://example.com/not-a-social-post"})}),{});
+  assert.equal(invalidImagePost.status,400);
+  console.log("✔ V81.0 image extraction rejects unsupported non-social URLs before fetching");
+
+  const invalidImageSearch=await worker.fetch(new Request("https://aryanzz.example/api/social/image-search",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({platform:"unknown",query:"test image"})}),{});
+  assert.equal(invalidImageSearch.status,400);
+  console.log("✔ V81.0 image search validates supported platform names");
+
+  const unsafeImage=await worker.fetch(new Request("https://aryanzz.example/api/social-image-file?url="+encodeURIComponent("http://127.0.0.1/private.png")),{}); 
+  assert.equal(unsafeImage.status,400);
+  console.log("✔ V81.0 image proxy rejects non-HTTPS/private-network targets");
+
+
 }finally{
   globalThis.fetch=originalFetch;
 }
