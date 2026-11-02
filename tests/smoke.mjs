@@ -459,7 +459,7 @@ try{
   assert.equal((await externalStatus.json()).ok,true);
   const health=await worker.fetch(new Request("https://aryanzz.example/api/health"),backendEnv);
   const healthData=await health.json();
-  assert.equal(healthData.platformBackend,"community-handoff");
+  assert.equal(healthData.platformBackend,"public-free-community-api");
   assert.equal(healthData.platformExtraction,false);
   console.log("✔ V73.7 health keeps the no-server mode active");
 }finally{globalThis.fetch=originalFallbackFetch;}
