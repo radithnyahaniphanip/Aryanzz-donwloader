@@ -29,3 +29,7 @@
 .youtube-result .youtube-start:disabled{opacity:.58;filter:saturate(.55);cursor:not-allowed}
 .youtube-result .youtube-start:not(:disabled){min-height:54px;font-size:15px;font-weight:900}
 @media(max-width:420px){.youtube-result .youtube-start:not(:disabled){min-height:52px;font-size:14px}}
+
+.youtube-provider-state{margin:0;padding:11px 13px;border:1px solid #315779;border-left:3px solid #42c6dc;border-radius:10px;background:#0d1d31;color:#c5ddf5;font-size:12px;line-height:1.6}
+.youtube-provider-state.is-offline{border-color:#785e35;border-left-color:#e7b65c;background:#261e13;color:#f0d6a5}
+.youtube-result .youtube-start:disabled{opacity:.58;filter:saturate(.55);cursor:not-allowed}
