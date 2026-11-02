@@ -1,4 +1,4 @@
-# ARYANZZ V73.3 — Mobile-resilient media downloader
+# ARYANZZ V73.4 — Mobile-resilient media downloader
 
 Production website: https://aryanzz-donwloader.radithnyahaniphanip.workers.dev/
 
@@ -24,7 +24,16 @@ ARYANZZ is a mobile-first creator workspace hosted on Cloudflare Workers. V73.0 
 | V67.6 | Backend health cleanup, title-based YouTube search routed through yt-dlp, clearer AudD/Shazam status, and DJ scan fallback fixes |
 
 
-## V73.3 — Browser-side streaming fallback
+## V73.4 — Faster MP4 choices, file-size estimates and clean thumbnail download
+
+- Shows an estimated or provider-reported file size beside every available YouTube MP4 quality. Estimates use source bitrate and video duration when an exact byte size is not supplied.
+- Labels each quality as a single-file progressive MP4 (direct Chrome download, no FFmpeg) or separate video/audio tracks (local MP4 assembly required).
+- Keeps the default quality on the best available progressive MP4 up to 480p, so the common quick-download path avoids the 30 MB FFmpeg engine whenever a single-file stream exists.
+- Displays the measured byte sizes for adaptive video and audio components before assembly, and shows the actual progressive stream size after its one-byte preflight.
+- Reduces stream preflight waits to 12 seconds before attempting the browser-side fallback.
+- Removes the large thumbnail preview and overlay button. A compact “Unduh thumbnail YouTube” action now sits directly below the video title and downloads the image through the safe Worker attachment route.
+
+## V73.4 — Browser-side streaming fallback
 
 - Adds a same-origin Service Worker download route that validates the media URL through the Worker, then fetches the approved Piped/Invidious stream from the user's browser connection and streams it to Chrome with an attachment filename.
 - The browser route preserves HTTP Range and partial-response headers, so Chrome can resume when the community provider supports byte ranges.
