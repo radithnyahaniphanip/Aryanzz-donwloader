@@ -1,8 +1,8 @@
-# ARYANZZ V70.1 — Native Chrome Download Studio
+# ARYANZZ V71.0 — Piped + Invidious Hybrid Downloader
 
 Production website: https://aryanzz-donwloader.radithnyahaniphanip.workers.dev/
 
-ARYANZZ is a mobile-first creator workspace hosted on Cloudflare Workers. V70.1 uses a zero-server design: direct media links are streamed by the Worker, while social-media links are handed off to community-operated downloader frontends. No private extraction server or paid hosting is required.
+ARYANZZ is a mobile-first creator workspace hosted on Cloudflare Workers. V71.0 uses a zero-private-server hybrid for YouTube: it queries public Piped and Invidious community APIs, then streams only supported progressive media formats through a validated Cloudflare Worker attachment endpoint. Direct media URLs remain supported. No Cobalt, SaveNow, Docker Desktop, private server, or paid extractor is used.
 
 ## V65.0 release scope
 
@@ -32,25 +32,15 @@ ARYANZZ is a mobile-first creator workspace hosted on Cloudflare Workers. V70.1 
 - Shazam DJ fallback samples now honor the consecutive-sample setting and remain capped at 30 segments per scan to limit server load. AudD Enterprise can process up to 100 segments where the account permits it.
 - Removed the duplicate Express health route so the backend reports one current version and a consistent feature list.
 
-## V70.1 — Authorized Cobalt YouTube handoff and native Chrome download
+## V71.0 — Public API hybrid (current)
 
-- YouTube extraction can use a Cobalt instance only when the operator configures an HTTPS instance they own or have explicit permission to integrate.
-- Configure Cloudflare Worker variables/secrets: `COBALT_API_ORIGIN` (HTTPS origin only), optional `COBALT_API_KEY`, and optional `COBALT_API_AUTH_SCHEME` (`Api-Key` or `Bearer`). Never use the shared public `api.cobalt.tools` endpoint without explicit permission.
-- When configured, the YouTube preview identifies Cobalt as the active provider. The Download via Chrome action sends the selected video quality or audio format/bitrate to the Worker, which redirects the browser to the Cobalt tunnel/file URL so Chrome can handle the download.
-- Supported UI video targets: 360p, 480p, 720p, 1080p, 1440p and 2160p (4K). These are requested target qualities, not a promise that every source offers each quality. Cobalt determines actual availability.
-- Supported Cobalt audio formats: MP3, OGG, WAV and OPUS, with 128/256/320 kbps targets.
-- TikTok is intentionally disabled in this release. Direct media-file URLs remain supported.
-- SaveNow remains opt-in only via `ALLOW_PAID_YOUTUBE_PROVIDER=true`; no paid provider is activated by default. A configured Cobalt instance is preferred over SaveNow.
-- The integration does not bypass platform access controls or make protected/unavailable videos downloadable. Users must have the right to download the content.
-
-
-## V70.0 — YouTube flow and TikTok diagnostics
-
-- YouTube URLs now use the dedicated `/api/youtube/info`, `/api/youtube/download`, `/api/youtube/progress`, and `/api/youtube/file` endpoints rather than the generic direct-file endpoint.
-- If no downloader provider key is configured, the Worker attempts a public YouTube oEmbed preview and clearly marks downloading as unavailable. It does not silently configure or charge a third-party provider.
-- If a provider key is explicitly configured by the owner, the UI can start a job, poll progress, and stream the completed file through the Worker.
-- TikTok short URLs remain on the community-provider handoff path in the zero-server edition. A post URL is not the same as a direct MP4 file URL.
-- The supplied test links could not be fetched by the web inspection tool in this environment, so no claim is made that either real-world download succeeded. Automated tests use mocked provider responses and validate routing only.
+- YouTube metadata and stream discovery tries the current official Piped public-instance list first, then the official Invidious public-instance list.
+- Piped endpoints return audio and video stream URLs; ARYANZZ only offers muxed MP4 video streams (videoOnly=false) and supported audio source formats. It does not advertise video-only DASH streams because that would require a media merger such as FFmpeg.
+- Invidious fallback uses progressive MP4 formatStreams and audio-only MP4/WebM adaptiveFormats. No transcoding is performed, so MP3 and arbitrary bitrates are not promised.
+- The Worker validates the provider/instance and stream host, forwards HTTP Range requests, and returns the media as an attachment for Chrome's download manager. The stream proxy rejects arbitrary external URLs.
+- Provider instances are public community infrastructure. Their availability, rate limits, YouTube access, CORS-independent stream behavior, and geographic reach can change; ARYANZZ fails over and shows a clear unavailable state rather than claiming a successful download.
+- TikTok extraction is intentionally disabled. Direct public media-file URLs continue to work.
+- No API key, private extractor server, Cobalt, SaveNow, Docker Desktop, or paid hosting is required by this path.
 
 ## V70.1 — Zero-server Free Edition
 
