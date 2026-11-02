@@ -43,11 +43,11 @@ function fileName(u,ext){let n;try{n=decodeURIComponent(u.pathname.split("/").po
 async function getUpstream(parsed,method="HEAD",range=null){
   let current=parsed;
   for(let i=0;i<5;i++){
-    const headers={"user-agent":"ARYANZZ/73.2 media fetch"};
+    const headers={"user-agent":"ARYANZZ/73.3 media fetch"};
     if(method==="GET"&&range&&/^bytes=\d*-\d*(?:,\d*-\d*)*$/.test(range))headers.range=range;
     let response=await fetch(current.url.toString(),{method,redirect:"manual",headers});
     if(method==="HEAD"&&[403,405,501].includes(response.status)){
-      response=await fetch(current.url.toString(),{method:"GET",redirect:"manual",headers:{"user-agent":"ARYANZZ/73.2 media fetch","range":"bytes=0-0"}});
+      response=await fetch(current.url.toString(),{method:"GET",redirect:"manual",headers:{"user-agent":"ARYANZZ/73.3 media fetch","range":"bytes=0-0"}});
       if(response.body)response.body.cancel().catch(()=>{});
     }
     if(![301,302,303,307,308].includes(response.status))return {response,parsed:current};
@@ -199,7 +199,7 @@ async function hybridFetchJson(url,parentSignal){
   const abort=()=>controller.abort();
   if(parentSignal){if(parentSignal.aborted)controller.abort();else parentSignal.addEventListener("abort",abort,{once:true});}
   try{
-    const response=await fetch(url,{headers:{accept:"application/json","user-agent":"ARYANZZ/73.2 (public-instance failover)"},signal:controller.signal,cache:"no-store"});
+    const response=await fetch(url,{headers:{accept:"application/json","user-agent":"ARYANZZ/73.3 (public-instance failover)"},signal:controller.signal,cache:"no-store"});
     if(!response.ok)throw new Error("HTTP "+response.status);
     if(!(response.headers.get("content-type")||"").toLowerCase().includes("json"))throw new Error("Respons bukan JSON");
     return await response.json();
@@ -290,6 +290,29 @@ async function hybridYoutubeInfo(request){
 function hybridFilename(title,ext){
   const clean=String(title||"aryanzz-youtube").replace(/[\\/:*?"<>|\u0000-\u001f]/g," ").replace(/\s+/g," ").trim().slice(0,90)||"aryanzz-youtube";
   return clean.toLowerCase().endsWith("."+ext)?clean:clean+"."+ext;
+}
+async function hybridYoutubeValidate(request){
+  const u=new URL(request.url),rawStream=u.searchParams.get("url")||"",instance=u.searchParams.get("instance")||"";
+  let instanceOrigin=null;
+  try{
+    const candidate=new URL(instance);
+    if(candidate.protocol==="https:"&&!candidate.username&&!candidate.password&&!candidate.port&&candidate.pathname==="/"&&!candidate.search&&!candidate.hash)instanceOrigin=candidate.origin;
+  }catch{}
+  let trustedInstance;
+  if(instanceOrigin){
+    const staticInstances=[...PIPED_PUBLIC_INSTANCES,...INVIDIOUS_PUBLIC_INSTANCES];
+    let known=staticInstances.some(candidate=>{try{return new URL(candidate).origin===instanceOrigin}catch{return false}});
+    if(!known){
+      const [pipedInstances,invidiousInstances]=await Promise.all([currentHybridPipedInstances(),currentHybridInvidiousInstances()]);
+      known=[...pipedInstances,...invidiousInstances].some(candidate=>{try{return new URL(candidate).origin===instanceOrigin}catch{return false}});
+    }
+    if(known)trustedInstance=instanceOrigin;
+  }
+  const stream=hybridMediaUrl(rawStream,trustedInstance),ext=String(u.searchParams.get("ext")||"mp4").toLowerCase();
+  if(!stream)return json({error:"URL stream tidak berasal dari host media yang diizinkan atau instance komunitas tidak dikenal."},400);
+  if(!["mp4","m4a","mp3","webm","opus","ogg","wav","flac"].includes(ext))return json({error:"Format file tidak didukung."},400);
+  const title=hybridFilename(u.searchParams.get("title"),ext);
+  return json({ok:true,url:stream.toString(),ext,title,instance:trustedInstance||null});
 }
 async function hybridYoutubeFile(request){
   const u=new URL(request.url),rawStream=u.searchParams.get("url")||"",instance=u.searchParams.get("instance")||"";
@@ -702,10 +725,11 @@ export default {async fetch(request,env){
   if(url.pathname==="/api/platform/status"&&request.method==="GET")return platformStatus(env);
   if(url.pathname==="/api/youtube/status"&&request.method==="GET")return json({ok:true,service:"ARYANZZ YouTube Backend",youtubeDownloader:true,provider:"Dynamic Piped + Invidious hybrid",paidProvider:false,cobalt:false,supportedAudio:["M4A","MP3","WEBM","OPUS"],supportedVideo:["360","480","720","1080","1440","2160"]});
   if(url.pathname==="/api/youtube/hybrid/info"&&request.method==="GET")return hybridYoutubeInfo(request);
-  if(url.pathname==="/api/youtube/hybrid/file"&&request.method==="GET")return hybridYoutubeFile(request);
+  if(url.pathname==="/api/youtube/hybrid/validate"&&request.method==="GET")return hybridYoutubeValidate(request);
+   if(url.pathname==="/api/youtube/hybrid/file"&&request.method==="GET")return hybridYoutubeFile(request);
    if(url.pathname==="/api/youtube/hybrid/thumbnail"&&request.method==="GET")return hybridYoutubeThumbnail(request);
   if(url.pathname==="/api/youtube/info"&&request.method==="GET")return youtubeInfo(request,env);
-    if(url.pathname==="/api/health"&&request.method==="GET")return json({ok:true,service:"ARYANZZ",version:"73.2",mode:"cloudflare-worker-zero-server-hybrid",directMediaDownload:true,selfHostedDownloader:false,youtubeDownloader:true,youtubeApiKeyConfigured:false,cobalt:false,paidYoutubeProvider:false,musicRecognitionConfigured:!!env.AUDD_API_TOKEN,musicFallbackReady:false,musicVideoRecognitionReady:false,platformExtraction:false,platformBackend:"community-handoff"});
+    if(url.pathname==="/api/health"&&request.method==="GET")return json({ok:true,service:"ARYANZZ",version:"73.3",mode:"cloudflare-worker-zero-server-hybrid",directMediaDownload:true,selfHostedDownloader:false,youtubeDownloader:true,youtubeApiKeyConfigured:false,cobalt:false,paidYoutubeProvider:false,musicRecognitionConfigured:!!env.AUDD_API_TOKEN,musicFallbackReady:false,musicVideoRecognitionReady:false,platformExtraction:false,platformBackend:"community-handoff"});
   if(url.pathname==="/api/info"&&request.method==="POST"){const proxied=await proxyPlatform(request,env,"/api/info");if(proxied)return proxied;return info(request);}
   if(url.pathname==="/api/direct-file"&&request.method==="GET")return download(request);
   if(url.pathname==="/api/download"&&request.method==="POST"){const proxied=await proxyPlatform(request,env,"/api/download");if(proxied)return proxied;return download(request);}
