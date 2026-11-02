@@ -309,7 +309,7 @@
   async function browserInvidiousInfo(instance,id,signal){
     const data=await browserProviderJson(instance+"/api/v1/videos/"+encodeURIComponent(id)+"?fields=title,videoId,author,lengthSeconds,videoThumbnails,formatStreams,adaptiveFormats",signal);
       const formats=browserDedupeFormats([...(Array.isArray(data.formatStreams)?data.formatStreams.map(item=>browserVideoFormat(item,instance,true)).filter(Boolean):[]),...(Array.isArray(data.adaptiveFormats)?data.adaptiveFormats.map(item=>browserAudioFormat(item,instance)).filter(Boolean):[])]);
-      if(!data.title||!formats.length)throw new Error("Tidak ada stream progresif yang kompatibel");
+      if(!data.title||!formats.some(item=>item.mode==="video"&&item.ext==="mp4"))throw new Error("Instance Invidious ini hanya mengembalikan audio atau tidak memiliki MP4 progresif; lanjutkan ke instance berikutnya");
       const thumb=Array.isArray(data.videoThumbnails)?data.videoThumbnails.find(x=>x.quality==="maxresdefault")||data.videoThumbnails[0]:null;
       return {ok:true,providerReady:true,providerName:"Hybrid",provider:"Invidious",instance,title:String(data.title).slice(0,300),thumbnail:typeof thumb?.url==="string"?thumb.url:null,duration:Number(data.lengthSeconds)||null,uploader:String(data.author||"").slice(0,160),formats,message:"Stream diperoleh langsung dari browser melalui instance komunitas."};
   }
