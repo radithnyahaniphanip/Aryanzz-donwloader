@@ -222,7 +222,7 @@
     try{return await fetch(input,{...init,signal:controller.signal});}
     finally{clearTimeout(timer);}
   }
-  async function fetchYoutubeTrackRanges(target,total,info,item,bar,progressText,progressMeta,label,base,span,speed){
+  async function fetchYoutubeTrackRanges(target,total,info,item,bar,progressText,progressMeta,label,base,span,speed,rangeSource=target){
     const chunkSize=4*1024*1024,count=Math.ceil(total/chunkSize),output=new Uint8Array(total);
     const prefix=downloadResumePrefix(info.url||"",item),concurrency=Math.max(1,Math.min(5,Number(speed)||3));
     let next=0,received=0,resumed=0,failure=null;
@@ -234,7 +234,8 @@
         try{
           let part=await readDownloadChunk(key);
           if(!part||part.byteLength!==expected){
-            const response=await fetchWithHeaderTimeout(target,{headers:{Range:"bytes="+start+"-"+end},cache:"no-store"},45000);
+            const directRange=rangeSource!==target;
+            const response=await fetchWithHeaderTimeout(rangeSource,{...(directRange?{mode:"cors",credentials:"omit"}:{}),headers:{Range:"bytes="+start+"-"+end},cache:"no-store"},45000);
             if(response.status!==206){
               if(response.body)await response.body.cancel().catch(()=>{});
               if(response.status===200)throw new Error("Server sumber tidak mendukung Range untuk mode paralel.");
@@ -267,6 +268,22 @@
     const direct=browserHybridMediaUrl(item.url,item.instance||info.instance);
     if(!direct)throw new Error("Alamat stream "+label+" tidak lolos pemeriksaan keamanan.");
     const target="/api/youtube/hybrid/file?url="+encodeURIComponent(direct.href)+"&ext="+encodeURIComponent(item.ext)+"&title="+encodeURIComponent((info.title||"youtube")+"-"+label)+"&instance="+encodeURIComponent(item.instance||info.instance||"");
+    // Try the browser-to-provider route first. Public instances may allow CORS from the phone
+    // even when the Cloudflare Worker egress is blocked by the same provider.
+    try{
+      const directProbe=await fetchWithHeaderTimeout(direct.href,{mode:"cors",credentials:"omit",headers:{Range:"bytes=0-0"},cache:"no-store"},15000);
+      const directRangeHeader=directProbe.headers.get("content-range")||"";
+      const directTotal=Number(directRangeHeader.match(/\\/(\\d+)$/)?.[1]||0);
+      const directType=String(directProbe.headers.get("content-type")||"").toLowerCase();
+      if(directProbe.status===206&&directTotal>0&&!directType.includes("text/html")&&!directType.includes("application/json")){
+        await directProbe.body?.cancel().catch(()=>{});
+        if(directTotal>maxBytes)throw new Error(label+" berukuran "+formatDownloadSize(directTotal)+" dan melewati batas aman memori perangkat. Coba kualitas lebih rendah.");
+        return await fetchYoutubeTrackRanges(target,directTotal,info,item,bar,progressText,progressMeta,label,base,span,speed,direct.href);
+      }
+      await directProbe.body?.cancel().catch(()=>{});
+    }catch(error){
+      if(/melewati batas aman memori/.test(String(error.message||error)))throw error;
+    }
     try{
       const probe=await fetch(target+"&probe=1",{cache:"no-store",signal:AbortSignal.timeout(45000)});
       const check=await probe.json().catch(()=>({}));
