@@ -205,6 +205,7 @@ async function socialMediaFile(request){
     }catch(error){return json({error:"CDN media dan jalur cadangan provider gagal. "+(lastError||String(error?.message||error).slice(0,120))},502)}
   }
   if(!upstream.ok||!upstream.body)return json({error:"Provider tidak mengirim file media utuh (HTTP "+upstream.status+")."},502);
+  if(upstream.status===206){await upstream.body.cancel().catch(()=>{});return json({error:"Provider hanya mengirim sebagian file tanpa permintaan lanjutan. Coba ulangi unduhan agar file lengkap."},502);}
   const rawType=String(upstream.headers.get("content-type")||"").split(";")[0].trim().toLowerCase();
   if(/^(text\/|application\/(json|xml)|application\/x-mpegurl)/i.test(rawType)){
     await upstream.body.cancel().catch(()=>{});
@@ -233,6 +234,10 @@ async function socialMediaFile(request){
   if(expectedBytes&&prefixLength>expectedBytes){
     await reader.cancel().catch(()=>{});
     return json({error:"Ukuran respons provider tidak konsisten; unduhan dibatalkan."},502);
+  }
+  if(finished&&expectedBytes&&prefixLength!==expectedBytes){
+    await reader.cancel().catch(()=>{});
+    return json({error:"File media terpotong: provider menyatakan "+expectedBytes+" byte tetapi hanya mengirim "+prefixLength+" byte."},502);
   }
   const actualFilename=socialFileName(filename,detected.ext);
   if(probe){
