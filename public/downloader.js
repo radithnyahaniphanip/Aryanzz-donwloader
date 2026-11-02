@@ -360,7 +360,7 @@
     const response=await fetch("/api/youtube/hybrid/info?url="+encodeURIComponent(raw),{cache:"no-store",signal:AbortSignal.timeout(35000)});
     const fallback=await response.json().catch(()=>({}));
     if(response.ok&&fallback.providerReady)return fallback;
-    throw new Error("Belum menemukan stream MP4 progresif. Invidious: "+(invidiousError?.message||"tidak tersedia")+" · Piped: "+(pipedError?.message||"tidak tersedia")+" · Server: "+(fallback.providerMessage||fallback.error||"tidak tersedia"));
+    throw new Error("MP4 belum tersedia saat ini. Semua penyedia komunitas yang diperiksa gagal diakses atau tidak mengirim stream MP4 yang kompatibel. Link YouTube tetap valid; masalahnya ada pada penyedia stream, bukan pada link. Coba lagi nanti.");
   }
   async function checkLink(url, button) {
     const out = $("downloadResult");
