@@ -90,10 +90,22 @@
   function youtubeFormat(mode,quality,audioFormat="mp3"){
     if(mode==="audio")return audioFormat==="m4a"?"m4a":"mp3";
     const q=Number(quality)||720;
-    return q>=2160?"4k":String([360,720,1080,1440].includes(q)?q:720);
+    return q>=2160?"4k":String([360,480,720,1080,1440].includes(q)?q:720);
   }
-  async function downloadYouTube(url,mode,quality,bar,progressText,info={},audioFormat="mp3"){
+  async function downloadYouTube(url,mode,quality,bar,progressText,info={},audioFormat="mp3",audioBitrate="320"){
     const format=youtubeFormat(mode,quality,audioFormat);
+    if(info.providerName==="Cobalt"){
+      const chosen=mode==="audio"?audioFormat:format;
+      const target="/api/youtube/cobalt-redirect?url="+encodeURIComponent(url)+"&format="+encodeURIComponent(chosen)+"&bitrate="+encodeURIComponent(audioBitrate);
+      const filename=safeFilename(info.title||("aryanzz-youtube."+(mode==="audio"?audioFormat:"mp4")));
+      progressText.textContent="Menghubungkan ke instance Cobalt. Chrome akan menerima file jika unduhan tersedia…";
+      bar.style.width="100%";
+      remember(url,filename,mode,quality);
+      // Same-origin navigation is initiated by the user's tap. The Worker redirects to the authorized
+      // Cobalt tunnel/file URL, allowing Chrome's native download manager to handle the response.
+      window.location.assign(target);
+      return filename;
+    }
     const startResponse=await fetch("/api/youtube/download",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({url,format}),cache:"no-store"});
     const start=await startResponse.json().catch(()=>({}));
     if(!startResponse.ok)throw new Error(start.error||"Provider YouTube belum siap.");
@@ -198,6 +210,7 @@
     button.disabled = true;
     button.textContent = "Memeriksa…";
     try {
+      if(platformName(url)==="TikTok")throw new Error("TikTok sementara dinonaktifkan. ARYANZZ V70.1 difokuskan pada YouTube dan tautan file langsung.");
       const host=url.hostname.toLowerCase();
       const isYouTube=["youtube.com","www.youtube.com","m.youtube.com","music.youtube.com","youtu.be","www.youtu.be"].includes(host);
       const info=isYouTube
@@ -271,17 +284,24 @@
       const progressText = make("p", "muted", "Siap. Pilih format dan kualitas, lalu mulai unduh.");
       const audioFormat=make("select","field");
       audioFormat.id="aryAudioFormat";
-      [["mp3","MP3"],["m4a","M4A"]].forEach(([value,label])=>{const option=make("option","",label);option.value=value;audioFormat.append(option)});
+      const audioChoices=info.providerName==="Cobalt"?[["mp3","MP3"],["ogg","OGG"],["wav","WAV"],["opus","OPUS"]]:[["mp3","MP3"],["m4a","M4A"]];
+      audioChoices.forEach(([value,label])=>{const option=make("option","",label);option.value=value;audioFormat.append(option)});
       audioFormat.hidden=true;
       const audioLabel=make("label","label","FORMAT AUDIO");
       audioLabel.style.marginTop="12px";audioLabel.hidden=true;
-      box.append(audioLabel,audioFormat);
+      const bitrateLabel=make("label","label","BITRATE AUDIO");
+      bitrateLabel.style.marginTop="12px";bitrateLabel.hidden=true;
+      const audioBitrate=make("select","field");
+      audioBitrate.id="aryAudioBitrate";
+      [["128","128 kbps"],["256","256 kbps"],["320","320 kbps"]].forEach(([value,label])=>{const option=make("option","",label);option.value=value;if(value==="320")option.selected=true;audioBitrate.append(option)});
+      audioBitrate.hidden=true;
+      box.append(audioLabel,audioFormat,bitrateLabel,audioBitrate);
       const actions = make("div", "feature-row");
-      const start = make("button", "primary youtube-start", isYouTube&&!info.providerReady?"Download belum tersedia":"Download langsung");
+      const start = make("button", "primary youtube-start", isYouTube&&!info.providerReady?"Extractor belum aktif":"⬇ Download via Chrome");
       start.type = "button";
       const canStart=!isYouTube||!!info.providerReady;
       start.disabled=!canStart;
-      if(!canStart)start.title="Menunggu extractor YouTube gratis yang stabil.";
+      if(!canStart)start.title="Menunggu provider YouTube yang diizinkan dan dikonfigurasi.";
       const fav = make("button", "tag youtube-favorite", "♡ Favorit");
       fav.type = "button";
       fav.addEventListener("click", () => favorite(url.href, info.title || url.href, fav));
@@ -292,14 +312,17 @@
         qualityLabel.style.opacity = mode.value === "audio" ? ".45" : "1";
         audioFormat.hidden=mode.value!=="audio"||directMedia;
         audioLabel.hidden=audioFormat.hidden;
+        audioBitrate.hidden=audioFormat.hidden||info.providerName!=="Cobalt";
+        bitrateLabel.hidden=audioBitrate.hidden;
       });
+      mode.dispatchEvent(new Event("change"));
       start.addEventListener("click", async () => {
         start.disabled = true;
         mode.disabled = true;
         quality.disabled = true;
         start.textContent = "Memproses…";
         try {
-          const filename = isYouTube ? await downloadYouTube(url.href,mode.value,Number(quality.value)||720,bar,progressText,info,audioFormat.value) : await downloadFile(url.href, mode.value, Number(quality.value) || 720, bar, progressText, info);
+          const filename = isYouTube ? await downloadYouTube(url.href,mode.value,Number(quality.value)||720,bar,progressText,info,audioFormat.value,audioBitrate.value) : await downloadFile(url.href, mode.value, Number(quality.value) || 720, bar, progressText, info);
           progressText.textContent = "Berhasil disimpan: " + filename;
           start.textContent = "Unduhan selesai ✓";
         } catch (error) {
@@ -307,6 +330,7 @@
           start.disabled = false;
           mode.disabled = false;
           quality.disabled = mode.value === "audio"||directMedia;
+          audioBitrate.disabled=false;
           start.textContent = "Coba lagi";
         }
       });
