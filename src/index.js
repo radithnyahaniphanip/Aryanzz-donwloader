@@ -162,7 +162,7 @@ function invidiousFormatList(data,instance){
   return {formats,audioFormats};
 }
 async function fetchCommunityJson(url){
-  const response=await fetch(url,{headers:{accept:"application/json","user-agent":"ARYANZZ/71.0 (public API client)"},redirect:"error",signal:AbortSignal.timeout(4500)});
+  const response=await fetch(url,{headers:{accept:"application/json","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"},redirect:"error",signal:AbortSignal.timeout(4500)});
   if(!response.ok)throw new Error("HTTP "+response.status);
   const data=await response.json();if(!data||typeof data!=="object")throw new Error("JSON tidak valid");return data;
 }
