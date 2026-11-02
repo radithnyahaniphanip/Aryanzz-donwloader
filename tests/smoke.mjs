@@ -74,7 +74,7 @@ const checks=[
   ["MP4 quality options are derived from actual available video streams",downloader.includes("const hasVideo=")&&downloader.includes("if(videoOption)videoOption.disabled=!hasVideo")],
 
   ["Progressive MP4 uses a one-byte Worker preflight and direct Chrome attachment streaming",downloader.includes("probe=1")&&downloader.includes("anchor.download=filename")&&downloader.includes("Chrome mengelola transfer dan dapat meneruskan unduhan di latar belakang")&&workerSource.includes("content-disposition")],
-  ["Adaptive MP4 remux fallback remains bounded for mobile memory",downloader.includes("maxTrack=110*1024*1024")&&downloader.includes("maxCombined=180*1024*1024")&&downloader.includes("melebihi batas memori HP")],
+  ["Adaptive MP4 remux fallback uses device-aware memory budgets",downloader.includes("function youtubeMuxMemoryBudget")&&downloader.includes("maxTrack:220*1024*1024")&&downloader.includes("maxCombined:340*1024*1024")&&downloader.includes("melewati batas aman memori perangkat")&&downloader.includes("progressiveFallback")],
   ["Browser CORS failure on adaptive tracks is reported instead of claiming success",downloader.includes("browserError=error")&&downloader.includes("detail.error||browserError.message")],
   ["legacy competing downloader handler removed",!v15.includes("button.onclick=async()=>{")],
   ["owner header controls are real buttons",html.includes('class="owner-menu-mark" type="button" data-panel="allTools"')&&html.includes('aria-label="Buka riwayat unduhan"')&&html.includes('aria-label="Buka personalisasi profil"')],
