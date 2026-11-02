@@ -1,8 +1,8 @@
-# ARYANZZ V71.3 — Piped + Invidious Hybrid Downloader
+# ARYANZZ V72.6 — Piped + Invidious Hybrid Downloader
 
 Production website: https://aryanzz-donwloader.radithnyahaniphanip.workers.dev/
 
-ARYANZZ is a mobile-first creator workspace hosted on Cloudflare Workers. V71.1 adds browser-first access to a zero-server design: direct media links are streamed by the Worker, while YouTube formats are discovered through public Piped and Invidious community instances. No Cobalt, Docker Desktop, private extraction server, or paid downloader provider is required.
+ARYANZZ is a mobile-first creator workspace hosted on Cloudflare Workers. V72.6 improves the zero-server YouTube flow by requesting Invidious-proxied stream URLs, checking real media bytes before download, and handing progressive media directly to Chrome without buffering the full file in page memory. No Cobalt, Docker Desktop, private extraction server, or paid downloader provider is required.
 
 ## V65.0 release scope
 
@@ -24,12 +24,15 @@ ARYANZZ is a mobile-first creator workspace hosted on Cloudflare Workers. V71.1 
 | V67.6 | Backend health cleanup, title-based YouTube search routed through yt-dlp, clearer AudD/Shazam status, and DJ scan fallback fixes |
 
 
-## V71.3 — Invidious MP4 format detection and trusted download fallback
+## V72.6 — Invidious proxy and direct Chrome streaming
 
-- Adds progressive MP4 quality detection from YouTube `itag` metadata when an Invidious response omits an explicit height or quality label.
-- Includes 144p and 240p when those actual MP4 formats are returned.
-- Passes the active, allowlisted community instance to the Worker download fallback so relative/provider-host stream URLs are validated consistently, including redirects.
-- Bumps downloader asset and service-worker cache versions to V71.3 to prevent stale mobile browser assets.
+- Requests Invidious video metadata with `local=true`, which makes supported instances return their own proxied playback URLs instead of exposing raw Googlevideo URLs that may be rejected by the Cloudflare Worker.
+- Validates the active Invidious origin against the public instance registry before the Worker fetches same-origin proxy URLs; Piped and Googlevideo allowlists remain in place.
+- Progressive MP4 and source-audio candidates are checked with a one-byte Range preflight. HTTP 403/404, empty bodies, and non-media responses are rejected before the UI hands the file to Chrome.
+- Once preflight succeeds, the Worker streams the attachment directly to Chrome. The full progressive file is no longer buffered in page JavaScript; Chrome displays the real download progress and remaining time.
+- Adaptive video-only streams still use local FFmpeg remuxing when no complete progressive MP4 is available. This fallback uses device memory and can be slower on phones.
+- Failed provider attempts reset the in-page progress bar and report several provider errors instead of leaving a misleading partial bar.
+- Updates the Worker health version, downloader asset, PWA cache and deployment smoke tests to V72.6.
 
 ## V71.2 — Invidious progressive MP4 format fix
 
@@ -43,8 +46,7 @@ ARYANZZ is a mobile-first creator workspace hosted on Cloudflare Workers. V71.1 
 - The YouTube metadata lookup now tries official Piped community API instances directly from the user's browser first, then official Invidious public instances, before falling back to the Cloudflare Worker route. This provides an alternative path when the Worker network receives 401/403/5xx responses from community operators.
 - Piped API origins are refreshed at runtime from the official TeamPiped public-instance directory (with a vetted snapshot fallback); Invidious origins use the currently listed official public instances.
 - Instance checks run in small batches with request timeouts. Only actual progressive MP4 video streams (audio+video already muxed) and source audio formats returned by the instance are offered.
-- The selected stream is fetched directly by the browser and saved as a Blob download with visible byte/progress feedback. This browser-side route is limited to 250 MB to avoid excessive mobile memory use. If CORS or network policy blocks the stream, ARYANZZ reports the failure rather than claiming a successful download.
-- The existing Cloudflare attachment-stream endpoint remains as a fallback attempt. It still depends on the Worker being able to reach the selected media host.
+- Progressive streams are preflighted through the Worker and then handed to Chrome as streamed attachments, avoiding full-file buffering in the page. Adaptive video-only streams are locally remuxed with FFmpeg only when a progressive MP4 is unavailable.
 - This remains a best-effort zero-cost design using third-party community instances. They may block requests, change domains, rate-limit, or stop operating. No guaranteed availability is claimed; the live CI probe must report whether the supplied test video currently returns formats.
 - TikTok extraction remains disabled. No Cobalt, Docker Desktop, paid extraction API, or private server is introduced.
 
@@ -52,7 +54,7 @@ ARYANZZ is a mobile-first creator workspace hosted on Cloudflare Workers. V71.1 
 
 - Replaces Cobalt and SaveNow extraction routes with a no-key, no-paid-provider hybrid lookup using public Piped API instances first and the official Invidious public-instance list as fallback.
 - Piped uses `GET /streams/:videoId`; Invidious uses `GET /api/v1/videos/:id`. The instance list is a curated snapshot of the upstream public directories and must be refreshed as instances change.
-- Only progressive/muxed MP4 video streams are offered for video downloads. Video-only DASH streams are intentionally excluded because this Worker does not merge separate video/audio tracks.
+- Progressive/muxed MP4 is preferred; when only adaptive video and audio tracks are returned, ARYANZZ can combine matching MP4/M4A tracks locally into one MP4.
 - Audio streams are exposed only in their actual source container (for example M4A/WEBM/OPUS where returned); no transcoding or fabricated MP3 quality options are shown.
 - The UI displays only formats actually returned by the working instance, and routes downloads through `/api/youtube/hybrid/file` as an attachment so Chrome can handle the file.
 - The Worker validates stream hostnames against Googlevideo and the curated Piped proxy domains, follows only validated HTTPS redirects, forwards Range requests, and preserves partial-content responses.
