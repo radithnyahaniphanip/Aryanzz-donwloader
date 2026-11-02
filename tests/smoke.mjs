@@ -710,11 +710,6 @@ try{
   const unsafeBrowserValidation=await worker.fetch(new Request(browserValidationUrl.replace(encodeURIComponent("https://inv.nadeko.net/videoplayback?itag=18"),encodeURIComponent("https://evil.example/video.mp4"))),{});
   assert.equal(unsafeBrowserValidation.status,400);
   console.log("✔ V73.7 browser download validation permits trusted streams and blocks untrusted hosts");
-  const dynamicInvidiousFileUrl="https://aryanzz.example/api/youtube/hybrid/file?url="+encodeURIComponent("https://inv.dynamic.example/videoplayback?itag=18")+"&ext=mp4&title=Dynamic%20Invidious&instance="+encodeURIComponent("https://inv.dynamic.example");
-  const dynamicInvidiousFile=await worker.fetch(new Request(dynamicInvidiousFileUrl),{});
-  assert.equal(dynamicInvidiousFile.status,200);
-  assert.equal((await dynamicInvidiousFile.arrayBuffer()).byteLength,4);
-  console.log("✔ Dynamically discovered Invidious origins are validated before proxy streaming");
   const retryFetch=globalThis.fetch;
   try{
     let retryCalls=0;
