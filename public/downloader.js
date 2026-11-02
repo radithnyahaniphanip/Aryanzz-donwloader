@@ -303,7 +303,7 @@
   async function browserPipedInfo(instance,id,signal){
     const data=await browserProviderJson(instance+"/streams/"+encodeURIComponent(id),signal);
       const formats=browserDedupeFormats([...(Array.isArray(data.videoStreams)?data.videoStreams.map(item=>browserVideoFormat(item,instance)).filter(Boolean):[]),...(Array.isArray(data.audioStreams)?data.audioStreams.map(item=>browserAudioFormat(item,instance)).filter(Boolean):[])]);
-      if(!data.title||!formats.length)throw new Error("Tidak ada stream progresif yang kompatibel");
+      if(!data.title||!formats.some(item=>item.mode==="video"))throw new Error("Instance Piped tidak menyediakan MP4 progresif; lanjutkan mencari instance video lain");
       return {ok:true,providerReady:true,providerName:"Hybrid",provider:"Piped",instance,title:String(data.title).slice(0,300),thumbnail:typeof data.thumbnailUrl==="string"?data.thumbnailUrl:null,duration:Number(data.duration)||null,uploader:String(data.uploader||"").slice(0,160),formats,message:"Stream diperoleh langsung dari browser melalui instance komunitas."};
   }
   async function browserInvidiousInfo(instance,id,signal){
