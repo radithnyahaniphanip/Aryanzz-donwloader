@@ -133,10 +133,11 @@ function youtubeDownloadUrl(provider,instance,raw,filename,mime){
   return u.pathname+u.search;
 }
 function pipedFormatList(data,instance){
-  const formats=(Array.isArray(data.videoStreams)?data.videoStreams:[]).filter(x=>x&&x.videoOnly===false&&String(x.mimeType||"").toLowerCase().startsWith("video/mp4")&&typeof x.url==="string").map(x=>{
+  const formats=(Array.isArray(data.videoStreams)?data.videoStreams:[]).filter(x=>x&&x.videoOnly===false&&["video/mp4","video/webm"].includes(String(x.mimeType||"").toLowerCase().split(";")[0])&&typeof x.url==="string").map(x=>{
     const height=Number(x.height)||Number(String(x.quality||"").match(/\d+/)?.[0])||0;
     if(![144,240,360,480,720,1080,1440,2160].includes(height))return null;
-    return {height,quality:String(x.quality||height+"p"),mimeType:"video/mp4",format:"mp4",downloadUrl:youtubeDownloadUrl("piped",instance.id,x.url,safeYoutubeName(data.title||"youtube-"+height,"mp4"),"video/mp4")};
+    const mime=String(x.mimeType).toLowerCase().split(";")[0],ext=mime==="video/webm"?"webm":"mp4";
+    return {height,quality:String(x.quality||height+"p")+(ext==="webm"?" · WebM":""),mimeType:mime,format:ext,downloadUrl:youtubeDownloadUrl("piped",instance.id,x.url,safeYoutubeName(data.title||"youtube-"+height,ext),mime)};
   }).filter(Boolean);
   const audioFormats=(Array.isArray(data.audioStreams)?data.audioStreams:[]).filter(x=>x&&typeof x.url==="string").map(x=>{
     const mime=String(x.mimeType||"").toLowerCase(),format=String(x.format||"").toLowerCase();
@@ -147,10 +148,11 @@ function pipedFormatList(data,instance){
   return {formats,audioFormats};
 }
 function invidiousFormatList(data,instance){
-  const formats=(Array.isArray(data.formatStreams)?data.formatStreams:[]).filter(x=>x&&typeof x.url==="string"&&String(x.container||"").toLowerCase()==="mp4").map(x=>{
+  const formats=(Array.isArray(data.formatStreams)?data.formatStreams:[]).filter(x=>x&&typeof x.url==="string"&&["mp4","webm"].includes(String(x.container||"").toLowerCase())).map(x=>{
     const height=Number(String(x.qualityLabel||x.resolution||"").match(/(\d{3,4})p?/)?.[1])||0;
     if(![144,240,360,480,720,1080,1440,2160].includes(height))return null;
-    return {height,quality:String(x.qualityLabel||height+"p"),mimeType:"video/mp4",format:"mp4",downloadUrl:youtubeDownloadUrl("invidious",instance.id,x.url,safeYoutubeName(data.title||"youtube-"+height,"mp4"),"video/mp4")};
+    const ext=String(x.container).toLowerCase(),mime=ext==="webm"?"video/webm":"video/mp4";
+    return {height,quality:String(x.qualityLabel||height+"p")+(ext==="webm"?" · WebM":""),mimeType:mime,format:ext,downloadUrl:youtubeDownloadUrl("invidious",instance.id,x.url,safeYoutubeName(data.title||"youtube-"+height,ext),mime)};
   }).filter(Boolean);
   const audioFormats=(Array.isArray(data.adaptiveFormats)?data.adaptiveFormats:[]).filter(x=>x&&typeof x.url==="string"&&String(x.type||"").toLowerCase().startsWith("audio/")).map(x=>{
     const mime=String(x.type||"").toLowerCase(),ext=mime.includes("audio/mp4")?"m4a":mime.includes("audio/webm")?"webm":null;
@@ -220,8 +222,8 @@ async function youtubeStream(request){
   if([301,302,303,307,308].includes(upstream.status))return json({error:"Terlalu banyak pengalihan stream."},502);
   if(!upstream.ok&&upstream.status!==206)return json({error:"Penyedia stream menjawab HTTP "+upstream.status+"."},upstream.status===416?416:502);
   const mime=String(u.searchParams.get("mime")||upstream.headers.get("content-type")||"application/octet-stream").split(";")[0].toLowerCase();
-  if(!["video/mp4","audio/mp4","audio/webm","audio/ogg"].includes(mime)) {if(upstream.body)upstream.body.cancel().catch(()=>{});return json({error:"Tipe file stream tidak didukung."},415);}
-  const ext=mime==="video/mp4"?"mp4":mime==="audio/mp4"?"m4a":mime==="audio/webm"?"webm":"ogg";
+  if(!["video/mp4","video/webm","audio/mp4","audio/webm","audio/ogg"].includes(mime)) {if(upstream.body)upstream.body.cancel().catch(()=>{});return json({error:"Tipe file stream tidak didukung."},415);}
+  const ext=mime==="video/mp4"?"mp4":mime==="video/webm"?"webm":mime==="audio/mp4"?"m4a":mime==="audio/webm"?"webm":"ogg";
   const filename=safeYoutubeName(u.searchParams.get("filename")||"aryanzz-youtube",ext);
   const responseHeaders=new Headers({"content-type":mime,"content-disposition":"attachment; filename*=UTF-8''"+encodeURIComponent(filename),"cache-control":"no-store","x-content-type-options":"nosniff","accept-ranges":upstream.headers.get("accept-ranges")||"bytes"});
   for(const name of ["content-length","content-range","etag","last-modified"])if(upstream.headers.get(name))responseHeaders.set(name,upstream.headers.get(name));
