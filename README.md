@@ -1,8 +1,8 @@
-# ARYANZZ V72.8 — Piped + Invidious Hybrid Downloader
+# ARYANZZ V72.9 — Mobile-resumable YouTube Downloader
 
 Production website: https://aryanzz-donwloader.radithnyahaniphanip.workers.dev/
 
-ARYANZZ is a mobile-first creator workspace hosted on Cloudflare Workers. V72.8 improves the zero-server YouTube flow by requesting Invidious-proxied stream URLs, checking real media bytes before download, and handing progressive media directly to Chrome without buffering the full file in page memory. No Cobalt, Docker Desktop, private extraction server, or paid downloader provider is required.
+ARYANZZ is a mobile-first creator workspace hosted on Cloudflare Workers. V72.9 builds on the zero-server YouTube flow with resumable range downloads, mobile-aware MP4 memory limits, quality fallback, download speed modes, and a safe thumbnail proxy. No Cobalt, Docker Desktop, private extraction server, or paid downloader provider is required.
 
 ## V65.0 release scope
 
@@ -23,6 +23,19 @@ ARYANZZ is a mobile-first creator workspace hosted on Cloudflare Workers. V72.8 
 | V67.4 | Premium mobile UI refresh, simplified downloader home, searchable Tools Center and Color Studio |
 | V67.6 | Backend health cleanup, title-based YouTube search routed through yt-dlp, clearer AudD/Shazam status, and DJ scan fallback fixes |
 
+
+## V72.9 — Mobile download resilience
+
+- Adds **Speed (1 lane)**, **Max Speed (3 lanes)**, and **Mega Speed (5 lanes)** for adaptive streams when the provider supports HTTP Range requests. This can improve throughput on a capable source, but it cannot increase the user's carrier or Wi-Fi bandwidth.
+- Downloads adaptive audio/video components in 4 MiB byte ranges and stores completed chunks in IndexedDB. If the page is suspended or closed, a later retry of the same video can reuse completed chunks when the provider and format are unchanged.
+- Reads the provider's actual total byte count from `Content-Range` before starting resumable range transfers.
+- Scales the in-browser FFmpeg memory budget using `navigator.deviceMemory`; if a selected adaptive quality is too large, it tries an available lower-quality MP4 instead of stopping at the first memory error.
+- Releases JavaScript media buffers after copying tracks into FFmpeg's virtual filesystem and allows a longer remux window for large files.
+- Moves the thumbnail download action directly below the preview image and routes it through a strict allowlist-backed Worker endpoint. The proxy only accepts known YouTube image hosts or a validated Invidious thumbnail path, and caps images at 15 MiB.
+- Progressive MP4 downloads are still handed to Chrome's native download manager, which is the preferred route for background downloads and browser-managed resume.
+- No paid extractor, Cobalt, Docker Desktop, or private download server is added.
+
+**Important limitation:** browsers may suspend page JavaScript when the tab is backgrounded. IndexedDB preserves completed chunks for a later retry; it does not make an in-page FFmpeg remux run continuously after Chrome is closed. Native progressive downloads are handled by Chrome itself.
 
 ## V72.8 — Wider community-provider failover
 
