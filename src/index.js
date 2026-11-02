@@ -289,7 +289,7 @@ async function hybridYoutubeFile(request){
     for(let i=0;i<4;i++){
       const headers={accept:"*/*","user-agent":"Mozilla/5.0 (compatible; ARYANZZ/72.9)"};
       if(range&&/^bytes=\d*-\d*(,\d*-\d*)*$/.test(range))headers.range=range;
-      response=await fetch(current.toString(),{headers,redirect:"manual",signal:AbortSignal.timeout(30000)});
+      const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),30000);\n      try{response=await fetch(current.toString(),{headers,redirect:"manual",signal:controller.signal});}\n      finally{clearTimeout(timer);}
       if(![301,302,303,307,308].includes(response.status))break;
       const loc=response.headers.get("location");if(!loc)break;
       const next=hybridMediaUrl(new URL(loc,current).toString(),trustedInstance);
