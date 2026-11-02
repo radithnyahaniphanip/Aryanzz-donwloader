@@ -43,7 +43,7 @@ const checks=[
   ["V72.7 shows transfer speed, remaining-time estimate and indeterminate progress",downloader.includes("function updateDownloadProgress")&&downloader.includes("sisa tahap")&&downloader.includes("is-indeterminate")],
   ["V72.7 hides audio format and bitrate controls outside audio mode",downloaderCss.includes(".youtube-result [hidden]{display:none!important}")&&downloader.includes("audioLabel.hidden=audioFormat.hidden")],
   ["V72.7 keeps FFmpeg warm after first use",downloader.includes("Keep the FFmpeg engine warm")&&!downloader.includes("ffmpeg.terminate();aryanzzFfmpegPromise=null")],
-  ["V72.7 first provider batch returns without waiting for further batches",downloader.includes("Only the first five instances per provider")&&!downloader.includes("if(available.length)break")],
+  ["V72.7 browser retains provider errors without waiting for further batches",downloader.includes("Provider errors are retained")&&!downloader.includes("if(available.length)break")],
   ["V72.7 browser aggregates provider instances and retries same-quality streams",downloader.includes("const available=[]")&&downloader.includes("for(const selected of candidates)")&&downloader.includes("selected.instance||info.instance")],
   ["V72.7 Invidious requests its local proxy URLs in both Worker and browser paths",workerSource.includes("?local=true")&&downloader.includes("?local=true")],
   ["V72.7 progressive MP4 is preflighted then streamed directly to Chrome",workerSource.includes('u.searchParams.get("probe")==="1"')&&downloader.includes("probe=1")&&downloader.includes("Chrome menampilkan progres dan sisa waktu sebenarnya")],
