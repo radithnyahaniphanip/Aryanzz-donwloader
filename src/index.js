@@ -451,7 +451,7 @@ function imageSafeFilename(title,index,ext){
   return base+"-"+String(index+1)+"."+ext;
 }
 function imageProxyLinks(imageUrl,sourceUrl,requestUrl,title,index){
-  const ext=(new URL(imageUrl).pathname.match(/\.(jpe?g|png|webp|gif|avif|bmp)$/i)||[])[1]||"jpg";
+  const imageParsed=new URL(imageUrl);\n  const ext=(imageParsed.pathname.match(/\.(jpe?g|png|webp|gif|avif|bmp)$/i)||[])[1]||String(imageParsed.searchParams.get("format")||"jpg").replace(/[^a-z]/gi,"").slice(0,5)||"jpg";
   const filename=imageSafeFilename(title,index,ext.toLowerCase());
   const make=(preview)=>{
     const u=new URL("/api/image/file",requestUrl);
@@ -476,7 +476,7 @@ function extractPublicImageUrls(html,baseUrl){
     if(!raw)return;
     let url;try{url=new URL(decodeSearchHtml(raw).replace(/\\u0026/g,"&"),baseUrl)}catch{return}
     const safe=safePublicMediaUrl(url.href);
-    if(!safe||!/\.(?:jpe?g|png|webp|gif|avif|bmp)(?:$|[?#])/i.test(safe.href))return;
+    if(!safe)return;
     if(seen.has(safe.href))return;seen.add(safe.href);found.push(safe.href);
   };
   for(const tag of String(html||"").matchAll(/<meta\b[^>]*>/gi)){
@@ -494,12 +494,10 @@ function extractPublicImageUrls(html,baseUrl){
 async function imagePostMetadata(rawUrl,requestUrl){
   const input=safePublicMediaUrl(rawUrl);
   if(!input)return {ok:false,error:"Tautan harus HTTPS dan berasal dari alamat publik yang aman."};
-  const directExt=(input.pathname.match(/\.(jpe?g|png|webp|gif|avif|bmp)$/i)||[])[1];
-  if(directExt){
-    const title=decodeURIComponent(input.pathname.split("/").pop()||"Gambar");
+  if(!isPlatformLink(input.href)){
+    let title=input.pathname.split("/").pop()||"Gambar";try{title=decodeURIComponent(title)}catch{}
     return {ok:true,title,platform:"Direct image",images:[{...imageProxyLinks(input.href,"",requestUrl,title,0),title,platform:"Direct image",sourceUrl:""}]};
   }
-  if(!isPlatformLink(input.href))return {ok:false,error:"Masukkan URL gambar langsung atau tautan postingan dari platform yang didukung."};
   try{
     const response=await fetch(input.href,{headers:{accept:"text/html,application/xhtml+xml","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0.0.0 Safari/537.36"},redirect:"follow",cache:"no-store",signal:AbortSignal.timeout(12000)});
     if(!response.ok)return {ok:false,error:"Postingan tidak dapat dibuka secara publik (HTTP "+response.status+")."};
