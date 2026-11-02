@@ -21,6 +21,7 @@
   let ffmpeg = null;
   let ffmpegPromise = null;
   let running = false;
+  let cancelRequested = false;
   let outputUrl = null;
   let sourceUrl = null;
 
@@ -223,20 +224,23 @@
     if(!selectedFile){setStatus("Pilih file MP4 atau audio terlebih dahulu.",true);return;}
     if(selectedFile.size>MAX_FILE_BYTES){setStatus("File terlalu besar untuk pemrosesan stabil di browser HP. Batas saat ini 120 MB.",true);return;}
     const format=outputExtension(),bitrate=$("audioBitrate")?.value||"320";
-    const base=cleanName($("audioFilename")?.value||selectedFile.name.replace(/\.[^.]+$/,""));
+    const base=cleanName($("audioFilename")?.value||selectedFile.name.replace(/\.[^.]+$/,"")).replace(/\.[a-z0-9]{2,5}$/i,"");
     const filename=base+"."+format;
     const sourceExt=(selectedFile.name.match(/\.([a-z0-9]{2,8})$/i)?.[1]||"mp4").toLowerCase();
     const inputName="aryanzz-input."+sourceExt;
     const outputName="aryanzz-output."+format;
     const convertButton=$("audioConvert"),cancelButton=$("audioCancel");
     running=true;
+    cancelRequested=false;
     if(convertButton){convertButton.disabled=true;convertButton.textContent="Mengonversi…";}
     if(cancelButton){cancelButton.hidden=false;cancelButton.disabled=false;}
     setProgress(0);
     try {
       const engine=await loadFfmpeg();
+      if(cancelRequested)throw new Error("Proses dibatalkan.");
       setStatus("Menyiapkan file dan filter audio…");
       await engine.writeFile(inputName,new Uint8Array(await selectedFile.arrayBuffer()));
+      if(cancelRequested)throw new Error("Proses dibatalkan.");
       const args=["-y","-i",inputName,"-vn","-map","0:a:0?","-af",audioFilter(),...metadataArgs()];
       if(format==="mp3")args.push("-c:a","libmp3lame","-b:a",bitrate+"k","-id3v2_version","3");
       else if(format==="m4a")args.push("-c:a","aac","-b:a",bitrate==="320"?"256k":bitrate+"k","-movflags","+faststart");
@@ -251,6 +255,7 @@
       let code;
       try { code=await engine.exec(args,300000); }
       finally { engine.off("progress",progressHandler); }
+      if(cancelRequested)throw new Error("Proses dibatalkan.");
       if(code!==0)throw new Error("Mesin konversi tidak dapat menyelesaikan file. Coba format lain atau file yang lebih kecil.");
       const result=await engine.readFile(outputName);
       if(!result||result.length<256)throw new Error("Hasil konversi kosong atau tidak lengkap.");
@@ -272,7 +277,8 @@
       rememberOutput({name:filename,format,at:Date.now(),size:blob.size});
       try { await engine.deleteFile(inputName); await engine.deleteFile(outputName); } catch {}
     } catch(error) {
-      setStatus(error?.message||"Konversi gagal. Periksa koneksi dan coba lagi.",true);
+      if(cancelRequested)setStatus("Proses dibatalkan. File sumber asli tidak diubah.");
+      else setStatus(error?.message||"Konversi gagal. Periksa koneksi dan coba lagi.",true);
       setProgress(0);
     } finally {
       running=false;
@@ -306,12 +312,12 @@
   }
   function cancel() {
     if(!running)return;
+    cancelRequested=true;
     try { ffmpeg?.terminate(); } catch {}
-    ffmpeg=null;ffmpegPromise=null;running=false;
-    setStatus("Proses dibatalkan. File sumber asli tidak diubah.",true);
+    ffmpeg=null;ffmpegPromise=null;
+    setStatus("Membatalkan proses konversi…");
     setProgress(0);
-    if($("audioConvert")){$("audioConvert").disabled=false;$("audioConvert").textContent="Konversi sekarang";}
-    if($("audioCancel")){$("audioCancel").hidden=true;$("audioCancel").disabled=false;}
+    if($("audioCancel"))$("audioCancel").disabled=true;
   }
   function init() {
     if(!$("audioStudio"))return;
