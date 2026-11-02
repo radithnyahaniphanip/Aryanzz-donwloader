@@ -1,4 +1,4 @@
-/* ARYANZZ V72.6 — zero-server direct downloader and community handoff */
+/* ARYANZZ V72.7 — zero-server direct downloader and community handoff */
 (() => {
   "use strict";
   const $ = id => document.getElementById(id);
@@ -157,7 +157,7 @@
         const mod=await import(moduleUrl);
         const ffmpeg=new mod.FFmpeg();
         [coreURL,wasmURL]=await Promise.all([loadBlob(coreBase+"/ffmpeg-core.js","text/javascript"),loadBlob(coreBase+"/ffmpeg-core.wasm","application/wasm")]);
-        await ffmpeg.load({coreURL,wasmURL,classWorkerURL:new URL("/ffmpeg-worker-bootstrap.js?v=72.6",location.origin).href});
+        await ffmpeg.load({coreURL,wasmURL,classWorkerURL:new URL("/ffmpeg-worker-bootstrap.js?v=72.7",location.origin).href});
         return ffmpeg;
       }finally{
         if(coreURL)URL.revokeObjectURL(coreURL);
@@ -521,34 +521,41 @@
   async function browserHybridYoutubeInfo(raw){
     const match=(()=>{try{const u=new URL(raw);if(["youtu.be","www.youtu.be"].includes(u.hostname))return u.pathname.split("/").filter(Boolean)[0]||null;return u.searchParams.get("v")||u.pathname.match(/^\/(?:shorts|embed|live|v)\/([A-Za-z0-9_-]{6,20})/)?.[1]||null;}catch{return null;}})();
     if(!match||! /^[A-Za-z0-9_-]{6,20}$/.test(match))throw new Error("ID video YouTube tidak valid.");
-    const tryGroup=(instances,fn)=>{
+    const tryGroup=(provider,instances,fn)=>{
+      const diagnostics=[];
       const controllers=instances.map(()=>browserProviderTimeout(5000));
       const promise=Promise.all(instances.map((instance,i)=>fn(instance,match,controllers[i].signal)
         .then(result=>({...result,instance:result.instance||instance,formats:(result.formats||[]).map(format=>({...format,instance:format.instance||instance,provider:format.provider||result.provider}))}))
-        .catch(()=>null).finally(()=>controllers[i].clear())));
-      return {promise,abort:()=>controllers.forEach(controller=>{controller.clear();controller.abort();})};
+        .catch(error=>{diagnostics.push({provider,instance,error:String(error?.message||"permintaan gagal").slice(0,150)});return null;})
+        .finally(()=>controllers[i].clear())));
+      return {promise,diagnostics,abort:()=>controllers.forEach(controller=>{controller.clear();controller.abort();})};
     };
     const [invidiousInstances,pipedInstances]=await Promise.all([currentInvidiousInstances(),currentPipedInstances()]);
     const available=[];
     const groups=[];
     const inv=invidiousInstances.slice(0,8),piped=pipedInstances.slice(0,8);
-    if(inv.length)groups.push(tryGroup(inv,browserInvidiousInfo));
-    if(piped.length)groups.push(tryGroup(piped,browserPipedInfo));
+    if(inv.length)groups.push(tryGroup("Invidious",inv,browserInvidiousInfo));
+    if(piped.length)groups.push(tryGroup("Piped",piped,browserPipedInfo));
     if(groups.length){
       const results=await Promise.all(groups.map(group=>group.promise));
       groups.forEach(group=>group.abort());
       available.push(...results.flat().filter(Boolean));
-      // Only the first five instances per provider are checked for a fast first result.
+      // Provider errors are retained so the UI can show why every instance failed.
     }
     if(available.length){
       const primary=available.find(item=>item.provider==="Piped")||available[0];
       const formats=browserDedupeFormats(available.flatMap(result=>(result.formats||[]).map(format=>({...format,instance:format.instance||result.instance,provider:format.provider||result.provider}))));
-      return {...primary,providerReady:true,formats,providers:available.map(item=>({provider:item.provider,instance:item.instance,formatCount:item.formats?.length||0}))};
+      return {...primary,providerReady:true,formats,providers:available.map(item=>({provider:item.provider,instance:item.instance,formatCount:item.formats?.length||0})),diagnostics:groups.flatMap(group=>group.diagnostics).slice(0,12)};
     }
     const response=await fetch("/api/youtube/hybrid/info?url="+encodeURIComponent(raw),{cache:"no-store",signal:AbortSignal.timeout(12000)});
     const fallback=await response.json().catch(()=>({}));
     if(response.ok&&fallback.providerReady)return fallback;
-    throw new Error("MP4 belum tersedia saat ini. Instance komunitas tidak mengirim stream yang dapat digunakan. Ini bukan kesalahan link; coba lagi nanti.");
+    const diagnostics=[...groups.flatMap(group=>group.diagnostics),...(Array.isArray(fallback.diagnostics)?fallback.diagnostics:[])];
+    const detail=diagnostics.slice(0,6).map(item=>{
+      let host=String(item.instance||"");try{host=new URL(host).hostname}catch{}
+      return (item.provider||"Provider")+" "+host+": "+(item.error||"gagal");
+    }).join(" | ");
+    throw new Error("MP4 belum tersedia dari provider gratis saat ini."+(detail?" Detail: "+detail:" Tidak ada instance yang mengirim format MP4 yang bisa digunakan.")+" Coba tautan lain nanti; bukan berarti tombol unduhnya rusak.");
   }
   async function checkLink(url, button) {
     const out = $("downloadResult");
