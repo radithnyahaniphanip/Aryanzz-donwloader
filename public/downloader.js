@@ -336,9 +336,21 @@
     try{
       const healthResponse=await fetch("/api/health",{cache:"no-store"});
       const health=await healthResponse.json().catch(()=>({}));
-      if(!healthResponse.ok||!health.platformExtraction){
+      if(!healthResponse.ok){
         node.dataset.state="warn";
-        node.textContent="Mode gratis · file langsung dikirim ke unduhan Chrome; ekstraksi YouTube menunggu provider gratis yang stabil.";
+        node.textContent="Status Worker belum dapat dibaca. Unduhan file langsung tetap bisa dicoba.";
+        return;
+      }
+      if(health.mode==="cloudflare-worker-zero-server-hybrid"&&health.youtubeDownloader){
+        const hybridResponse=await fetch("/api/youtube/status",{cache:"no-store"});
+        const hybrid=await hybridResponse.json().catch(()=>({}));
+        node.dataset.state=hybridResponse.ok&&hybrid.provider==="Piped + Invidious hybrid"?"ok":"warn";
+        node.textContent="Mode gratis · YouTube Hybrid aktif (Piped + Invidious). Ketersediaan instance dicek saat link diperiksa; TikTok sementara nonaktif.";
+        return;
+      }
+      if(!health.platformExtraction){
+        node.dataset.state="warn";
+        node.textContent="Mode gratis · file langsung dikirim ke unduhan Chrome; link sosial memerlukan provider komunitas.";
         return;
       }
       const response=await fetch("/api/platform/status",{cache:"no-store"});
