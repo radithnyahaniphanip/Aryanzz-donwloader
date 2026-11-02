@@ -23,6 +23,8 @@ const ownerJs=file("../public/owner.js");
 const ownerCss=file("../public/owner.css");
 const audioStudioJs=file("../public/audio-studio.js");
 const audioStudioCss=file("../public/audio-studio.css");
+const imageStudioJs=file("../public/image-studio.js");
+const imageStudioCss=file("../public/image-studio.css");
 const profileJs=file("../public/v25.js");
 const manifest=JSON.parse(file("../public/manifest.webmanifest"));
 const deployWorkflow=file("../.github/workflows/deploy-cloudflare.yml");
@@ -203,6 +205,14 @@ const checks=[
   ["V80.0 narrow-screen overrides no longer force 74px platform cards or nowrap labels",v674Css.includes(".v736-platform{min-width:0}")&&v674Css.includes(".v736-platform span:last-child{white-space:normal}")&&!v674Css.includes("min-width:74px")&&!v674Css.includes("white-space:nowrap")],
   ["V80.0 platform logos have consistent branded icon tiles and responsive labels",downloaderCss.includes(".v736-logo{")&&downloaderCss.includes(".v736-instagram{background:linear-gradient")&&downloaderCss.includes("overflow-wrap:anywhere")&&html.includes("12 PLATFORM")],
   ["V80.0 Reddit short video host v.redd.it routes through the Reddit provider",workerSource.includes('"v.redd.it":"reddit"')&&workerSource.includes('id:"reddit",domains:["reddit.com","redd.it","v.redd.it"]')],
+
+
+  ["V80.1 Image Studio editor controls and client-side export are present",html.includes('id="imageStudioFile"')&&html.includes('id="imageEditorCanvas"')&&html.includes('id="imageExport"')&&imageStudioJs.includes("createImageBitmap")&&imageStudioJs.includes("canvas.toBlob")],
+  ["V80.1 Image Studio supports all requested aspect ratios and custom pixel dimensions",html.includes('value="1:1"')&&html.includes('value="4:3"')&&html.includes('value="3:2"')&&html.includes('value="16:9"')&&html.includes('value="9:16"')&&html.includes('value="6:8"')&&imageStudioJs.includes('imageCustomWidth')&&imageStudioJs.includes('imageCustomHeight')],
+  ["V80.1 Image Downloader has platform search and public-post extraction controls",html.includes('id="imageSearchPlatform"')&&html.includes('id="imageSearchQuery"')&&html.includes('id="imageExtractButton"')&&workerSource.includes('async function searchSocialImages')&&workerSource.includes('async function imagePostMetadata')],
+  ["V80.1 image downloads use a validated same-origin image proxy and reject non-image content",workerSource.includes('url.pathname==="/api/image/file"')&&workerSource.includes('safePublicMediaUrl(raw)')&&workerSource.includes('image/jpeg')&&workerSource.includes('Sumber tidak mengirim file gambar yang didukung')],
+  ["V80.1 Image Studio CSS and JavaScript are loaded and cached by the service worker",html.includes('/image-studio.css?v=80.1')&&html.includes('/image-studio.js?v=80.1')&&sw.includes('/image-studio.css?v=80.1')&&sw.includes('/image-studio.js?v=80.1')&&imageStudioCss.includes('.image-download-results')],
+  ["V80.1 CapCut and Pinterest marks use updated reference-style SVG paths",html.includes('viewBox="0 0 32 32"')&&html.includes('class="v736-pinterest"')&&html.includes('fill="#fff"')]
 
  ];
  for(const [name,ok] of checks){assert.ok(ok,name+" failed");console.log("✔ "+name)}
