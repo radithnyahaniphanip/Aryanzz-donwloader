@@ -82,7 +82,7 @@ for(const [name,ok] of checks){assert.ok(ok,name+" failed");console.log("✔ "+n
 const healthResponse=await worker.fetch(new Request("https://aryanzz.example/api/health"),{});
 assert.equal(healthResponse.status,200);
 const health=await healthResponse.json();
-assert.equal(health.version,"69.0");
+assert.equal(health.version,"69.2");
 assert.equal(health.selfHostedDownloader,false);
 assert.equal(health.youtubeDownloader,false);
 assert.equal(health.mode,"cloudflare-worker-zero-server");
