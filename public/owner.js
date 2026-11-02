@@ -68,12 +68,12 @@
     if (bioNode) bioNode.textContent = bio;
     if (avatar) {
       avatar.textContent = (name.charAt(0) || "A").toUpperCase();
-      avatar.style.backgroundImage = profile.photo ? 'url("' + profile.photo + '")' : "";
+      avatar.style.backgroundImage = profile.photo ? 'url("' + profile.photo + '")' : "none";
       avatar.style.backgroundSize = "cover";
       avatar.style.backgroundPosition = "center";
     }
-    if (cover && design.banner) {
-      cover.style.backgroundImage = 'linear-gradient(120deg,rgba(7,13,25,.45),rgba(7,13,25,.58)),url("' + design.banner + '")';
+    if (cover) {
+      cover.style.backgroundImage = design.banner ? 'linear-gradient(120deg,rgba(7,13,25,.45),rgba(7,13,25,.58)),url("' + design.banner + '")' : "none";
       cover.style.backgroundSize = "cover";
       cover.style.backgroundPosition = "center";
     }
@@ -112,6 +112,7 @@
     $("ownerLinksSave")?.addEventListener("click", saveLinks);
     $("ownerEditProfile")?.addEventListener("click", () => window.aryanzzShowPanel?.("profile"));
     window.addEventListener("storage", () => { renderOwnerProfile(); renderLinks(); });
+    window.addEventListener("aryanzz:profile-assets-updated", renderOwnerProfile);
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init, { once: true });
   else init();
