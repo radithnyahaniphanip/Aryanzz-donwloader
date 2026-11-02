@@ -107,7 +107,7 @@
     progressText.textContent="Menyerahkan file "+selected.quality+" ke pengelola unduhan Chrome…";
     bar.style.width="100%";
     const a=document.createElement("a");
-    a.href=target;a.download=filename;a.rel="noopener";a.style.display="none";
+    a.href=target;a.download=filename;a.target="_blank";a.rel="noopener";a.style.display="none";
     document.body.append(a);a.click();a.remove();
     remember(url,filename,mode,quality);
     return filename;
