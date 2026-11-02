@@ -22,9 +22,9 @@ const downloaderCss=file("../public/downloader.css");
 const manifest=JSON.parse(file("../public/manifest.webmanifest"));
 
 const checks=[
-  ["V70.0 page title",html.includes("ARYANZZ V70.0 — All-in-One Creative Space")],
-  ["V59.5 versioned assets",html.includes("/v15.js?v=59.5")&&html.includes("/owner.js?v=59.5")&&html.includes("/downloader.js?v=70.0")&&html.includes("/downloader.css?v=59.5")&&html.includes("/v59.css?v=59.5")&&html.includes("/editor-pro.css?v=65.0")&&html.includes("/editor.js?v=65.0")],
-  ["service worker cache and V59.5 assets",html.includes("/sw.js?v=70.0")&&sw.includes("aryanzz-v70-0")&&sw.includes("/editor.js?v=65.0")&&sw.includes("/editor-pro.css?v=65.0")&&sw.includes("/v59.css?v=59.5")],
+  ["V70.1 page title",html.includes("ARYANZZ V70.1 — All-in-One Creative Space")],
+  ["V59.5 versioned assets",html.includes("/v15.js?v=59.5")&&html.includes("/owner.js?v=59.5")&&html.includes("/downloader.js?v=70.1")&&html.includes("/downloader.css?v=59.5")&&html.includes("/v59.css?v=59.5")&&html.includes("/editor-pro.css?v=65.0")&&html.includes("/editor.js?v=65.0")],
+  ["service worker cache and V59.5 assets",html.includes("/sw.js?v=70.1")&&sw.includes("aryanzz-v70-0")&&sw.includes("/editor.js?v=65.0")&&sw.includes("/editor-pro.css?v=65.0")&&sw.includes("/v59.css?v=59.5")],
   ["downloader input, result and backend status",html.includes('id="analyze"')&&html.includes('id="downloadResult"')&&html.includes('id="backendStatus"')],
   ["unified self-hosted downloader API",downloader.includes('postJson("/api/info"')&&downloader.includes('"/api/direct-file?url="')&&downloader.includes("PLATFORM_NAMES")&&!downloader.toLowerCase().includes("savenow")],
   ["single capture-phase universal URL handler",downloader.includes('button.addEventListener("click"')&&downloader.includes("event.stopImmediatePropagation()")&&downloader.includes("}, true);")],
@@ -50,18 +50,18 @@ const checks=[
   ["V65.0 chroma key live preview and export",html.includes('id="editorPreviewCanvas"')&&html.includes('id="editorChromaEnabled"')&&editor.includes("function applyChromaKey")&&editor.includes("drawFrame(previewCtx")],
   ["V65.0 animated captions",html.includes('id="editorTextAnimation"')&&editor.includes("function textAnimationState")&&editor.includes("overlay.dataset.animation")],
   ["Music Finder panel and tool card",html.includes('id="musicFinder"')&&html.includes('data-panel="musicFinder"')],
-  ["Music Finder assets and PWA cache",html.includes("/music-recognition.js?v=70.0")&&html.includes("/music-recognition.css?v=70.0")&&sw.includes("/music-recognition.js?v=70.0")&&sw.includes("/music-recognition.css?v=70.0")],
+  ["Music Finder assets and PWA cache",html.includes("/music-recognition.js?v=70.1")&&html.includes("/music-recognition.css?v=70.1")&&sw.includes("/music-recognition.js?v=70.1")&&sw.includes("/music-recognition.css?v=70.1")],
   ["DJ mix scan uses AudD Enterprise endpoint",html.includes('id="musicFileScanButton"')&&html.includes('id="musicScanSkip"')&&musicJs.includes('/api/music/scan-video')&&workerSource.includes("enterprise.audd.io")],
   ["Music Finder supports file, video URL and microphone",musicJs.includes("captureMediaSample")&&musicJs.includes("getUserMedia")&&musicJs.includes("/api/music/recognize")&&musicJs.includes("musicVideoUrl")],
   ["AudD errors expose provider code and actionable quota guidance",workerSource.includes("function auddFailure")&&workerSource.includes("providerErrorCode")&&workerSource.includes("kode 901")&&workerSource.includes("kode 902")],
-  ["V70.0 runs without a self-hosted extractor",workerSource.includes('version:"70.0"')&&workerSource.includes('mode:"cloudflare-worker-zero-server"')&&workerSource.includes('platformBackend:"community-handoff"')&&!workerSource.includes("DOWNLOADER_CONTAINER")],
+  ["V70.1 runs without a self-hosted extractor",workerSource.includes('version:"70.1"')&&workerSource.includes('mode:"cloudflare-worker-zero-server"')&&workerSource.includes('platformBackend:"community-handoff"')&&!workerSource.includes("DOWNLOADER_CONTAINER")],
   ["Shazam fallback covers standard AudD auth/quota failures",workerSource.includes("shazamRecognize(audioBlob,env)")&&workerSource.includes("providerErrorCode")&&serverSource.includes("/api/music/recognize")&&serverSource.includes("shazam_recognize.py")],
   ["DJ mix scans fall back to Shazam when AudD Enterprise errors",workerSource.includes("shazamScan(fallbackSource")&&serverSource.includes("/api/music/scan")&&serverSource.includes("scanShazamMedia")],
   ["Docker backend includes yt-dlp, FFmpeg and ShazamIO",file("../Dockerfile").includes("yt-dlp")&&file("../Dockerfile").includes("shazamio==0.9.0")&&serverSource.includes("ffprobe")],
   ["Music Finder responsive styling",musicCss.includes(".music-grid")&&musicCss.includes("@media(max-width:620px)")],
   ["Video URL DJ scanning goes directly through AudD Enterprise",workerSource.includes('fetch("https://enterprise.audd.io/"')&&!musicJs.includes("identifyVideoUrl(url,startSeconds)")],
   ["tool hub remains available",html.includes('id="allTools"')],
-  ["PWA manifest version",manifest.name.includes("V70.0")],
+  ["PWA manifest version",manifest.name.includes("V70.1")],
   ["V67.7 visual assets are loaded",html.includes("/v677.css?v=67.7")&&html.includes("/v677.js?v=67.7")&&sw.includes("/v677.css?v=67.7")&&sw.includes("/v677.js?v=67.7")],
   ["V67.7 home remains focused on the downloader",html.includes('id="home"')&&html.includes('id="downloadLinkMode"')&&!html.slice(html.indexOf('id="home"'),html.indexOf('id="toolsArea"')).includes('id="toolGrid"')],
   ["V67.7 feature identity map covers all tools",file("../public/v677.js").includes("const ICONS=")&&["speed","checker","queue","editor","musicFinder","history","imageTools","pdfTools","qrTools","securityTools","colorStudio","profile","owner","about","help"].every(id=>file("../public/v677.js").includes(id))],
@@ -70,19 +70,19 @@ const checks=[
   ["V67.9 remaining tools have branded backgrounds",v677css.includes('data-feature="gradientStudio"')&&v677css.includes('data-feature="fileHash"')&&v677css.includes("#editor .editor-pro-head")&&v677css.includes("#profile .v25-profile-cover")],
   ["V67.9 Color Studio favorites and clipboard work after redesign",v677js.includes("palette.onclick=async event")&&v677js.includes("favorites.onclick=async event")&&v677js.includes('localStorage.setItem("aryanzz.color-favorites.v674"')&&v677js.includes("copyExpandedColor")],
 
-  ["V70.0 service worker cache and creative assets",sw.includes("aryanzz-v70-0")&&sw.includes("/v680.css?v=70.0")&&sw.includes("/v680.js?v=70.0")&&html.includes("/v680.js?v=70.0")],
+  ["V70.1 service worker cache and creative assets",sw.includes("aryanzz-v70-0")&&sw.includes("/v680.css?v=70.1")&&sw.includes("/v680.js?v=70.1")&&html.includes("/v680.js?v=70.1")],
   ["V67.9 downloader preserves direct-source details",downloader.includes("function responseFilename")&&downloader.includes("const directMedia=!!info.extension&&!info.extractor")&&downloader.includes("/api/platform/status")],
-  ["V70.0 title search has no-server YouTube handoff",file("../public/v674.js").includes("Buka hasil YouTube")&&file("../public/v674.js").includes("salin tautan video")],
+  ["V70.1 title search has no-server YouTube handoff",file("../public/v674.js").includes("Buka hasil YouTube")&&file("../public/v674.js").includes("salin tautan video")],
   ["V67.9 direct media whitelist includes common formats",workerSource.includes('"mkv"')&&workerSource.includes('"avi"')&&workerSource.includes('"aiff"')&&workerSource.includes('"opus"')],
-  ["V70.0 Gradient Studio controls are wired",html.includes('id="gradientStudio"')&&html.includes('id="gradientRandom"')&&html.includes('id="gradientPng"')&&file("../public/v680.js").includes("function renderGradient")],
-  ["V70.0 File Hash Checker uses local Web Crypto",html.includes('id="fileHash"')&&html.includes('id="hashCompute"')&&file("../public/v680.js").includes("crypto.subtle.digest")],
+  ["V70.1 Gradient Studio controls are wired",html.includes('id="gradientStudio"')&&html.includes('id="gradientRandom"')&&html.includes('id="gradientPng"')&&file("../public/v680.js").includes("function renderGradient")],
+  ["V70.1 File Hash Checker uses local Web Crypto",html.includes('id="fileHash"')&&html.includes('id="hashCompute"')&&file("../public/v680.js").includes("crypto.subtle.digest")],
 ];
 for(const [name,ok] of checks){assert.ok(ok,name+" failed");console.log("✔ "+name)}
 
 const healthResponse=await worker.fetch(new Request("https://aryanzz.example/api/health"),{});
 assert.equal(healthResponse.status,200);
 const health=await healthResponse.json();
-assert.equal(health.version,"70.0");
+assert.equal(health.version,"70.1");
 assert.equal(health.selfHostedDownloader,false);
 assert.equal(health.youtubeDownloader,false);
 assert.equal(health.mode,"cloudflare-worker-zero-server");
@@ -90,7 +90,7 @@ assert.equal(health.platformBackend,"community-handoff");
 assert.equal(health.directMediaDownload,true);
 assert.equal(health.musicRecognitionConfigured,false);
 assert.equal(health.youtubeApiKeyConfigured,false);
-console.log("✔ V70.0 Worker health and zero-server status");
+console.log("✔ V70.1 Worker health and zero-server status");
 const platformStatusResponse=await worker.fetch(new Request("https://aryanzz.example/api/platform/status"),{});
 assert.equal(platformStatusResponse.status,200);
 const platformStatus=await platformStatusResponse.json();
@@ -313,7 +313,7 @@ try{
   const healthData=await health.json();
   assert.equal(healthData.platformBackend,"community-handoff");
   assert.equal(healthData.platformExtraction,false);
-  console.log("✔ V70.0 health keeps the no-server mode active");
+  console.log("✔ V70.1 health keeps the no-server mode active");
 }finally{globalThis.fetch=originalFallbackFetch;}
 
 const originalEnterpriseFetch=globalThis.fetch;
@@ -379,6 +379,20 @@ try{
       assert.equal(url.searchParams.get("u"),"https://www.youtube.com/watch?v=K1Pu75yJUOE");
       return new Response(JSON.stringify({title:"Test YouTube Video",duration:125,thumbnail:"https://img.example/thumb.jpg"}),{status:200,headers:{"content-type":"application/json"}});
     }
+    if(url.hostname==="cobalt.example"&&url.pathname==="/"){
+      assert.equal(init.method,"POST");
+      assert.equal(init.headers.authorization,"Api-Key cobalt-test-key");
+      const payload=JSON.parse(init.body);
+      assert.equal(payload.url,"https://www.youtube.com/watch?v=K1Pu75yJUOE");
+      assert.equal(payload.youtubeVideoCodec,"h264");
+      if(payload.downloadMode==="audio"){
+        assert.equal(payload.audioFormat,"opus");
+        assert.equal(payload.audioBitrate,"256");
+      }else{
+        assert.equal(payload.videoQuality,"1080");
+      }
+      return new Response(JSON.stringify({status:"tunnel",url:"https://cobalt.example/tunnel?id=cobalt-job",filename:"aryanzz-test.mp4"}),{status:200,headers:{"content-type":"application/json"}});
+    }
     if(url.hostname==="www.youtube.com"&&url.pathname==="/oembed"){
       return new Response(JSON.stringify({title:"Fallback YouTube Preview",thumbnail_url:"https://img.example/fallback.jpg",author_name:"Test Channel"}),{status:200,headers:{"content-type":"application/json"}});
     }
@@ -410,6 +424,32 @@ try{
   assert.match(directSocialFile.headers.get("content-disposition"),/sample\.mp4/);
   assert.equal((await directSocialFile.arrayBuffer()).byteLength,4);
   console.log("✔ Direct MP4 GET endpoint streams attachment directly for Chrome download manager");
+
+  const cobaltPreview=await worker.fetch(new Request("https://aryanzz.example/api/youtube/info?url="+encodeURIComponent("https://www.youtube.com/watch?v=K1Pu75yJUOE")),{COBALT_API_ORIGIN:"https://cobalt.example"});
+  assert.equal(cobaltPreview.status,200);
+  const cobaltPreviewData=await cobaltPreview.json();
+  assert.equal(cobaltPreviewData.providerReady,true);
+  assert.equal(cobaltPreviewData.providerName,"Cobalt");
+  console.log("✔ Authorized Cobalt instance makes YouTube preview download-ready without SaveNow credits");
+
+  const cobaltVideo=await worker.fetch(new Request("https://aryanzz.example/api/youtube/cobalt-redirect?url="+encodeURIComponent("https://www.youtube.com/watch?v=K1Pu75yJUOE")+"&format=1080"),{
+    COBALT_API_ORIGIN:"https://cobalt.example",COBALT_API_KEY:"cobalt-test-key",COBALT_API_AUTH_SCHEME:"Api-Key"
+  });
+  assert.equal(cobaltVideo.status,302);
+  assert.equal(cobaltVideo.headers.get("location"),"https://cobalt.example/tunnel?id=cobalt-job");
+  console.log("✔ YouTube 1080p redirects directly to the authorized Cobalt tunnel for Chrome downloads");
+
+  const cobaltAudio=await worker.fetch(new Request("https://aryanzz.example/api/youtube/cobalt-redirect?url="+encodeURIComponent("https://www.youtube.com/watch?v=K1Pu75yJUOE")+"&format=opus&bitrate=256"),{
+    COBALT_API_ORIGIN:"https://cobalt.example",COBALT_API_KEY:"cobalt-test-key",COBALT_API_AUTH_SCHEME:"Api-Key"
+  });
+  assert.equal(cobaltAudio.status,302);
+  console.log("✔ Cobalt audio format and bitrate are passed through safely");
+
+  const blockedPublicInstance=await worker.fetch(new Request("https://aryanzz.example/api/youtube/cobalt-redirect?url="+encodeURIComponent("https://www.youtube.com/watch?v=K1Pu75yJUOE")+"&format=720"),{
+    COBALT_API_ORIGIN:"https://api.cobalt.tools"
+  });
+  assert.equal(blockedPublicInstance.status,503);
+  console.log("✔ Unapproved shared public Cobalt endpoint is not used as an integration");
 
   const noKeyPreview=await worker.fetch(new Request("https://aryanzz.example/api/youtube/info?url="+encodeURIComponent("https://www.youtube.com/watch?v=4dpnHLPMQGs")),{SAVENOW_API_KEY:"test-secret"});
   assert.equal(noKeyPreview.status,200);
@@ -479,4 +519,4 @@ try{
   globalThis.fetch=originalFetch;
 }
 
-console.log("\nARYANZZ V70.0 YouTube flow, TikTok community handoff, zero-server downloader, Gradient Studio, file hashing and music recognition smoke tests passed.");
+console.log("\nARYANZZ V70.1 YouTube flow, TikTok community handoff, zero-server downloader, Gradient Studio, file hashing and music recognition smoke tests passed.");
