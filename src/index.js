@@ -497,7 +497,7 @@ async function imagePostMetadata(rawUrl,requestUrl){
   const directExt=(input.pathname.match(/\.(jpe?g|png|webp|gif|avif|bmp)$/i)||[])[1];
   if(directExt){
     const title=decodeURIComponent(input.pathname.split("/").pop()||"Gambar");
-    return {ok:true,title,platform:"Direct image",images:[imageProxyLinks(input.href,"",requestUrl,title,0)]};
+    return {ok:true,title,platform:"Direct image",images:[{...imageProxyLinks(input.href,"",requestUrl,title,0),title,platform:"Direct image",sourceUrl:""}]};
   }
   if(!isPlatformLink(input.href))return {ok:false,error:"Masukkan URL gambar langsung atau tautan postingan dari platform yang didukung."};
   try{
@@ -512,7 +512,7 @@ async function imagePostMetadata(rawUrl,requestUrl){
     const title=String(titleAttrs.content||decodeSearchHtml(titleTag?.[1]||"Postingan gambar")).slice(0,180);
     const imageUrls=extractPublicImageUrls(html,finalUrl.href);
     const platform=freePlatformKey(finalUrl.href)||"social";
-    const images=imageUrls.map((url,index)=>imageProxyLinks(url,finalUrl.href,requestUrl,title,index));
+    const images=imageUrls.map((url,index)=>({...imageProxyLinks(url,finalUrl.href,requestUrl,title,index),title,platform,sourceUrl:finalUrl.href}));
     return {ok:true,title,platform,sourceUrl:finalUrl.href,images};
   }catch(error){return {ok:false,error:"Platform tidak mengizinkan pembacaan otomatis atau sedang membatasi akses. "+String(error?.message||error).slice(0,100)}}
 }
