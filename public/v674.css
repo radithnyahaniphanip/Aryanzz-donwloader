@@ -29,3 +29,9 @@ body[data-theme="light"]{background:#f2f5ff;color:#1b2440}body[data-theme="light
 body[data-theme="light"] .v674-search-result,body[data-theme="light"] .v674-search-loading,body[data-theme="light"] .v674-search-empty{background:#fff;border-color:#c4d0e7}
 body[data-theme="light"] .v674-search-result h3{color:#1b2440}
 @media(max-width:390px){.v674-search-result{grid-template-columns:90px minmax(0,1fr);gap:9px;padding:8px}.v674-search-result img{width:90px}}
+
+/* V73.7 unified search cards */
+.v737-media-result{align-items:start}
+.v737-media-result .primary{display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:8px 13px;border:0;border-radius:10px;background:linear-gradient(110deg,#815cf6,#328fe8);color:#fff;text-decoration:none;font-size:11px;font-weight:850}
+.v737-media-result img{width:112px;max-height:100px;object-fit:cover}
+@media(max-width:390px){.v737-media-result img{width:90px}}
