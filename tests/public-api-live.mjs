@@ -39,12 +39,12 @@ for (const provider of providers) {
     if (provider.kind === "piped") {
       stream = (data.videoStreams || []).find(x =>
         x && x.videoOnly === false &&
-        String(x.mimeType || "").toLowerCase().startsWith("video/mp4") &&
+        ["video/mp4","video/webm"].includes(String(x.mimeType || "").toLowerCase().split(";")[0]) &&
         typeof x.url === "string"
       );
     } else {
       stream = (data.formatStreams || []).find(x =>
-        x && String(x.container || "").toLowerCase() === "mp4" &&
+        x && ["mp4","webm"].includes(String(x.container || "").toLowerCase()) &&
         typeof x.url === "string"
       );
     }
@@ -54,7 +54,7 @@ for (const provider of providers) {
     });
     if (!(probe.ok || probe.status === 206)) throw new Error("stream HTTP " + probe.status);
     const mime = String(probe.headers.get("content-type") || "").toLowerCase();
-    if (mime && !mime.includes("video/mp4") && !mime.includes("octet-stream")) {
+    if (mime && !mime.includes("video/mp4") && !mime.includes("video/webm") && !mime.includes("octet-stream")) {
       throw new Error("unexpected stream MIME " + mime);
     }
     if (probe.body) await probe.body.cancel();
