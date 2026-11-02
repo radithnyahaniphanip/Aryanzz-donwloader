@@ -643,7 +643,8 @@ try{
   assert.equal(dynamicInfo.status,200);
   const dynamicData=await dynamicInfo.json();
   assert.equal(dynamicData.providerReady,true);
-  const dynamicFileUrl="https://aryanzz.example/api/youtube/hybrid/file?url="+encodeURIComponent("https://pipedproxy.example.org/videoplayback?itag=18&sig=test")+"&ext=mp4&title=Dynamic%20Piped&instance="+encodeURIComponent("https://pipedapi.example.org");
+  const dynamicProxy=new URL(dynamicData.instance).hostname.endsWith("kavin.rocks")?"https://pipedproxy-bom.kavin.rocks":"https://pipedproxy.example.org";
+  const dynamicFileUrl="https://aryanzz.example/api/youtube/hybrid/file?url="+encodeURIComponent(dynamicProxy+"/videoplayback?itag=18&sig=test")+"&ext=mp4&title=Dynamic%20Piped&instance="+encodeURIComponent(dynamicData.instance);
   const dynamicFile=await worker.fetch(new Request(dynamicFileUrl),{});
   assert.equal(dynamicFile.status,200);
   assert.equal((await dynamicFile.arrayBuffer()).byteLength,4);
