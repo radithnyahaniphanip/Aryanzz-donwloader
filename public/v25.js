@@ -227,7 +227,7 @@
         if(payload?.app!=="ARYANZZ"||!storage||typeof storage!=="object"||Array.isArray(storage))throw new Error("File ini bukan backup ARYANZZ yang valid.");
         if(!window.confirm("Pulihkan backup ini? Data ARYANZZ yang ada di browser akan diganti."))return;
         const allowed=Object.entries(storage).filter(([key,value])=>(key.startsWith("aryanzz.")||key==="aryanzz-download-history-v1")&&typeof value==="string");
-        for(let i=localStorage.length-1;i>=0;i--){const key=localStorage.key(i);if(key?.startsWith("aryanzz.")&&!allowed.some(([savedKey])=>savedKey===key))localStorage.removeItem(key);}
+        for(let i=localStorage.length-1;i>=0;i--){const key=localStorage.key(i);if((key?.startsWith("aryanzz.")||key==="aryanzz-download-history-v1")&&!allowed.some(([savedKey])=>savedKey===key))localStorage.removeItem(key);}
         allowed.forEach(([key,value])=>localStorage.setItem(key,value));
         toast("Backup dipulihkan. Memuat ulang tampilan…");setTimeout(()=>location.reload(),650);
       }catch(error){toast(error.message||"Backup tidak dapat dipulihkan.");}finally{input.value="";}
@@ -237,7 +237,7 @@
       if(!snapshot?.data){toast("Belum ada cadangan otomatis yang tersimpan.");return;}
       if(!window.confirm("Pulihkan cadangan otomatis terakhir dari browser ini? Data ARYANZZ saat ini akan diganti."))return;
       const allowed=Object.entries(snapshot.data).filter(([key,value])=>(key.startsWith("aryanzz.")||key==="aryanzz-download-history-v1")&&typeof value==="string");
-      for(let i=localStorage.length-1;i>=0;i--){const key=localStorage.key(i);if(key?.startsWith("aryanzz.")&&!allowed.some(([savedKey])=>savedKey===key))localStorage.removeItem(key);}
+      for(let i=localStorage.length-1;i>=0;i--){const key=localStorage.key(i);if((key?.startsWith("aryanzz.")||key==="aryanzz-download-history-v1")&&!allowed.some(([savedKey])=>savedKey===key))localStorage.removeItem(key);}
       allowed.forEach(([key,value])=>localStorage.setItem(key,value));
       toast("Cadangan otomatis dipulihkan. Memuat ulang…");setTimeout(()=>location.reload(),650);
     });
