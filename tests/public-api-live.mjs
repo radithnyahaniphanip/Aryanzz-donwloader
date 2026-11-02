@@ -32,7 +32,7 @@ for (const provider of providers) {
     const endpoint = provider.kind === "piped"
       ? provider.api + "/streams/" + encodeURIComponent(videoId)
       : provider.api + "/api/v1/videos/" + encodeURIComponent(videoId) + "?region=ID";
-    const response = await request(endpoint, { headers: { accept: "application/json", referer: provider.kind === "piped" ? "https://piped.video/" : provider.api + "/" } });
+    const response = await request(endpoint, { headers: { accept: "application/json", "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36", referer: provider.kind === "piped" ? "https://piped.video/" : provider.api + "/" } });
     if (!response.ok) throw new Error("metadata HTTP " + response.status);
     const data = await response.json();
     let stream = null;
