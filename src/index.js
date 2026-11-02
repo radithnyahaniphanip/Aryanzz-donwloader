@@ -211,8 +211,192 @@ async function youtubeCobaltRedirect(request,env){
     "x-content-type-options":"nosniff"
   }});
 }
+const PIPED_PUBLIC_INSTANCES=[
+  "https://pipedapi.kavin.rocks",
+  "https://pipedapi.leptons.xyz",
+  "https://pipedapi.nosebs.ru",
+  "https://pipedapi-libre.kavin.rocks",
+  "https://piped-api.privacy.com.de",
+  "https://pipedapi.adminforge.de",
+  "https://api.piped.yt",
+  "https://pipedapi.drgns.space",
+  "https://pipedapi.owo.si",
+  "https://pipedapi.ducks.party",
+  "https://piped-api.codespace.cz",
+  "https://pipedapi.reallyaweso.me",
+  "https://api.piped.private.coffee",
+  "https://pipedapi.darkness.services",
+  "https://pipedapi.orangenet.cc"
+];
+const INVIDIOUS_PUBLIC_INSTANCES=[
+  "https://inv.nadeko.net",
+  "https://invidious.nerdvpn.de",
+  "https://yt.chocolatemoo53.com",
+  "https://invidious.tiekoetter.com"
+];
+const HYBRID_MEDIA_ROOTS=[
+  "kavin.rocks","leptons.xyz","nosebs.ru","privacy.com.de","adminforge.de",
+  "piped.yt","drgns.space","owo.si","ducks.party","codespace.cz",
+  "reallyaweso.me","private.coffee","darkness.services","orangenet.cc"
+];
+function youtubeVideoId(raw){
+  try{
+    const u=new URL(raw),h=u.hostname.toLowerCase();
+    if(h==="youtu.be"||h==="www.youtu.be")return u.pathname.split("/").filter(Boolean)[0]||null;
+    const v=u.searchParams.get("v");
+    if(v)return v;
+    const m=u.pathname.match(/^\/(?:shorts|embed|live|v)\/([A-Za-z0-9_-]{6,20})/);
+    return m?.[1]||null;
+  }catch{return null;}
+}
+function hybridMediaUrl(raw){
+  try{
+    const u=new URL(raw);
+    if(u.protocol!=="https:"||u.username||u.password)return null;
+    const h=u.hostname.toLowerCase();
+    if(h==="googlevideo.com"||h.endsWith(".googlevideo.com"))return u;
+    if(HYBRID_MEDIA_ROOTS.some(root=>h===root||h.endsWith("."+root)))return u;
+    return null;
+  }catch{return null;}
+}
+function hybridVideoFormat(item){
+  const mime=String(item?.mimeType||item?.type||"").toLowerCase();
+  const container=String(item?.format||item?.container||"").toLowerCase();
+  const height=Number(item?.height)||Number((String(item?.qualityLabel||item?.quality||item?.resolution||"").match(/(\d{3,4})p?/i)||[])[1])||0;
+  const url=hybridMediaUrl(item?.url||"");
+  if(!url||!height||item?.videoOnly===true)return null;
+  if(!(mime.includes("video/mp4")||container.includes("mpeg_4")||container==="mp4"||mime.includes("video/x-m4v")))return null;
+  // Only progressive/muxed streams are offered: Worker does not merge separate DASH tracks.
+  if(item?.videoOnly===true)return null;
+  return {mode:"video",height,quality:height+"p",ext:"mp4",mimeType:"video/mp4",url:url.toString(),bitrate:Number(item.bitrate)||0};
+}
+function hybridAudioFormat(item){
+  const mime=String(item?.mimeType||item?.type||"").toLowerCase();
+  const container=String(item?.format||item?.container||"").toLowerCase();
+  const url=hybridMediaUrl(item?.url||"");
+  if(!url||!(mime.startsWith("audio/")||["m4a","mp3","webm","opus","ogg"].includes(container)))return null;
+  let ext=container==="mpeg"?"mp3":container==="mp4"?"m4a":container;
+  if(!["m4a","mp3","webm","opus","ogg","wav","flac"].includes(ext)){
+    if(mime.includes("audio/mp4"))ext="m4a";
+    else if(mime.includes("audio/mpeg"))ext="mp3";
+    else if(mime.includes("audio/webm"))ext="webm";
+    else return null;
+  }
+  return {mode:"audio",height:0,quality:String(item.quality||item.audioQuality||item.bitrate||"Audio"),ext,mimeType:mime.split(";")[0],url:url.toString(),bitrate:Number(item.bitrate)||0};
+}
+function dedupeHybridFormats(formats){
+  const seen=new Set();
+  return formats.filter(f=>{const key=f.mode+":"+f.height+":"+f.ext+":"+f.url.split("?")[0];if(seen.has(key))return false;seen.add(key);return true;})
+    .sort((a,b)=>a.mode===b.mode?(a.mode==="video"?a.height-b.height:b.bitrate-a.bitrate):a.mode==="video"?-1:1);
+}
+async function hybridFetchJson(url){
+  const response=await fetch(url,{headers:{accept:"application/json","user-agent":"ARYANZZ/71.0 (public-instance failover)"},signal:AbortSignal.timeout(4500)});
+  if(!response.ok)throw new Error("HTTP "+response.status);
+  const type=response.headers.get("content-type")||"";
+  if(!type.includes("json"))throw new Error("Respons bukan JSON");
+  return response.json();
+}
+function hybridFromPiped(data,instance){
+  const formats=dedupeHybridFormats([
+    ...(Array.isArray(data.videoStreams)?data.videoStreams.map(hybridVideoFormat).filter(Boolean):[]),
+    ...(Array.isArray(data.audioStreams)?data.audioStreams.map(hybridAudioFormat).filter(Boolean):[])
+  ]);
+  if(!formats.length||!data.title)return null;
+  return {ok:true,providerReady:true,providerName:"Hybrid",provider:"Piped",instance,title:String(data.title).slice(0,300),thumbnail:typeof data.thumbnailUrl==="string"?data.thumbnailUrl:null,duration:Number(data.duration)||null,uploader:String(data.uploader||"").slice(0,160),formats:formats.map((f,i)=>({...f,id:"f"+i})),message:"Stream progresif tersedia dari instance komunitas. Kualitas yang tampil berasal dari format yang benar-benar ditemukan."};
+}
+function hybridFromInvidious(data,instance){
+  const video=(Array.isArray(data.formatStreams)?data.formatStreams:[]).map(hybridVideoFormat).filter(Boolean);
+  const audio=(Array.isArray(data.adaptiveFormats)?data.adaptiveFormats:[]).map(hybridAudioFormat).filter(Boolean);
+  const formats=dedupeHybridFormats([...video,...audio]);
+  if(!formats.length||!data.title)return null;
+  const thumb=Array.isArray(data.videoThumbnails)?data.videoThumbnails.find(x=>x.quality==="maxresdefault")||data.videoThumbnails[0]:null;
+  return {ok:true,providerReady:true,providerName:"Hybrid",provider:"Invidious",instance,title:String(data.title).slice(0,300),thumbnail:typeof thumb?.url==="string"?thumb.url:null,duration:Number(data.lengthSeconds)||null,uploader:String(data.author||"").slice(0,160),formats:formats.map((f,i)=>({...f,id:"f"+i})),message:"Stream progresif tersedia dari instance komunitas. Kualitas yang tampil berasal dari format yang benar-benar ditemukan."};
+}
+async function hybridYoutubeInfo(request){
+  const raw=new URL(request.url).searchParams.get("url")||"";
+  if(!isYouTubeUrl(raw))return json({error:"URL YouTube tidak valid."},400);
+  const id=youtubeVideoId(raw);
+  if(!id||!/^[A-Za-z0-9_-]{6,20}$/.test(id))return json({error:"ID video YouTube tidak valid."},400);
+  const attempts=[];
+  const piped=PIPED_PUBLIC_INSTANCES.slice(0,8);
+  const pipedResults=await Promise.allSettled(piped.map(async instance=>{
+    const data=await hybridFetchJson(instance+"/streams/"+encodeURIComponent(id));
+    const result=hybridFromPiped(data,instance);
+    if(!result)throw new Error("Tidak ada stream MP4 progresif/audio langsung");
+    return result;
+  }));
+  for(let i=0;i<pipedResults.length;i++){
+    const r=pipedResults[i];
+    if(r.status==="fulfilled")return json(r.value);
+    attempts.push("Piped "+piped[i]+": "+String(r.reason?.message||"gagal").slice(0,90));
+  }
+  const inv=INVIDIOUS_PUBLIC_INSTANCES;
+  const invResults=await Promise.allSettled(inv.map(async instance=>{
+    const data=await hybridFetchJson(instance+"/api/v1/videos/"+encodeURIComponent(id)+"?fields=title,videoId,author,lengthSeconds,videoThumbnails,formatStreams,adaptiveFormats");
+    const result=hybridFromInvidious(data,instance);
+    if(!result)throw new Error("Tidak ada stream progresif/audio langsung");
+    return result;
+  }));
+  for(let i=0;i<invResults.length;i++){
+    const r=invResults[i];
+    if(r.status==="fulfilled")return json(r.value);
+    attempts.push("Invidious "+inv[i]+": "+String(r.reason?.message||"gagal").slice(0,90));
+  }
+  let preview={};
+  try{
+    const u=new URL("https://www.youtube.com/oembed");u.searchParams.set("url",raw);u.searchParams.set("format","json");
+    const res=await fetch(u.toString(),{headers:{accept:"application/json"},signal:AbortSignal.timeout(7000)});
+    if(res.ok)preview=await res.json();
+  }catch{}
+  return json({
+    ok:true,providerReady:false,providerName:"Hybrid",provider:"Unavailable",
+    title:String(preview.title||"Video YouTube").slice(0,300),
+    thumbnail:typeof preview.thumbnail_url==="string"?preview.thumbnail_url:null,
+    formats:[],
+    providerMessage:"Semua instance komunitas yang diuji sedang tidak menyediakan stream yang kompatibel. Tidak ada provider berbayar yang dipanggil. Coba lagi nanti.",
+    diagnostics:attempts.slice(0,12)
+  });
+}
+function hybridFilename(title,ext){
+  const clean=String(title||"aryanzz-youtube").replace(/[\\/:*?"<>|\\u0000-\\u001f]/g," ").replace(/\\s+/g," ").trim().slice(0,90)||"aryanzz-youtube";
+  return clean.toLowerCase().endsWith("."+ext.toLowerCase())?clean:clean+"."+ext;
+}
+async function hybridYoutubeFile(request){
+  const u=new URL(request.url),raw=u.searchParams.get("url")||"",ext=String(u.searchParams.get("ext")||"mp4").toLowerCase();
+  const stream=hybridMediaUrl(raw);
+  if(!stream)return json({error:"URL stream tidak berasal dari host media yang diizinkan."},400);
+  if(!["mp4","m4a","mp3","webm","opus","ogg","wav","flac"].includes(ext))return json({error:"Format file tidak didukung."},400);
+  const title=hybridFilename(u.searchParams.get("title"),ext);
+  const range=request.headers.get("range");
+  let current=stream,response;
+  try{
+    for(let i=0;i<4;i++){
+      const headers={accept:"*/*","user-agent":"Mozilla/5.0 (compatible; ARYANZZ/71.0)"};
+      if(range&&/^bytes=\\d*-\\d*(,\\d*-\\d*)*$/.test(range))headers.range=range;
+      response=await fetch(current.toString(),{headers,redirect:"manual",signal:AbortSignal.timeout(30000)});
+      if(![301,302,303,307,308].includes(response.status))break;
+      const loc=response.headers.get("location");if(!loc)break;
+      const next=hybridMediaUrl(new URL(loc,current).toString());if(!next)return json({error:"Redirect stream menuju host yang tidak diizinkan."},502);
+      current=next;
+    }
+  }catch(e){return json({error:"Gagal mengambil stream dari instance komunitas: "+String(e.message||"network error").slice(0,160)},502)}
+  if(!response||![200,206].includes(response.status)||!response.body)return json({error:"Stream tidak tersedia atau ditolak (HTTP "+(response?.status||502)+"). Coba format/instance lain."},502);
+  const size=Number(response.headers.get("content-length")||0);
+  if(size>MAX_YOUTUBE_BYTES){await response.body.cancel();return json({error:"File melebihi batas 500 MB."},413)}
+  const mime=ext==="mp4"?"video/mp4":ext==="m4a"?"audio/mp4":ext==="mp3"?"audio/mpeg":ext==="webm"?"video/webm":ext==="opus"?"audio/ogg":ext==="ogg"?"audio/ogg":ext==="wav"?"audio/wav":"audio/flac";
+  const headers=new Headers({
+    "content-type":mime,
+    "content-disposition":"attachment; filename*=UTF-8''"+encodeURIComponent(title),
+    "cache-control":"no-store",
+    "x-content-type-options":"nosniff",
+    "accept-ranges":response.headers.get("accept-ranges")||"bytes"
+  });
+  for(const h of ["content-length","content-range"])if(response.headers.get(h))headers.set(h,response.headers.get(h));
+  return new Response(response.body,{status:response.status,headers});
+}
 function youtubeInfoUrl(raw){return isYouTubeUrl(raw)?raw:null;}
 async function youtubeInfo(request,env){
+  return hybridYoutubeInfo(request);
   const url=new URL(request.url).searchParams.get("url")||"";
   if(!youtubeInfoUrl(url))return json({error:"URL YouTube tidak valid."},400);
   const cobalt=cobaltConfig(env);
@@ -696,13 +880,15 @@ export default {async fetch(request,env){
   if(url.pathname==="/api/search"&&request.method==="POST")return searchYouTube(request,env);
   if(url.pathname==="/api/music/recognize"&&request.method==="POST")return recognizeMusic(request,env);
   if(url.pathname==="/api/platform/status"&&request.method==="GET")return platformStatus(env);
-  if(url.pathname==="/api/youtube/status"&&request.method==="GET"){const cobalt=cobaltConfig(env);return json({ok:true,service:"ARYANZZ YouTube Backend",youtubeDownloader:!!cobalt||(env.ALLOW_PAID_YOUTUBE_PROVIDER==="true"&&!!env.SAVENOW_API_KEY),provider:cobalt?"Cobalt":env.ALLOW_PAID_YOUTUBE_PROVIDER==="true"&&env.SAVENOW_API_KEY?"SaveNow":"Unavailable",cobaltConfigured:!!cobalt,cobaltInstance:cobalt?.hostname||null,youtubeApiKeyConfigured:false,supportedAudio:[...YOUTUBE_AUDIO_FORMATS],supportedVideo:["360","480","720","1080","1440","4k"]});}
+  if(url.pathname==="/api/youtube/status"&&request.method==="GET"){const cobalt=cobaltConfig(env);return json({ok:true,service:"ARYANZZ YouTube Backend",youtubeDownloader:!!cobalt||(env.ALLOW_PAID_YOUTUBE_PROVIDER==="true"&&!!env.SAVENOW_API_KEY),provider:"Hybrid",cobaltConfigured:!!cobalt,cobaltInstance:cobalt?.hostname||null,youtubeApiKeyConfigured:false,supportedAudio:[...YOUTUBE_AUDIO_FORMATS],supportedVideo:["360","480","720","1080","1440","4k"]});}
+  if(url.pathname==="/api/youtube/hybrid/info"&&request.method==="GET")return hybridYoutubeInfo(request);
+  if(url.pathname==="/api/youtube/hybrid/file"&&request.method==="GET")return hybridYoutubeFile(request);
   if(url.pathname==="/api/youtube/info"&&request.method==="GET")return youtubeInfo(request,env);
   if(url.pathname==="/api/youtube/cobalt-redirect"&&request.method==="GET")return youtubeCobaltRedirect(request,env);
   if(url.pathname==="/api/youtube/download"&&request.method==="POST")return youtubeStart(request,env);
   if(url.pathname==="/api/youtube/progress"&&request.method==="POST")return youtubeProgress(request,env);
   if(url.pathname==="/api/youtube/file"&&request.method==="GET")return youtubeFile(request,env);
-  if(url.pathname==="/api/health"&&request.method==="GET")return json({ok:true,service:"ARYANZZ",version:"70.1",mode:"cloudflare-worker-zero-server",directMediaDownload:true,selfHostedDownloader:false,youtubeDownloader:!!cobaltConfig(env)||(env.ALLOW_PAID_YOUTUBE_PROVIDER==="true"&&!!env.SAVENOW_API_KEY),youtubeApiKeyConfigured:false,musicRecognitionConfigured:!!env.AUDD_API_TOKEN,musicFallbackReady:false,musicVideoRecognitionReady:false,platformExtraction:false,platformBackend:"community-handoff"});
+  if(url.pathname==="/api/health"&&request.method==="GET")return json({ok:true,service:"ARYANZZ",version:"71.0",mode:"cloudflare-worker-zero-server-hybrid",directMediaDownload:true,selfHostedDownloader:false,youtubeDownloader:true,youtubeApiKeyConfigured:false,musicRecognitionConfigured:!!env.AUDD_API_TOKEN,musicFallbackReady:false,musicVideoRecognitionReady:false,platformExtraction:false,platformBackend:"community-handoff"});
   if(url.pathname==="/api/info"&&request.method==="POST"){const proxied=await proxyPlatform(request,env,"/api/info");if(proxied)return proxied;return info(request);}
   if(url.pathname==="/api/direct-file"&&request.method==="GET")return download(request);
   if(url.pathname==="/api/download"&&request.method==="POST"){const proxied=await proxyPlatform(request,env,"/api/download");if(proxied)return proxied;return download(request);}
