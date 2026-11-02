@@ -179,8 +179,8 @@ function hybridFormatSizeBytes(item){
   const parse=value=>{
     if(typeof value==="number"&&Number.isFinite(value)&&value>0)return Math.round(value);
     const text=String(value??"").trim();
-    if(/^\\d{5,}$/.test(text)){const n=Number(text);return Number.isFinite(n)&&n>0?Math.round(n):0;}
-    const match=text.match(/^([\\d.,]+)\\s*(B|KB|KIB|MB|MIB|GB|GIB)$/i);
+    if(/^\d{5,}$/.test(text)){const n=Number(text);return Number.isFinite(n)&&n>0?Math.round(n):0;}
+    const match=text.match(/^([\d.,]+)\s*(B|KB|KIB|MB|MIB|GB|GIB)$/i);
     if(!match)return 0;
     const amount=Number(match[1].replace(",","."));
     if(!Number.isFinite(amount)||amount<=0)return 0;
@@ -369,7 +369,7 @@ async function hybridYoutubeFile(request){
         if(profile.referer)headers.referer=profile.referer;
         if(profile.origin)headers.origin=profile.origin;
         if(range&&/^bytes=\d*-\d*(?:,\d*-\d*)*$/.test(range))headers.range=range;
-        const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),30000);
+        const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),probe?10000:30000);
         try{response=await fetch(current.toString(),{headers,redirect:"manual",signal:controller.signal});}
         finally{clearTimeout(timer);}
         if(![301,302,303,307,308].includes(response.status))break;
