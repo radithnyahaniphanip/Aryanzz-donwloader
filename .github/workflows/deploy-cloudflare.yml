@@ -142,7 +142,7 @@ jobs:
           if (!downloaderSource.includes("available.map(value=>[value,value+\"p · tersedia\"])") || !downloaderSource.includes("Persiapan 100% · ketuk tombol") || !downloaderSource.includes("Kesiapan tautan unduhan")) {
             throw new Error("V81.0 social quality selector or honest link-ready progress is missing.");
           }
-          if (!pageResponse.ok || !pageSource.includes("ARYANZZ V81.0") || !pageSource.includes('id="imageStudio"') || !pageSource.includes('src="/image-studio.js?v=81.0"') || !pageSource.includes("restoreAutoBackup") || !pageSource.includes("audioStudio") || !pageSource.includes("profileMotionToggle") || !pageSource.includes("Kontrol banner profil") || !pageSource.includes("audioStudioTempo") || !pageSource.includes("audioStudioTitle")) {
+          if (!pageResponse.ok || !pageSource.includes("ARYANZZ V81.0") || !pageSource.includes('id="imageStudio"') || !pageSource.includes('src="/image-studio.js?v=80.1"') || !pageSource.includes("restoreAutoBackup") || !pageSource.includes("audioStudio") || !pageSource.includes("profileMotionToggle") || !pageSource.includes("Kontrol banner profil") || !pageSource.includes("audioStudioTempo") || !pageSource.includes("audioStudioTitle")) {
             throw new Error("V74.0 page, profile backup, or Audio Studio markup is not live.");
           }
           console.log("V81.0 Audio Studio, profile backup, and creative assets are available.");
