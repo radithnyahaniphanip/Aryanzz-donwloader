@@ -451,7 +451,8 @@ function imageSafeFilename(title,index,ext){
   return base+"-"+String(index+1)+"."+ext;
 }
 function imageProxyLinks(imageUrl,sourceUrl,requestUrl,title,index){
-  const imageParsed=new URL(imageUrl);\n  const ext=(imageParsed.pathname.match(/\.(jpe?g|png|webp|gif|avif|bmp)$/i)||[])[1]||String(imageParsed.searchParams.get("format")||"jpg").replace(/[^a-z]/gi,"").slice(0,5)||"jpg";
+  const imageParsed=new URL(imageUrl);
+  const ext=(imageParsed.pathname.match(/\.(jpe?g|png|webp|gif|avif|bmp)$/i)||[])[1]||String(imageParsed.searchParams.get("format")||"jpg").replace(/[^a-z]/gi,"").slice(0,5)||"jpg";
   const filename=imageSafeFilename(title,index,ext.toLowerCase());
   const make=(preview)=>{
     const u=new URL("/api/image/file",requestUrl);
