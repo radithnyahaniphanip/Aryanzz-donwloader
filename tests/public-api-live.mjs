@@ -39,10 +39,15 @@ try {
     enable_session_cache: false,
     fast_fail: true
   });
-  const info = await yt.getInfo(videoId);
-  const directFormats = (info.streaming_data?.formats || []).filter(format =>
-    format && format.has_video && format.has_audio &&
-    String(format.mime_type || "").toLowerCase().startsWith("video/mp4") &&
+  const playerResponse = await yt.actions.execute("/player", {
+    videoId,
+    client: "ANDROID_VR",
+    parse: false
+  });
+  const payload = playerResponse?.data || playerResponse;
+  const streaming = payload?.streamingData || payload?.streaming_data || {};
+  const directFormats = (streaming.formats || []).filter(format =>
+    format && String(format.mimeType || format.mime_type || "").toLowerCase().startsWith("video/mp4") &&
     typeof format.url === "string" && format.url.length > 0
   );
   for (const format of directFormats) {
@@ -53,7 +58,7 @@ try {
     }
     if (probe.body) await probe.body.cancel();
     console.log("LIVE PROVIDER PASS: YouTube.js ANDROID_VR returned " +
-      (format.quality_label || format.height || "MP4") + " and a byte-range stream.");
+      (format.qualityLabel || format.quality_label || format.height || "MP4") + " and a byte-range stream.");
     process.exit(0);
   }
   failures.push("YouTube.js ANDROID_VR: no direct muxed MP4 URL usable without deciphering");
