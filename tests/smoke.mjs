@@ -368,6 +368,9 @@ try{
   globalThis.fetch=async(input,init={})=>{
     const url=new URL(typeof input==="string"?input:input.url);
     requests.push({url,init});
+    if(url.hostname==="cdn.instagram.com"&&url.pathname==="/sample.mp4"){
+      return new Response(init.method==="HEAD"?null:new Uint8Array([1,2,3,4]),{status:200,headers:{"content-type":"video/mp4","content-length":"4"}});
+    }
     if(url.pathname==="/ajax/api.php"){
       assert.equal(url.searchParams.get("function"),"i");
       assert.equal(url.searchParams.get("api"),"test-secret");
@@ -395,6 +398,21 @@ try{
     }
     throw new Error("Unexpected mocked fetch: "+url.href);
   };
+
+  const directSocialFileInfo=await worker.fetch(new Request("https://aryanzz.example/api/info",{
+    method:"POST",headers:{"content-type":"application/json"},
+    body:JSON.stringify({url:"https://cdn.instagram.com/sample.mp4"})
+  }),{});
+  assert.equal(directSocialFileInfo.status,200);
+  assert.equal((await directSocialFileInfo.json()).extension,"mp4");
+  const directSocialFile=await worker.fetch(new Request("https://aryanzz.example/api/download",{
+    method:"POST",headers:{"content-type":"application/json"},
+    body:JSON.stringify({url:"https://cdn.instagram.com/sample.mp4",mode:"video"})
+  }),{});
+  assert.equal(directSocialFile.status,200);
+  assert.match(directSocialFile.headers.get("content-disposition"),/sample\.mp4/);
+  assert.equal((await directSocialFile.arrayBuffer()).byteLength,4);
+  console.log("✔ Direct MP4 URLs on social/CDN domains bypass platform extraction and download as files");
 
   const info=await worker.fetch(new Request("https://aryanzz.example/api/youtube/info?url="+encodeURIComponent("https://www.youtube.com/watch?v=K1Pu75yJUOE")),{SAVENOW_API_KEY:"test-secret"});
   assert.equal(info.status,200);
