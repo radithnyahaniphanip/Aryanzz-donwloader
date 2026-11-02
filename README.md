@@ -1,8 +1,8 @@
-# ARYANZZ V72.7 — Piped + Invidious Hybrid Downloader
+# ARYANZZ V72.8 — Piped + Invidious Hybrid Downloader
 
 Production website: https://aryanzz-donwloader.radithnyahaniphanip.workers.dev/
 
-ARYANZZ is a mobile-first creator workspace hosted on Cloudflare Workers. V72.7 improves the zero-server YouTube flow by requesting Invidious-proxied stream URLs, checking real media bytes before download, and handing progressive media directly to Chrome without buffering the full file in page memory. No Cobalt, Docker Desktop, private extraction server, or paid downloader provider is required.
+ARYANZZ is a mobile-first creator workspace hosted on Cloudflare Workers. V72.8 improves the zero-server YouTube flow by requesting Invidious-proxied stream URLs, checking real media bytes before download, and handing progressive media directly to Chrome without buffering the full file in page memory. No Cobalt, Docker Desktop, private extraction server, or paid downloader provider is required.
 
 ## V65.0 release scope
 
@@ -23,6 +23,13 @@ ARYANZZ is a mobile-first creator workspace hosted on Cloudflare Workers. V72.7 
 | V67.4 | Premium mobile UI refresh, simplified downloader home, searchable Tools Center and Color Studio |
 | V67.6 | Backend health cleanup, title-based YouTube search routed through yt-dlp, clearer AudD/Shazam status, and DJ scan fallback fixes |
 
+
+## V72.8 — Wider community-provider failover
+
+- Checks up to 20 dynamically discovered Piped API instances instead of stopping after the first 10.
+- Expands browser-side discovery to 20 Piped and up to 10 Invidious instances, while keeping provider errors visible.
+- Returns up to 20 provider diagnostics so failures from later instances are not hidden.
+- This broadens coverage of the official public directories; it cannot guarantee a stream when every public provider is blocked or unavailable.
 
 ## V72.7 — Provider diagnostics
 
