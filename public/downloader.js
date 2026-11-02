@@ -1,4 +1,4 @@
-/* ARYANZZ V72.7 — zero-server direct downloader and community handoff */
+/* ARYANZZ V72.8 — zero-server direct downloader and community handoff */
 (() => {
   "use strict";
   const $ = id => document.getElementById(id);
@@ -157,7 +157,7 @@
         const mod=await import(moduleUrl);
         const ffmpeg=new mod.FFmpeg();
         [coreURL,wasmURL]=await Promise.all([loadBlob(coreBase+"/ffmpeg-core.js","text/javascript"),loadBlob(coreBase+"/ffmpeg-core.wasm","application/wasm")]);
-        await ffmpeg.load({coreURL,wasmURL,classWorkerURL:new URL("/ffmpeg-worker-bootstrap.js?v=72.7",location.origin).href});
+        await ffmpeg.load({coreURL,wasmURL,classWorkerURL:new URL("/ffmpeg-worker-bootstrap.js?v=72.8",location.origin).href});
         return ffmpeg;
       }finally{
         if(coreURL)URL.revokeObjectURL(coreURL);
@@ -533,7 +533,7 @@
     const [invidiousInstances,pipedInstances]=await Promise.all([currentInvidiousInstances(),currentPipedInstances()]);
     const available=[];
     const groups=[];
-    const inv=invidiousInstances.slice(0,8),piped=pipedInstances.slice(0,8);
+    const inv=invidiousInstances.slice(0,10),piped=pipedInstances.slice(0,20);
     if(inv.length)groups.push(tryGroup("Invidious",inv,browserInvidiousInfo));
     if(piped.length)groups.push(tryGroup("Piped",piped,browserPipedInfo));
     if(groups.length){
