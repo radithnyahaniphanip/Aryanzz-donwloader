@@ -88,12 +88,14 @@
   }
   function setupReveal(){
     const targets=document.querySelectorAll(".v25-profile-card,.v25-profile-stats>div");
+    if(document.body.dataset.motion==="off"){targets.forEach(el=>el.classList.add("v25-visible"));return;}
     if(!("IntersectionObserver" in window)||window.matchMedia("(prefers-reduced-motion: reduce)").matches){targets.forEach(el=>el.classList.add("v25-visible"));return;}
     targets.forEach(el=>el.classList.add("v25-reveal"));
     const observer=new IntersectionObserver(entries=>entries.forEach(entry=>{if(entry.isIntersecting){entry.target.classList.add("v25-visible");observer.unobserve(entry.target);}}),{threshold:.08});
     targets.forEach(el=>observer.observe(el));
   }
   function setupPremiumEffects(){
+    if(document.body.dataset.motion==="off")return;
     if(window.matchMedia("(pointer:fine)").matches&&!window.matchMedia("(prefers-reduced-motion: reduce)").matches){
       document.querySelectorAll(".v25-profile-card").forEach(card=>{
         card.addEventListener("pointermove",e=>{const r=card.getBoundingClientRect(),x=(e.clientX-r.left)/r.width-.5,y=(e.clientY-r.top)/r.height-.5;card.style.transform="perspective(900px) rotateX("+(-y*2.4)+"deg) rotateY("+(x*2.4)+"deg) translateY(-2px)";});
