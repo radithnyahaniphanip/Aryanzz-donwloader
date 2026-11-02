@@ -1053,12 +1053,22 @@
         }
       }
       const updateQualityHint=()=>{
+        if(mode.value==="audio"){qualityHint.hidden=true;return;}
         const height=Number(quality.value)||0,estimate=youtubeQualityEstimate(info,height);
-        qualityHint.hidden=!isYouTube||mode.value==="audio"||!info.providerReady;
-        if(qualityHint.hidden)return;
-        if(!estimate){qualityHint.textContent="Ukuran belum diberikan provider; ukuran asli akan terbaca saat stream diperiksa.";return;}
-        const size=estimate.bytes?(estimate.exact?"Ukuran sumber: ":"Perkiraan ukuran: ±")+formatDownloadSize(estimate.bytes)+". ":"";
-        qualityHint.textContent=estimate.kind==="direct"?"MP4 langsung · "+size:"Gabung video + audio otomatis · "+size;
+        if(isYouTube&&info.providerReady){
+          qualityHint.hidden=false;
+          if(!estimate){qualityHint.textContent="Ukuran belum diberikan provider; ukuran asli akan terbaca saat stream diperiksa.";return;}
+          const size=estimate.bytes?(estimate.exact?"Ukuran sumber: ":"Perkiraan ukuran: ±")+formatDownloadSize(estimate.bytes)+". ":"";
+          qualityHint.textContent=estimate.kind==="direct"?"MP4 langsung · "+size:"Gabung video + audio otomatis · "+size;
+          return;
+        }
+        if(info.providerName==="Public API"){
+          const variants=(info.formats||[]).filter(item=>item.mode==="video"&&Number(item.height)>0);
+          qualityHint.hidden=variants.length<2;
+          if(!qualityHint.hidden)qualityHint.textContent=variants.length+" pilihan resolusi tersedia dari sumber. Kualitas mengikuti file asli; ARYANZZ tidak melakukan upscaling.";
+          return;
+        }
+        qualityHint.hidden=true;
       };
       const speedLabel=make("label","label","KECEPATAN");
       speedLabel.style.marginTop="12px";
