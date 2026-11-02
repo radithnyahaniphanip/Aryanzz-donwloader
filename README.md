@@ -1,4 +1,4 @@
-# ARYANZZ V73.2 — Mobile-resilient media downloader
+# ARYANZZ V73.3 — Mobile-resilient media downloader
 
 Production website: https://aryanzz-donwloader.radithnyahaniphanip.workers.dev/
 
@@ -23,6 +23,14 @@ ARYANZZ is a mobile-first creator workspace hosted on Cloudflare Workers. V73.0 
 | V67.4 | Premium mobile UI refresh, simplified downloader home, searchable Tools Center and Color Studio |
 | V67.6 | Backend health cleanup, title-based YouTube search routed through yt-dlp, clearer AudD/Shazam status, and DJ scan fallback fixes |
 
+
+## V73.3 — Browser-side streaming fallback
+
+- Adds a same-origin Service Worker download route that validates the media URL through the Worker, then fetches the approved Piped/Invidious stream from the user's browser connection and streams it to Chrome with an attachment filename.
+- The browser route preserves HTTP Range and partial-response headers, so Chrome can resume when the community provider supports byte ranges.
+- Progressive MP4/audio downloads try the Cloudflare Worker first; if the Worker egress is blocked with 403 or another provider error, they probe the browser-side stream and hand the actual transfer to Chrome.
+- The Service Worker route validates every stream against the same approved media-host and public-instance registry used by the Worker; it is not an unrestricted URL proxy.
+- Browser-side streaming avoids buffering the entire progressive media file in JavaScript memory. Adaptive video/audio remuxing still requires the page to remain open while FFmpeg assembles the final MP4.
 
 ## V73.2 — Provider 403 retries and failover
 
