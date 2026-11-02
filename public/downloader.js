@@ -1054,7 +1054,7 @@
       const speedSelect=make("select","field");
       speedSelect.id="aryDownloadSpeed";
       [[1,"Normal · 1 jalur"],[3,"Cepat · 3 jalur"],[5,"Maksimal · 5 jalur"]].forEach(([value,label])=>{const option=make("option","",label);option.value=String(value);if(value===3)option.selected=true;speedSelect.append(option)});
-      speedLabel.hidden=!isYouTube;speedSelect.hidden=!isYouTube;
+      speedLabel.hidden=!isYouTube||info.providerName==="Public API";speedSelect.hidden=speedLabel.hidden;
       const audioHint = make("p", "muted", directMedia?(info.type==="audio"?"File audio langsung diunduh melalui Chrome; pengelola unduhan browser menangani kecepatan dan percobaan ulang.":"File video langsung diunduh melalui Chrome; sumber yang mendukung Range dapat dilanjutkan oleh pengelola unduhan."):isYouTube?(info.providerReady?(progressiveHeights.length?"MP4 langsung diprioritaskan. Chrome mengelola unduhan di latar belakang; mode kecepatan berlaku pada stream terpisah yang mendukung Range.":"Sumber memisahkan video dan suara; ARYANZZ merakitnya menjadi satu MP4. Potongan 1 MB disimpan lokal. Jika halaman tertutup, buka link yang sama, periksa lagi, lalu tekan Unduh untuk melanjutkan. Tab harus tetap terbuka saat tahap perakitan MP4. Mode kecepatan memakai 1, 3, atau 5 jalur bila server mendukung Range."):"Provider belum menyediakan stream saat ini; coba lagi nanti."):"Tautan platform perlu provider yang mendukung ekstraksi. Tautan file langsung memakai pengelola unduhan Chrome.");
       const note = make("p", "youtube-note", "Hanya unduh konten milikmu atau yang diizinkan.");
       audioHint.hidden=true;
@@ -1110,7 +1110,7 @@
         audioBitrate.hidden=true;
         bitrateLabel.hidden=true;
         start.textContent=mode.value==="audio"?"Unduh Audio":"Unduh MP4";
-        speedLabel.hidden=!isYouTube||mode.value==="audio";speedSelect.hidden=speedLabel.hidden;
+        speedLabel.hidden=!isYouTube||mode.value==="audio"||info.providerName==="Public API";speedSelect.hidden=speedLabel.hidden;
         updateQualityHint();
         progressMeta.textContent=mode.value==="audio"?"Target: 1 file audio · estimasi muncul setelah ukuran sumber terbaca.":"Target: 1 file MP4 · estimasi muncul setelah ukuran sumber terbaca.";
       });
