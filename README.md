@@ -1,4 +1,4 @@
-# ARYANZZ V71.1 — Piped + Invidious Hybrid Downloader
+# ARYANZZ V71.3 — Piped + Invidious Hybrid Downloader
 
 Production website: https://aryanzz-donwloader.radithnyahaniphanip.workers.dev/
 
@@ -23,6 +23,13 @@ ARYANZZ is a mobile-first creator workspace hosted on Cloudflare Workers. V71.1 
 | V67.4 | Premium mobile UI refresh, simplified downloader home, searchable Tools Center and Color Studio |
 | V67.6 | Backend health cleanup, title-based YouTube search routed through yt-dlp, clearer AudD/Shazam status, and DJ scan fallback fixes |
 
+
+## V71.3 — Invidious MP4 format detection and trusted download fallback
+
+- Adds progressive MP4 quality detection from YouTube `itag` metadata when an Invidious response omits an explicit height or quality label.
+- Includes 144p and 240p when those actual MP4 formats are returned.
+- Passes the active, allowlisted community instance to the Worker download fallback so relative/provider-host stream URLs are validated consistently, including redirects.
+- Bumps downloader asset and service-worker cache versions to V71.3 to prevent stale mobile browser assets.
 
 ## V71.2 — Invidious progressive MP4 format fix
 
