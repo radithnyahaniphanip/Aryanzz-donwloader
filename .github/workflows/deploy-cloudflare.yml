@@ -1,4 +1,4 @@
-name: Deploy ARYANZZ V73.4 to Cloudflare Workers
+name: Deploy ARYANZZ V73.5 to Cloudflare Workers
 
 on:
   push:
@@ -51,7 +51,7 @@ jobs:
           wrangler secret delete PLATFORM_API_ORIGIN || true
           wrangler secret delete PLATFORM_API_TOKEN || true
 
-      - name: Smoke test live Worker and V73.4 creative assets
+      - name: Smoke test live Worker and V73.5 creative assets
         env:
           WORKER_URL: https://aryanzz-donwloader.radithnyahaniphanip.workers.dev
         run: |
@@ -62,20 +62,20 @@ jobs:
             try {
               const healthResponse = await fetch(base + "/api/health", { cache: "no-store", signal: AbortSignal.timeout(10000) });
               if (healthResponse.ok) health = await healthResponse.json();
-              if (health?.version === "73.4" && health?.mode === "cloudflare-worker-zero-server-hybrid") break;
+              if (health?.version === "73.5" && health?.mode === "cloudflare-worker-zero-server-hybrid") break;
             } catch {}
             await new Promise(resolve => setTimeout(resolve, 2500));
           }
-          if (health?.version !== "73.4" || health?.mode !== "cloudflare-worker-zero-server-hybrid" || !health?.directMediaDownload) {
-            throw new Error("Live Worker has not propagated the V73.4 zero-server deployment: " + JSON.stringify(health));
+          if (health?.version !== "73.5" || health?.mode !== "cloudflare-worker-zero-server-hybrid" || !health?.directMediaDownload) {
+            throw new Error("Live Worker has not propagated the V73.5 zero-server deployment: " + JSON.stringify(health));
           }
           console.log("Live Worker health OK: V" + health.version + " in zero-server mode.");
 
-          for (const path of ["/editor.js?v=65.0", "/editor-pro.css?v=65.0", "/music-recognition.js?v=71.0", "/music-recognition.css?v=71.0", "/v674.js?v=67.6", "/v674.css?v=67.6", "/v677.js?v=67.7", "/v677.css?v=67.7", "/v680.js?v=71.0", "/v680.css?v=71.0", "/v690.css?v=71.0", "/downloader.js?v=73.4", "/downloader.css?v=73.4", "/v59.js?v=59.5", "/v59.css?v=59.5"]) {
+          for (const path of ["/editor.js?v=65.0", "/editor-pro.css?v=65.0", "/music-recognition.js?v=71.0", "/music-recognition.css?v=71.0", "/v674.js?v=67.6", "/v674.css?v=67.6", "/v677.js?v=67.7", "/v677.css?v=67.7", "/v680.js?v=71.0", "/v680.css?v=71.0", "/v690.css?v=71.0", "/downloader.js?v=73.5", "/downloader.css?v=73.5", "/v59.js?v=59.5", "/v59.css?v=59.5"]) {
             const response = await fetch(base + path, { cache: "no-store" });
             if (!response.ok) throw new Error("Static asset unavailable: " + path + " HTTP " + response.status);
           }
-          const downloaderResponse = await fetch(base + "/downloader.js?v=73.4", { cache: "no-store" });
+          const downloaderResponse = await fetch(base + "/downloader.js?v=73.5", { cache: "no-store" });
           const downloaderSource = await downloaderResponse.text();
           const parserStart = downloaderSource.indexOf("function browserVideoFormat");
           const parserEnd = downloaderSource.indexOf("function browserAudioFormat", parserStart);
@@ -84,16 +84,16 @@ jobs:
             throw new Error("Live browser MP4 parser failed its URL initialization regression check.");
           }
           console.log("Live browser MP4 parser URL initialization check passed.");
-          if (!downloaderSource.includes("function updateDownloadProgress") || !downloaderSource.includes("const exactProgressive=") || !downloaderSource.includes("Komponen suara") || !downloaderSource.includes("fetchYoutubeTrackRanges") || !downloaderSource.includes("indexedDB.open(\"aryanzz-download-resume\"") || !downloaderSource.includes("Mega Speed · 5 jalur") || !downloaderSource.includes("const chunkSize=1024*1024") || !downloaderSource.includes("inFlight+=result.value.byteLength") || !downloaderSource.includes("probeYoutubeTrack") || !downloaderSource.includes("await ffmpeg.writeFile(inputVideo,videoBytes);videoBytes=null;") || !downloaderSource.includes("/api/youtube/hybrid/thumbnail") || !downloaderSource.includes("?local=true") || !downloaderSource.includes("probe=1") || !downloaderSource.includes("diagnostics.push({provider,instance,error:") || !downloaderSource.includes("pipedInstances.slice(0,20)") || !downloaderSource.includes("speedLabel.hidden=!isYouTube") || !downloaderSource.includes("/api/youtube/hybrid/browser-file?") || !downloaderSource.includes("navigator.serviceWorker?.controller") || !downloaderSource.includes("function youtubeQualityEstimate") || !downloaderSource.includes("details.append(thumbAction)") || downloaderSource.includes('make("img","youtube-thumbnail")')) {
-            throw new Error("Live downloader is missing the V73.4 progressive MP4 or progress/ETA improvements.");
+          if (!downloaderSource.includes("function updateDownloadProgress") || !downloaderSource.includes("const exactProgressive=") || !downloaderSource.includes("Komponen suara") || !downloaderSource.includes("fetchYoutubeTrackRanges") || !downloaderSource.includes("indexedDB.open(\"aryanzz-download-resume\"") || !downloaderSource.includes("Mega Speed · 5 jalur") || !downloaderSource.includes("const chunkSize=1024*1024") || !downloaderSource.includes("inFlight+=result.value.byteLength") || !downloaderSource.includes("probeYoutubeTrack") || !downloaderSource.includes("await ffmpeg.writeFile(inputVideo,videoBytes);videoBytes=null;") || !downloaderSource.includes("/api/youtube/hybrid/thumbnail") || !downloaderSource.includes("?local=true") || !downloaderSource.includes("probe=1") || !downloaderSource.includes("diagnostics.push({provider,instance,error:") || !downloaderSource.includes("pipedInstances.slice(0,20)") || !downloaderSource.includes("speedLabel.hidden=!isYouTube") || !downloaderSource.includes("/api/youtube/hybrid/browser-file?") || !downloaderSource.includes("navigator.serviceWorker?.controller") || !downloaderSource.includes("function youtubeQualityEstimate") || !downloaderSource.includes("details.append(thumbAction)") || !downloaderSource.includes("async function refreshYoutubeProviderInfo") || !downloaderSource.includes("const [downloadedVideo,readyFfmpeg]=await Promise.all([") || downloaderSource.includes('make("img","youtube-thumbnail")')) {
+            throw new Error("Live downloader is missing the V73.5 progressive MP4 or progress/ETA improvements.");
           }
-          const downloaderCssResponse = await fetch(base + "/downloader.css?v=73.4", { cache: "no-store" });
+          const downloaderCssResponse = await fetch(base + "/downloader.css?v=73.5", { cache: "no-store" });
           const downloaderCssSource = await downloaderCssResponse.text();
           if (!downloaderCssResponse.ok || !downloaderCssSource.includes(".youtube-result [hidden]{display:none!important}") || !downloaderCssSource.includes("aryanzzDownloadSweep") || downloaderCssSource.includes("position:absolute")) {
             throw new Error("Live downloader CSS is missing hidden-control or animated-progress fixes.");
           }
-          console.log("V73.4 direct MP4 quality estimates, measured file sizes, browser-side streaming fallback and clean thumbnail download checks passed.");
-          console.log("V73.4 Creative Studio, Tools Center, and Music Finder assets are available.");
+          console.log("V73.5 direct MP4 quality estimates, measured file sizes, browser-side streaming fallback and clean thumbnail download checks passed.");
+          console.log("V73.5 Creative Studio, Tools Center, and Music Finder assets are available.");
 
           const titleSearchProbe = await fetch(base + "/api/search", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ query: "x" }) });
           if (titleSearchProbe.status !== 400) throw new Error("Title-search endpoint validation failed: HTTP " + titleSearchProbe.status);
@@ -117,7 +117,7 @@ jobs:
           if (!youtubeStatusResponse.ok) throw new Error("Hybrid YouTube status endpoint failed.");
           const youtubeStatus = await youtubeStatusResponse.json();
           if (youtubeStatus.provider !== "Dynamic Piped + Invidious hybrid" || youtubeStatus.paidProvider !== false || youtubeStatus.cobalt !== false) {
-            throw new Error("V73.4 must use the no-paid Piped/Invidious hybrid only: " + JSON.stringify(youtubeStatus));
+            throw new Error("V73.5 must use the no-paid Piped/Invidious hybrid only: " + JSON.stringify(youtubeStatus));
           }
           console.log("Hybrid YouTube status confirms dynamic Piped + Invidious, no Cobalt and no paid provider.");
 
