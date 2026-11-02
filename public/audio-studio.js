@@ -6,6 +6,7 @@
   if (!fileInput) return;
   const MAX_FILE_BYTES = 100 * 1024 * 1024;
   const HISTORY_KEY = "aryanzz.audio-studio.history.v74";
+  const SETTINGS_KEY = "aryanzz.audio-studio.settings.v75";
   const EQ_FREQUENCIES = [31, 62, 125, 250, 500, 1000, 2000, 4000, 8000, 16000];
   const moduleUrl = "https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js";
   const coreBase = "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm";
@@ -15,6 +16,7 @@
   const formatSize = bytes => bytes < 1048576 ? (bytes / 1024).toFixed(0) + " KB" : (bytes / 1048576).toFixed(1) + " MB";
   const safeName = value => String(value || "aryanzz-audio").normalize("NFKC").replace(/[\\/:*?"<>|\u0000-\u001f]/g, " ").replace(/\s+/g, " ").trim().replace(/\.[^.]+$/, "").slice(0, 80) || "aryanzz-audio";
   const setStatus = message => { const node = $("audioStudioStatus"); if (node) node.textContent = message; };
+  const safeMetadata = value => String(value || "").replace(/[\\u0000-\\u001f\\u007f]/g, " ").replace(/\\s+/g, " ").trim().slice(0, 120);
   function setProgress(value, state = "running") {
     const track = $("audioStudioProgressTrack"), bar = $("audioStudioProgressBar");
     const percent = Math.max(0, Math.min(100, Number(value) || 0));
@@ -26,19 +28,39 @@
     $("audioStudioConvert").disabled = value || !selectedFile;
     $("audioStudioCancel").hidden = !value;
     fileInput.disabled = value;
-    $("audioStudioBitrate").disabled = value;
-    $("audioStudioName").disabled = value;
-    $("audioStudioPitch").disabled = value;
-    $("audioStudioVolume").disabled = value;
+    ["audioStudioBitrate","audioStudioName","audioStudioTitle","audioStudioArtist","audioStudioPitch","audioStudioTempo","audioStudioVolume"].forEach(id=>{const control=$(id);if(control)control.disabled=value;});
     $("audioStudioEq").querySelectorAll("input").forEach(input => input.disabled = value);
+  }
+  function restoreSettings(){
+    try{
+      const saved=JSON.parse(localStorage.getItem(SETTINGS_KEY)||"{}");
+      const set=(id,value,min,max)=>{const node=$(id);if(node&&value!==undefined&&Number.isFinite(Number(value)))node.value=String(Math.max(min,Math.min(max,Number(value))));};
+      set("audioStudioPitch",saved.pitch,-12,12);set("audioStudioTempo",saved.tempo,50,200);set("audioStudioVolume",saved.volume,50,200);set("audioStudioBitrate",saved.bitrate,128,320);
+      if($("audioStudioName")&&saved.name)$("audioStudioName").value=String(saved.name).slice(0,90);
+      if($("audioStudioTitle")&&saved.title)$("audioStudioTitle").value=String(saved.title).slice(0,100);
+      if($("audioStudioArtist")&&saved.artist)$("audioStudioArtist").value=String(saved.artist).slice(0,80);
+      if(Array.isArray(saved.eq))$("audioStudioEq").querySelectorAll("input").forEach((input,index)=>{if(Number.isFinite(Number(saved.eq[index])))input.value=String(Math.max(-12,Math.min(12,Number(saved.eq[index]))));});
+    }catch{}
+  }
+  function saveSettings(){
+    try{
+      localStorage.setItem(SETTINGS_KEY,JSON.stringify({
+        pitch:Number($("audioStudioPitch").value),tempo:Number($("audioStudioTempo").value),
+        volume:Number($("audioStudioVolume").value),bitrate:Number($("audioStudioBitrate").value),
+        name:$("audioStudioName").value,title:$("audioStudioTitle").value,artist:$("audioStudioArtist").value,
+        eq:[...$("audioStudioEq").querySelectorAll("input")].map(input=>Number(input.value))
+      }));
+    }catch{}
   }
   function updateControls() {
     $("audioStudioPitchValue").textContent = Number($("audioStudioPitch").value) + " semitone";
+    $("audioStudioTempoValue").textContent = $("audioStudioTempo").value + "%";
     $("audioStudioVolumeValue").textContent = $("audioStudioVolume").value + "%";
     $("audioStudioEq").querySelectorAll("input").forEach(input => {
       const output = input.parentElement.querySelector("output");
       if (output) output.textContent = Number(input.value) + " dB";
     });
+    saveSettings();
   }
   function applyPreset(name) {
     const presets = {
@@ -75,6 +97,8 @@
     }
     meta.textContent = selectedFile.name + " · " + formatSize(selectedFile.size) + " · diproses lokal";
     $("audioStudioName").value = safeName(selectedFile.name);
+    $("audioStudioTitle").value = safeName(selectedFile.name);
+    saveSettings();
     previewUrl = URL.createObjectURL(selectedFile);
     preview.src = previewUrl;
     preview.hidden = false;
@@ -113,7 +137,7 @@
       ]);
       try {
         setStatus("Menyiapkan mesin audio lokal…"); setProgress(19);
-        await instance.load({ coreURL, wasmURL, classWorkerURL: new URL("/ffmpeg-worker-bootstrap.js?v=73.6", location.origin).href });
+        await instance.load({ coreURL, wasmURL, classWorkerURL: new URL("/ffmpeg-worker-bootstrap.js?v=75.0", location.origin).href });
         if (signal.aborted) { instance.terminate(); throw new Error("Proses dibatalkan."); }
         ffmpeg = instance;
         return instance;
@@ -129,6 +153,8 @@
       const ratio = Math.pow(2, semitones / 12);
       filters.push("asetrate=44100*" + ratio.toFixed(6), "aresample=44100", "atempo=" + (1 / ratio).toFixed(6));
     }
+    const tempo = Math.max(0.5,Math.min(2,Number($("audioStudioTempo").value)/100||1));
+    if(Math.abs(tempo-1)>0.001)filters.push("atempo="+tempo.toFixed(3));
     const volume = Number($("audioStudioVolume").value) / 100;
     if (Math.abs(volume - 1) > 0.001) filters.push("volume=" + volume.toFixed(2));
     $("audioStudioEq").querySelectorAll("input").forEach(input => {
@@ -141,7 +167,7 @@
   function saveHistory(filename, bytes) {
     try {
       const old = JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]");
-      const next = [{ filename, bytes, at: Date.now(), pitch: Number($("audioStudioPitch").value), volume: Number($("audioStudioVolume").value), bitrate: Number($("audioStudioBitrate").value) }, ...(Array.isArray(old) ? old : [])].slice(0, 20);
+      const next = [{ filename, bytes, at: Date.now(), pitch: Number($("audioStudioPitch").value), tempo:Number($("audioStudioTempo").value), volume: Number($("audioStudioVolume").value), bitrate: Number($("audioStudioBitrate").value), title:safeMetadata($("audioStudioTitle").value), artist:safeMetadata($("audioStudioArtist").value) }, ...(Array.isArray(old) ? old : [])].slice(0, 20);
       localStorage.setItem(HISTORY_KEY, JSON.stringify(next));
     } catch {}
   }
@@ -171,7 +197,11 @@
       await engine.writeFile(inputName, bytes);
       const filters = buildFilters(), bitrate = Number($("audioStudioBitrate").value) || 192;
       const outputName = "aryanzz-output.mp3";
-      const args = ["-i", inputName, "-map", "0:a:0", "-vn", "-c:a", "libmp3lame", "-b:a", bitrate + "k", "-ar", "44100", "-af", filters.join(","), "-y", outputName];
+      const titleTag=safeMetadata($("audioStudioTitle").value||$("audioStudioName").value||"ARYANZZ Audio");
+      const artistTag=safeMetadata($("audioStudioArtist").value);
+      const args = ["-i", inputName, "-map", "0:a:0", "-vn", "-c:a", "libmp3lame", "-b:a", bitrate + "k", "-ar", "44100", "-id3v2_version", "3", "-write_id3v1", "1", "-metadata", "title="+titleTag];
+      if(artistTag)args.push("-metadata","artist="+artistTag);
+      args.push("-af",filters.join(","),"-y",outputName);
       const progressHandler = event => {
         const value = Number(event?.progress);
         if (Number.isFinite(value)) { const percent = Math.max(0, Math.min(1, value)); setProgress(20 + percent * 78); setStatus("Mengonversi audio ke MP3 · " + Math.round(percent * 100) + "%"); }
@@ -199,7 +229,10 @@
   }
   fileInput.addEventListener("change", () => updateSelectedFile(fileInput.files?.[0]));
   $("audioStudioPitch").addEventListener("input", updateControls);
+  $("audioStudioTempo").addEventListener("input", updateControls);
   $("audioStudioVolume").addEventListener("input", updateControls);
+  ["audioStudioName","audioStudioTitle","audioStudioArtist","audioStudioBitrate"].forEach(id=>$(id).addEventListener("input",saveSettings));
+  $("audioStudioBitrate").addEventListener("change",saveSettings);
   $("audioStudioEq").addEventListener("input", updateControls);
   $("audioStudioEqReset").addEventListener("click", () => applyPreset("flat"));
   document.querySelectorAll("[data-audio-preset]").forEach(button => button.addEventListener("click", () => applyPreset(button.dataset.audioPreset)));
@@ -210,5 +243,6 @@
     setStatus("Membatalkan proses konversi…");
   });
   window.addEventListener("pagehide", () => { if (ffmpeg) { try { ffmpeg.terminate(); } catch {} } if (previewUrl) URL.revokeObjectURL(previewUrl); if (resultUrl) URL.revokeObjectURL(resultUrl); });
+  restoreSettings();
   updateControls();
 })();
