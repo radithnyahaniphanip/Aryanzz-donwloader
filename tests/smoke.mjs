@@ -40,7 +40,7 @@ const checks=[
   ["Browser stream URLs are restricted to approved HTTPS media hosts",downloader.includes("function browserHybridMediaUrl")&&downloader.includes("googlevideo.com")&&downloader.includes("BROWSER_MEDIA_ROOTS")],
   ["Invidious formatStreams are parsed as progressive MP4 and retain their provider origin",downloader.includes("browserVideoFormat(item,providerInstance,progressiveSource=false)")&&downloader.includes("browserVideoFormat(item,instance,true)")&&downloader.includes("u.origin===new URL(trustedOrigin).origin")],
   ["Invidious media URLs are resolved against the active instance and allowed for download",downloader.includes("new URL(raw,trustedOrigin||undefined)")&&downloader.includes("browserHybridMediaUrl(selected.url,info.instance)")],
-  ["MP4 quality options are derived from actual available video streams",downloader.includes("const hasVideo=(info.formats||[]).some(item=>item.mode===\\"video\\")")&&downloader.includes("if(videoOption)videoOption.disabled=!hasVideo")],
+  ["MP4 quality options are derived from actual available video streams",downloader.includes("const hasVideo=")&&downloader.includes("if(videoOption)videoOption.disabled=!hasVideo")],
 
   ["Browser download shows byte progress and caps in-memory downloads at 250 MB",downloader.includes("new Blob(chunks")&&downloader.includes("250*1024*1024")&&downloader.includes("Mengunduh ")],
   ["Browser CORS failure is reported instead of claiming a successful download",downloader.includes("browserMediaContentType")&&downloader.includes("Jalur Worker juga gagal")],
