@@ -1,4 +1,4 @@
-/* ARYANZZ V73.2 — zero-server direct downloader and community handoff */
+/* ARYANZZ V73.3 — zero-server direct downloader and community handoff */
 (() => {
   "use strict";
   const $ = id => document.getElementById(id);
@@ -157,7 +157,7 @@
         const mod=await import(moduleUrl);
         const ffmpeg=new mod.FFmpeg();
         [coreURL,wasmURL]=await Promise.all([loadBlob(coreBase+"/ffmpeg-core.js","text/javascript"),loadBlob(coreBase+"/ffmpeg-core.wasm","application/wasm")]);
-        await ffmpeg.load({coreURL,wasmURL,classWorkerURL:new URL("/ffmpeg-worker-bootstrap.js?v=73.2",location.origin).href});
+        await ffmpeg.load({coreURL,wasmURL,classWorkerURL:new URL("/ffmpeg-worker-bootstrap.js?v=73.3",location.origin).href});
         return ffmpeg;
       }finally{
         if(coreURL)URL.revokeObjectURL(coreURL);
@@ -394,18 +394,37 @@
     const instance=selected.instance||info.instance;
     const direct=browserHybridMediaUrl(selected.url,instance);
     if(!direct)throw new Error("Alamat stream tidak lolos pemeriksaan keamanan.");
-    const target="/api/youtube/hybrid/file?url="+encodeURIComponent(direct.href)+"&ext="+encodeURIComponent(selected.ext)+"&title="+encodeURIComponent(info.title||"aryanzz-youtube")+"&instance="+encodeURIComponent(instance||"");
+    const params="url="+encodeURIComponent(direct.href)+"&ext="+encodeURIComponent(selected.ext)+"&title="+encodeURIComponent(info.title||"aryanzz-youtube")+"&instance="+encodeURIComponent(instance||"");
+    const target="/api/youtube/hybrid/file?"+params;
+    const browserTarget="/api/youtube/hybrid/browser-file?"+params;
     const probeTarget=target+"&probe=1";
     const targetName=mode==="video"?"1 file MP4":"1 file audio";
-    const probe=await fetch(probeTarget,{cache:"no-store",signal:AbortSignal.timeout(45000)});
-    const check=await probe.json().catch(()=>({}));
-    if(!probe.ok||!check.ok)throw new Error(check.error||"Pemeriksaan stream gagal (HTTP "+probe.status+").");
+    let transferTarget=target,browserStream=false,check=null;
+    try{
+      const probe=await fetch(probeTarget,{cache:"no-store",signal:AbortSignal.timeout(45000)});
+      check=await probe.json().catch(()=>({}));
+      if(!probe.ok||!check.ok)throw new Error(check.error||"Pemeriksaan stream gagal (HTTP "+probe.status+").");
+    }catch(workerError){
+      if(!navigator.serviceWorker?.controller)throw new Error("Server komunitas menolak koneksi Cloudflare dan jalur browser belum aktif. Muat ulang ARYANZZ sekali, lalu coba lagi. Detail: "+String(workerError.message||workerError).slice(0,140));
+      progressText.textContent="Server Cloudflare ditolak · mencoba koneksi langsung dari browser HP…";
+      progressMeta.textContent="Mengalihkan pengambilan stream ke jaringan perangkat dan Chrome Download Manager.";
+      const browserProbe=await fetch(browserTarget,{headers:{Range:"bytes=0-0"},cache:"no-store",signal:AbortSignal.timeout(45000)});
+      if(!browserProbe.ok||browserProbe.status!==206){
+        const failure=await browserProbe.json().catch(()=>({}));
+        throw new Error(failure.error||"Provider juga menolak koneksi browser (HTTP "+browserProbe.status+"). Coba instance lain.");
+      }
+      const browserType=String(browserProbe.headers.get("content-type")||"").toLowerCase();
+      if(browserType.startsWith("text/")||browserType.includes("application/json"))throw new Error("Provider browser mengirim respons non-media.");
+      const first=await browserProbe.arrayBuffer();
+      if(first.byteLength!==1)throw new Error("Pemeriksaan koneksi browser tidak menerima satu byte media yang valid.");
+      browserStream=true;transferTarget=browserTarget;
+    }
     const actualQuality=Number(selected.height)||0,requestedQuality=Number(quality)||0;
     const fellBack=mode==="video"&&actualQuality>0&&requestedQuality>0&&actualQuality!==requestedQuality;
-    progressText.textContent=fellBack?"Kualitas "+requestedQuality+"p terlalu berat · memakai MP4 langsung "+actualQuality+"p.":"Stream MP4 tersedia · meneruskan unduhan ke Chrome…";
-    progressMeta.textContent="Target: "+targetName+" · "+(actualQuality?("kualitas aktual "+actualQuality+"p · "):"")+"Chrome mengunduh langsung dan dapat melanjutkan proses melalui pengelola unduhan.";
+    progressText.textContent=browserStream?"Koneksi browser HP aktif · mengirim "+(mode==="video"?"MP4":"audio")+" ke Chrome…":fellBack?"Kualitas "+requestedQuality+"p terlalu berat · memakai MP4 langsung "+actualQuality+"p.":"Stream MP4 tersedia · meneruskan unduhan ke Chrome…";
+    progressMeta.textContent="Target: "+targetName+" · "+(actualQuality?("kualitas aktual "+actualQuality+"p · "):"")+(browserStream?"stream langsung dari perangkat; tidak memakai IP Cloudflare. ":"")+"Chrome mengelola transfer dan dapat melanjutkan proses di latar belakang.";
     const anchor=make("a");
-    anchor.href=target;
+    anchor.href=transferTarget;
     anchor.download=filename;
     anchor.rel="noopener";
     anchor.style.display="none";
@@ -415,12 +434,12 @@
     bar.parentElement?.classList.remove("is-indeterminate");
     bar.style.width="100%";
     bar.parentElement?.setAttribute("aria-valuenow","100");
-    progressText.textContent=(mode==="video"?"MP4":"Audio")+" diserahkan ke Chrome · lihat progres asli di notifikasi unduhan.";
-    progressMeta.textContent=(fellBack?"Kualitas yang tersedia: "+actualQuality+"p (permintaan "+requestedQuality+"p tidak muat di memori). ":"")+"Chrome mengelola transfer dan dapat meneruskan unduhan di latar belakang.";
+    progressText.textContent=(mode==="video"?"MP4":"Audio")+" diserahkan ke Chrome · "+(browserStream?"koneksi browser HP aktif. ":"")+"lihat progres asli di notifikasi unduhan.";
+    progressMeta.textContent=(fellBack?"Kualitas yang tersedia: "+actualQuality+"p (permintaan "+requestedQuality+"p tidak muat di memori). ":"")+(browserStream?"Transfer melalui jaringan perangkat; Chrome menangani penyimpanan. ":"Chrome mengelola transfer dan dapat meneruskan unduhan di latar belakang.");
     remember(url,filename,mode,actualQuality||quality);
     return filename;
   }
-  async function downloadYouTube(url,mode,quality,bar,progressText,progressMeta,info={},audioFormat="m4a",speed=3){
+  async function downloadYouTube(url,mode,quality,bar,progressText,progressMeta,info={},audioFormat="m4a",speed=3){  async function downloadYouTube(url,mode,quality,bar,progressText,progressMeta,info={},audioFormat="m4a",speed=3){
     if(info.providerName!=="Hybrid"||!info.providerReady)throw new Error("Tidak ada stream gratis yang tersedia dari instance komunitas saat ini.");
     const all=(Array.isArray(info.formats)?info.formats:[]).filter(item=>item.mode===mode&&item.url);
     let candidates=[];
