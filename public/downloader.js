@@ -716,7 +716,7 @@
     }
     throw new Error("Semua jalur "+(mode==="video"?"MP4":"audio")+" yang tersedia gagal. "+(failures.slice(0,3).join(" | ")||"Coba kualitas lain atau ulangi nanti."));
   }
-  async function downloadFile(url, mode, quality, bar, progressText, info={}, requestedAudioFormat="mp3") {
+  async function downloadFile(url, mode, quality, bar, progressText, info={}, requestedAudioFormat="mp3",progressMeta=null) {
     if(info.providerName==="Public API"){
       const all=(Array.isArray(info.formats)?info.formats:[]).filter(item=>item.mode===mode&&item.downloadUrl);
       let selected=null;
@@ -738,17 +738,19 @@
       const filename=safeFilename((info.outputName||info.title||"aryanzz-media").replace(/\.(?:mp4|mp3|m4a|webm|mov)$/i,"")+"."+ext);
       addReadyDownloadLink(bar.parentElement?.parentElement,ready.href,filename,mode==="audio"?"⬇ Unduh MP3 sekarang":"⬇ Unduh MP4 sekarang");
       bar.style.width="100%";bar.parentElement?.classList.remove("is-indeterminate");bar.parentElement?.setAttribute("aria-valuenow","100");
-      progressText.textContent="File siap diunduh · "+filename;
+      progressText.textContent="Tautan unduhan siap · "+filename;
+      if(progressMeta)progressMeta.textContent="Persiapan 100% · ketuk tombol “Unduh MP4/MP3 sekarang” di bawah. Proses transfer file sesungguhnya akan ditampilkan oleh Chrome, bukan bar persiapan ini.";
       remember(url,filename,mode,quality);
       return filename;
     }
     const sourceExt=/^[a-z0-9]{2,8}$/i.test(info.extension||"")?info.extension.toLowerCase():"";
     const ext=sourceExt||(mode==="audio"?"mp3":"mp4");
-    const filename=safeFilename(info.filename||info.title||("aryanzz-"+(mode==="audio"?"audio":"video-"+quality+"p")+"."+ext));
+    const filename=safeFilename(info.outputName||info.filename||info.title||("aryanzz-"+(mode==="audio"?"audio":"video-"+quality+"p")+"."+ext));
     const fileUrl="/api/direct-file?url="+encodeURIComponent(url);
     addReadyDownloadLink(bar.parentElement?.parentElement,fileUrl,filename,"⬇ Unduh file sekarang");
     bar.style.width="100%";bar.parentElement?.classList.remove("is-indeterminate");bar.parentElement?.setAttribute("aria-valuenow","100");
-    progressText.textContent="File siap · "+filename;
+    progressText.textContent="Tautan file siap · "+filename;
+    if(progressMeta)progressMeta.textContent="Persiapan 100% · ketuk tombol unduh di bawah. Chrome akan menangani transfer dan progres unduhan sesungguhnya.";
     remember(url,filename,mode,quality);
     return filename;
   }
@@ -1080,7 +1082,7 @@
       const outputNameHint=make("small","muted","Nama ini hanya mengubah file yang disimpan di perangkat. Judul, deskripsi, dan tag YouTube tetap diatur saat mengunggah video.");
       const directMedia=!!info.extension&&!info.extractor;
       const heights = Array.isArray(info.formats)
-        ? [...new Set(info.formats.map(item => Number(typeof item === "number" ? item : item.height)).filter(n => [144,240,360,480,720,1080,1440,2160].includes(n)))].sort((a,b) => a-b)
+        ? [...new Set(info.formats.map(item => Number(typeof item === "number" ? item : item.height)).filter(n => Number.isFinite(n)&&n>=100&&n<=4320))].sort((a,b) => a-b)
         : [];
       const progressiveHeights=[...new Set((info.formats||[]).filter(item=>item.mode==="video"&&item.ext==="mp4"&&!item.videoOnly&&Number(item.height)>0).map(item=>Number(item.height)))].sort((a,b)=>a-b);
       const adaptiveHeights=[...new Set((info.formats||[]).filter(item=>item.mode==="video"&&item.ext==="mp4"&&item.videoOnly&&Number(item.height)>0).map(item=>Number(item.height)))].sort((a,b)=>a-b);
@@ -1099,7 +1101,10 @@
           const original=make("option","","Kualitas asli · sumber");
           original.value="0";original.selected=true;quality.append(original);quality.disabled=true;qualityLabel.textContent="KUALITAS SUMBER";
         }else{
-          FORMATS.video.filter(item => available.includes(Number(item[0]))).forEach(([value,label]) => {
+          const qualityOptions=isYouTube
+            ?FORMATS.video.filter(item=>available.includes(Number(item[0]))).map(([value,label])=>[Number(value),label])
+            :available.map(value=>[value,value+"p · tersedia"]);
+          qualityOptions.forEach(([value,label]) => {
             const option = make("option", "", label);
             option.value = String(value);
             if (Number(value) === quickHeight) option.selected = true;
@@ -1115,8 +1120,9 @@
       }
       const updateQualityHint=()=>{
         const height=Number(quality.value)||0,estimate=youtubeQualityEstimate(info,height);
-        qualityHint.hidden=!isYouTube||mode.value==="audio"||!info.providerReady;
+        qualityHint.hidden=mode.value==="audio"||(!isYouTube&&!(info.providerName==="Public API"&&heights.length));
         if(qualityHint.hidden)return;
+        if(!isYouTube){qualityHint.textContent="Pilihan kualitas diambil dari format yang benar-benar dikirim provider. Jika kualitas tertentu tidak tersedia, pilih resolusi terdekat.";return;}
         if(!estimate){qualityHint.textContent="Ukuran belum diberikan provider; ukuran asli akan terbaca saat stream diperiksa.";return;}
         const size=estimate.bytes?(estimate.exact?"Ukuran sumber: ":"Perkiraan ukuran: ±")+formatDownloadSize(estimate.bytes)+". ":"";
         qualityHint.textContent=estimate.kind==="direct"?"MP4 langsung · "+size:"Gabung video + audio otomatis · "+size;
@@ -1136,7 +1142,7 @@
 
       const progress = make("div", "progress-track is-idle");
       progress.setAttribute("role","progressbar");
-      progress.setAttribute("aria-label","Progres unduhan");
+      progress.setAttribute("aria-label",isYouTube?"Progres unduhan dan penggabungan":"Kesiapan tautan unduhan");
       progress.setAttribute("aria-valuemin","0");
       progress.setAttribute("aria-valuemax","100");
       progress.setAttribute("aria-valuenow","0");
@@ -1208,13 +1214,7 @@
         progressMeta.textContent="Target: "+(mode.value==="audio"?"1 file audio":"1 file MP4")+" · "+(isYouTube&&mode.value==="video"?speedName+" · "+speedSelect.value+" jalur paralel bila didukung sumber.":"Chrome mengelola kecepatan unduhan.");
         try {
           const downloadInfo={...info,outputName:safeFilename(outputName.value||info.title||"aryanzz-media")};
-          const filename = isYouTube&&downloadInfo.providerName!=="Public API" ? await downloadYouTube(url.href,mode.value,Number(quality.value)||480,bar,progressText,progressMeta,downloadInfo,audioFormat.value,Number(speedSelect.value)||3) : await downloadFile(url.href, mode.value, Number(quality.value) || 0, bar, progressText, downloadInfo, audioFormat.value);
-          if(!isYouTube){
-            progress.classList.remove("is-indeterminate");
-            bar.style.width="100%";progress.setAttribute("aria-valuenow","100");
-            progressText.textContent="Permintaan unduhan dikirim ke Chrome: "+filename;
-            progressMeta.textContent="Chrome mengelola proses penyimpanan dan notifikasi unduhan.";
-          }
+          const filename = isYouTube&&downloadInfo.providerName!=="Public API" ? await downloadYouTube(url.href,mode.value,Number(quality.value)||480,bar,progressText,progressMeta,downloadInfo,audioFormat.value,Number(speedSelect.value)||3) : await downloadFile(url.href, mode.value, Number(quality.value) || 0, bar, progressText, downloadInfo, audioFormat.value,progressMeta);
           start.textContent = "File siap ✓";start.disabled=true;
         } catch (error) {
           progress.classList.remove("is-indeterminate");progress.classList.add("is-failed");
