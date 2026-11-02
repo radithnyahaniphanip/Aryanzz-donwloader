@@ -147,10 +147,94 @@ async function savenowRequest(path,env,{requireKey=true,redirect="follow"}={}){
     return {data};
   }catch(e){return {error:e.message||"Gagal menghubungi layanan downloader.",status:502};}
 }
+function cobaltConfig(env){
+  const raw=String(env.COBALT_API_ORIGIN||"").trim();
+  if(!raw)return null;
+  try{
+    const u=new URL(raw);
+    if(u.protocol!=="https:"||u.username||u.password||u.search||u.hash||u.pathname!=="/")return null;
+    // The public hosted instance is not a third-party integration endpoint.
+    if(u.hostname.toLowerCase()==="api.cobalt.tools")return null;
+    return {origin:u.origin,hostname:u.hostname};
+  }catch{return null;}
+}
+async function cobaltApiRequest(rawUrl,format,bitrate,env){
+  const config=cobaltConfig(env);
+  if(!config)return {error:"Provider Cobalt belum dikonfigurasi. Gunakan instance milik sendiri atau instance yang memberi izin integrasi.",status:503};
+  const isAudio=YOUTUBE_AUDIO_FORMATS.has(format);
+  const body={
+    url:rawUrl,
+    downloadMode:isAudio?"audio":"auto",
+    filenameStyle:"basic",
+    disableMetadata:false,
+    youtubeVideoCodec:"h264",
+    youtubeVideoContainer:"mp4",
+    alwaysProxy:true
+  };
+  if(isAudio){
+    if(!["mp3","ogg","wav","opus"].includes(format))return {error:"Format audio ini tidak didukung oleh instance Cobalt.",status:400};
+    body.audioFormat=format;
+    body.audioBitrate=["128","256","320"].includes(String(bitrate))?String(bitrate):"320";
+  }else{
+    body.videoQuality=format==="4k"?"2160":format;
+  }
+  const headers={"accept":"application/json","content-type":"application/json"};
+  const token=String(env.COBALT_API_KEY||"").trim();
+  if(token){
+    const scheme=String(env.COBALT_API_AUTH_SCHEME||"Api-Key").trim();
+    if(!["Api-Key","Bearer"].includes(scheme))return {error:"COBALT_API_AUTH_SCHEME harus Api-Key atau Bearer.",status:500};
+    headers.authorization=scheme+" "+token;
+  }
+  try{
+    const response=await fetch(config.origin+"/",{method:"POST",headers,body:JSON.stringify(body),redirect:"error",signal:AbortSignal.timeout(45000)});
+    const data=await response.json().catch(()=>null);
+    if(!response.ok)return {error:data?.error?.code||data?.error||data?.message||("Instance Cobalt menjawab HTTP "+response.status+"."),status:response.status===429?429:502};
+    if(!data||typeof data!=="object")return {error:"Respons instance Cobalt bukan JSON yang valid.",status:502};
+    if(data.status==="error")return {error:data.error?.code||data.error?.message||"Instance Cobalt gagal menyiapkan unduhan.",status:502};
+    if(data.status==="picker")return {error:"Sumber menghasilkan beberapa item. Pemilihan item belum didukung pada versi ini.",status:409};
+    if(!["redirect","tunnel"].includes(data.status)||typeof data.url!=="string")return {error:"Instance Cobalt mengembalikan respons unduhan yang tidak dikenal.",status:502};
+    let fileUrl;
+    try{fileUrl=providerFileUrl(data.url)}catch(e){return {error:e.message,status:502};}
+    return {data,downloadUrl:fileUrl.toString(),filename:safeFilename(data.filename||"aryanzz-youtube."+(isAudio?format:"mp4"),format)};
+  }catch(e){return {error:e.message||"Gagal menghubungi instance Cobalt.",status:502};}
+}
+async function youtubeCobaltRedirect(request,env){
+  const u=new URL(request.url),rawUrl=u.searchParams.get("url")||"",format=u.searchParams.get("format")||"720",bitrate=u.searchParams.get("bitrate")||"320";
+  if(!isYouTubeUrl(rawUrl))return json({error:"URL YouTube tidak valid."},400);
+  let normalized;try{normalized=normalizeYoutubeFormat(format)}catch(e){return json({error:e.message},400)}
+  const result=await cobaltApiRequest(rawUrl,normalized.requested,bitrate,env);
+  if(result.error)return json({error:result.error},result.status||502);
+  return new Response(null,{status:302,headers:{
+    location:result.downloadUrl,
+    "cache-control":"no-store",
+    "referrer-policy":"no-referrer",
+    "x-content-type-options":"nosniff"
+  }});
+}
 function youtubeInfoUrl(raw){return isYouTubeUrl(raw)?raw:null;}
 async function youtubeInfo(request,env){
   const url=new URL(request.url).searchParams.get("url")||"";
   if(!youtubeInfoUrl(url))return json({error:"URL YouTube tidak valid."},400);
+  const cobalt=cobaltConfig(env);
+  if(cobalt){
+    try{
+      const oembedUrl=new URL("https://www.youtube.com/oembed");
+      oembedUrl.searchParams.set("url",url);
+      oembedUrl.searchParams.set("format","json");
+      const oembed=await fetch(oembedUrl.toString(),{headers:{accept:"application/json"},signal:AbortSignal.timeout(10000)});
+      if(oembed.ok){
+        const preview=await oembed.json();
+        if(preview.title)return json({
+          ok:true,providerReady:true,providerName:"Cobalt",
+          providerMessage:"Instance Cobalt siap. Pilih format dan kualitas; hasil akan diteruskan ke unduhan Chrome.",
+          title:String(preview.title).slice(0,300),
+          thumbnail:typeof preview.thumbnail_url==="string"?preview.thumbnail_url:null,
+          duration:null,source:"YouTube"
+        });
+      }
+    }catch{}
+    return json({error:"Instance Cobalt sudah dikonfigurasi, tetapi preview YouTube tidak tersedia saat ini."},502);
+  }
   if(!env.SAVENOW_API_KEY||env.ALLOW_PAID_YOUTUBE_PROVIDER!=="true"){
     try{
       const oembedUrl=new URL("https://www.youtube.com/oembed");
@@ -612,12 +696,13 @@ export default {async fetch(request,env){
   if(url.pathname==="/api/search"&&request.method==="POST")return searchYouTube(request,env);
   if(url.pathname==="/api/music/recognize"&&request.method==="POST")return recognizeMusic(request,env);
   if(url.pathname==="/api/platform/status"&&request.method==="GET")return platformStatus(env);
-  if(url.pathname==="/api/youtube/status"&&request.method==="GET")return json({ok:true,service:"ARYANZZ YouTube Backend",youtubeDownloader:true,youtubeApiKeyConfigured:!!env.SAVENOW_API_KEY,supportedAudio:[...YOUTUBE_AUDIO_FORMATS],supportedVideo:["360","720","1080","1440","4k"]});
+  if(url.pathname==="/api/youtube/status"&&request.method==="GET"){const cobalt=cobaltConfig(env);return json({ok:true,service:"ARYANZZ YouTube Backend",youtubeDownloader:!!cobalt||(env.ALLOW_PAID_YOUTUBE_PROVIDER==="true"&&!!env.SAVENOW_API_KEY),provider:cobalt?"Cobalt":env.ALLOW_PAID_YOUTUBE_PROVIDER==="true"&&env.SAVENOW_API_KEY?"SaveNow":"Unavailable",cobaltConfigured:!!cobalt,cobaltInstance:cobalt?.hostname||null,youtubeApiKeyConfigured:false,supportedAudio:[...YOUTUBE_AUDIO_FORMATS],supportedVideo:["360","480","720","1080","1440","4k"]});}
   if(url.pathname==="/api/youtube/info"&&request.method==="GET")return youtubeInfo(request,env);
+  if(url.pathname==="/api/youtube/cobalt-redirect"&&request.method==="GET")return youtubeCobaltRedirect(request,env);
   if(url.pathname==="/api/youtube/download"&&request.method==="POST")return youtubeStart(request,env);
   if(url.pathname==="/api/youtube/progress"&&request.method==="POST")return youtubeProgress(request,env);
   if(url.pathname==="/api/youtube/file"&&request.method==="GET")return youtubeFile(request,env);
-  if(url.pathname==="/api/health"&&request.method==="GET")return json({ok:true,service:"ARYANZZ",version:"70.0",mode:"cloudflare-worker-zero-server",directMediaDownload:true,selfHostedDownloader:false,youtubeDownloader:env.ALLOW_PAID_YOUTUBE_PROVIDER==="true"&&!!env.SAVENOW_API_KEY,youtubeApiKeyConfigured:false,musicRecognitionConfigured:!!env.AUDD_API_TOKEN,musicFallbackReady:false,musicVideoRecognitionReady:false,platformExtraction:false,platformBackend:"community-handoff"});
+  if(url.pathname==="/api/health"&&request.method==="GET")return json({ok:true,service:"ARYANZZ",version:"70.1",mode:"cloudflare-worker-zero-server",directMediaDownload:true,selfHostedDownloader:false,youtubeDownloader:!!cobaltConfig(env)||(env.ALLOW_PAID_YOUTUBE_PROVIDER==="true"&&!!env.SAVENOW_API_KEY),youtubeApiKeyConfigured:false,musicRecognitionConfigured:!!env.AUDD_API_TOKEN,musicFallbackReady:false,musicVideoRecognitionReady:false,platformExtraction:false,platformBackend:"community-handoff"});
   if(url.pathname==="/api/info"&&request.method==="POST"){const proxied=await proxyPlatform(request,env,"/api/info");if(proxied)return proxied;return info(request);}
   if(url.pathname==="/api/direct-file"&&request.method==="GET")return download(request);
   if(url.pathname==="/api/download"&&request.method==="POST"){const proxied=await proxyPlatform(request,env,"/api/download");if(proxied)return proxied;return download(request);}
