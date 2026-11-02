@@ -109,7 +109,7 @@ function freeProviderMediaInfo(data,rawUrl,requestUrl){
     const pathExt=(mediaUrl.pathname.match(/\.([a-z0-9]{2,5})$/i)?.[1]||"").toLowerCase();
     const declaredExt=String(item?.ext||item?.extension||item?.fileExtension||"").replace(/^\./,"").toLowerCase();
     const ext=mimeExtensions[mime]||(["mp4","webm","mov","m4v","avi","3gp","mp3","m4a","aac","opus","ogg","wav","flac"].includes(pathExt)?pathExt:"")||(["mp4","webm","mov","m4v","avi","3gp","mp3","m4a","aac","opus","ogg","wav","flac"].includes(declaredExt)?declaredExt:"")||(/mp3/i.test(label)?"mp3":/m4a/i.test(label)?"m4a":/webm/i.test(label)?"webm":/mp4|video/i.test(label+ " "+kind)?"mp4":"");
-    const image=/image|photo|picture|thumbnail|cover/.test(kind+" "+label)||["jpg","jpeg","png","gif","webp","avif"].includes(ext);
+    const image=/image|photo|picture|thumbnail|cover/.test(kind+" "+label)||["jpg","jpeg","png","gif","webp","avif"].includes(pathExt)||["jpg","jpeg","png","gif","webp","avif"].includes(declaredExt);
     if(image)return null;
     const audio=mime.startsWith("audio/")||/audio|mp3|m4a|aac|opus|flac/.test(kind+" "+label)||["mp3","m4a","aac","opus","ogg","wav","flac"].includes(ext);
     const video=mime.startsWith("video/")||/video/.test(kind+" "+label)||["mp4","webm","mov","m4v","avi","3gp"].includes(ext);
