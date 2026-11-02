@@ -401,8 +401,8 @@ async function verifySocialSearchResult(result,requestUrl){
     const info=freeProviderMediaInfo(data,result.url,requestUrl);
     const playableFormats=(info?.formats||[]).filter(item=>item.previewUrl&&item.downloadUrl&&!item.videoOnly);
     const playable=key==="soundcloud"
-      ?playableFormats.find(item=>item.mode==="audio")
-      :playableFormats.find(item=>item.mode==="video")||playableFormats.find(item=>item.mode==="audio");
+      ?playableFormats.find(item=>item.mode==="audio"&&["mp3","m4a","aac","opus","ogg","wav","flac"].includes(item.ext))
+      :playableFormats.find(item=>item.mode==="video"&&["mp4","m4v"].includes(item.ext))||playableFormats.find(item=>item.mode==="audio"&&["mp3","m4a"].includes(item.ext));
     if(!playable)return null;
     const probeUrl=new URL(playable.downloadUrl);probeUrl.searchParams.set("probe","1");
     const mediaCheck=await socialMediaFile(new Request(probeUrl.href));
