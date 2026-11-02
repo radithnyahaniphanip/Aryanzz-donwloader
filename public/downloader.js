@@ -92,6 +92,19 @@
     const q=Number(quality)||720;
     return q>=2160?"4k":String([360,480,720,1080,1440].includes(q)?q:720);
   }
+  function browserMediaContentType(response,mode){
+    const type=String(response.headers.get("content-type")||"").toLowerCase();
+    if(type.includes("text/html")||type.includes("application/json")||type.includes("text/plain"))throw new Error("Provider mengirim halaman error, bukan file media.");
+    if(mode==="video"&&type&&!type.includes("video/")&&!type.includes("application/octet-stream"))throw new Error("Tipe file yang diterima bukan video.");
+    if(mode==="audio"&&type&&!type.includes("audio/")&&!type.includes("application/octet-stream"))throw new Error("Tipe file yang diterima bukan audio.");
+  }
+  async function saveBrowserBlob(blob,filename){
+    if(!blob||!blob.size)throw new Error("File kosong.");
+    const objectUrl=URL.createObjectURL(blob),a=document.createElement("a");
+    a.href=objectUrl;a.download=filename;a.style.display="none";
+    document.body.append(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(objectUrl),120000);
+  }
   async function downloadYouTube(url,mode,quality,bar,progressText,info={},audioFormat="m4a"){
     if(info.providerName!=="Hybrid"||!info.providerReady)throw new Error("Tidak ada stream gratis yang tersedia dari instance komunitas saat ini.");
     const candidates=(Array.isArray(info.formats)?info.formats:[]).filter(item=>item.mode===mode&&item.url);
@@ -113,6 +126,7 @@
       try{response=await fetch(direct.href,{mode:"cors",credentials:"omit",cache:"no-store",signal:controller.signal});}
       finally{clearTimeout(timer);}
       if(!response.ok)throw new Error("HTTP "+response.status);
+      browserMediaContentType(response,mode);
       const total=Number(response.headers.get("content-length")||0),maxBytes=250*1024*1024;
       if(total>maxBytes)throw new Error("File lebih dari 250 MB; pilih kualitas lebih rendah.");
       const reader=response.body?.getReader();
@@ -128,15 +142,25 @@
       }
       if(!received)throw new Error("Stream kosong.");
       const blob=new Blob(chunks,{type:selected.mimeType||response.headers.get("content-type")||"application/octet-stream"});
-      const objectUrl=URL.createObjectURL(blob),a=document.createElement("a");
-      a.href=objectUrl;a.download=filename;a.style.display="none";
-      document.body.append(a);a.click();a.remove();
-      setTimeout(()=>URL.revokeObjectURL(objectUrl),120000);
+      await saveBrowserBlob(blob,filename);
       bar.style.width="100%";progressText.textContent="File siap disimpan oleh Chrome · "+(received/1048576).toFixed(1)+" MB";
       remember(url,filename,mode,quality);
       return filename;
     }catch(browserError){
-      throw new Error("Browser tidak dapat membaca stream langsung ("+String(browserError.message||"CORS") + "). Instance komunitas mungkin membatasi CORS atau koneksi. Coba instance lain atau ulangi beberapa saat lagi.");
+      try{
+        const target="/api/youtube/hybrid/file?url="+encodeURIComponent(direct.href)+"&ext="+encodeURIComponent(selected.ext)+"&title="+encodeURIComponent(info.title||"aryanzz-youtube");
+        const fallback=await fetch(target,{cache:"no-store",signal:AbortSignal.timeout(120000)});
+        if(!fallback.ok){const detail=await fallback.json().catch(()=>({}));throw new Error(detail.error||("Worker HTTP "+fallback.status));}
+        browserMediaContentType(fallback,mode);
+        const blob=await fallback.blob();
+        if(blob.size>250*1024*1024)throw new Error("File melebihi batas 250 MB untuk penyimpanan browser.");
+        await saveBrowserBlob(blob,filename);
+        bar.style.width="100%";progressText.textContent="File diterima melalui jalur Worker · "+(blob.size/1048576).toFixed(1)+" MB";
+        remember(url,filename,mode,quality);
+        return filename;
+      }catch(proxyError){
+        throw new Error("Unduhan browser gagal: "+String(browserError.message||"CORS")+". Jalur Worker juga gagal: "+String(proxyError.message||"network error")+". Coba instance lain atau ulangi nanti.");
+      }
     }
   }
   async function downloadFile(url, mode, quality, bar, progressText, info={}) {
