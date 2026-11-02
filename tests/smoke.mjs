@@ -55,6 +55,7 @@ const checks=[
   ["V76.0 TikTok quality selector is populated from real provider resolutions",workerSource.includes("const rawQuality=item?.height??item?.quality??item?.resolution??item?.qualityLabel??label;")&&downloader.includes("available.map(value=>[value,value+\"p · tersedia\"])")&&downloader.includes("n>=100&&n<=4320")],
   ["V76.0 title search routes YouTube through hybrid public search and displays in-page result cards",workerSource.includes("async function hybridYouTubeSearch(query)")&&workerSource.includes('if(url.pathname==="/api/search"&&request.method==="POST")return searchYouTube(request,env)')&&file("../public/v674.js").includes('selected==="youtube"?"/api/search":"/api/social/search"')&&file("../public/v674.js").includes('pick.textContent="Lihat & unduh"')],
   ["V76.0 social downloads use a same-origin Worker proxy and validate MP4/WebM signatures",workerSource.includes('url.pathname==="/api/social-file"')&&workerSource.includes("detectSocialMediaSignature")&&downloader.includes('probeUrl.searchParams.set("probe","1")')&&downloader.includes('ready.pathname!=="/api/social-file"')],
+  ["V76.0 social stream header timeout does not abort the media body after headers arrive",workerSource.includes("async function fetchSocialHeaders")&&workerSource.includes("finally{clearTimeout(timer)}")&&workerSource.includes("fetchSocialHeaders(current.href")],
   ["V76.0 social downloads reject image assets, HTML error pages and partial streams",workerSource.includes("if(image)return null")&&workerSource.includes("File ditolak: isi file tidak cocok")&&workerSource.includes("upstream.status===206")&&workerSource.includes("File media terpotong")],
   ["V76.0 social videos marked video-only are not offered as complete video files",workerSource.includes("videoOnly,hasAudio")&&downloader.includes('!(mode==="video"&&item.videoOnly)')],
   ["V76.0 verified social files use the detected extension from Content-Disposition",downloader.includes('else link.removeAttribute("download")')&&workerSource.includes('content-disposition":"attachment; filename*=UTF-8\'\'"+encodeURIComponent(actualFilename)')],
@@ -249,6 +250,15 @@ try{
   assert.match(socialFile.headers.get("content-disposition"),/Test%20TikTok\.mp4/);
   assert.deepEqual(new Uint8Array(await socialFile.arrayBuffer()),mp4Bytes);
   console.log("✔ Social video downloads are proxied, signature-checked and stream intact");
+  globalThis.fetch=async()=>new Response("<html>blocked</html>",{status:200,headers:{"content-type":"text/html"}});
+  const htmlError=await worker.fetch(new Request(socialProbeUrl.href),{});
+  assert.equal(htmlError.status,502,"HTML error pages must never be saved as MP4");
+  globalThis.fetch=async()=>new Response(mp4Bytes.slice(0,20),{status:200,headers:{"content-type":"video/mp4","content-length":"24"}});
+  const truncated=await worker.fetch(new Request(socialProbeUrl.href),{});
+  assert.equal(truncated.status,502,"truncated media must fail preflight");
+  globalThis.fetch=async()=>new Response(mp4Bytes,{status:206,headers:{"content-type":"video/mp4","content-length":"24","content-range":"bytes 0-23/100"}});
+  const partial=await worker.fetch(new Request(socialProbeUrl.href),{});
+  assert.equal(partial.status,502,"partial responses must not be presented as complete videos");
   console.log("✔ Free public provider resolves TikTok links into previewable MP4 and MP3 choices");
 }finally{globalThis.fetch=originalSocialFetch;}
 const originalSocialSearch=globalThis.fetch;
