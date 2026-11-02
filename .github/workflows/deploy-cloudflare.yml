@@ -142,11 +142,18 @@ jobs:
           if (!downloaderSource.includes("available.map(value=>[value,value+\"p · tersedia\"])") || !downloaderSource.includes("Persiapan 100% · ketuk tombol") || !downloaderSource.includes("Kesiapan tautan unduhan")) {
             throw new Error("V81.0 social quality selector or honest link-ready progress is missing.");
           }
-          if (!pageResponse.ok || !pageSource.includes("ARYANZZ V81.0") || !pageSource.includes("restoreAutoBackup") || !pageSource.includes("audioStudio") || !pageSource.includes("profileMotionToggle") || !pageSource.includes("Kontrol banner profil") || !pageSource.includes("audioStudioTempo") || !pageSource.includes("audioStudioTitle")) {
+          if (!pageResponse.ok || !pageSource.includes("ARYANZZ V81.0") || !pageSource.includes('id="imageStudio"') || !pageSource.includes('src="/image-studio.js?v=81.0"') || !pageSource.includes("restoreAutoBackup") || !pageSource.includes("audioStudio") || !pageSource.includes("profileMotionToggle") || !pageSource.includes("Kontrol banner profil") || !pageSource.includes("audioStudioTempo") || !pageSource.includes("audioStudioTitle")) {
             throw new Error("V74.0 page, profile backup, or Audio Studio markup is not live.");
           }
           console.log("V81.0 Audio Studio, profile backup, and creative assets are available.");
 
+          const imagePostProbe = await fetch(base + "/api/social/images", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ url: "https://example.com/not-a-social-post" }) });
+          if (imagePostProbe.status !== 400) throw new Error("Image post endpoint validation failed: HTTP " + imagePostProbe.status);
+          const imageSearchProbe = await fetch(base + "/api/social/image-search", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ platform: "unknown", query: "test image" }) });
+          if (imageSearchProbe.status !== 400) throw new Error("Image search endpoint validation failed: HTTP " + imageSearchProbe.status);
+          const unsafeImageProbe = await fetch(base + "/api/social-image-file?url=" + encodeURIComponent("http://127.0.0.1/private.png"));
+          if (unsafeImageProbe.status !== 400) throw new Error("Image proxy private-network guard failed: HTTP " + unsafeImageProbe.status);
+          console.log("V81.0 image endpoints, unsupported-source validation, and private-network proxy guards passed.");
           const titleSearchProbe = await fetch(base + "/api/search", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ query: "x" }) });
           if (titleSearchProbe.status !== 400) throw new Error("Title-search endpoint validation failed: HTTP " + titleSearchProbe.status);
           console.log("Title-search endpoint is mounted and validates query input.");
