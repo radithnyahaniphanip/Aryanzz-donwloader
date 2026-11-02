@@ -355,6 +355,7 @@ try{
         videoStreams:[
           {height:720,quality:"720p",mimeType:"video/mp4",videoOnly:false,url:"https://pipedproxy-bom.kavin.rocks/videoplayback?itag=22&sig=test"},
           {height:360,quality:"360p",mimeType:"video/mp4",videoOnly:false,url:"https://pipedproxy-bom.kavin.rocks/videoplayback?itag=18&sig=test"},
+          {height:480,quality:"480p",mimeType:"video/webm",videoOnly:false,url:"https://pipedproxy-bom.kavin.rocks/videoplayback?itag=43&sig=webm"},
           {height:1080,quality:"1080p",mimeType:"video/mp4",videoOnly:true,url:"https://pipedproxy-bom.kavin.rocks/videoplayback?itag=137&sig=video-only"}
         ],
         audioStreams:[{format:"M4A",quality:"128 kbps",mimeType:"audio/mp4",url:"https://pipedproxy-bom.kavin.rocks/videoplayback?itag=140&sig=audio"}]
@@ -416,7 +417,7 @@ try{
   assert.equal(pipedData.providerReady,true);
   assert.equal(pipedData.providerName,"Piped");
   assert.equal(pipedData.title,"Hybrid Test Video");
-  assert.deepEqual(pipedData.formats.map(x=>x.height),[720,360]);
+  assert.deepEqual(pipedData.formats.map(x=>x.height),[720,360,480]);
   assert.equal(pipedData.audioFormats[0].format,"m4a");
   assert.match(pipedData.formats[0].downloadUrl,/\/api\/youtube\/stream\?/);
   console.log("✔ Piped primary returns only available progressive MP4 and audio stream formats");
