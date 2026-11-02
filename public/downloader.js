@@ -315,6 +315,7 @@
         audioBitrate.hidden=audioFormat.hidden||info.providerName!=="Cobalt";
         bitrateLabel.hidden=audioBitrate.hidden;
       });
+      mode.dispatchEvent(new Event("change"));
       start.addEventListener("click", async () => {
         start.disabled = true;
         mode.disabled = true;
