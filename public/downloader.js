@@ -312,20 +312,24 @@
         const above=formats.filter(item=>Number(item.height)>wanted).sort((a,b)=>Number(a.height)-Number(b.height)||Number(b.bitrate)-Number(a.bitrate));
         return [...below,...above];
       };
-      if(progressive.length){
+      const exactProgressive=progressive.filter(item=>Number(item.height)===wanted);
+      const exactAdaptive=adaptive.filter(item=>Number(item.height)===wanted);
+      if(exactProgressive.length){
+        candidates=exactProgressive.sort((a,b)=>Number(b.bitrate)-Number(a.bitrate));
+      }else if(exactAdaptive.length){
+        candidates=exactAdaptive.sort((a,b)=>Number(b.bitrate)-Number(a.bitrate));
+      }else if(progressive.length){
         candidates=orderByRequestedQuality(progressive);
-        const best=Number(candidates[0]?.height)||0;
-        if(best&&best<wanted){
-          progressText.textContent="MP4 langsung tersedia sampai "+best+"p · memakai satu stream lengkap agar lebih cepat.";
-          progressMeta.textContent="Target: 1 file MP4 · tanpa unduh komponen audio terpisah.";
-        }else{
-          progressText.textContent="Mode cepat · satu stream MP4 lengkap diprioritaskan.";
-          progressMeta.textContent="Target: 1 file MP4 · tanpa penggabungan tambahan.";
-        }
       }else{
         candidates=orderByRequestedQuality(adaptive);
-        progressText.textContent="Sumber hanya menyediakan komponen terpisah · ARYANZZ akan merakit satu MP4 otomatis.";
+      }
+      if(candidates[0]?.videoOnly){
+        progressText.textContent="Sumber memisahkan komponen media · merakit satu file MP4 otomatis.";
         progressMeta.textContent="Target: 1 file MP4 · tidak ada file audio terpisah yang disimpan.";
+      }else{
+        const best=Number(candidates[0]?.height)||0;
+        progressText.textContent="Mode cepat · satu stream MP4 lengkap diprioritaskan"+(best&&best<wanted?" · kualitas tersedia "+best+"p.":".");
+        progressMeta.textContent="Target: 1 file MP4 · tanpa penggabungan tambahan.";
       }
     }
     if(!candidates.length)throw new Error("Provider tidak menyediakan format "+(mode==="video"?"MP4":"audio")+" yang dapat diunduh.");
