@@ -1,4 +1,4 @@
-name: Deploy ARYANZZ V74.0 to Cloudflare Workers
+name: Deploy ARYANZZ V75.0 to Cloudflare Workers
 
 on:
   push:
@@ -51,7 +51,7 @@ jobs:
           wrangler secret delete PLATFORM_API_ORIGIN || true
           wrangler secret delete PLATFORM_API_TOKEN || true
 
-      - name: Smoke test live Worker and V74.0 creative assets
+      - name: Smoke test live Worker and V75.0 creative assets
         env:
           WORKER_URL: https://aryanzz-donwloader.radithnyahaniphanip.workers.dev
         run: |
@@ -62,20 +62,20 @@ jobs:
             try {
               const healthResponse = await fetch(base + "/api/health", { cache: "no-store", signal: AbortSignal.timeout(10000) });
               if (healthResponse.ok) health = await healthResponse.json();
-              if (health?.version === "74.0" && health?.mode === "cloudflare-worker-zero-server-hybrid") break;
+              if (health?.version === "75.0" && health?.mode === "cloudflare-worker-zero-server-hybrid") break;
             } catch {}
             await new Promise(resolve => setTimeout(resolve, 2500));
           }
-          if (health?.version !== "74.0" || health?.mode !== "cloudflare-worker-zero-server-hybrid" || !health?.directMediaDownload) {
-            throw new Error("Live Worker has not propagated the V74.0 zero-server deployment: " + JSON.stringify(health));
+          if (health?.version !== "75.0" || health?.mode !== "cloudflare-worker-zero-server-hybrid" || !health?.directMediaDownload) {
+            throw new Error("Live Worker has not propagated the V75.0 zero-server deployment: " + JSON.stringify(health));
           }
           console.log("Live Worker health OK: V" + health.version + " in zero-server mode.");
 
-          for (const path of ["/editor.js?v=65.0", "/editor-pro.css?v=65.0", "/music-recognition.js?v=71.0", "/music-recognition.css?v=71.0", "/v674.js?v=73.7", "/v674.css?v=73.7", "/v677.js?v=67.7", "/v677.css?v=67.7", "/v680.js?v=71.0", "/v680.css?v=71.0", "/v690.css?v=71.0", "/downloader.js?v=73.7.1", "/downloader.css?v=73.7", "/v59.js?v=59.5", "/v59.css?v=59.5", "/audio-studio.js?v=74.0", "/audio-studio.css?v=74.0"]) {
+          for (const path of ["/editor.js?v=65.0", "/editor-pro.css?v=65.0", "/music-recognition.js?v=71.0", "/music-recognition.css?v=71.0", "/v674.js?v=75.0", "/v674.css?v=75.0", "/v677.js?v=67.7", "/v677.css?v=67.7", "/v680.js?v=71.0", "/v680.css?v=71.0", "/v690.css?v=71.0", "/downloader.js?v=75.0", "/downloader.css?v=75.0", "/v59.js?v=59.5", "/v59.css?v=59.5", "/audio-studio.js?v=75.0", "/audio-studio.css?v=75.0"]) {
             const response = await fetch(base + path, { cache: "no-store" });
             if (!response.ok) throw new Error("Static asset unavailable: " + path + " HTTP " + response.status);
           }
-          const downloaderResponse = await fetch(base + "/downloader.js?v=73.7.1", { cache: "no-store" });
+          const downloaderResponse = await fetch(base + "/downloader.js?v=75.0", { cache: "no-store" });
           const downloaderSource = await downloaderResponse.text();
           if (!downloaderSource.includes("Provider komunitas menolak stream") || !downloaderSource.includes('postJson("/api/info",{url})')) {
             throw new Error("Live YouTube downloader is missing its public-free-provider fallback after 403/429.");
@@ -83,7 +83,7 @@ jobs:
           if (!downloaderSource.includes('info.providerName==="Public API"') || !downloaderSource.includes("v737-media-preview") || !downloaderSource.includes("selected.downloadUrl")) {
             throw new Error("Live downloader is missing V73.7 in-page social preview or public-provider download handling.");
           }
-          const searchResponse = await fetch(base + "/v674.js?v=73.7", { cache: "no-store" });
+          const searchResponse = await fetch(base + "/v674.js?v=75.0", { cache: "no-store" });
           const searchSource = await searchResponse.text();
           if (!searchResponse.ok || !searchSource.includes("/api/social/search") || !searchSource.includes("Lihat & unduh")) {
             throw new Error("V73.7 in-page social title search assets are not live.");
@@ -95,28 +95,28 @@ jobs:
             throw new Error("Live browser MP4 parser failed its URL initialization regression check.");
           }
           console.log("Live browser MP4 parser URL initialization check passed.");
-          if (!downloaderSource.includes("function updateDownloadProgress") || !downloaderSource.includes("const exactProgressive=") || !downloaderSource.includes("Tahap 2/3 · Audio") || !downloaderSource.includes("fetchYoutubeTrackRanges") || !downloaderSource.includes("indexedDB.open(\"aryanzz-download-resume\"") || !downloaderSource.includes("Maksimal · 5 jalur") || !downloaderSource.includes("const chunkSize=1024*1024") || !downloaderSource.includes("inFlight+=result.value.byteLength") || !downloaderSource.includes("probeYoutubeTrack") || !downloaderSource.includes("await ffmpeg.writeFile(inputVideo,videoBytes);videoBytes=null;") || !downloaderSource.includes("/api/youtube/hybrid/thumbnail") || !downloaderSource.includes("?local=true") || !downloaderSource.includes("probe=1") || !downloaderSource.includes("diagnostics.push({provider,instance,error:") || !downloaderSource.includes("pipedInstances.slice(0,20)") || !downloaderSource.includes("speedLabel.hidden=!isYouTube") || !downloaderSource.includes("/api/youtube/hybrid/browser-file?") || !downloaderSource.includes("navigator.serviceWorker?.controller") || !downloaderSource.includes("function youtubeQualityEstimate") || !downloaderSource.includes("details.append(thumbAction)") || !downloaderSource.includes("async function refreshYoutubeProviderInfo") || !downloaderSource.includes("const [downloadedVideo,readyFfmpeg]=await Promise.all([") || downloaderSource.includes('make("img","youtube-thumbnail")')) {
+          if (!downloaderSource.includes("youtube-engine-status") || !downloaderSource.includes("youtube-nocookie.com/embed/") || !downloaderSource.includes("const downloadInfo={...info,outputName:") || !downloaderSource.includes("ffmpegUnavailable&&mode===\"video\"&&selected.videoOnly") || !downloaderSource.includes("function updateDownloadProgress") || !downloaderSource.includes("const exactProgressive=") || !downloaderSource.includes("Tahap 2/3 · Audio") || !downloaderSource.includes("fetchYoutubeTrackRanges") || !downloaderSource.includes("indexedDB.open(\"aryanzz-download-resume\"") || !downloaderSource.includes("Maksimal · 5 jalur") || !downloaderSource.includes("const chunkSize=1024*1024") || !downloaderSource.includes("inFlight+=result.value.byteLength") || !downloaderSource.includes("probeYoutubeTrack") || !downloaderSource.includes("await ffmpeg.writeFile(inputVideo,videoBytes);videoBytes=null;") || !downloaderSource.includes("/api/youtube/hybrid/thumbnail") || !downloaderSource.includes("?local=true") || !downloaderSource.includes("probe=1") || !downloaderSource.includes("diagnostics.push({provider,instance,error:") || !downloaderSource.includes("pipedInstances.slice(0,20)") || !downloaderSource.includes("speedLabel.hidden=!isYouTube") || !downloaderSource.includes("/api/youtube/hybrid/browser-file?") || !downloaderSource.includes("navigator.serviceWorker?.controller") || !downloaderSource.includes("function youtubeQualityEstimate") || !downloaderSource.includes("details.append(thumbAction)") || !downloaderSource.includes("async function refreshYoutubeProviderInfo") || !downloaderSource.includes("const [downloadedVideo,readyFfmpeg]=await Promise.all([") || downloaderSource.includes('make("img","youtube-thumbnail")')) {
             throw new Error("Live downloader is missing the V73.7 progressive MP4 or progress/ETA improvements.");
           }
-          const downloaderCssResponse = await fetch(base + "/downloader.css?v=73.7", { cache: "no-store" });
+          const downloaderCssResponse = await fetch(base + "/downloader.css?v=75.0", { cache: "no-store" });
           const downloaderCssSource = await downloaderCssResponse.text();
           if (!downloaderCssResponse.ok || !downloaderCssSource.includes(".youtube-result [hidden]{display:none!important}") || !downloaderCssSource.includes("aryanzzDownloadSweep") || downloaderCssSource.includes("position:absolute")) {
             throw new Error("Live downloader CSS is missing hidden-control or animated-progress fixes.");
           }
           console.log("V73.7 direct MP4 quality estimates, measured file sizes, browser-side streaming fallback and clean thumbnail download checks passed.");
 
-          const audioJsResponse = await fetch(base + "/audio-studio.js?v=74.0", { cache: "no-store" });
+          const audioJsResponse = await fetch(base + "/audio-studio.js?v=75.0", { cache: "no-store" });
           const audioJsSource = await audioJsResponse.text();
-          const audioCssResponse = await fetch(base + "/audio-studio.css?v=74.0", { cache: "no-store" });
-          if (!audioJsResponse.ok || !audioCssResponse.ok || !audioJsSource.includes("libmp3lame") || !audioJsSource.includes("equalizer=f=")) {
-            throw new Error("V74.0 Audio Studio assets are missing or incomplete.");
+          const audioCssResponse = await fetch(base + "/audio-studio.css?v=75.0", { cache: "no-store" });
+          if (!audioJsResponse.ok || !audioCssResponse.ok || !audioJsSource.includes("libmp3lame") || !audioJsSource.includes("equalizer=f=") || !audioJsSource.includes("audioStudioTempo") || !audioJsSource.includes("id3v2_version") || !audioJsSource.includes("aryanzz.audio-studio.settings.v75")) {
+            throw new Error("V75.0 Audio Studio assets are missing or incomplete.");
           }
           const pageResponse = await fetch(base + "/", { cache: "no-store" });
           const pageSource = await pageResponse.text();
-          if (!pageResponse.ok || !pageSource.includes("ARYANZZ V74.0") || !pageSource.includes("restoreAutoBackup") || !pageSource.includes("audioStudio")) {
+          if (!pageResponse.ok || !pageSource.includes("ARYANZZ V75.0") || !pageSource.includes("restoreAutoBackup") || !pageSource.includes("audioStudio") || !pageSource.includes("profileMotionToggle") || !pageSource.includes("Kontrol banner profil") || !pageSource.includes("audioStudioTempo") || !pageSource.includes("audioStudioTitle")) {
             throw new Error("V74.0 page, profile backup, or Audio Studio markup is not live.");
           }
-          console.log("V74.0 Audio Studio, profile backup, and creative assets are available.");
+          console.log("V75.0 Audio Studio, profile backup, and creative assets are available.");
 
           const titleSearchProbe = await fetch(base + "/api/search", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ query: "x" }) });
           if (titleSearchProbe.status !== 400) throw new Error("Title-search endpoint validation failed: HTTP " + titleSearchProbe.status);
