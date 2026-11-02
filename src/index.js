@@ -120,14 +120,22 @@ const HYBRID_MEDIA_ROOTS=["kavin.rocks","leptons.xyz","nosebs.ru","privacy.com.d
 function youtubeVideoId(raw){
   try{const u=new URL(raw),h=u.hostname.toLowerCase();if(h==="youtu.be"||h==="www.youtu.be")return u.pathname.split("/").filter(Boolean)[0]||null;const v=u.searchParams.get("v");if(v)return v;return u.pathname.match(/^\/(?:shorts|embed|live|v)\/([A-Za-z0-9_-]{6,20})/)?.[1]||null;}catch{return null;}
 }
-function hybridMediaUrl(raw){
-  try{const u=new URL(raw);if(u.protocol!=="https:"||u.username||u.password)return null;const h=u.hostname.toLowerCase();if(h==="googlevideo.com"||h.endsWith(".googlevideo.com"))return u;if(HYBRID_MEDIA_ROOTS.some(root=>h===root||h.endsWith("."+root)))return u;return null;}catch{return null;}
+function hybridMediaUrl(raw,trustedOrigin){
+  try{const u=new URL(raw,trustedOrigin||undefined);if(u.protocol!=="https:"||u.username||u.password)return null;const h=u.hostname.toLowerCase();if(h==="googlevideo.com"||h.endsWith(".googlevideo.com"))return u;if(HYBRID_MEDIA_ROOTS.some(root=>h===root||h.endsWith("."+root)))return u;if(trustedOrigin&&u.origin===new URL(trustedOrigin).origin)return u;return null;}catch{return null;}
 }
-function hybridVideoFormat(item){
-  const mime=String(item?.mimeType||item?.type||"").toLowerCase(),container=String(item?.format||item?.container||"").toLowerCase();
-  const height=Number(item?.height)||Number((String(item?.qualityLabel||item?.quality||item?.resolution||"").match(/(\d{3,4})p?/i)||[])[1])||0;
-  const url=hybridMediaUrl(item?.url||"");
-  if(!url||!height||item?.videoOnly===true||!(mime.includes("video/mp4")||container.includes("mpeg_4")||container==="mp4"||mime.includes("video/x-m4v")))return null;
+function hybridVideoHeight(item){
+  const direct=Number(item?.height);if(Number.isFinite(direct)&&direct>=100&&direct<=4320)return direct;
+  for(const label of [item?.qualityLabel,item?.quality,item?.resolution,item?.size,item?.label].filter(Boolean).map(String)){
+    const dimensions=label.match(/\d{2,4}\s*[x×]\s*(\d{2,4})/i);if(dimensions)return Number(dimensions[1]);
+    const p=label.match(/(?:^|\D)(\d{3,4})\s*p(?:\D|$)/i);if(p)return Number(p[1]);
+  }
+  return 0;
+}
+function hybridVideoFormat(item,instance){
+  const mime=String(item?.mimeType||item?.type||item?.mime_type||item?.mime||"").toLowerCase(),container=String(item?.format||item?.container||item?.ext||"").toLowerCase();
+  const height=hybridVideoHeight(item),url=hybridMediaUrl(item?.url||item?.urlTemplate||"",instance);
+  const mp4=mime.includes("video/mp4")||mime.includes("video/x-m4v")||container.includes("mpeg_4")||container==="mp4"||container==="m4v"||(/\.mp4(?:$|[?#])/i.test(url?.pathname||""));
+  if(!url||![144,240,360,480,720,1080,1440,2160].includes(height)||item?.videoOnly===true||!mp4)return null;
   return {mode:"video",height,quality:height+"p",ext:"mp4",mimeType:"video/mp4",url:url.toString(),bitrate:Number(item.bitrate)||0};
 }
 function hybridAudioFormat(item){
@@ -145,12 +153,12 @@ async function hybridFetchJson(url){
   if(!response.ok)throw new Error("HTTP "+response.status);if(!(response.headers.get("content-type")||"").includes("json"))throw new Error("Respons bukan JSON");return response.json();
 }
 function hybridFromPiped(data,instance){
-  const formats=dedupeHybridFormats([...(Array.isArray(data.videoStreams)?data.videoStreams.map(hybridVideoFormat).filter(Boolean):[]),...(Array.isArray(data.audioStreams)?data.audioStreams.map(hybridAudioFormat).filter(Boolean):[])]);
+  const formats=dedupeHybridFormats([...(Array.isArray(data.videoStreams)?data.videoStreams.map(item=>hybridVideoFormat(item,instance)).filter(Boolean):[]),...(Array.isArray(data.audioStreams)?data.audioStreams.map(hybridAudioFormat).filter(Boolean):[])]);
   if(!formats.length||!data.title)return null;
   return {ok:true,providerReady:true,providerName:"Hybrid",provider:"Piped",instance,title:String(data.title).slice(0,300),thumbnail:typeof data.thumbnailUrl==="string"?data.thumbnailUrl:null,duration:Number(data.duration)||null,uploader:String(data.uploader||"").slice(0,160),formats:formats.map((f,i)=>({...f,id:"f"+i})),message:"Stream progresif tersedia dari instance komunitas."};
 }
 function hybridFromInvidious(data,instance){
-  const formats=dedupeHybridFormats([...(Array.isArray(data.formatStreams)?data.formatStreams.map(hybridVideoFormat).filter(Boolean):[]),...(Array.isArray(data.adaptiveFormats)?data.adaptiveFormats.map(hybridAudioFormat).filter(Boolean):[])]);
+  const formats=dedupeHybridFormats([...(Array.isArray(data.formatStreams)?data.formatStreams.map(item=>hybridVideoFormat(item,instance)).filter(Boolean):[]),...(Array.isArray(data.adaptiveFormats)?data.adaptiveFormats.map(hybridAudioFormat).filter(Boolean):[])]);
   if(!formats.length||!data.title)return null;const thumb=Array.isArray(data.videoThumbnails)?data.videoThumbnails.find(x=>x.quality==="maxresdefault")||data.videoThumbnails[0]:null;
   return {ok:true,providerReady:true,providerName:"Hybrid",provider:"Invidious",instance,title:String(data.title).slice(0,300),thumbnail:typeof thumb?.url==="string"?thumb.url:null,duration:Number(data.lengthSeconds)||null,uploader:String(data.author||"").slice(0,160),formats:formats.map((f,i)=>({...f,id:"f"+i})),message:"Stream progresif tersedia dari instance komunitas."};
 }
