@@ -493,7 +493,7 @@ try{
 
   const health=await worker.fetch(new Request("https://aryanzz.example/api/health"),{});
   const healthData=await health.json();
-  assert.equal(healthData.version,"71.0");
+  assert.equal(healthData.version,"71.1");
   assert.equal(healthData.cobalt,false);
   assert.equal(healthData.paidYoutubeProvider,false);
   console.log("✔ Worker health reports V71.1 with no Cobalt or paid YouTube provider");
