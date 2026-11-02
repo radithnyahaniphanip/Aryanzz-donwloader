@@ -1,4 +1,4 @@
-# ARYANZZ V73.4 — Mobile-resilient media downloader
+# ARYANZZ V73.5 — Mobile-resilient media downloader
 
 Production website: https://aryanzz-donwloader.radithnyahaniphanip.workers.dev/
 
@@ -24,7 +24,15 @@ ARYANZZ is a mobile-first creator workspace hosted on Cloudflare Workers. V73.0 
 | V67.6 | Backend health cleanup, title-based YouTube search routed through yt-dlp, clearer AudD/Shazam status, and DJ scan fallback fixes |
 
 
-## V73.4 — Faster MP4 choices, file-size estimates and clean thumbnail download
+## V73.5 — Faster adaptive MP4 preparation and refreshed provider failover
+
+- Starts the local FFmpeg engine while the selected video component is downloading, so engine initialization overlaps media transfer instead of adding a separate wait afterward.
+- Keeps the direct progressive MP4 path first; adaptive video/audio pairs still use local stream-copy muxing when a single-file MP4 is unavailable.
+- Limits each quality tier to a small number of distinct provider instances, avoiding long serial retry queues while preserving same-quality failover and lower-quality fallbacks.
+- After provider HTTP 403, 429, or 5xx/network rejection, refreshes the public Piped/Invidious metadata once and retries only stream URLs that were not already attempted.
+- Retains the zero-server design: no Cobalt, Docker Desktop, paid extractor, or private server is introduced.
+
+## V73.5 — Faster MP4 choices, file-size estimates and clean thumbnail download
 
 - Shows an estimated or provider-reported file size beside every available YouTube MP4 quality. Estimates use source bitrate and video duration when an exact byte size is not supplied.
 - Labels each quality as a single-file progressive MP4 (direct Chrome download, no FFmpeg) or separate video/audio tracks (local MP4 assembly required).
@@ -33,7 +41,7 @@ ARYANZZ is a mobile-first creator workspace hosted on Cloudflare Workers. V73.0 
 - Reduces stream preflight waits to 12 seconds before attempting the browser-side fallback.
 - Removes the large thumbnail preview and overlay button. A compact “Unduh thumbnail YouTube” action now sits directly below the video title and downloads the image through the safe Worker attachment route.
 
-## V73.4 — Browser-side streaming fallback
+## V73.5 — Browser-side streaming fallback
 
 - Adds a same-origin Service Worker download route that validates the media URL through the Worker, then fetches the approved Piped/Invidious stream from the user's browser connection and streams it to Chrome with an attachment filename.
 - The browser route preserves HTTP Range and partial-response headers, so Chrome can resume when the community provider supports byte ranges.
