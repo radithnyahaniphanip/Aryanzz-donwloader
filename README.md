@@ -1,8 +1,8 @@
-# ARYANZZ V71.0 — Piped + Invidious Hybrid Downloader
+# ARYANZZ V71.1 — Piped + Invidious Hybrid Downloader
 
 Production website: https://aryanzz-donwloader.radithnyahaniphanip.workers.dev/
 
-ARYANZZ is a mobile-first creator workspace hosted on Cloudflare Workers. V71.0 uses a zero-server design: direct media links are streamed by the Worker, while YouTube formats are discovered through public Piped and Invidious community instances. No Cobalt, Docker Desktop, private extraction server, or paid downloader provider is required.
+ARYANZZ is a mobile-first creator workspace hosted on Cloudflare Workers. V71.1 adds browser-first access to a zero-server design: direct media links are streamed by the Worker, while YouTube formats are discovered through public Piped and Invidious community instances. No Cobalt, Docker Desktop, private extraction server, or paid downloader provider is required.
 
 ## V65.0 release scope
 
@@ -23,6 +23,16 @@ ARYANZZ is a mobile-first creator workspace hosted on Cloudflare Workers. V71.0 
 | V67.4 | Premium mobile UI refresh, simplified downloader home, searchable Tools Center and Color Studio |
 | V67.6 | Backend health cleanup, title-based YouTube search routed through yt-dlp, clearer AudD/Shazam status, and DJ scan fallback fixes |
 
+
+## V71.1 — Browser-first hybrid provider access
+
+- The YouTube metadata lookup now tries official Piped community API instances directly from the user's browser first, then official Invidious public instances, before falling back to the Cloudflare Worker route. This provides an alternative path when the Worker network receives 401/403/5xx responses from community operators.
+- Piped API origins are refreshed at runtime from the official TeamPiped public-instance directory (with a vetted snapshot fallback); Invidious origins use the currently listed official public instances.
+- Instance checks run in small batches with request timeouts. Only actual progressive MP4 video streams (audio+video already muxed) and source audio formats returned by the instance are offered.
+- The selected stream is fetched directly by the browser and saved as a Blob download with visible byte/progress feedback. This browser-side route is limited to 250 MB to avoid excessive mobile memory use. If CORS or network policy blocks the stream, ARYANZZ reports the failure rather than claiming a successful download.
+- The existing Cloudflare attachment-stream endpoint remains as a fallback attempt. It still depends on the Worker being able to reach the selected media host.
+- This remains a best-effort zero-cost design using third-party community instances. They may block requests, change domains, rate-limit, or stop operating. No guaranteed availability is claimed; the live CI probe must report whether the supplied test video currently returns formats.
+- TikTok extraction remains disabled. No Cobalt, Docker Desktop, paid extraction API, or private server is introduced.
 
 ## V71.0 — Zero-cost Piped + Invidious hybrid YouTube
 
