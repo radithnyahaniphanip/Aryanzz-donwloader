@@ -190,7 +190,7 @@
   }
   function collectAppStorage(){
     const data={};
-    for(let i=0;i<localStorage.length;i++){const key=localStorage.key(i);if(key&&((key.startsWith("aryanzz.")&&!key.startsWith("aryanzz.autosave."))||key==="aryanzz-download-history-v1")){const value=localStorage.getItem(key);if(value!==null)data[key]=value;}}
+    for(let i=0;i<localStorage.length;i++){const key=localStorage.key(i);if(key&&((key.startsWith("aryanzz.")&&!key.startsWith("aryanzz.autosave.")))){const value=localStorage.getItem(key);if(value!==null)data[key]=value;}}
     return data;
   }
   async function writeAutoSnapshot(){
@@ -209,8 +209,8 @@
     if(autoSaveObserverInstalled)return;autoSaveObserverInstalled=true;
     try{
       const proto=Storage.prototype,originalSet=proto.setItem,originalRemove=proto.removeItem,originalClear=proto.clear;
-      proto.setItem=function(key,value){const result=originalSet.call(this,key,value);if(this===localStorage&&((String(key).startsWith("aryanzz.")&&!String(key).startsWith("aryanzz.autosave."))||String(key)==="aryanzz-download-history-v1"))queueAutoSnapshot();return result;};
-      proto.removeItem=function(key){const result=originalRemove.call(this,key);if(this===localStorage&&(String(key).startsWith("aryanzz.")||String(key)==="aryanzz-download-history-v1"))queueAutoSnapshot();return result;};
+      proto.setItem=function(key,value){const result=originalSet.call(this,key,value);if(this===localStorage&&((String(key).startsWith("aryanzz.")&&!String(key).startsWith("aryanzz.autosave."))))queueAutoSnapshot();return result;};
+      proto.removeItem=function(key){const result=originalRemove.call(this,key);if(this===localStorage&&(String(key).startsWith("aryanzz.")))queueAutoSnapshot();return result;};
       proto.clear=function(){const result=originalClear.call(this);if(this===localStorage)queueAutoSnapshot();return result;};
     }catch{setAutoSaveStatus("Auto-save otomatis tidak dapat diaktifkan di browser ini.",true);}
   }
@@ -226,8 +226,8 @@
         const payload=JSON.parse(await file.text()),storage=payload?.storage||payload?.data;
         if(payload?.app!=="ARYANZZ"||!storage||typeof storage!=="object"||Array.isArray(storage))throw new Error("File ini bukan backup ARYANZZ yang valid.");
         if(!window.confirm("Pulihkan backup ini? Data ARYANZZ yang ada di browser akan diganti."))return;
-        const allowed=Object.entries(storage).filter(([key,value])=>(key.startsWith("aryanzz.")||key==="aryanzz-download-history-v1")&&typeof value==="string");
-        for(let i=localStorage.length-1;i>=0;i--){const key=localStorage.key(i);if((key?.startsWith("aryanzz.")||key==="aryanzz-download-history-v1")&&!allowed.some(([savedKey])=>savedKey===key))localStorage.removeItem(key);}
+        const allowed=Object.entries(storage).filter(([key,value])=>(key.startsWith("aryanzz."))&&typeof value==="string");
+        for(let i=localStorage.length-1;i>=0;i--){const key=localStorage.key(i);if((key?.startsWith("aryanzz."))&&!allowed.some(([savedKey])=>savedKey===key))localStorage.removeItem(key);}
         allowed.forEach(([key,value])=>localStorage.setItem(key,value));
         toast("Backup dipulihkan. Memuat ulang tampilan…");setTimeout(()=>location.reload(),650);
       }catch(error){toast(error.message||"Backup tidak dapat dipulihkan.");}finally{input.value="";}
@@ -236,8 +236,8 @@
       const snapshot=await readAutoSnapshot();
       if(!snapshot?.data){toast("Belum ada cadangan otomatis yang tersimpan.");return;}
       if(!window.confirm("Pulihkan cadangan otomatis terakhir dari browser ini? Data ARYANZZ saat ini akan diganti."))return;
-      const allowed=Object.entries(snapshot.data).filter(([key,value])=>(key.startsWith("aryanzz.")||key==="aryanzz-download-history-v1")&&typeof value==="string");
-      for(let i=localStorage.length-1;i>=0;i--){const key=localStorage.key(i);if((key?.startsWith("aryanzz.")||key==="aryanzz-download-history-v1")&&!allowed.some(([savedKey])=>savedKey===key))localStorage.removeItem(key);}
+      const allowed=Object.entries(snapshot.data).filter(([key,value])=>(key.startsWith("aryanzz."))&&typeof value==="string");
+      for(let i=localStorage.length-1;i>=0;i--){const key=localStorage.key(i);if((key?.startsWith("aryanzz."))&&!allowed.some(([savedKey])=>savedKey===key))localStorage.removeItem(key);}
       allowed.forEach(([key,value])=>localStorage.setItem(key,value));
       toast("Cadangan otomatis dipulihkan. Memuat ulang…");setTimeout(()=>location.reload(),650);
     });
