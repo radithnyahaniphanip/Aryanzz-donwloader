@@ -23,7 +23,7 @@ const manifest=JSON.parse(file("../public/manifest.webmanifest"));
 
 const checks=[
   ["V72.2 page title",html.includes("ARYANZZ V72.2 — All-in-One Creative Space")],
-  ["V59.5 versioned assets",html.includes("/v15.js?v=59.5")&&html.includes("/owner.js?v=59.5")&&html.includes("/downloader.js?v=72.1")&&html.includes("/downloader.css?v=71.0")&&html.includes("/v59.css?v=59.5")&&html.includes("/editor-pro.css?v=65.0")&&html.includes("/editor.js?v=65.0")],
+  ["V59.5 versioned assets",html.includes("/v15.js?v=59.5")&&html.includes("/owner.js?v=59.5")&&html.includes("/downloader.js?v=72.2")&&html.includes("/downloader.css?v=71.0")&&html.includes("/v59.css?v=59.5")&&html.includes("/editor-pro.css?v=65.0")&&html.includes("/editor.js?v=65.0")],
   ["service worker cache and V59.5 assets",html.includes("navigator.serviceWorker.register")&&sw.includes("aryanzz-v72-2")&&sw.includes("/editor.js?v=65.0")],
   ["downloader input, result and backend status",html.includes('id="analyze"')&&html.includes('id="downloadResult"')&&html.includes('id="backendStatus"')],
   ["unified self-hosted downloader API",downloader.includes('postJson("/api/info"')&&downloader.includes('"/api/direct-file?url="')&&downloader.includes("PLATFORM_NAMES")&&!downloader.toLowerCase().includes("savenow")],
@@ -39,7 +39,7 @@ const checks=[
   ["V72 local FFmpeg worker bootstrap is included",file("../public/ffmpeg-worker-bootstrap.js").includes("@ffmpeg/ffmpeg@0.12.10")&&file("../public/sw.js").includes("/ffmpeg-worker-bootstrap.js?v=72.2")],
   ["V72 parses adaptive video-only MP4 plus matching M4A audio",workerSource.includes("adaptiveSource=false")&&workerSource.includes("hybridVideoFormat(item,instance,true,true)")&&workerSource.includes("videoOnly")&&downloader.includes('adaptive.map(item=>String(item?.type||item?.mimeType||')],
   ["V72 browser remuxes separate tracks locally with FFmpeg WASM",downloader.includes("loadBrowserFfmpeg")&&downloader.includes("classWorkerURL")&&downloader.includes("ffmpeg.exec")&&downloader.includes('"copy"')&&downloader.includes("muxYoutubeMp4")],
-  ["V72 FFmpeg worker bootstrap is same-origin and cached",file("../public/ffmpeg-worker-bootstrap.js").includes("@ffmpeg/ffmpeg@0.12.10")&&sw.includes("/ffmpeg-worker-bootstrap.js?v=72.1")],
+  ["V72 FFmpeg worker bootstrap is same-origin and cached",file("../public/ffmpeg-worker-bootstrap.js").includes("@ffmpeg/ffmpeg@0.12.10")&&sw.includes("/ffmpeg-worker-bootstrap.js?v=72.2")],
   ["Hybrid stream download is restricted to approved media hosts",workerSource.includes("function hybridMediaUrl")&&workerSource.includes("googlevideo.com")&&workerSource.includes("HYBRID_MEDIA_ROOTS")],
   ["Hybrid download uses attachment streaming and range requests",workerSource.includes("function hybridYoutubeFile")&&workerSource.includes("trustedInstance")&&workerSource.includes("content-disposition")&&workerSource.includes("headers.range=range")],
   ["No Cobalt or paid SaveNow downloader remains",!workerSource.includes("cobaltConfig")&&!workerSource.includes("SAVENOW_BASE")&&!workerSource.includes("SAVENOW_API_KEY")],
