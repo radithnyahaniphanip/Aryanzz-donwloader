@@ -414,6 +414,13 @@ try{
   assert.equal((await directSocialFile.arrayBuffer()).byteLength,4);
   console.log("✔ Direct MP4 URLs on social/CDN domains bypass platform extraction and download as files");
 
+  const noKeyPreview=await worker.fetch(new Request("https://aryanzz.example/api/youtube/info?url="+encodeURIComponent("https://www.youtube.com/watch?v=4dpnHLPMQGs")),{});
+  assert.equal(noKeyPreview.status,200);
+  const noKeyPreviewData=await noKeyPreview.json();
+  assert.equal(noKeyPreviewData.providerReady,false);
+  assert.equal(noKeyPreviewData.title,"Fallback YouTube Preview");
+  console.log("✔ YouTube link shows public oEmbed preview without configuring or charging a downloader provider");
+
   const info=await worker.fetch(new Request("https://aryanzz.example/api/youtube/info?url="+encodeURIComponent("https://www.youtube.com/watch?v=K1Pu75yJUOE")),{SAVENOW_API_KEY:"test-secret"});
   assert.equal(info.status,200);
   const infoData=await info.json();
@@ -475,4 +482,4 @@ try{
   globalThis.fetch=originalFetch;
 }
 
-console.log("\nARYANZZ V69.0 zero-server downloader, community handoff, Gradient Studio, file hashing and music recognition smoke tests passed.");
+console.log("\nARYANZZ V69.2 YouTube flow, TikTok community handoff, zero-server downloader, Gradient Studio, file hashing and music recognition smoke tests passed.");
