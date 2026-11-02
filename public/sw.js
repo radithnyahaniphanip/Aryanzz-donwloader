@@ -1,4 +1,4 @@
-const CACHE="aryanzz-v73-4";
+const CACHE="aryanzz-v73-5";
 const SHELL=["/?v=73.5","/manifest.webmanifest?v=73.5","/v674.css?v=67.6","/v674.js?v=67.6","/v677.css?v=67.7","/v677.js?v=67.7","/v680.css?v=71.0","/v680.js?v=71.0","/advanced.js?v=59.5","/v15.js?v=59.5","/v15.css?v=59.5","/v25.css?v=72.3","/v25.js?v=72.3","/owner.css?v=59.5","/owner.js?v=59.5","/downloader.css?v=73.5","/downloader.js?v=73.5","/ffmpeg-worker-bootstrap.js?v=73.5","/v59.css?v=59.5","/v59.js?v=59.5","/editor-pro.css?v=65.0","/editor.js?v=65.0","/music-recognition.css?v=71.0","/music-recognition.js?v=71.0","/v690.css?v=71.0"];
 async function browserMediaDownload(request){
   const incoming=new URL(request.url),raw=incoming.searchParams.get("url")||"",instance=incoming.searchParams.get("instance")||"",ext=String(incoming.searchParams.get("ext")||"mp4").toLowerCase(),title=String(incoming.searchParams.get("title")||"aryanzz-media");
