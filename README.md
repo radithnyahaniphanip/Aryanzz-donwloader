@@ -42,29 +42,9 @@ ARYANZZ is a mobile-first creator workspace hosted on Cloudflare Workers. V71.0 
 - TikTok extraction is intentionally disabled. Direct public media-file URLs continue to work.
 - No API key, private extractor server, Cobalt, SaveNow, Docker Desktop, or paid hosting is required by this path.
 
-## V70.1 — Zero-server Free Edition
+## V70.1 — Initial zero-server release (historical)
 
-ARYANZZ V70.1 removes the requirement for a self-hosted extraction server. Cloudflare Workers continues to host the website and handles direct media URLs only. No Render, Railway, VPS, Docker host, paid extractor, or private server is required.
-
-### Download behavior
-
-- **Direct media URLs:** supported media file links (for example MP4, WebM, MP3, M4A, WAV and other allowlisted formats) can be inspected and streamed through the Cloudflare Worker to the browser. Source host CORS does not apply to the server-side Worker fetch, but source host access controls, redirects, and anti-hotlink rules can still prevent a download.
-- **Social-media URLs:** ARYANZZ detects the platform and provides a handoff to the Cobalt community-instance directory. The user selects a currently active community frontend and pastes the same link there. ARYANZZ does not proxy community APIs or pretend those services are guaranteed. Instance owners control availability, supported platforms, rate limits, and privacy policies.
-- **Search by title:** works without an extractor by opening YouTube's own search results. The user copies the chosen video URL back into the Link URL tab.
-- **History and favorites:** remain local in the user's browser.
-
-### Important limitations
-
-There is no reliable, permissionless, permanently free public API that ARYANZZ can use to extract every social-media platform from inside its own interface. Cobalt's public API documentation says there is no generally available pre-hosted API and hosted instances should only be used with permission. Community instances are independently operated and can go offline, require a challenge, or limit usage. Therefore social-media downloads are a community-provider handoff, not native one-click downloads inside ARYANZZ.
-
-Cloudflare Workers Free currently provides 100,000 requests/day, 10 ms CPU time per invocation, and 50 external subrequests per invocation. It is suitable for lightweight URL validation and proxying direct media streams, not running yt-dlp/FFmpeg extraction itself.
-
-### Privacy and safety
-
-- ARYANZZ does not store downloaded media on its own server.
-- Do not paste private links, login cookies, or account credentials into third-party community providers.
-- Download only content you own or are authorized to save.
-- Provider availability and supported formats can change at any time.
+V70.1 established the no-private-extractor hosting direction. Its original social-link handoff was superseded by the V71.0 YouTube hybrid described above. The current YouTube flow no longer uses the old Cobalt/SaveNow routes.
 
 ## V68.1 — External extraction server
 
@@ -85,17 +65,18 @@ The GitHub Actions workflow deploys the Worker and static assets, then checks th
 
 `PLATFORM_API_ORIGIN` and `PLATFORM_API_TOKEN` must be configured as GitHub Actions repository secrets. The workflow syncs them to the Cloudflare Worker during deployment.
 
-## Downloader
+## Downloader — V71.0
 
-The current frontend uses the self-hosted API routes `/api/info` and `/api/download`. It no longer uses the SaveNow wallet flow for the main downloader UI.
+- **YouTube:** query public Piped instances first and Invidious instances as fallback. The list is based on the projects' published public-instance directories.
+- **Video:** only progressive/muxed MP4 streams are offered. Video-only DASH streams are intentionally omitted because combining them with audio requires a media merger.
+- **Audio:** only source formats actually returned by the provider (currently M4A/WebM/OGG where available) are shown. ARYANZZ does not transcode to MP3 or invent bitrate options.
+- **Download:** Cloudflare Worker validates the selected provider and stream host, forwards Range requests, and returns an attachment so Chrome can manage the file.
+- **Direct media:** supported direct MP4, WebM, MOV, MP3, M4A and other allowlisted links continue to download through the Worker.
+- **TikTok:** paused for this release; no external TikTok extractor is configured.
 
-The backend is powered by yt-dlp and FFmpeg. The current allowlist includes YouTube, TikTok, Instagram, Threads, Facebook, Pinterest, X/Twitter, Reddit, Vimeo, Dailymotion, SoundCloud, Twitch, Streamable, Tumblr, Bilibili, VK, OK.ru, Rutube, Likee, Snapchat, Imgur, Bandcamp, Mixcloud, TED, Internet Archive, Loom, Rumble, Odysee, Weibo and Xiaohongshu.
+Public community instances are independently operated. A working metadata endpoint does not guarantee a downloadable stream. Instances can be unavailable, rate-limited, blocked from Cloudflare egress, or return no progressive format. The UI therefore disables download when no valid stream URL is found. This is a best-effort zero-cost path, not a guaranteed 24/7 download service.
 
-**This is broad platform support, not a promise that every URL will work.** Availability depends on the platform's current extractor, public access, region, age/login restrictions and source changes. Private pages, DRM, login walls and access controls are not bypassed. Only download media you own or are authorized to save.
-
-Direct media URLs remain supported by the Cloudflare Worker without the extraction server when the URL points to a supported media file extension.
-
-## Self-hosted extraction backend setup
+## Self-hosted extraction backend setup (legacy; not used by V71.0)
 
 The repository includes `Dockerfile` and `render.yaml` for a Docker host such as Render.
 
@@ -239,14 +220,14 @@ The API listens on port 3000 by default. Set `ALLOWED_ORIGINS` if browser client
 
 ## Legacy API note
 
-The older `/api/youtube/*` SaveNow endpoints remain in the Worker for backward compatibility with older clients. The V59.5 downloader page does not call those endpoints; the primary downloader uses the self-hosted yt-dlp backend. The editor UI is V60.0.
+V71.0 removes the old Cobalt and SaveNow YouTube endpoints. The active YouTube routes are `/api/youtube/info`, `/api/youtube/status`, and `/api/youtube/stream`. No provider key or private extractor is needed.
 
+## V71.0 — Hybrid YouTube download
 
-## V70.1 — Native Chrome Download Studio
+- Piped primary, Invidious fallback.
+- Real available quality choices only; no fake 4K/MP3 selections.
+- Chrome attachment download with HTTP Range forwarding.
+- Public instance failover and clear unavailable state.
+- TikTok remains disabled.
+- No Cobalt, SaveNow, Docker Desktop, API key, private server, or paid hosting.
 
-- Direct media URLs now use a GET attachment endpoint so Chrome/Android receives a normal browser download instead of buffering the entire file in page JavaScript.
-- Completed YouTube jobs, when an explicitly enabled provider is available, are handed to Chrome through the attachment endpoint; the browser handles download progress.
-- Paid SaveNow extraction is disabled by default. It requires the explicit Worker flag `ALLOW_PAID_YOUTUBE_PROVIDER=true`; the deployment does not set this flag. This prevents accidental balance use.
-- YouTube metadata preview remains available via oEmbed. When no free extractor is configured, format choices are visible but the Download button is disabled with an honest explanation.
-- TikTok extraction/community routing is paused in this release to focus on YouTube and direct media files.
-- Formats offered by the UI are not a guarantee of source availability; actual resolutions depend on the extractor and source.
