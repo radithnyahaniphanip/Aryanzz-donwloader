@@ -1,3 +1,5 @@
+import { Innertube } from "youtubei.js";
+
 import assert from "node:assert/strict";
 
 const videoId = process.env.ARYANZZ_TEST_VIDEO_ID || "4dpnHLPMQGs";
@@ -25,6 +27,38 @@ const failures = [];
 
 async function request(url, init = {}) {
   return fetch(url, { ...init, signal: AbortSignal.timeout(4500) });
+}
+
+try {
+  const yt = await Innertube.create({
+    client_type: "ANDROID_VR",
+    lang: "id",
+    location: "ID",
+    retrieve_player: false,
+    generate_session_locally: true,
+    enable_session_cache: false,
+    fast_fail: true
+  });
+  const info = await yt.getInfo(videoId);
+  const directFormats = (info.streaming_data?.formats || []).filter(format =>
+    format && format.has_video && format.has_audio &&
+    String(format.mime_type || "").toLowerCase().startsWith("video/mp4") &&
+    typeof format.url === "string" && format.url.length > 0
+  );
+  for (const format of directFormats) {
+    const probe = await request(format.url, { headers: { range: "bytes=0-0", accept: "*/*" } });
+    if (!(probe.ok || probe.status === 206)) {
+      if (probe.body) await probe.body.cancel();
+      continue;
+    }
+    if (probe.body) await probe.body.cancel();
+    console.log("LIVE PROVIDER PASS: YouTube.js ANDROID_VR returned " +
+      (format.quality_label || format.height || "MP4") + " and a byte-range stream.");
+    process.exit(0);
+  }
+  failures.push("YouTube.js ANDROID_VR: no direct muxed MP4 URL usable without deciphering");
+} catch (error) {
+  failures.push("YouTube.js ANDROID_VR: " + String(error.message || error));
 }
 
 for (const provider of providers) {
