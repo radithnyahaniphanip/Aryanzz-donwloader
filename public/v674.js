@@ -5,14 +5,51 @@ const read=(k)=>{try{return JSON.parse(localStorage.getItem(k)||"[]")}catch{retu
 function toast(s){let n=$("v674Toast");if(!n){n=document.createElement("div");n.id="v674Toast";n.className="v674-toast";document.body.append(n)}n.textContent=s;n.classList.add("show");clearTimeout(toast.timer);toast.timer=setTimeout(()=>n.classList.remove("show"),2200)}
 async function copy(s){try{await navigator.clipboard.writeText(s);return true}catch{try{const t=document.createElement("textarea");t.value=s;document.body.append(t);t.select();const ok=document.execCommand("copy");t.remove();return ok}catch{return false}}}
 function initTheme(){document.body.dataset.theme=localStorage.getItem(THEME)||"dark";const b=$("themeToggle");if(!b)return;const draw=()=>{b.textContent=document.body.dataset.theme==="light"?"☾":"☼"};draw();b.onclick=()=>{const v=document.body.dataset.theme==="light"?"dark":"light";document.body.dataset.theme=v;localStorage.setItem(THEME,v);draw();toast("Tema "+v+" diaktifkan")}}
-function initSearch(){const a=$("downloadLinkMode"),b=$("downloadTitleMode"),x=$("linkModePanel"),y=$("titleModePanel");if(a&&b){const set=v=>{const link=v==="link";x.hidden=!link;y.hidden=link;a.classList.toggle("active",link);b.classList.toggle("active",!link);a.setAttribute("aria-selected",String(link));b.setAttribute("aria-selected",String(!link))};a.onclick=()=>set("link");b.onclick=()=>set("title")}
-const results=$("titleSearchResults"),help=$("titleSearchHelp");
+function initSearch(){
+const a=$("downloadLinkMode"),b=$("downloadTitleMode"),x=$("linkModePanel"),y=$("titleModePanel"),picker=$("platformPicker");
+const results=$("titleSearchResults"),help=$("titleSearchHelp"),searchInput=$("titleSearch");
+const platforms={
+ youtube:{name:"YouTube",url:q=>"https://www.youtube.com/results?search_query="+encodeURIComponent(q)},
+ tiktok:{name:"TikTok",url:q=>"https://www.tiktok.com/search?q="+encodeURIComponent(q)},
+ instagram:{name:"Instagram",url:q=>"https://www.google.com/search?q="+encodeURIComponent("site:instagram.com "+q)},
+ snackvideo:{name:"SnackVideo",url:q=>"https://www.google.com/search?q="+encodeURIComponent("site:snackvideo.com "+q)},
+ pinterest:{name:"Pinterest",url:q=>"https://www.pinterest.com/search/pins/?q="+encodeURIComponent(q)},
+ facebook:{name:"Facebook",url:q=>"https://www.facebook.com/search/videos/?q="+encodeURIComponent(q)},
+ x:{name:"X",url:q=>"https://x.com/search?q="+encodeURIComponent(q)},
+ reddit:{name:"Reddit",url:q=>"https://www.reddit.com/search/?q="+encodeURIComponent(q)},
+ vimeo:{name:"Vimeo",url:q=>"https://vimeo.com/search?q="+encodeURIComponent(q)}
+};
+let selected="youtube";
+const setMode=v=>{const link=v==="link";if(x)x.hidden=!link;if(y)y.hidden=link;if(a){a.classList.toggle("active",link);a.setAttribute("aria-selected",String(link))}if(b){b.classList.toggle("active",!link);b.setAttribute("aria-selected",String(!link))}};
+a?.addEventListener("click",()=>setMode("link"));b?.addEventListener("click",()=>setMode("title"));
+const setPlatform=id=>{selected=platforms[id]?id:"youtube";picker?.querySelectorAll("[data-platform]").forEach(btn=>{const active=btn.dataset.platform===selected;btn.classList.toggle("active",active);btn.setAttribute("aria-pressed",String(active))});const name=platforms[selected].name;const label=y?.querySelector("label");if(label)label.textContent="CARI JUDUL DI "+name.toUpperCase();if(searchInput)searchInput.placeholder=selected==="youtube"?"Contoh: DJ tabola bale":"Ketik judul yang ingin dicari…";if(help)help.textContent="Pencarian akan dibuka melalui "+name+".";setMode("title")};
+picker?.addEventListener("click",e=>{const btn=e.target.closest("[data-platform]");if(btn)setPlatform(btn.dataset.platform)});
 const duration=v=>{if(!Number.isFinite(Number(v)))return "Durasi tidak tersedia";const n=Math.max(0,Math.floor(Number(v)));return Math.floor(n/60)+":"+String(n%60).padStart(2,"0")};
-const go=async()=>{const q=($("titleSearch").value||"").trim();if(!q){help.textContent="Masukkan judul video yang ingin dicari.";return}if(q.length<2){help.textContent="Masukkan minimal 2 karakter.";return}results.hidden=false;results.replaceChildren();const loading=document.createElement("div");loading.className="v674-search-loading";loading.textContent="Mode tanpa server aktif. Membuka hasil pencarian YouTube langsung…";results.append(loading);const btn=$("titleSearchBtn");btn.disabled=true;btn.textContent="Mencari…";
-try{const response=await fetch("/api/search",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({query:q}),cache:"no-store"});const data=await response.json().catch(()=>({}));if(!response.ok)throw Error(data.error||"Pencarian gagal.");results.replaceChildren();const items=Array.isArray(data.results)?data.results:[];if(!items.length){const empty=document.createElement("div");empty.className="v674-search-empty";empty.textContent="Tidak ada hasil. Coba kata kunci yang lebih spesifik.";results.append(empty);return}items.forEach(item=>{const card=document.createElement("article");card.className="v674-search-result";if(item.thumbnail){try{const u=new URL(item.thumbnail);if(u.protocol==="https:"){const img=document.createElement("img");img.src=u.href;img.alt="Thumbnail video";img.loading="lazy";card.append(img)}}catch{}}const info=document.createElement("div"),title=document.createElement("h3"),meta=document.createElement("p"),pick=document.createElement("button");title.textContent=item.title||"Video tanpa judul";meta.textContent=[item.channel,duration(item.duration)].filter(Boolean).join(" · ");pick.type="button";pick.textContent="Pilih & periksa kualitas";pick.onclick=()=>{const u=$("url");u.value=item.url;$("downloadLinkMode").click();$("analyze").click()};info.append(title,meta,pick);card.append(info);results.append(card)});help.textContent=items.length+" hasil ditemukan. Pilih video untuk melihat kualitas unduhan yang tersedia."}
-catch(error){results.replaceChildren();const note=document.createElement("div");note.className="v690-search-fallback";const p=document.createElement("p");p.textContent="Pencarian judul otomatis memerlukan mesin ekstraksi. Agar tetap gratis tanpa server, buka hasil YouTube langsung lalu salin tautan video ke kolom Link URL.";const a=document.createElement("a");a.className="primary";a.href="https://www.youtube.com/results?search_query="+encodeURIComponent(q);a.target="_blank";a.rel="noopener noreferrer";a.textContent="Buka hasil YouTube ↗";note.append(p,a);results.append(note);help.textContent="Setelah menemukan video, salin URL-nya dan tempel ke tab Link URL."}
-finally{btn.disabled=false;btn.textContent="Cari video ⌕"}};
-$("titleSearchBtn")?.addEventListener("click",go);$("titleSearch")?.addEventListener("keydown",e=>{if(e.key==="Enter")go()})}
+const go=async()=>{
+const q=(searchInput?.value||"").trim();if(!q){if(help)help.textContent="Masukkan judul yang ingin dicari.";return}if(q.length<2){if(help)help.textContent="Masukkan minimal 2 karakter.";return}
+results.hidden=false;results.replaceChildren();
+const target=platforms[selected],link=target.url(q);
+if(selected==="youtube"){
+const loading=document.createElement("div");loading.className="v674-search-loading";loading.textContent="Mencari di YouTube…";results.append(loading);
+const btn=$("titleSearchBtn");if(btn){btn.disabled=true;btn.textContent="Mencari…"}
+try{
+const response=await fetch("/api/search",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({query:q}),cache:"no-store",signal:AbortSignal.timeout(8000)});
+const data=await response.json().catch(()=>({}));if(!response.ok)throw Error(data.error||"Pencarian internal belum aktif.");
+const items=Array.isArray(data.results)?data.results:[];
+if(items.length){results.replaceChildren();items.forEach(item=>{const card=document.createElement("article");card.className="v674-search-result";if(item.thumbnail){try{const u=new URL(item.thumbnail);if(u.protocol==="https:"){const img=document.createElement("img");img.src=u.href;img.alt="Thumbnail";img.loading="lazy";card.append(img)}}catch{}}const info=document.createElement("div"),title=document.createElement("h3"),meta=document.createElement("p"),pick=document.createElement("button");title.textContent=item.title||"Video tanpa judul";meta.textContent=[item.channel,duration(item.duration)].filter(Boolean).join(" · ");pick.type="button";pick.textContent="Pilih video";pick.onclick=()=>{const input=$("url");input.value=item.url;setMode("link");$("analyze")?.click()};info.append(title,meta,pick);card.append(info);results.append(card)});if(help)help.textContent=items.length+" hasil ditemukan.";return}
+}catch{}
+finally{if(btn){btn.disabled=false;btn.textContent="Cari ⌕"}}
+}
+results.replaceChildren();
+const card=document.createElement("article");card.className="v674-search-result v736-search-handoff";
+const title=document.createElement("h3");title.textContent="Hasil pencarian "+target.name;
+const note=document.createElement("p");note.textContent="Buka hasil di "+target.name+", pilih video, lalu salin tautannya ke ARYANZZ.";
+const open=document.createElement("a");open.className="primary";open.href=link;open.target="_blank";open.rel="noopener noreferrer";open.textContent="Buka hasil "+target.name+" ↗";
+card.append(title,note,open);results.append(card);
+if(help)help.textContent="Hasil dibuka di "+target.name+". Tempel tautan publik di tab Tempel tautan untuk memeriksa dukungan unduhan.";
+};
+$("titleSearchBtn")?.addEventListener("click",go);searchInput?.addEventListener("keydown",e=>{if(e.key==="Enter")go()});
+}
 function initTools(){const input=$("toolSearch"),grid=$("toolGrid"),filters=$("toolFilters"),empty=$("toolEmpty");if(!input||!grid||!filters)return;let category="all";const cards=[...grid.querySelectorAll(".tool")];const apply=()=>{let n=0;const q=input.value.toLowerCase().trim();cards.forEach(c=>{const show=(category==="all"||c.dataset.category===category)&&c.textContent.toLowerCase().includes(q);c.hidden=!show;if(show)n++});empty.hidden=n>0};filters.onclick=e=>{const b=e.target.closest("[data-tool-filter]");if(!b)return;category=b.dataset.toolFilter;filters.querySelectorAll("button").forEach(x=>x.classList.toggle("active",x===b));apply()};input.oninput=apply}
 const rand=(a,b)=>Math.random()*(b-a)+a;
 function toHex(h,s,l){s/=100;l/=100;const k=n=>(n+h/30)%12,a=s*Math.min(l,1-l),f=n=>l-a*Math.max(-1,Math.min(k(n)-3,Math.min(9-k(n),1)));return "#"+[f(0),f(8),f(4)].map(v=>Math.round(v*255).toString(16).padStart(2,"0")).join("").toUpperCase()}
