@@ -549,7 +549,16 @@ async function imageFile(request){
   const finalFilename=cleanBase+"."+extension;
   const headers=new Headers({"content-type":mime,"content-disposition":(preview?"inline":"attachment")+"; filename*=UTF-8''"+encodeURIComponent(finalFilename),"cache-control":"no-store","x-content-type-options":"nosniff","accept-ranges":"none"});
   if(size)headers.set("content-length",String(size));
-  return new Response(upstream.body,{status:200,headers});
+  const maxImageBytes=25*1024*1024;
+  let streamedBytes=0;
+  const limitedBody=upstream.body.pipeThrough(new TransformStream({
+    transform(chunk,controller){
+      streamedBytes+=chunk.byteLength;
+      if(streamedBytes>maxImageBytes){controller.error(new Error("Gambar melebihi batas 25 MB."));return;}
+      controller.enqueue(chunk);
+    }
+  }));
+  return new Response(limitedBody,{status:200,headers});
 }
 async function searchSocialImages(request){
   let body;try{body=await request.json()}catch{return json({error:"Body JSON tidak valid."},400)}
