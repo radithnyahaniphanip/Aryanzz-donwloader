@@ -123,7 +123,7 @@
         const mod=await import(moduleUrl);
         const ffmpeg=new mod.FFmpeg();
         [coreURL,wasmURL]=await Promise.all([loadBlob(coreBase+"/ffmpeg-core.js","text/javascript"),loadBlob(coreBase+"/ffmpeg-core.wasm","application/wasm")]);
-        await ffmpeg.load({coreURL,wasmURL,classWorkerURL:new URL("/ffmpeg-worker-bootstrap.js?v=72.0",location.origin).href});
+        await ffmpeg.load({coreURL,wasmURL,classWorkerURL:new URL("/ffmpeg-worker-bootstrap.js?v=72.1",location.origin).href});
         return ffmpeg;
       }finally{
         if(coreURL)URL.revokeObjectURL(coreURL);
@@ -192,7 +192,8 @@
     if(mode==="audio")selected=candidates.find(item=>item.ext===audioFormat)||candidates[0];
     else{
       const wanted=Number(quality)||720;
-      selected=candidates.find(item=>Number(item.height)===wanted)||candidates.filter(item=>Number(item.height)<=wanted).sort((x,y)=>Number(y.height)-Number(x.height))[0]||candidates.sort((x,y)=>Number(y.height)-Number(x.height))[0];
+      const chooseAtHeight=height=>candidates.filter(item=>Number(item.height)===height).sort((a,b)=>Number(Boolean(a.videoOnly))-Number(Boolean(b.videoOnly)))[0];
+      selected=chooseAtHeight(wanted)||candidates.filter(item=>Number(item.height)<=wanted).sort((a,b)=>Number(b.height)-Number(a.height)||Number(Boolean(a.videoOnly))-Number(Boolean(b.videoOnly)))[0]||candidates.slice().sort((a,b)=>Number(b.height)-Number(a.height)||Number(Boolean(a.videoOnly))-Number(Boolean(b.videoOnly)))[0];
     }
     if(!selected)throw new Error("Kualitas/format yang dipilih tidak tersedia dari sumber komunitas.");
     if(mode==="video"&&selected.videoOnly){
@@ -351,6 +352,13 @@
     }catch{return fallback;}
   }
   const BROWSER_MEDIA_ROOTS=["kavin.rocks","leptons.xyz","nosebs.ru","privacy.com.de","adminforge.de","piped.yt","drgns.space","owo.si","ducks.party","codespace.cz","reallyaweso.me","private.coffee","darkness.services","orangenet.cc"];
+  function browserProviderRoot(host){
+    const labels=String(host||"").toLowerCase().split(".").filter(Boolean);
+    if(labels.length<2)return labels.join(".");
+    const lastTwo=labels.slice(-2).join(".");
+    const compound=new Set(["com.de","co.uk","org.uk","com.au","net.au","co.nz","com.br","co.jp","com.sg"]);
+    return compound.has(lastTwo)&&labels.length>=3?labels.slice(-3).join("."):lastTwo;
+  }
   function browserHybridMediaUrl(raw,trustedOrigin){
     try{
       const u=new URL(raw,trustedOrigin||undefined);
@@ -358,7 +366,12 @@
       const h=u.hostname.toLowerCase();
       if(h==="googlevideo.com"||h.endsWith(".googlevideo.com"))return u;
       if(BROWSER_MEDIA_ROOTS.some(root=>h===root||h.endsWith("."+root)))return u;
-      if(trustedOrigin&&u.origin===new URL(trustedOrigin).origin)return u;
+      if(trustedOrigin){
+        const trusted=new URL(trustedOrigin);
+        if(u.origin===trusted.origin)return u;
+        const root=browserProviderRoot(trusted.hostname);
+        if(root&&(h===root||h.endsWith("."+root)))return u;
+      }
       return null;
     }catch{return null;}
   }
@@ -427,29 +440,29 @@
   async function browserHybridYoutubeInfo(raw){
     const match=(()=>{try{const u=new URL(raw);if(["youtu.be","www.youtu.be"].includes(u.hostname))return u.pathname.split("/").filter(Boolean)[0]||null;return u.searchParams.get("v")||u.pathname.match(/^\/(?:shorts|embed|live|v)\/([A-Za-z0-9_-]{6,20})/)?.[1]||null;}catch{return null;}})();
     if(!match||! /^[A-Za-z0-9_-]{6,20}$/.test(match))throw new Error("ID video YouTube tidak valid.");
-    const tryGroup=async(instances,fn)=>{
-      const timeoutMs=fn===browserInvidiousInfo?12000:8000;
-      const controllers=instances.map(()=>browserProviderTimeout(timeoutMs));
-      try{return await Promise.any(instances.map((instance,i)=>fn(instance,match,controllers[i].signal).finally(()=>controllers[i].clear())));}
-      catch(error){const reasons=Array.isArray(error?.errors)?error.errors.map((item,i)=>instances[i]+": "+String(item?.message||"gagal")).join(" | "):String(error?.message||"gagal");throw new Error("Semua instance pada kelompok ini gagal: "+reasons.slice(0,900));}
-      finally{controllers.forEach(t=>t.abort());}
+    const tryGroup=(instances,fn)=>{
+      const controllers=instances.map(()=>browserProviderTimeout(6500));
+      const promise=Promise.any(instances.map((instance,i)=>fn(instance,match,controllers[i].signal).finally(()=>controllers[i].clear())));
+      return {promise,abort:()=>controllers.forEach(controller=>controller.abort())};
     };
-    let invidiousError,pipedError;
-    // Prefer Invidious first: its formatStreams endpoint supplies already-muxed MP4.
-    const invidiousInstances=await currentInvidiousInstances();
-    for(let offset=0;offset<invidiousInstances.length;offset+=5){
-      try{return await tryGroup(invidiousInstances.slice(offset,offset+5),browserInvidiousInfo);}
-      catch(error){invidiousError=error;}
+    const [invidiousInstances,pipedInstances]=await Promise.all([currentInvidiousInstances(),currentPipedInstances()]);
+    const batches=Math.max(Math.ceil(invidiousInstances.length/5),Math.ceil(pipedInstances.length/5));
+    for(let batch=0;batch<batches;batch++){
+      const groups=[];
+      const inv=invidiousInstances.slice(batch*5,batch*5+5),piped=pipedInstances.slice(batch*5,batch*5+5);
+      if(inv.length)groups.push(tryGroup(inv,browserInvidiousInfo));
+      if(piped.length)groups.push(tryGroup(piped,browserPipedInfo));
+      if(!groups.length)break;
+      try{
+        const result=await Promise.any(groups.map(group=>group.promise));
+        groups.forEach(group=>group.abort());
+        return result;
+      }catch(error){groups.forEach(group=>group.abort());}
     }
-    const pipedInstances=await currentPipedInstances();
-    for(let offset=0;offset<pipedInstances.length;offset+=5){
-      try{return await tryGroup(pipedInstances.slice(offset,offset+5),browserPipedInfo);}
-      catch(error){pipedError=error;}
-    }
-    const response=await fetch("/api/youtube/hybrid/info?url="+encodeURIComponent(raw),{cache:"no-store",signal:AbortSignal.timeout(35000)});
+    const response=await fetch("/api/youtube/hybrid/info?url="+encodeURIComponent(raw),{cache:"no-store",signal:AbortSignal.timeout(12000)});
     const fallback=await response.json().catch(()=>({}));
     if(response.ok&&fallback.providerReady)return fallback;
-    throw new Error("MP4 belum tersedia saat ini. Semua penyedia komunitas yang diperiksa gagal diakses atau tidak mengirim stream MP4 yang kompatibel. Link YouTube tetap valid; masalahnya ada pada penyedia stream, bukan pada link. Coba lagi nanti.");
+    throw new Error("MP4 belum tersedia. Instance komunitas tidak mengirim stream yang dapat digunakan. Ini bukan kesalahan link; coba lagi nanti.");
   }
   async function checkLink(url, button) {
     const out = $("downloadResult");
