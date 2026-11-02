@@ -29,12 +29,12 @@ async function browserMediaDownload(request){
     }catch(error){lastError=String(error.message||"network/CORS error");upstream=null;}
   }
   if(!upstream||![200,206].includes(upstream.status)||!upstream.body)return new Response(JSON.stringify({error:"Koneksi browser ke provider gagal: "+(lastError||("HTTP "+(upstream?.status||502)))}),{status:502,headers:{"content-type":"application/json","cache-control":"no-store"}});
-  if(range&&upstream.status!==206){await upstream.body.cancel().catch(()=>{});return new Response(JSON.stringify({error:"Provider browser tidak mendukung unduhan parsial/resume (HTTP "+upstream.status+")."}),{status:502,headers:{"content-type":"application/json","cache-control":"no-store"}});
+  if(range&&upstream.status!==206){await upstream.body.cancel().catch(()=>{});return new Response(JSON.stringify({error:"Provider browser tidak mendukung unduhan parsial/resume (HTTP "+upstream.status+")."}),{status:502,headers:{"content-type":"application/json","cache-control":"no-store"}});}
   const contentType=String(upstream.headers.get("content-type")||"").split(";")[0].toLowerCase();
-  if(contentType.startsWith("text/")||contentType.includes("json")||contentType.includes("xml")){await upstream.body.cancel().catch(()=>{});return new Response(JSON.stringify({error:"Provider browser mengirim halaman, bukan file media."}),{status:502,headers:{"content-type":"application/json","cache-control":"no-store"});}
+  if(contentType.startsWith("text/")||contentType.includes("json")||contentType.includes("xml")){await upstream.body.cancel().catch(()=>{});return new Response(JSON.stringify({error:"Provider browser mengirim halaman, bukan file media."}),{status:502,headers:{"content-type":"application/json","cache-control":"no-store"}});}
   const contentRange=String(upstream.headers.get("content-range")||""),totalMatch=contentRange.match(/\/(\d+)$/);
   const total=Number(totalMatch?.[1]||upstream.headers.get("content-length")||0);
-  if(total>500*1024*1024){await upstream.body.cancel().catch(()=>{});return new Response(JSON.stringify({error:"File melebihi batas 500 MB."}),{status:413,headers:{"content-type":"application/json","cache-control":"no-store"});}
+  if(total>500*1024*1024){await upstream.body.cancel().catch(()=>{});return new Response(JSON.stringify({error:"File melebihi batas 500 MB."}),{status:413,headers:{"content-type":"application/json","cache-control":"no-store"}});}
   const clean=(validation.title||"aryanzz-media").replace(/[\\/:*?"<>|\u0000-\u001f]/g," ").replace(/\s+/g," ").trim().slice(0,90)||"aryanzz-media";
   const filename=clean.toLowerCase().endsWith("."+ext)?clean:clean+"."+ext;
   const headers=new Headers({"content-type":contentType||({mp4:"video/mp4",m4a:"audio/mp4",mp3:"audio/mpeg",webm:"video/webm",opus:"audio/ogg",ogg:"audio/ogg",wav:"audio/wav",flac:"audio/flac"}[ext]||"application/octet-stream"),"content-disposition":"attachment; filename*=UTF-8''"+encodeURIComponent(filename),"cache-control":"no-store","x-content-type-options":"nosniff","accept-ranges":upstream.headers.get("accept-ranges")||"bytes"});
