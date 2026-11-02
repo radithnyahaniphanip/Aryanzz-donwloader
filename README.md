@@ -24,6 +24,13 @@ ARYANZZ is a mobile-first creator workspace hosted on Cloudflare Workers. V71.1 
 | V67.6 | Backend health cleanup, title-based YouTube search routed through yt-dlp, clearer AudD/Shazam status, and DJ scan fallback fixes |
 
 
+## V71.2 — Invidious progressive MP4 format fix
+
+- Fixes the browser parser to recognize Invidious progressive `formatStreams` MP4 records, including `type`/`mime_type`/`mime`, `qualityLabel`/`resolution`, and relative media URLs.
+- Allows HTTPS media URLs on the exact active Piped/Invidious instance origin, while retaining the Googlevideo and community media-host allowlists. Download validation uses the selected provider instance.
+- Video format controls are enabled only when actual progressive video streams are returned; MP3/M4A remains available independently.
+- This does not convert adaptive video-only streams into MP4. Only already-muxed progressive MP4 is offered so audio and video remain together without a paid transcoding backend.
+
 ## V71.1 — Browser-first hybrid provider access
 
 - The YouTube metadata lookup now tries official Piped community API instances directly from the user's browser first, then official Invidious public instances, before falling back to the Cloudflare Worker route. This provides an alternative path when the Worker network receives 401/403/5xx responses from community operators.
