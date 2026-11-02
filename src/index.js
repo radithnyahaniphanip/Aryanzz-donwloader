@@ -159,8 +159,12 @@ async function hybridYoutubeInfo(request){
   const id=youtubeVideoId(raw);if(!id||!/^[A-Za-z0-9_-]{6,20}$/.test(id))return json({error:"ID video YouTube tidak valid."},400);
   const attempts=[];
   const piped=PIPED_PUBLIC_INSTANCES.slice(0,8);
-  const p=await Promise.allSettled(piped.map(async instance=>{const data=await hybridFetchJson(instance+"/streams/"+encodeURIComponent(id));const result=hybridFromPiped(data,instance);if(!result)throw new Error("Tidak ada stream MP4 progresif/audio langsung");return result;}));
-  for(let i=0;i<p.length;i++){if(p[i].status==="fulfilled")return json(p[i].value);attempts.push("Piped "+piped[i]+": "+String(p[i].reason?.message||"gagal").slice(0,80));}
+  // Probe a small batch at a time so one click does not fan out to every community operator.
+  for(let offset=0;offset<piped.length;offset+=3){
+    const batch=piped.slice(offset,offset+3);
+    const results=await Promise.allSettled(batch.map(async instance=>{const data=await hybridFetchJson(instance+"/streams/"+encodeURIComponent(id));const result=hybridFromPiped(data,instance);if(!result)throw new Error("Tidak ada stream MP4 progresif/audio langsung");return result;}));
+    for(let i=0;i<results.length;i++){if(results[i].status==="fulfilled")return json(results[i].value);attempts.push("Piped "+batch[i]+": "+String(results[i].reason?.message||"gagal").slice(0,80));}
+  }
   const inv=INVIDIOUS_PUBLIC_INSTANCES;
   const q=await Promise.allSettled(inv.map(async instance=>{const data=await hybridFetchJson(instance+"/api/v1/videos/"+encodeURIComponent(id)+"?fields=title,videoId,author,lengthSeconds,videoThumbnails,formatStreams,adaptiveFormats");const result=hybridFromInvidious(data,instance);if(!result)throw new Error("Tidak ada stream progresif/audio langsung");return result;}));
   for(let i=0;i<q.length;i++){if(q[i].status==="fulfilled")return json(q[i].value);attempts.push("Invidious "+inv[i]+": "+String(q[i].reason?.message||"gagal").slice(0,80));}
