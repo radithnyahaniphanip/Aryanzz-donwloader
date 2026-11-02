@@ -81,9 +81,14 @@ function socialRateLimited(request){
   return bucket.count>18;
 }
 function safePublicMediaUrl(raw){
-  try{const u=new URL(raw);return u.protocol==="https:"&&!u.username&&!u.password&&!u.port?u:null}catch{return null}
+  try{
+    const u=new URL(raw),h=u.hostname.toLowerCase().replace(/^\[|\]$/g,"");
+    if(u.protocol!=="https:"||u.username||u.password||u.port)return null;
+    if(h==="localhost"||h.endsWith(".localhost")||h.endsWith(".local")||h==="::"||h==="::1"||/^127\./.test(h)||/^10\./.test(h)||/^192\.168\./.test(h)||/^169\.254\./.test(h)||/^172\.(1[6-9]|2\d|3[01])\./.test(h)||/^fc[0-9a-f]{2}:/i.test(h)||/^fd[0-9a-f]{2}:/i.test(h)||/^fe80:/i.test(h))return null;
+    return u;
+  }catch{return null}
 }
-function freeProviderMediaInfo(data,rawUrl){
+function freeProviderMediaInfo(data,rawUrl,requestUrl){
   const normalized=data?.normalized;
   const media=Array.isArray(normalized?.media)?normalized.media:[];
   const mediaItems=media.slice();
@@ -91,27 +96,45 @@ function freeProviderMediaInfo(data,rawUrl){
   for(const rawAudio of [rawResult.audio_url,rawResult.audioUrl,rawResult.music?.audio_url,rawResult.music?.url,rawResult.music?.download_url]){
     if(typeof rawAudio==="string"&&!mediaItems.some(item=>item?.url===rawAudio))mediaItems.push({label:"Audio MP3",type:"audio",url:rawAudio});
   }
+  const title=String(normalized?.title||rawResult.title||rawResult.caption||"Media siap diunduh").slice(0,300);
+  const mimeExtensions={
+    "video/mp4":"mp4","video/webm":"webm","video/quicktime":"mov","video/x-msvideo":"avi",
+    "audio/mpeg":"mp3","audio/mp4":"m4a","audio/aac":"aac","audio/ogg":"ogg","audio/wav":"wav","audio/flac":"flac"
+  };
   const formats=mediaItems.map(item=>{
     const mediaUrl=safePublicMediaUrl(item?.url);if(!mediaUrl)return null;
     const label=String(item?.label||item?.type||"Media").slice(0,100);
     const kind=String(item?.type||item?.kind||label).toLowerCase();
-    const ext=(mediaUrl.pathname.match(/\.([a-z0-9]{2,5})$/i)?.[1]||(/mp3|audio/i.test(label)?"mp3":/m4a/i.test(label)?"m4a":/webm/i.test(label)?"webm":"mp4")).toLowerCase();
-    const audio=/audio|mp3|m4a|aac|opus|flac/.test(kind+" "+label)||["mp3","m4a","aac","opus","flac","wav"].includes(ext);
+    const mime=String(item?.mimeType||item?.mime_type||item?.mimetype||item?.contentType||item?.content_type||"").split(";")[0].trim().toLowerCase();
+    const pathExt=(mediaUrl.pathname.match(/\.([a-z0-9]{2,5})$/i)?.[1]||"").toLowerCase();
+    const declaredExt=String(item?.ext||item?.extension||item?.fileExtension||"").replace(/^\./,"").toLowerCase();
+    const ext=mimeExtensions[mime]||(["mp4","webm","mov","m4v","avi","3gp","mp3","m4a","aac","opus","ogg","wav","flac"].includes(pathExt)?pathExt:"")||(["mp4","webm","mov","m4v","avi","3gp","mp3","m4a","aac","opus","ogg","wav","flac"].includes(declaredExt)?declaredExt:"")||(/mp3/i.test(label)?"mp3":/m4a/i.test(label)?"m4a":/webm/i.test(label)?"webm":/mp4|video/i.test(label+ " "+kind)?"mp4":"");
+    const image=/image|photo|picture|thumbnail|cover/.test(kind+" "+label)||["jpg","jpeg","png","gif","webp","avif"].includes(ext);
+    if(image)return null;
+    const audio=mime.startsWith("audio/")||/audio|mp3|m4a|aac|opus|flac/.test(kind+" "+label)||["mp3","m4a","aac","opus","ogg","wav","flac"].includes(ext);
+    const video=mime.startsWith("video/")||/video/.test(kind+" "+label)||["mp4","webm","mov","m4v","avi","3gp"].includes(ext);
+    if(!audio&&!video)return null;
+    const finalExt=ext||(audio?"mp3":"mp4");
     const rawQuality=item?.height??item?.quality??item?.resolution??item?.qualityLabel??label;
     const qualityMatch=String(rawQuality||"").match(/(?:^|\D)(144|240|360|480|540|576|720|900|960|1080|1440|2160)\s*p?/i)||String(label).match(/(144|240|360|480|540|576|720|900|960|1080|1440|2160)p/i);
     const height=Number(rawQuality)>0?Number(rawQuality):Number(qualityMatch?.[1]||0);
-    const filename=String((data?.normalized?.title||rawResult.title||"aryanzz-media")+"."+(audio?ext:"mp4")).replace(/[^a-zA-Z0-9._-]/g,"_").slice(0,100);
-    const downloadUrl=FREE_MEDIA_API+"/api/fetch-media?url="+encodeURIComponent(mediaUrl.href)+"&filename="+encodeURIComponent(filename);
-    return {mode:audio?"audio":"video",type:audio?"audio":"video",ext:audio?ext:(["mp4","webm","mov"].includes(ext)?ext:"mp4"),height:audio?0:height,videoOnly:false,url:mediaUrl.href,downloadUrl,label,filesize:Number(item?.sizeBytes||item?.size_bytes||0)||null};
+    const videoOnly=video&&(item?.videoOnly===true||item?.video_only===true||item?.hasAudio===false||item?.has_audio===false||item?.audio===false);
+    const filenameBase=title.replace(/\.[a-z0-9]{2,5}$/i,"").replace(/[^a-zA-Z0-9._-]/g,"_").slice(0,90)||"aryanzz-media";
+    const downloadUrl=new URL("/api/social-file",requestUrl);
+    downloadUrl.searchParams.set("url",mediaUrl.href);
+    downloadUrl.searchParams.set("source",rawUrl);
+    downloadUrl.searchParams.set("filename",filenameBase);
+    downloadUrl.searchParams.set("ext",finalExt);
+    downloadUrl.searchParams.set("mode",audio?"audio":"video");
+    return {mode:audio?"audio":"video",type:audio?"audio":"video",ext:finalExt,height:audio?0:height,videoOnly,hasAudio:video?!videoOnly:undefined,mimeType:mime||null,url:mediaUrl.href,downloadUrl:downloadUrl.href,label,filesize:Number(item?.sizeBytes||item?.size_bytes||item?.filesize||0)||null};
   }).filter(Boolean);
-  const title=String(normalized?.title||data?.result?.title||data?.result?.caption||"Media siap diunduh").slice(0,300);
-  const thumbnail=safePublicMediaUrl(normalized?.thumbnail||data?.result?.thumbnail||data?.result?.cover)?.href||null;
-  const duration=Number(normalized?.duration||data?.result?.duration||data?.result?.video?.duration||0)||null;
+  const thumbnail=safePublicMediaUrl(normalized?.thumbnail||rawResult.thumbnail||rawResult.cover)?.href||null;
+  const duration=Number(normalized?.duration||rawResult.duration||rawResult.video?.duration||0)||null;
   if(!formats.length)return null;
   formats.sort((a,b)=>a.mode===b.mode?(b.height-a.height):a.mode==="video"?-1:1);
   return {ok:true,providerName:"Public API",providerReady:true,provider:"Free public provider",source:"Provider komunitas gratis",title,filename:title,duration,thumbnail,type:formats.some(x=>x.mode==="video")?"video":"audio",formats};
 }
-async function freePublicMediaInfo(rawUrl){
+async function freePublicMediaInfo(rawUrl,requestUrl){
   const key=freePlatformKey(rawUrl);
   if(!key)return json({error:"Platform belum didukung oleh provider gratis."},400);
   const endpoint=FREE_MEDIA_API+"/api/download/"+key+"?url="+encodeURIComponent(rawUrl);
@@ -119,16 +142,145 @@ async function freePublicMediaInfo(rawUrl){
     const response=await fetch(endpoint,{headers:{accept:"application/json"},signal:AbortSignal.timeout(28000),cache:"no-store"});
     const data=await response.json().catch(()=>({}));
     if(!response.ok||data?.success===false)return json({error:data?.error?.message||data?.error||"Provider gratis menjawab HTTP "+response.status+"."},response.status===429?429:502);
-    const normalized=freeProviderMediaInfo(data,rawUrl);
+    const normalized=freeProviderMediaInfo(data,rawUrl,requestUrl);
     if(!normalized)return json({error:"Provider mengenali tautan, tetapi belum mengembalikan file video/audio yang bisa diputar."},502);
     return json(normalized);
   }catch(error){return json({error:"Provider komunitas gratis sedang tidak tersedia. Coba lagi sebentar. Detail: "+String(error?.message||error).slice(0,120)},502)}
 }
+
+function mediaAsciiAt(bytes,offset,value){
+  if(offset<0||offset+value.length>bytes.length)return false;
+  for(let i=0;i<value.length;i++)if(bytes[offset+i]!==value.charCodeAt(i))return false;
+  return true;
+}
+function detectSocialMediaSignature(bytes,mode){
+  const limit=Math.min(bytes.length,65536);
+  for(let i=0;i<=limit-4;i++){
+    if(mediaAsciiAt(bytes,i,"ftyp"))return mode==="audio"?{mime:"audio/mp4",ext:"m4a",mode:"audio"}:{mime:"video/mp4",ext:"mp4",mode:"video"};
+  }
+  if(bytes.length>=4&&bytes[0]===0x1a&&bytes[1]===0x45&&bytes[2]===0xdf&&bytes[3]===0xa3)return {mime:"video/webm",ext:"webm",mode:"video"};
+  if(bytes.length>=12&&mediaAsciiAt(bytes,0,"RIFF")&&mediaAsciiAt(bytes,8,"AVI "))return {mime:"video/x-msvideo",ext:"avi",mode:"video"};
+  if(bytes.length>=3&&mediaAsciiAt(bytes,0,"FLV"))return {mime:"video/x-flv",ext:"flv",mode:"video"};
+  if(bytes.length>=4&&mediaAsciiAt(bytes,0,"OggS"))return mode==="audio"?{mime:"audio/ogg",ext:"ogg",mode:"audio"}:null;
+  if(bytes.length>=4&&mediaAsciiAt(bytes,0,"fLaC"))return {mime:"audio/flac",ext:"flac",mode:"audio"};
+  if(bytes.length>=12&&mediaAsciiAt(bytes,0,"RIFF")&&mediaAsciiAt(bytes,8,"WAVE"))return {mime:"audio/wav",ext:"wav",mode:"audio"};
+  if(bytes.length>=3&&mediaAsciiAt(bytes,0,"ID3"))return {mime:"audio/mpeg",ext:"mp3",mode:"audio"};
+  if(bytes.length>=2&&bytes[0]===0xff&&(bytes[1]&0xe0)===0xe0)return mode==="audio"?{mime:"audio/mpeg",ext:"mp3",mode:"audio"}:null;
+  return null;
+}
+function socialFileName(value,ext){
+  const base=String(value||"aryanzz-media").replace(/[\\/:*?"<>|\u0000-\u001f]/g,"_").replace(/\s+/g," ").trim().slice(0,110).replace(/\.[a-z0-9]{2,5}$/i,"")||"aryanzz-media";
+  return base+"."+ext;
+}
+async function fetchSocialUpstream(mediaUrl,sourceUrl){
+  const sourceOrigin=new URL(sourceUrl).origin;
+  const headers={"user-agent":"Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36","accept":"video/*,audio/*,application/octet-stream;q=0.9,*/*;q=0.8","referer":sourceOrigin+"/","origin":sourceOrigin};
+  let current=mediaUrl;
+  for(let i=0;i<6;i++){
+    const response=await fetch(current.href,{method:"GET",headers,redirect:"manual",cache:"no-store",signal:AbortSignal.timeout(25000)});
+    if(![301,302,303,307,308].includes(response.status))return response;
+    const location=response.headers.get("location");
+    if(!location)throw new Error("CDN media mengirim pengalihan tanpa alamat tujuan.");
+    const next=safePublicMediaUrl(new URL(location,current).href);
+    if(!next)throw new Error("Pengalihan CDN menuju alamat yang tidak aman.");
+    current=next;
+  }
+  throw new Error("Terlalu banyak pengalihan dari CDN media.");
+}
+async function socialMediaFile(request){
+  const u=new URL(request.url),raw=u.searchParams.get("url")||"",source=u.searchParams.get("source")||"",mode=u.searchParams.get("mode")==="audio"?"audio":"video",requestedExt=String(u.searchParams.get("ext")||"mp4").toLowerCase(),filename=u.searchParams.get("filename")||"aryanzz-media",probe=u.searchParams.get("probe")==="1";
+  const mediaUrl=safePublicMediaUrl(raw);
+  if(!mediaUrl)return json({error:"Alamat media tidak valid atau tidak aman."},400);
+  if(!isPlatformLink(source))return json({error:"Tautan sumber platform tidak valid."},400);
+  if(!["mp4","webm","mov","m4v","avi","3gp","mp3","m4a","aac","opus","ogg","wav","flac"].includes(requestedExt))return json({error:"Ekstensi media tidak didukung."},400);
+  let upstream=null,lastError="";
+  try{upstream=await fetchSocialUpstream(mediaUrl,source)}catch(error){lastError=String(error?.message||error).slice(0,160)}
+  if(!upstream||!upstream.ok||!upstream.body){
+    if(upstream?.body)await upstream.body.cancel().catch(()=>{});
+    const fallback=new URL("/api/fetch-media",FREE_MEDIA_API);
+    fallback.searchParams.set("url",mediaUrl.href);
+    fallback.searchParams.set("filename",socialFileName(filename,requestedExt));
+    try{
+      upstream=await fetch(fallback.href,{headers:{accept:"*/*","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0.0.0 Safari/537.36"},cache:"no-store",signal:AbortSignal.timeout(25000)});
+    }catch(error){return json({error:"CDN media dan jalur cadangan provider gagal. "+(lastError||String(error?.message||error).slice(0,120))},502)}
+  }
+  if(!upstream.ok||!upstream.body)return json({error:"Provider tidak mengirim file media utuh (HTTP "+upstream.status+")."},502);
+  const rawType=String(upstream.headers.get("content-type")||"").split(";")[0].trim().toLowerCase();
+  if(/^(text\/|application\/(json|xml)|application\/x-mpegurl)/i.test(rawType)){
+    await upstream.body.cancel().catch(()=>{});
+    return json({error:"Provider mengirim halaman error atau daftar putar, bukan file video/audio."},502);
+  }
+  const reader=upstream.body.getReader(),parts=[];
+  let prefixLength=0,finished=false;
+  try{
+    while(prefixLength<65536){
+      const part=await reader.read();
+      if(part.done){finished=true;break;}
+      parts.push(part.value);prefixLength+=part.value.byteLength;
+    }
+  }catch(error){await reader.cancel().catch(()=>{});return json({error:"Gagal membaca awal file media: "+String(error?.message||error).slice(0,120)},502)}
+  const prefix=new Uint8Array(prefixLength);let offset=0;
+  for(const part of parts){prefix.set(part,offset);offset+=part.byteLength;}
+  const detected=detectSocialMediaSignature(prefix,mode);
+  if(!detected||detected.mode!==mode){
+    await reader.cancel().catch(()=>{});
+    return json({error:"File ditolak: isi file tidak cocok dengan video/audio yang diminta. ARYANZZ tidak akan menyimpan file rusak dengan ekstensi MP4 palsu."},415);
+  }
+  const rangeHeader=upstream.headers.get("content-range")||"";
+  const rangeMatch=rangeHeader.match(/^bytes\s+(\d+)-(\d+)\/(\d+)$/i);
+  const contentLength=Number(upstream.headers.get("content-length")||0)||0;
+  const expectedBytes=rangeMatch?Number(rangeMatch[2])-Number(rangeMatch[1])+1:contentLength;
+  if(expectedBytes&&prefixLength>expectedBytes){
+    await reader.cancel().catch(()=>{});
+    return json({error:"Ukuran respons provider tidak konsisten; unduhan dibatalkan."},502);
+  }
+  const actualFilename=socialFileName(filename,detected.ext);
+  if(probe){
+    await reader.cancel().catch(()=>{});
+    return json({ok:true,valid:true,mimeType:detected.mime,extension:detected.ext,bytes:expectedBytes||null,filename:actualFilename,signature:"valid"});
+  }
+  let received=prefixLength;
+  const body=new ReadableStream({
+    async pull(controller){
+      if(prefixLength>=0){
+        if(prefixLength!==-1){prefixLength=-1;if(prefix.length)controller.enqueue(prefix);return;}
+      }
+      if(finished){
+        if(expectedBytes&&received!==expectedBytes){controller.error(new Error("Unduhan terputus: diterima "+received+" dari "+expectedBytes+" byte."));return;}
+        controller.close();return;
+      }
+      try{
+        const part=await reader.read();
+        if(part.done){
+          finished=true;
+          if(expectedBytes&&received!==expectedBytes){controller.error(new Error("Unduhan terputus: diterima "+received+" dari "+expectedBytes+" byte."));return;}
+          controller.close();return;
+        }
+        received+=part.value.byteLength;
+        if(expectedBytes&&received>expectedBytes){controller.error(new Error("Provider mengirim data melebihi ukuran file yang dilaporkan."));return;}
+        controller.enqueue(part.value);
+      }catch(error){controller.error(error)}
+    },
+    async cancel(reason){await reader.cancel(reason).catch(()=>{});}
+  });
+  const headers=new Headers({
+    "content-type":detected.mime,
+    "content-disposition":"attachment; filename*=UTF-8''"+encodeURIComponent(actualFilename),
+    "cache-control":"no-store",
+    "x-content-type-options":"nosniff",
+    "x-aryanzz-media-validation":"signature-ok"
+  });
+  if(expectedBytes)headers.set("content-length",String(expectedBytes));
+  if(upstream.headers.get("accept-ranges"))headers.set("accept-ranges",upstream.headers.get("accept-ranges"));
+  if(upstream.status===206&&rangeHeader)headers.set("content-range",rangeHeader);
+  return new Response(body,{status:upstream.status===206?206:200,headers});
+}
+
 async function proxyPlatform(request,env,path){
   let body;try{body=await request.clone().json()}catch{return json({error:"Body JSON tidak valid."},400)}
   if(!isPlatformLink(body?.url))return null;
   try{parseMediaUrl(body.url);return null}catch{}
-  if(!env.PLATFORM_API_ORIGIN||!env.PLATFORM_API_TOKEN){if(socialRateLimited(request))return json({error:"Batas unduhan gratis tercapai. Tunggu satu menit lalu coba lagi."},429);return freePublicMediaInfo(body.url);}
+  if(!env.PLATFORM_API_ORIGIN||!env.PLATFORM_API_TOKEN){if(socialRateLimited(request))return json({error:"Batas unduhan gratis tercapai. Tunggu satu menit lalu coba lagi."},429);return freePublicMediaInfo(body.url,request.url);}
   let origin;try{const parsed=new URL(env.PLATFORM_API_ORIGIN);if(parsed.protocol!=="https:"||parsed.username||parsed.password)throw new Error("origin tidak aman");origin=parsed.origin}catch{return json({error:"Konfigurasi backend harus berupa URL HTTPS yang valid."},500)}
   try{
     const response=await fetch(origin+path,{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+env.PLATFORM_API_TOKEN},body:JSON.stringify(body),signal:AbortSignal.timeout(300000)});
@@ -893,7 +1045,8 @@ export default {async fetch(request,env){
    if(url.pathname==="/api/youtube/hybrid/file"&&request.method==="GET")return hybridYoutubeFile(request);
    if(url.pathname==="/api/youtube/hybrid/thumbnail"&&request.method==="GET")return hybridYoutubeThumbnail(request);
   if(url.pathname==="/api/youtube/info"&&request.method==="GET")return youtubeInfo(request,env);
-    if(url.pathname==="/api/health"&&request.method==="GET")return json({ok:true,service:"ARYANZZ",version:"75.0",mode:"cloudflare-worker-zero-server-hybrid",directMediaDownload:true,selfHostedDownloader:false,youtubeDownloader:true,youtubeApiKeyConfigured:false,cobalt:false,paidYoutubeProvider:false,musicRecognitionConfigured:!!env.AUDD_API_TOKEN,musicFallbackReady:false,musicVideoRecognitionReady:false,platformExtraction:true,platformBackend:"public-free-community-api"});
+    if(url.pathname==="/api/health"&&request.method==="GET")return json({ok:true,service:"ARYANZZ",version:"76.0",mode:"cloudflare-worker-zero-server-hybrid",directMediaDownload:true,selfHostedDownloader:false,youtubeDownloader:true,youtubeApiKeyConfigured:false,cobalt:false,paidYoutubeProvider:false,musicRecognitionConfigured:!!env.AUDD_API_TOKEN,musicFallbackReady:false,musicVideoRecognitionReady:false,platformExtraction:true,platformBackend:"public-free-community-api"});
+  if(url.pathname==="/api/social-file"&&request.method==="GET")return socialMediaFile(request);
   if(url.pathname==="/api/info"&&request.method==="POST"){const proxied=await proxyPlatform(request,env,"/api/info");if(proxied)return proxied;return info(request);}
   if(url.pathname==="/api/direct-file"&&request.method==="GET")return download(request);
   if(url.pathname==="/api/download"&&request.method==="POST"){const proxied=await proxyPlatform(request,env,"/api/download");if(proxied)return proxied;return download(request);}
