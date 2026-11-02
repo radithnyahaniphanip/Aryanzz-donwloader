@@ -23,8 +23,8 @@ const manifest=JSON.parse(file("../public/manifest.webmanifest"));
 
 const checks=[
   ["V71.1 page title",html.includes("ARYANZZ V71.1 — All-in-One Creative Space")],
-  ["V59.5 versioned assets",html.includes("/v15.js?v=59.5")&&html.includes("/owner.js?v=59.5")&&html.includes("/downloader.js?v=71.0")&&html.includes("/downloader.css?v=71.0")&&html.includes("/v59.css?v=59.5")&&html.includes("/editor-pro.css?v=65.0")&&html.includes("/editor.js?v=65.0")],
-  ["service worker cache and V59.5 assets",html.includes("/sw.js?v=71.0")&&sw.includes("aryanzz-v71-1")&&sw.includes("/editor.js?v=65.0")&&sw.includes("/editor-pro.css?v=65.0")&&sw.includes("/v59.css?v=59.5")],
+  ["V59.5 versioned assets",html.includes("/v15.js?v=59.5")&&html.includes("/owner.js?v=59.5")&&html.includes("/downloader.js?v=71.1")&&html.includes("/downloader.css?v=71.0")&&html.includes("/v59.css?v=59.5")&&html.includes("/editor-pro.css?v=65.0")&&html.includes("/editor.js?v=65.0")],
+  ["service worker cache and V59.5 assets",html.includes("/sw.js?v=71.1")&&sw.includes("aryanzz-v71-1")&&sw.includes("/editor.js?v=65.0")&&sw.includes("/editor-pro.css?v=65.0")&&sw.includes("/v59.css?v=59.5")],
   ["downloader input, result and backend status",html.includes('id="analyze"')&&html.includes('id="downloadResult"')&&html.includes('id="backendStatus"')],
   ["unified self-hosted downloader API",downloader.includes('postJson("/api/info"')&&downloader.includes('"/api/direct-file?url="')&&downloader.includes("PLATFORM_NAMES")&&!downloader.toLowerCase().includes("savenow")],
   ["single capture-phase universal URL handler",downloader.includes('button.addEventListener("click"')&&downloader.includes("event.stopImmediatePropagation()")&&downloader.includes("}, true);")],
@@ -35,6 +35,11 @@ const checks=[
   ["No Cobalt or paid SaveNow downloader remains",!workerSource.includes("cobaltConfig")&&!workerSource.includes("SAVENOW_BASE")&&!workerSource.includes("SAVENOW_API_KEY")],
   ["TikTok is intentionally disabled while YouTube is prioritized",downloader.includes("TikTok sementara dinonaktifkan")],
   ["YouTube UI uses hybrid API and actual returned formats",downloader.includes("/api/youtube/hybrid/info")&&downloader.includes("/api/youtube/hybrid/file")&&downloader.includes("info.formats")&&downloader.includes("providerName!==\"Hybrid\"")],
+  ["Browser-first hybrid lookup tries public Piped and Invidious instances",downloader.includes("browserHybridYoutubeInfo")&&downloader.includes("BROWSER_PIPED_INSTANCES")&&downloader.includes("BROWSER_INVIDIOUS_INSTANCES")],
+  ["Piped instance list refreshes from the official directory with a snapshot fallback",downloader.includes("raw.githubusercontent.com/TeamPiped/documentation/main/content/docs/public-instances/index.md")&&downloader.includes("currentPipedInstances")],
+  ["Browser stream URLs are restricted to approved HTTPS media hosts",downloader.includes("function browserHybridMediaUrl")&&downloader.includes("googlevideo.com")&&downloader.includes("BROWSER_MEDIA_ROOTS")],
+  ["Browser download shows byte progress and caps in-memory downloads at 250 MB",downloader.includes("new Blob(chunks")&&downloader.includes("250*1024*1024")&&downloader.includes("Mengunduh ")],
+  ["Browser CORS failure is reported instead of claiming a successful download",downloader.includes("Browser tidak dapat membaca stream langsung")&&!downloader.includes("Tautan cadangan Worker dikirim ke Chrome")],
   ["legacy competing downloader handler removed",!v15.includes("button.onclick=async()=>{")],
   ["owner header controls are real buttons",html.includes('class="owner-menu-mark" type="button" data-panel="allTools"')&&html.includes('aria-label="Buka riwayat unduhan"')&&html.includes('aria-label="Buka personalisasi profil"')],
   ["owner view hides home and uses dark palette",ownerCss.includes('body[data-view="owner"] #home{display:none!important}')&&ownerCss.includes("background:linear-gradient(145deg,#13223a,#0d1728)")],
@@ -88,7 +93,7 @@ for(const [name,ok] of checks){assert.ok(ok,name+" failed");console.log("✔ "+n
 const healthResponse=await worker.fetch(new Request("https://aryanzz.example/api/health"),{});
 assert.equal(healthResponse.status,200);
 const health=await healthResponse.json();
-assert.equal(health.version,"71.0");
+assert.equal(health.version,"71.1");
 assert.equal(health.selfHostedDownloader,false);
 assert.equal(health.youtubeDownloader,true);
 assert.equal(health.mode,"cloudflare-worker-zero-server-hybrid");
