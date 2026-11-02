@@ -51,8 +51,8 @@
     const parse=value=>{
       if(typeof value==="number"&&Number.isFinite(value)&&value>0)return Math.round(value);
       const text=String(value??"").trim();
-      if(/^\\d{5,}$/.test(text)){const n=Number(text);return Number.isFinite(n)&&n>0?Math.round(n):0;}
-      const match=text.match(/^([\\d.,]+)\\s*(B|KB|KIB|MB|MIB|GB|GIB)$/i);
+      if(/^\d{5,}$/.test(text)){const n=Number(text);return Number.isFinite(n)&&n>0?Math.round(n):0;}
+      const match=text.match(/^([\d.,]+)\s*(B|KB|KIB|MB|MIB|GB|GIB)$/i);
       if(!match)return 0;
       const amount=Number(match[1].replace(",","."));
       if(!Number.isFinite(amount)||amount<=0)return 0;
@@ -65,7 +65,7 @@
   function estimateFormatBytes(item,durationSeconds){
     const exact=sourceFormatBytes(item);
     if(exact)return {bytes:exact,exact:true};
-    const raw=Number(item?.bitrate)||Number(String(item?.bitrate||"").match(/[\\d.]+/)?.[0])||0;
+    const raw=Number(item?.bitrate)||Number(String(item?.bitrate||"").match(/[\d.]+/)?.[0])||0;
     const bitsPerSecond=raw>0&&raw<10000?raw*1000:raw;
     const seconds=Number(durationSeconds)||0;
     return {bytes:bitsPerSecond>0&&seconds>0?Math.round(bitsPerSecond*seconds/8):0,exact:false};
@@ -318,7 +318,7 @@
     if(!direct)return null;
     const target="/api/youtube/hybrid/file?url="+encodeURIComponent(direct.href)+"&ext="+encodeURIComponent(item.ext)+"&title="+encodeURIComponent((info.title||"youtube")+"-preflight")+"&instance="+encodeURIComponent(item.instance||info.instance||"");
     try{
-      const response=await fetch(target+"&probe=1",{cache:"no-store",signal:AbortSignal.timeout(45000)});
+      const response=await fetch(target+"&probe=1",{cache:"no-store",signal:AbortSignal.timeout(12000)});
       const check=await response.json().catch(()=>({}));
       if(response.ok&&check.ok)return {target,totalBytes:Number(check.totalBytes)||0,status:Number(check.status)||0};
     }catch{}
@@ -453,12 +453,12 @@
     const browserTarget="/api/youtube/hybrid/browser-file?"+params;
     const probeTarget=target+"&probe=1";
     const targetName=mode==="video"?"1 file MP4":"1 file audio";
-    let transferTarget=target,browserStream=false,actualBytes=0;
+    let transferTarget=target,browserStream=false,actualBytes=0,actualSizeExact=false;
     try{
       const probe=await fetch(probeTarget,{cache:"no-store",signal:AbortSignal.timeout(12000)});
       const check=await probe.json().catch(()=>({}));
       if(!probe.ok||!check.ok)throw new Error(check.error||"Pemeriksaan stream gagal (HTTP "+probe.status+").");
-      actualBytes=Number(check.totalBytes)||0;
+      actualBytes=Number(check.totalBytes)||0;actualSizeExact=actualBytes>0;
     }catch(workerError){
       if(!await waitForServiceWorkerController())throw new Error("Server komunitas menolak koneksi Cloudflare dan jalur browser belum aktif. Muat ulang ARYANZZ sekali, lalu coba lagi. Detail: "+String(workerError.message||workerError).slice(0,140));
       progressText.textContent="Mencoba koneksi provider dari jaringan HP…";
@@ -472,15 +472,15 @@
       if(browserType.startsWith("text/")||browserType.includes("application/json"))throw new Error("Provider browser mengirim respons non-media.");
       const first=await browserProbe.arrayBuffer();
       if(first.byteLength!==1)throw new Error("Pemeriksaan koneksi browser tidak menerima satu byte media yang valid.");
-      const totalMatch=String(browserProbe.headers.get("content-range")||"").match(/\\/(\\d+)$/);
-      actualBytes=Number(totalMatch?.[1])||0;
+      const totalMatch=String(browserProbe.headers.get("content-range")||"").match(/\/(\d+)$/);
+      actualBytes=Number(totalMatch?.[1])||0;actualSizeExact=actualBytes>0;
       browserStream=true;transferTarget=browserTarget;
     }
-    if(!actualBytes){const estimate=estimateFormatBytes(selected,info.duration);actualBytes=estimate.bytes||0;}
+    if(!actualBytes){const estimate=estimateFormatBytes(selected,info.duration);actualBytes=estimate.bytes||0;actualSizeExact=estimate.exact;}
     const actualQuality=Number(selected.height)||0,requestedQuality=Number(quality)||0;
     const fellBack=mode==="video"&&actualQuality>0&&requestedQuality>0&&actualQuality!==requestedQuality;
     progressText.textContent=fellBack?"MP4 langsung "+actualQuality+"p tersedia; kualitas "+requestedQuality+"p memerlukan perakitan video dan audio.":"Stream "+(mode==="video"?"MP4":"audio")+" siap untuk Chrome.";
-    const sizeLabel=actualBytes?"Ukuran file: "+formatDownloadSize(actualBytes)+" · ":"";
+    const sizeLabel=actualBytes?(actualSizeExact?"Ukuran file: ":"Perkiraan ukuran: ±")+formatDownloadSize(actualBytes)+" · ":"";
     progressMeta.textContent=sizeLabel+"Target: "+targetName+" · "+(actualQuality?("kualitas aktual "+actualQuality+"p · "):"")+(browserStream?"koneksi dari jaringan HP, bukan IP Cloudflare. ":"")+"Chrome mengelola transfer dan progres unduhan asli.";
     const anchor=make("a");
     anchor.href=transferTarget;anchor.download=filename;anchor.rel="noopener";anchor.style.display="none";
@@ -693,8 +693,8 @@
     const parse=value=>{
       if(typeof value==="number"&&Number.isFinite(value)&&value>0)return Math.round(value);
       const text=String(value??"").trim();
-      if(/^\\d{5,}$/.test(text)){const n=Number(text);return Number.isFinite(n)&&n>0?Math.round(n):0;}
-      const match=text.match(/^([\\d.,]+)\\s*(B|KB|KIB|MB|MIB|GB|GIB)$/i);
+      if(/^\d{5,}$/.test(text)){const n=Number(text);return Number.isFinite(n)&&n>0?Math.round(n):0;}
+      const match=text.match(/^([\d.,]+)\s*(B|KB|KIB|MB|MIB|GB|GIB)$/i);
       if(!match)return 0;
       const amount=Number(match[1].replace(",","."));
       if(!Number.isFinite(amount)||amount<=0)return 0;
