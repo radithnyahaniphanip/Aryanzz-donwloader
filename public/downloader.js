@@ -157,7 +157,7 @@
         const mod=await import(moduleUrl);
         const ffmpeg=new mod.FFmpeg();
         [coreURL,wasmURL]=await Promise.all([loadBlob(coreBase+"/ffmpeg-core.js","text/javascript"),loadBlob(coreBase+"/ffmpeg-core.wasm","application/wasm")]);
-        await ffmpeg.load({coreURL,wasmURL,classWorkerURL:new URL("/ffmpeg-worker-bootstrap.js?v=72.4",location.origin).href});
+        await ffmpeg.load({coreURL,wasmURL,classWorkerURL:new URL("/ffmpeg-worker-bootstrap.js?v=72.5",location.origin).href});
         return ffmpeg;
       }finally{
         if(coreURL)URL.revokeObjectURL(coreURL);
@@ -450,7 +450,7 @@
           return u.origin;
         }catch{return null;}
       }).filter(Boolean);
-      return [...new Set([...fallback,...discovered])].slice(0,18);
+      return [...new Set([...discovered,...fallback])].slice(0,18);
     }catch{return fallback;}
   }
   const BROWSER_MEDIA_ROOTS=["kavin.rocks","leptons.xyz","nosebs.ru","privacy.com.de","adminforge.de","piped.yt","drgns.space","owo.si","ducks.party","codespace.cz","reallyaweso.me","private.coffee","darkness.services","orangenet.cc"];
@@ -552,7 +552,7 @@
     const [invidiousInstances,pipedInstances]=await Promise.all([currentInvidiousInstances(),currentPipedInstances()]);
     const available=[];
     const groups=[];
-    const inv=invidiousInstances.slice(0,5),piped=pipedInstances.slice(0,5);
+    const inv=invidiousInstances.slice(0,8),piped=pipedInstances.slice(0,8);
     if(inv.length)groups.push(tryGroup(inv,browserInvidiousInfo));
     if(piped.length)groups.push(tryGroup(piped,browserPipedInfo));
     if(groups.length){
