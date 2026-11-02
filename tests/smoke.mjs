@@ -40,7 +40,7 @@ const checks=[
   ["V72.9 defaults to the highest available progressive quality up to 480p",downloader.includes("quickPool.filter(height=>height<=480).sort((a,b)=>b-a)[0]")&&downloader.includes("MP4 langsung")],
   ["V72.9 prefers one complete progressive MP4 and honors an explicitly selected adaptive quality",downloader.includes("const exactProgressive=progressive.filter")&&downloader.includes("const exactAdaptive=adaptive.filter")&&downloader.includes("if(exactProgressive.length)")],
   ["V72.9 merges adaptive tracks internally as one MP4 without exposing a separate audio file",downloader.includes("Komponen MP4 1/2")&&downloader.includes("Komponen MP4 2/2")&&downloader.includes("tidak ada file audio terpisah yang disimpan")],
-  ["V72.9 shows transfer speed, remaining-time estimate and indeterminate progress",downloader.includes("function updateDownloadProgress")&&downloader.includes("sisa tahap")&&downloader.includes("is-indeterminate")&&downloader.includes("indexedDB.open(\\\"aryanzz-download-resume\\\"")],
+  ["V72.9 shows transfer speed, remaining-time estimate and indeterminate progress",downloader.includes("function updateDownloadProgress")&&downloader.includes("sisa tahap")&&downloader.includes("is-indeterminate")&&downloader.includes('indexedDB.open("aryanzz-download-resume"')],
   ["V72.9 mobile adaptive downloads use parallel HTTP ranges and resumable IndexedDB chunks",downloader.includes("fetchYoutubeTrackRanges")&&downloader.includes("Range:")&&downloader.includes("readDownloadChunk")&&downloader.includes("writeDownloadChunk")&&downloader.includes("downloadResumePrefix")],
   ["V72.9 Speed, Max Speed and Mega Speed controls are wired to adaptive downloads",downloader.includes("Speed · 1 jalur")&&downloader.includes("Max Speed · 3 jalur")&&downloader.includes("Mega Speed · 5 jalur")&&downloader.includes("Number(speedSelect.value)||3")],
   ["V72.9 adaptive memory budget scales with device memory and retries lower MP4 quality",downloader.includes("function youtubeMuxMemoryBudget")&&downloader.includes("navigator.deviceMemory")&&downloader.includes("progressiveFallback")&&downloader.includes("kualitas lebih rendah")],
@@ -576,7 +576,7 @@ try{
   const thumbnailResponse=await worker.fetch(new Request(thumbnailUrl),{});
   assert.equal(thumbnailResponse.status,200);
   assert.equal(thumbnailResponse.headers.get("content-type"),"image/jpeg");
-  assert.match(thumbnailResponse.headers.get("content-disposition"),/Test%20YouTube%20Thumbnail\\.jpg/);
+  assert.match(thumbnailResponse.headers.get("content-disposition"),/Test%20YouTube%20Thumbnail\.jpg/);
   assert.equal((await thumbnailResponse.arrayBuffer()).byteLength,3);
   const blockedThumbnail=await worker.fetch(new Request("https://aryanzz.example/api/youtube/hybrid/thumbnail?url="+encodeURIComponent("https://evil.example/thumb.jpg")),{}); 
   assert.equal(blockedThumbnail.status,400);
