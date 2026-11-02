@@ -32,3 +32,6 @@
 .is-muted{color:#8fa4c2;font-size:11px;line-height:1.6}
 @media(max-width:620px){.is-search-row{grid-template-columns:1fr 1fr}.is-search-row .is-action{grid-column:1/-1}.is-studio-grid{grid-template-columns:1fr}.is-image-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.is-section{padding:13px}.is-ratio-picks{grid-template-columns:repeat(4,minmax(0,1fr))}}
 @media(max-width:360px){.is-row{grid-template-columns:1fr}.is-search-row{grid-template-columns:1fr}.is-search-row .is-action{grid-column:auto}.is-image-grid{grid-template-columns:1fr 1fr}}
+.is-ratio-picks button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;min-height:66px}
+.is-ratio-shape{display:block;max-width:30px;max-height:25px;border:1.6px solid #8fc5ff;border-radius:3px;background:linear-gradient(135deg,#3d7fc533,#32d5ee22)}
+.is-ratio-square{width:22px;height:22px}.is-ratio-four-three{width:25px;height:19px}.is-ratio-three-two{width:27px;height:18px}.is-ratio-wide{width:30px;height:17px}.is-ratio-story{width:14px;height:25px}.is-ratio-portrait{width:18px;height:24px}.is-ratio-original{width:21px;height:18px;border-style:dashed}.is-ratio-custom{width:24px;height:20px;border-style:dotted}
