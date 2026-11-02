@@ -81,6 +81,7 @@
       state.bitmap = await createImageBitmap(file); state.file = file; state.rotation = 0;
       $("imageEditorEmpty").hidden = true;
       $("imageRatio").value = "source";
+      syncRatioGallery();
       drawPreview();
       status("Gambar siap diedit · " + state.bitmap.width + " × " + state.bitmap.height + " px");
     } catch (error) { status("Gagal membuka gambar: " + safeText(error.message),true); }
@@ -89,6 +90,13 @@
     const show = $("imageResolution").value === "custom";
     $("imageCustomSize").hidden = !show;
     if ($("imageRatio").value === "custom") $("imageCustomSize").hidden = false;
+  }
+  function syncRatioGallery() {
+    document.querySelectorAll("[data-image-ratio]").forEach(button => {
+      const active = button.dataset.imageRatio === $("imageRatio").value;
+      button.classList.toggle("active",active);
+      button.setAttribute("aria-pressed",String(active));
+    });
   }
   async function exportImage() {
     if (!state.bitmap) { status("Pilih gambar terlebih dahulu.",true); return; }
@@ -178,11 +186,12 @@
     $("imageEditTab").addEventListener("click",()=>setMode("edit"));
     $("imageDownloadTab").addEventListener("click",()=>setMode("download"));
     $("imageStudioFile").addEventListener("change",event=>loadImage(event.target.files&&event.target.files[0]));
-    ["imageRatio","imageResolution","imageFit","imageOutputFormat","imageCustomWidth","imageCustomHeight"].forEach(id=>$(id).addEventListener("change",()=>{updateCustomVisibility();drawPreview();}));
+    ["imageRatio","imageResolution","imageFit","imageOutputFormat","imageCustomWidth","imageCustomHeight"].forEach(id=>$(id).addEventListener("change",()=>{updateCustomVisibility();syncRatioGallery();drawPreview();}));
     $("imageOutputQuality").addEventListener("input",()=>{$("imageOutputQualityValue").textContent=$("imageOutputQuality").value+"%";});
     $("imageRotateLeft").addEventListener("click",()=>{state.rotation=(state.rotation+270)%360;drawPreview();});
     $("imageRotateRight").addEventListener("click",()=>{state.rotation=(state.rotation+90)%360;drawPreview();});
     $("imageReset").addEventListener("click",()=>{if(!state.bitmap)return;state.rotation=0;$("imageRatio").value="source";$("imageResolution").value="medium";$("imageFit").value="cover";$("imageOutputFormat").value="image/jpeg";$("imageOutputQuality").value="90";$("imageOutputQualityValue").textContent="90%";updateCustomVisibility();drawPreview();});
+    document.querySelectorAll("[data-image-ratio]").forEach(button=>button.addEventListener("click",()=>{$("imageRatio").value=button.dataset.imageRatio;updateCustomVisibility();syncRatioGallery();drawPreview();}));
     $("imageExport").addEventListener("click",exportImage);
     $("imageExtractButton").addEventListener("click",extractImages);
     $("imageSearchButton").addEventListener("click",searchImages);
@@ -190,7 +199,7 @@
     $("imagePostUrl").addEventListener("keydown",event=>{if(event.key==="Enter")extractImages();});
     $("imageSearchPlatform").addEventListener("change",()=>setDownloadStatus("Platform pencarian: "+$("imageSearchPlatform").selectedOptions[0].textContent));
     $("imageResolution").addEventListener("change",updateCustomVisibility);
-    updateCustomVisibility();
+    updateCustomVisibility();syncRatioGallery();
   }
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",bind,{once:true});else bind();
 })();
