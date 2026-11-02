@@ -188,7 +188,13 @@ async function hybridYoutubeFile(request){
   const mime=ext==="mp4"?"video/mp4":ext==="m4a"?"audio/mp4":ext==="mp3"?"audio/mpeg":ext==="webm"?"video/webm":ext==="opus"?"audio/ogg":ext==="ogg"?"audio/ogg":ext==="wav"?"audio/wav":"audio/flac";
   const headers=new Headers({"content-type":mime,"content-disposition":"attachment; filename*=UTF-8''"+encodeURIComponent(title),"cache-control":"no-store","x-content-type-options":"nosniff","accept-ranges":response.headers.get("accept-ranges")||"bytes"});
   for(const h of ["content-length","content-range"])if(response.headers.get(h))headers.set(h,response.headers.get(h));
-  return new Response(response.body,{status:response.status,headers});
+  let received=0;
+  const limited=response.body.pipeThrough(new TransformStream({transform(chunk,controller){
+    received+=chunk.byteLength;
+    if(received>MAX_YOUTUBE_BYTES){controller.error(new Error("File melebihi batas 500 MB."));return;}
+    controller.enqueue(chunk);
+  }}));
+  return new Response(limited,{status:response.status,headers});
 }
 function youtubeInfoUrl(raw){return isYouTubeUrl(raw)?raw:null;}
 async function youtubeInfo(request,env){return hybridYoutubeInfo(request);}
