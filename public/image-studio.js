@@ -24,14 +24,9 @@
     let aspect = ratio === "source" ? w / h : ratio === "custom" ? null : ratioValues[ratio];
     const resolution = $("imageResolution").value;
     let outW, outH;
-    if (resolution === "custom") {
+    if (resolution === "custom" || ratio === "custom") {
       outW = Math.max(1, Math.min(12000, Number($("imageCustomWidth").value) || 1080));
       outH = Math.max(1, Math.min(12000, Number($("imageCustomHeight").value) || 1080));
-      if (ratio !== "custom" && aspect) {
-        const maxEdge = Math.max(outW, outH);
-        outW = Math.round(maxEdge * Math.sqrt(aspect));
-        outH = Math.round(maxEdge / Math.sqrt(aspect));
-      }
     } else {
       const edge = ({low:480,medium:1080,high:1920,ultra:3840})[resolution] || 1080;
       if (!aspect) aspect = w / h;
