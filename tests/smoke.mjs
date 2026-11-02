@@ -22,9 +22,9 @@ const downloaderCss=file("../public/downloader.css");
 const manifest=JSON.parse(file("../public/manifest.webmanifest"));
 
 const checks=[
-  ["V72.0 page title",html.includes("ARYANZZ V72.0 — All-in-One Creative Space")],
-  ["V59.5 versioned assets",html.includes("/v15.js?v=59.5")&&html.includes("/owner.js?v=59.5")&&html.includes("/downloader.js?v=72.0")&&html.includes("/downloader.css?v=71.0")&&html.includes("/v59.css?v=59.5")&&html.includes("/editor-pro.css?v=65.0")&&html.includes("/editor.js?v=65.0")],
-  ["service worker cache and V59.5 assets",html.includes("navigator.serviceWorker.register")&&sw.includes("aryanzz-v72-0")&&sw.includes("/editor.js?v=65.0")],
+  ["V72.1 page title",html.includes("ARYANZZ V72.1 — All-in-One Creative Space")],
+  ["V59.5 versioned assets",html.includes("/v15.js?v=59.5")&&html.includes("/owner.js?v=59.5")&&html.includes("/downloader.js?v=72.1")&&html.includes("/downloader.css?v=71.0")&&html.includes("/v59.css?v=59.5")&&html.includes("/editor-pro.css?v=65.0")&&html.includes("/editor.js?v=65.0")],
+  ["service worker cache and V59.5 assets",html.includes("navigator.serviceWorker.register")&&sw.includes("aryanzz-v72-1")&&sw.includes("/editor.js?v=65.0")],
   ["downloader input, result and backend status",html.includes('id="analyze"')&&html.includes('id="downloadResult"')&&html.includes('id="backendStatus"')],
   ["unified self-hosted downloader API",downloader.includes('postJson("/api/info"')&&downloader.includes('"/api/direct-file?url="')&&downloader.includes("PLATFORM_NAMES")&&!downloader.toLowerCase().includes("savenow")],
   ["single capture-phase universal URL handler",downloader.includes('button.addEventListener("click"')&&downloader.includes("event.stopImmediatePropagation()")&&downloader.includes("}, true);")],
@@ -34,10 +34,10 @@ const checks=[
   ["V72 format deduplication keeps muxed and video-only variants separate",workerSource.includes('(f.videoOnly?"video-only":"muxed")')&&downloader.includes('(f.videoOnly?"video-only":"muxed")')],
   ["V72 Piped parser retains adaptive video-only MP4 with audio",workerSource.includes("videoOnly=adaptiveSource")&&workerSource.includes('formats.some(audio=>audio.mode===\"audio\"&&audio.ext===\"m4a\")')],
   ["V72 FFmpeg merge uses stream copy into MP4",downloader.includes("muxYoutubeMp4")&&downloader.includes('"copy"')&&downloader.includes('"+faststart"')],
-  ["V72 local FFmpeg worker bootstrap is included",file("../public/ffmpeg-worker-bootstrap.js").includes("@ffmpeg/ffmpeg@0.12.10")&&file("../public/sw.js").includes("/ffmpeg-worker-bootstrap.js?v=72.0")],
+  ["V72 local FFmpeg worker bootstrap is included",file("../public/ffmpeg-worker-bootstrap.js").includes("@ffmpeg/ffmpeg@0.12.10")&&file("../public/sw.js").includes("/ffmpeg-worker-bootstrap.js?v=72.1")],
   ["V72 parses adaptive video-only MP4 plus matching M4A audio",workerSource.includes("adaptiveSource=false")&&workerSource.includes("hybridVideoFormat(item,instance,true,true)")&&workerSource.includes("videoOnly")&&downloader.includes('adaptive.map(item=>String(item?.type||item?.mimeType||')],
   ["V72 browser remuxes separate tracks locally with FFmpeg WASM",downloader.includes("loadBrowserFfmpeg")&&downloader.includes("classWorkerURL")&&downloader.includes("ffmpeg.exec")&&downloader.includes('"copy"')&&downloader.includes("muxYoutubeMp4")],
-  ["V72 FFmpeg worker bootstrap is same-origin and cached",file("../public/ffmpeg-worker-bootstrap.js").includes("@ffmpeg/ffmpeg@0.12.10")&&sw.includes("/ffmpeg-worker-bootstrap.js?v=72.0")],
+  ["V72 FFmpeg worker bootstrap is same-origin and cached",file("../public/ffmpeg-worker-bootstrap.js").includes("@ffmpeg/ffmpeg@0.12.10")&&sw.includes("/ffmpeg-worker-bootstrap.js?v=72.1")],
   ["Hybrid stream download is restricted to approved media hosts",workerSource.includes("function hybridMediaUrl")&&workerSource.includes("googlevideo.com")&&workerSource.includes("HYBRID_MEDIA_ROOTS")],
   ["Hybrid download uses attachment streaming and range requests",workerSource.includes("function hybridYoutubeFile")&&workerSource.includes("trustedInstance")&&workerSource.includes("content-disposition")&&workerSource.includes("headers.range=range")],
   ["No Cobalt or paid SaveNow downloader remains",!workerSource.includes("cobaltConfig")&&!workerSource.includes("SAVENOW_BASE")&&!workerSource.includes("SAVENOW_API_KEY")],
@@ -46,10 +46,10 @@ const checks=[
   ["Browser-first hybrid lookup tries public Piped and Invidious instances",downloader.includes("browserHybridYoutubeInfo")&&downloader.includes("BROWSER_PIPED_INSTANCES")&&downloader.includes("BROWSER_INVIDIOUS_INSTANCES")],
   ["Piped instance list refreshes from the official directory with a snapshot fallback",downloader.includes("raw.githubusercontent.com/TeamPiped/documentation/main/content/docs/public-instances/index.md")&&downloader.includes("currentPipedInstances")],
   ["Browser stream URLs are restricted to approved HTTPS media hosts",downloader.includes("function browserHybridMediaUrl")&&downloader.includes("googlevideo.com")&&downloader.includes("BROWSER_MEDIA_ROOTS")],
-  ["Invidious API is requested without field projection and parser infers progressive MP4 from itag",workerSource.includes('instance+"/api/v1/videos/"+encodeURIComponent(id)')&&!workerSource.includes('?fields=title,videoId,author,lengthSeconds,videoThumbnails,formatStreams,adaptiveFormats')&&workerSource.includes('progressiveSource&&[18,22,37,59,78,82,83,84,85].includes(itag)')],
-  ["Browser checks Invidious first and discovers official CORS-enabled instances",downloader.indexOf("const invidiousInstances=await currentInvidiousInstances()")<downloader.indexOf("const pipedInstances=await currentPipedInstances()")&&downloader.includes("api.invidious.io/instances.json")],
+  ["Invidious API is requested without field projection and parser infers progressive MP4 from itag",workerSource.includes('"/api/v1/videos/"+encodeURIComponent(id)')&&!workerSource.includes('?fields=title,videoId,author,lengthSeconds,videoThumbnails,formatStreams,adaptiveFormats')&&workerSource.includes('progressiveSource&&[18,22,37,59,78,82,83,84,85].includes(itag)')],
+  ["Browser races Invidious and Piped batches and discovers official CORS-enabled instances",downloader.includes("Promise.all([currentInvidiousInstances(),currentPipedInstances()])")&&downloader.includes("Promise.any(groups.map(group=>group.promise))")&&downloader.includes("api.invidious.io/instances.json")],
   ["Browser MP4 parser resolves the stream URL before reading its itag",(() => { const block=downloader.slice(downloader.indexOf("function browserVideoFormat"),downloader.indexOf("function browserAudioFormat")); return block.indexOf("const url=browserHybridMediaUrl")>=0 && block.indexOf("const height=browserVideoHeight")>block.indexOf("const url=browserHybridMediaUrl"); })()],
-    ["Invidious formatStreams are parsed as progressive MP4 and retain their provider origin",downloader.includes("browserVideoFormat(item,providerInstance,progressiveSource=false,adaptiveSource=false)")&&downloader.includes("browserVideoFormat(item,instance,true)")&&downloader.includes("browserVideoHeight(item,url)")&&downloader.includes("itag")&&downloader.includes("u.origin===new URL(trustedOrigin).origin")],
+    ["Invidious formatStreams are parsed as progressive MP4 and retain their provider origin",downloader.includes("browserVideoFormat(item,providerInstance,progressiveSource=false,adaptiveSource=false)")&&downloader.includes("browserVideoFormat(item,instance,true)")&&downloader.includes("browserVideoHeight(item,url)")&&downloader.includes("itag")&&downloader.includes("const trusted=new URL(trustedOrigin)")&&downloader.includes("browserProviderRoot(trusted.hostname)")],
   ["Invidious media URLs are resolved against the active instance and allowed for download",downloader.includes("new URL(raw,trustedOrigin||undefined)")&&downloader.includes("browserHybridMediaUrl(selected.url,info.instance)")],
   ["MP4 quality options are derived from actual available video streams",downloader.includes("const hasVideo=")&&downloader.includes("if(videoOption)videoOption.disabled=!hasVideo")],
 
@@ -86,14 +86,14 @@ const checks=[
   ["DJ mix scan uses AudD Enterprise endpoint",html.includes('id="musicFileScanButton"')&&html.includes('id="musicScanSkip"')&&musicJs.includes('/api/music/scan-video')&&workerSource.includes("enterprise.audd.io")],
   ["Music Finder supports file, video URL and microphone",musicJs.includes("captureMediaSample")&&musicJs.includes("getUserMedia")&&musicJs.includes("/api/music/recognize")&&musicJs.includes("musicVideoUrl")],
   ["AudD errors expose provider code and actionable quota guidance",workerSource.includes("function auddFailure")&&workerSource.includes("providerErrorCode")&&workerSource.includes("kode 901")&&workerSource.includes("kode 902")],
-  ["V72.0 runs without a self-hosted extractor",workerSource.includes('version:"72.0"')&&workerSource.includes('mode:"cloudflare-worker-zero-server-hybrid"')&&workerSource.includes('platformBackend:"community-handoff"')&&!workerSource.includes("DOWNLOADER_CONTAINER")],
+  ["V72.1 runs without a self-hosted extractor",workerSource.includes('version:"72.1"')&&workerSource.includes('mode:"cloudflare-worker-zero-server-hybrid"')&&workerSource.includes('platformBackend:"community-handoff"')&&!workerSource.includes("DOWNLOADER_CONTAINER")],
   ["Shazam fallback covers standard AudD auth/quota failures",workerSource.includes("shazamRecognize(audioBlob,env)")&&workerSource.includes("providerErrorCode")&&serverSource.includes("/api/music/recognize")&&serverSource.includes("shazam_recognize.py")],
   ["DJ mix scans fall back to Shazam when AudD Enterprise errors",workerSource.includes("shazamScan(fallbackSource")&&serverSource.includes("/api/music/scan")&&serverSource.includes("scanShazamMedia")],
   ["Docker backend includes yt-dlp, FFmpeg and ShazamIO",file("../Dockerfile").includes("yt-dlp")&&file("../Dockerfile").includes("shazamio==0.9.0")&&serverSource.includes("ffprobe")],
   ["Music Finder responsive styling",musicCss.includes(".music-grid")&&musicCss.includes("@media(max-width:620px)")],
   ["Video URL DJ scanning goes directly through AudD Enterprise",workerSource.includes('fetch("https://enterprise.audd.io/"')&&!musicJs.includes("identifyVideoUrl(url,startSeconds)")],
   ["tool hub remains available",html.includes('id="allTools"')],
-  ["PWA manifest version",manifest.name.includes("V72.0")],
+  ["PWA manifest version",manifest.name.includes("V72.1")],
   ["V67.7 visual assets are loaded",html.includes("/v677.css?v=67.7")&&html.includes("/v677.js?v=67.7")&&sw.includes("/v677.css?v=67.7")&&sw.includes("/v677.js?v=67.7")],
   ["V67.7 home remains focused on the downloader",html.includes('id="home"')&&html.includes('id="downloadLinkMode"')&&!html.slice(html.indexOf('id="home"'),html.indexOf('id="toolsArea"')).includes('id="toolGrid"')],
   ["V67.7 feature identity map covers all tools",file("../public/v677.js").includes("const ICONS=")&&["speed","checker","queue","editor","musicFinder","history","imageTools","pdfTools","qrTools","securityTools","colorStudio","profile","owner","about","help"].every(id=>file("../public/v677.js").includes(id))],
@@ -102,19 +102,19 @@ const checks=[
   ["V67.9 remaining tools have branded backgrounds",v677css.includes('data-feature="gradientStudio"')&&v677css.includes('data-feature="fileHash"')&&v677css.includes("#editor .editor-pro-head")&&v677css.includes("#profile .v25-profile-cover")],
   ["V67.9 Color Studio favorites and clipboard work after redesign",v677js.includes("palette.onclick=async event")&&v677js.includes("favorites.onclick=async event")&&v677js.includes('localStorage.setItem("aryanzz.color-favorites.v674"')&&v677js.includes("copyExpandedColor")],
 
-  ["V72.0 service worker cache and creative assets",sw.includes("aryanzz-v72-0")&&sw.includes("/v680.css?v=71.0")&&sw.includes("/v680.js?v=71.0")&&html.includes("/v680.js?v=71.0")],
+  ["V72.1 service worker cache and creative assets",sw.includes("aryanzz-v72-1")&&sw.includes("/v680.css?v=71.0")&&sw.includes("/v680.js?v=71.0")&&html.includes("/v680.js?v=71.0")],
   ["V67.9 downloader preserves direct-source details",downloader.includes("function responseFilename")&&downloader.includes("const directMedia=!!info.extension&&!info.extractor")&&downloader.includes("/api/platform/status")],
-  ["V72.0 title search has no-server YouTube handoff",file("../public/v674.js").includes("Buka hasil YouTube")&&file("../public/v674.js").includes("salin tautan video")],
+  ["V72.1 title search has no-server YouTube handoff",file("../public/v674.js").includes("Buka hasil YouTube")&&file("../public/v674.js").includes("salin tautan video")],
   ["V67.9 direct media whitelist includes common formats",workerSource.includes('"mkv"')&&workerSource.includes('"avi"')&&workerSource.includes('"aiff"')&&workerSource.includes('"opus"')],
-  ["V72.0 Gradient Studio controls are wired",html.includes('id="gradientStudio"')&&html.includes('id="gradientRandom"')&&html.includes('id="gradientPng"')&&file("../public/v680.js").includes("function renderGradient")],
-  ["V72.0 File Hash Checker uses local Web Crypto",html.includes('id="fileHash"')&&html.includes('id="hashCompute"')&&file("../public/v680.js").includes("crypto.subtle.digest")],
+  ["V72.1 Gradient Studio controls are wired",html.includes('id="gradientStudio"')&&html.includes('id="gradientRandom"')&&html.includes('id="gradientPng"')&&file("../public/v680.js").includes("function renderGradient")],
+  ["V72.1 File Hash Checker uses local Web Crypto",html.includes('id="fileHash"')&&html.includes('id="hashCompute"')&&file("../public/v680.js").includes("crypto.subtle.digest")],
 ];
 for(const [name,ok] of checks){assert.ok(ok,name+" failed");console.log("✔ "+name)}
 
 const healthResponse=await worker.fetch(new Request("https://aryanzz.example/api/health"),{});
 assert.equal(healthResponse.status,200);
 const health=await healthResponse.json();
-assert.equal(health.version,"72.0");
+assert.equal(health.version,"72.1");
 assert.equal(health.selfHostedDownloader,false);
 assert.equal(health.youtubeDownloader,true);
 assert.equal(health.mode,"cloudflare-worker-zero-server-hybrid");
@@ -122,7 +122,7 @@ assert.equal(health.platformBackend,"community-handoff");
 assert.equal(health.directMediaDownload,true);
 assert.equal(health.musicRecognitionConfigured,false);
 assert.equal(health.youtubeApiKeyConfigured,false);
-console.log("✔ V72.0 Worker health and zero-server status");
+console.log("✔ V72.1 Worker health and zero-server status");
 const platformStatusResponse=await worker.fetch(new Request("https://aryanzz.example/api/platform/status"),{});
 assert.equal(platformStatusResponse.status,200);
 const platformStatus=await platformStatusResponse.json();
@@ -148,7 +148,7 @@ const legacyProgressEndpoint=await worker.fetch(new Request("https://aryanzz.exa
   method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({id:"job-123",format:"mp3"})
 }),{});
 assert.equal(legacyProgressEndpoint.status,404);
-console.log("✔ Legacy paid downloader/progress endpoints are removed in V72.0");
+console.log("✔ Legacy paid downloader/progress endpoints are removed in V72.1");
 
 const musicStatusResponse=await worker.fetch(new Request("https://aryanzz.example/api/music/status"),{});
 assert.equal(musicStatusResponse.status,200);
@@ -333,7 +333,7 @@ try{
   const healthData=await health.json();
   assert.equal(healthData.platformBackend,"community-handoff");
   assert.equal(healthData.platformExtraction,false);
-  console.log("✔ V72.0 health keeps the no-server mode active");
+  console.log("✔ V72.1 health keeps the no-server mode active");
 }finally{globalThis.fetch=originalFallbackFetch;}
 
 const originalEnterpriseFetch=globalThis.fetch;
@@ -391,6 +391,12 @@ try{
     if(url.hostname==="cdn.instagram.com"&&url.pathname==="/sample.mp4"){
       return new Response(init.method==="HEAD"?null:new Uint8Array([1,2,3,4]),{status:200,headers:{"content-type":"video/mp4","content-length":"4"}});
     }
+    if(url.hostname==="raw.githubusercontent.com"&&url.pathname==="/TeamPiped/documentation/main/content/docs/public-instances/index.md"){
+      return new Response("Instance API URL\\nhttps://pipedapi.example.org\\nhttps://pipedapi.kavin.rocks",{status:200,headers:{"content-type":"text/plain"}});
+    }
+    if(url.hostname==="api.invidious.io"){
+      return new Response(JSON.stringify([["https://inv.nadeko.net",{api:true,cors:true}]]),{status:200,headers:{"content-type":"application/json"}});
+    }
     if(url.pathname==="/ajax/api.php"){
       assert.equal(url.searchParams.get("function"),"i");
       assert.equal(url.searchParams.get("api"),"test-secret");
@@ -406,11 +412,11 @@ try{
         title:"Hybrid Piped Test Video",duration:125,uploader:"Test Channel",
         thumbnailUrl:"https://img.example/piped-thumb.jpg",
         videoStreams:[
-          {mimeType:"video/mp4",format:"MPEG_4",height:360,quality:"360p",videoOnly:false,url:"https://pipedproxy-bom.kavin.rocks/videoplayback?itag=18&sig=test",bitrate:500000},
+          {mimeType:"video/mp4",format:"MPEG_4",height:360,quality:"360p",videoOnly:false,url:id==="DYNAMIC1"?"https://pipedproxy.example.org/videoplayback?itag=18&sig=test":"https://pipedproxy-bom.kavin.rocks/videoplayback?itag=18&sig=test",bitrate:500000},
           {mimeType:"video/mp4",format:"MPEG_4",height:720,quality:"720p",videoOnly:false,url:"https://pipedproxy-bom.kavin.rocks/videoplayback?itag=22&sig=test",bitrate:1500000},
           {mimeType:"video/mp4",format:"MPEG_4",height:1080,quality:"1080p",videoOnly:true,url:"https://pipedproxy-bom.kavin.rocks/videoplayback?itag=137&sig=test",bitrate:3000000}
         ],
-        audioStreams:[{mimeType:"audio/mp4",format:"M4A",quality:"128 kbps",bitrate:128000,url:"https://pipedproxy-bom.kavin.rocks/videoplayback?itag=140&sig=test"}]
+        audioStreams:[{mimeType:"audio/mp4",format:"M4A",quality:"128 kbps",bitrate:128000,url:id==="DYNAMIC1"?"https://pipedproxy.example.org/videoplayback?itag=140&sig=test":"https://pipedproxy-bom.kavin.rocks/videoplayback?itag=140&sig=test"}]
       }),{status:200,headers:{"content-type":"application/json"}});
     }
     if(url.pathname.startsWith("/api/v1/videos/")&&url.hostname==="inv.nadeko.net"){
@@ -427,7 +433,7 @@ try{
         adaptiveFormats:[{url:"https://rr1---sn.googlevideo.com/videoplayback?itag=137",type:"video/mp4; codecs=avc1",qualityLabel:"1080p",itag:"137"},{url:"https://rr1---sn.googlevideo.com/videoplayback?itag=140",type:"audio/mp4; codecs=mp4a.40.2",audioQuality:"AUDIO_QUALITY_MEDIUM"}]
       }),{status:200,headers:{"content-type":"application/json"}});
     }
-    if(url.hostname==="pipedproxy-bom.kavin.rocks"||url.hostname==="rr1---sn.googlevideo.com"){
+    if(url.hostname==="pipedproxy-bom.kavin.rocks"||url.hostname==="pipedproxy.example.org"||url.hostname==="rr1---sn.googlevideo.com"){
       const bytes=new Uint8Array([1,2,3,4]);
       if(init.headers?.range==="bytes=0-1")return new Response(bytes.slice(0,2),{status:206,headers:{"content-type":"video/mp4","content-length":"2","content-range":"bytes 0-1/4","accept-ranges":"bytes"}});
       return new Response(bytes,{status:200,headers:{"content-type":"video/mp4","content-length":"4","accept-ranges":"bytes"}});
@@ -474,6 +480,18 @@ try{
   assert.ok(hybridData.formats.some(x=>x.mode==="video"&&x.videoOnly===true&&x.height===1080),"Piped adaptive 1080p stream should be kept for browser muxing");
   assert.equal(hybridData.formats.find(x=>x.mode==="audio").ext,"m4a");
   console.log("✔ Hybrid primary Piped API returns progressive and adaptive MP4 plus audio formats");
+  const dynamicInfo=await worker.fetch(new Request("https://aryanzz.example/api/youtube/hybrid/info?url="+encodeURIComponent("https://www.youtube.com/watch?v=DYNAMIC1")),{}); 
+  assert.equal(dynamicInfo.status,200);
+  const dynamicData=await dynamicInfo.json();
+  assert.equal(dynamicData.providerReady,true);
+  assert.equal(dynamicData.instance,"https://pipedapi.example.org");
+  assert.ok(dynamicData.formats.some(x=>x.mode==="audio"&&x.ext==="m4a"&&x.url.includes("pipedproxy.example.org")),"audio on discovered sibling proxy must be retained");
+  const dynamicFileUrl="https://aryanzz.example/api/youtube/hybrid/file?url="+encodeURIComponent("https://pipedproxy.example.org/videoplayback?itag=18&sig=test")+"&ext=mp4&title=Dynamic%20Piped&instance="+encodeURIComponent("https://pipedapi.example.org");
+  const dynamicFile=await worker.fetch(new Request(dynamicFileUrl),{});
+  assert.equal(dynamicFile.status,200);
+  assert.equal((await dynamicFile.arrayBuffer()).byteLength,4);
+  console.log("✔ Dynamic Piped instance, sibling media proxy and M4A audio are supported");
+
 
   const hybridFileUrl="https://aryanzz.example/api/youtube/hybrid/file?url="+encodeURIComponent("https://pipedproxy-bom.kavin.rocks/videoplayback?itag=22&sig=test")+"&ext=mp4&title="+encodeURIComponent("Hybrid Piped Test Video");
   const hybridFile=await worker.fetch(new Request(hybridFileUrl),{});
@@ -514,20 +532,20 @@ try{
   const hybridStatus=await worker.fetch(new Request("https://aryanzz.example/api/youtube/status"),{});
   assert.equal(hybridStatus.status,200);
   const hybridStatusData=await hybridStatus.json();
-  assert.equal(hybridStatusData.provider,"Piped + Invidious hybrid");
+  assert.equal(hybridStatusData.provider,"Dynamic Piped + Invidious hybrid");
   assert.equal(hybridStatusData.paidProvider,false);
   assert.equal(hybridStatusData.cobalt,false);
   console.log("✔ YouTube status confirms zero-paid hybrid mode without Cobalt");
 
   const health=await worker.fetch(new Request("https://aryanzz.example/api/health"),{});
   const healthData=await health.json();
-  assert.equal(healthData.version,"72.0");
+  assert.equal(healthData.version,"72.1");
   assert.equal(healthData.cobalt,false);
   assert.equal(healthData.paidYoutubeProvider,false);
-  console.log("✔ Worker health reports V72.0 with no Cobalt or paid YouTube provider");
+  console.log("✔ Worker health reports V72.1 with no Cobalt or paid YouTube provider");
 
 }finally{
   globalThis.fetch=originalFetch;
 }
 
-console.log("\nARYANZZ V72.0 YouTube flow, TikTok community handoff, zero-server downloader, Gradient Studio, file hashing and music recognition smoke tests passed.");
+console.log("\nARYANZZ V72.1 YouTube flow, TikTok community handoff, zero-server downloader, Gradient Studio, file hashing and music recognition smoke tests passed.");

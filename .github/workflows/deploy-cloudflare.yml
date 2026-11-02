@@ -1,4 +1,4 @@
-name: Deploy ARYANZZ V72.0 to Cloudflare Workers
+name: Deploy ARYANZZ V72.1 to Cloudflare Workers
 
 on:
   push:
@@ -51,7 +51,7 @@ jobs:
           wrangler secret delete PLATFORM_API_ORIGIN || true
           wrangler secret delete PLATFORM_API_TOKEN || true
 
-      - name: Smoke test live Worker and V72.0 creative assets
+      - name: Smoke test live Worker and V72.1 creative assets
         env:
           WORKER_URL: https://aryanzz-donwloader.radithnyahaniphanip.workers.dev
         run: |
@@ -67,7 +67,7 @@ jobs:
             await new Promise(resolve => setTimeout(resolve, 2500));
           }
           if (health?.version !== "72.0" || health?.mode !== "cloudflare-worker-zero-server-hybrid" || !health?.directMediaDownload) {
-            throw new Error("Live Worker has not propagated the V72.0 zero-server deployment: " + JSON.stringify(health));
+            throw new Error("Live Worker has not propagated the V72.1 zero-server deployment: " + JSON.stringify(health));
           }
           console.log("Live Worker health OK: V" + health.version + " in zero-server mode.");
 
@@ -84,7 +84,7 @@ jobs:
             throw new Error("Live browser MP4 parser failed its URL initialization regression check.");
           }
           console.log("Live browser MP4 parser URL initialization check passed.");
-                    console.log("V72.0 Creative Studio, Tools Center, and Music Finder assets are available.");
+                    console.log("V72.1 Creative Studio, Tools Center, and Music Finder assets are available.");
 
           const titleSearchProbe = await fetch(base + "/api/search", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ query: "x" }) });
           if (titleSearchProbe.status !== 400) throw new Error("Title-search endpoint validation failed: HTTP " + titleSearchProbe.status);
@@ -108,7 +108,7 @@ jobs:
           if (!youtubeStatusResponse.ok) throw new Error("Hybrid YouTube status endpoint failed.");
           const youtubeStatus = await youtubeStatusResponse.json();
           if (youtubeStatus.provider !== "Piped + Invidious hybrid" || youtubeStatus.paidProvider !== false || youtubeStatus.cobalt !== false) {
-            throw new Error("V72.0 must use the no-paid Piped/Invidious hybrid only: " + JSON.stringify(youtubeStatus));
+            throw new Error("V72.1 must use the no-paid Piped/Invidious hybrid only: " + JSON.stringify(youtubeStatus));
           }
           console.log("Hybrid YouTube status confirms Piped + Invidious, no Cobalt and no paid provider.");
 
