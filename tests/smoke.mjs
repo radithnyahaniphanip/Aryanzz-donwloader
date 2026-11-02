@@ -408,8 +408,8 @@ try{
     const bytes=item.mode==="audio"?audioBytes:videoBytes,mime=item.mode==="audio"?"audio/mpeg":"video/mp4";
     return new Response(bytes,{status:206,headers:{"content-type":mime,"content-length":String(bytes.length),"content-range":"bytes 0-"+(bytes.length-1)+"/"+bytes.length,"accept-ranges":"bytes"}});
   };
-  for(const item of cases){
-    const response=await worker.fetch(new Request("https://aryanzz.example/api/social/search",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({platform:item.id,query:"Tabola Bale"})}),{});
+  for(const [index,item] of cases.entries()){
+    const response=await worker.fetch(new Request("https://aryanzz.example/api/social/search",{method:"POST",headers:{"content-type":"application/json","cf-connecting-ip":"192.0.2."+String(index+1)},body:JSON.stringify({platform:item.id,query:"Tabola Bale"})}),{});
     assert.equal(response.status,200,item.id+" title search should complete");
     const data=await response.json();
     assert.equal(data.results.length,1,item.id+" search should show a provider-verified playable result");
