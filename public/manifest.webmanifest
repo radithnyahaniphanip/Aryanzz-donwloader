@@ -1,10 +1,10 @@
 {
-  "name": "ARYANZZ V68.0 — All-in-One Creative Space",
-  "short_name": "ARYANZZ V68.0",
+  "name": "ARYANZZ V69.0 — All-in-One Creative Space",
+  "short_name": "ARYANZZ V69.0",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "background_color": "#070b16",
   "theme_color": "#070b16",
-  "description": "A clean, mobile-first media downloader with title search, Shazam fallback, and creative tools."
+  "description": "A clean, mobile-first media downloader with zero-server direct media downloads, community provider handoff, and creative tools."
 }
