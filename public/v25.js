@@ -4,6 +4,8 @@
   const $=id=>document.getElementById(id);
   const DESIGN_KEY="aryanzz.profile.design.v25";
   const SURFACE_KEY="aryanzz.surface.v25";
+  const PROFILE_KEY="aryanzz.profile.info.v25";
+  const AUTOSAVE_DB="aryanzz-auto-save-v74";
   const HISTORY_KEYS=["aryanzz.history.v2","aryanzz-download-history-v1"];
   const FAV_KEYS=["aryanzz.favorites.v2","aryanzz.favorites.v2"];
   const read=(key,fallback)=>{try{return JSON.parse(localStorage.getItem(key)||JSON.stringify(fallback))}catch{return fallback}};
@@ -13,10 +15,14 @@
     let el=$("v25Toast");if(!el){el=document.createElement("div");el.id="v25Toast";el.className="v25-toast";el.setAttribute("role","status");el.setAttribute("aria-live","polite");document.body.append(el);}
     el.textContent=message;el.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove("show"),3200);
   }
-  function readDesign(){return read(DESIGN_KEY,{banner:"",background:""});}
+  function readDesign(){return read(DESIGN_KEY,{banner:"",background:"",avatar:""});}
   function applyDesign(){
-    const d=readDesign(),banner=$("profileBannerPreview");
+    const d=readDesign(),banner=$("profileBannerPreview"),avatar=$("profileAvatar"),profile=read(PROFILE_KEY,{});
     if(banner){if(d.banner)banner.style.backgroundImage='linear-gradient(120deg,#08152555,#08152588),url("'+d.banner+'")';else banner.style.removeProperty("background-image");}
+    if(avatar){if(d.avatar){avatar.style.backgroundImage='url("'+d.avatar+'")';avatar.textContent="";}else{avatar.style.removeProperty("background-image");avatar.textContent=(String(profile.name||"A").trim().charAt(0)||"A").toUpperCase();}}
+    const removeBanner=$("clearProfileBanner"),removeAvatar=$("clearProfilePhoto");
+    if(removeBanner)removeBanner.hidden=!d.banner;
+    if(removeAvatar)removeAvatar.hidden=!d.avatar;
     if(d.background){document.body.style.setProperty("--v25-bg-image",'url("'+d.background+'")');document.body.dataset.customBackground="true";}
     else{document.body.style.removeProperty("--v25-bg-image");document.body.dataset.customBackground="false";}
   }
@@ -50,6 +56,7 @@
     setSurface(localStorage.getItem(SURFACE_KEY)||"aurora");
     $("clearProfileBackground")?.addEventListener("click",()=>{const d=readDesign();d.background="";if(!write(DESIGN_KEY,d)){toast("Background belum terhapus karena penyimpanan browser penuh.");return;}applyDesign();setSurface("aurora");toast("Background pribadi dihapus.");});
     $("clearProfileBanner")?.addEventListener("click",()=>{const d=readDesign();d.banner="";if(!write(DESIGN_KEY,d)){toast("Banner belum terhapus karena penyimpanan browser penuh.");return;}applyDesign();window.dispatchEvent(new Event("aryanzz:profile-assets-updated"));toast("Banner berhasil dihapus.");});
+    $("clearProfilePhoto")?.addEventListener("click",()=>{const d=readDesign();d.avatar="";if(!write(DESIGN_KEY,d)){toast("Foto profil belum terhapus karena penyimpanan browser penuh.");return;}applyDesign();window.dispatchEvent(new Event("aryanzz:profile-assets-updated"));toast("Foto profil berhasil dihapus.");});
   }
   function profileCounts(){
     const count=keys=>{for(const key of keys){const value=read(key,[]);if(Array.isArray(value)&&value.length)return value.length;}return 0;};
@@ -62,16 +69,22 @@
     if($("profileSince"))$("profileSince").textContent=(Number.isNaN(joined.getTime())?new Date():joined).toLocaleDateString("id-ID",{day:"2-digit",month:"short",year:"numeric"});
   }
   function setupProfilePreview(){
-    const name=$("profileName"),bio=$("profileBio");
+    const name=$("profileName"),bio=$("profileBio"),saved=read(PROFILE_KEY,{});
+    if(name)name.value=String(saved.name||"");
+    if(bio)bio.value=String(saved.bio||"");
     const update=()=>{
-      if($("profileSummary")&&name)$("profileSummary").textContent=name.value.trim()||"Pengguna ARYANZZ";
-      if($("profileBioPreview")&&bio)$("profileBioPreview").textContent=bio.value.trim()||"Selamat datang di ruang personal ARYANZZ.";
+      const profile={name:String(name?.value||"").trim().slice(0,40),bio:String(bio?.value||"").trim().slice(0,160),updatedAt:Date.now()};
+      if($("profileSummary"))$("profileSummary").textContent=profile.name||"Pengguna ARYANZZ";
+      if($("profileBioPreview"))$("profileBioPreview").textContent=profile.bio||"Selamat datang di ruang personal ARYANZZ.";
       if($("profileCharCount")&&bio)$("profileCharCount").textContent=bio.value.length+"/160 karakter";
+      if(!write(PROFILE_KEY,profile)){setAutoSaveStatus("Penyimpanan perangkat penuh.",true);return;}
+      const design=readDesign();if(!design.avatar&&$("profileAvatar"))$("profileAvatar").textContent=(profile.name.charAt(0)||"A").toUpperCase();
+      setAutoSaveStatus("Perubahan tersimpan otomatis di perangkat ini.");
+      queueAutoSnapshot();
     };
     name?.addEventListener("input",update);bio?.addEventListener("input",update);update();
-    $("profileSave")?.addEventListener("click",()=>{setTimeout(()=>{update();toast("Profil ARYANZZ tersimpan.");},60);});
-    $("profileReset")?.addEventListener("click",()=>setTimeout(()=>{update();toast("Informasi profil direset.");},60));
-    $("profilePhoto")?.addEventListener("change",()=>setTimeout(()=>toast("Foto profil diperbarui."),350));
+    $("profileSave")?.addEventListener("click",()=>{update();toast("Profil tersimpan otomatis.");});
+    $("profileReset")?.addEventListener("click",()=>{if(name)name.value="";if(bio)bio.value="";update();toast("Informasi profil direset.");});
   }
   function setupReveal(){
     const targets=document.querySelectorAll(".v25-profile-card,.v25-profile-stats>div");
@@ -136,12 +149,86 @@
     $("deviceClearHistory")?.addEventListener("click",()=>{write(DEVICE_KEY,[]);renderDeviceHistory();toast("Riwayat perangkat dihapus.");});
   }
 
+
+  let autoSaveDbPromise=null,autoSaveTimer=0,autoSaveObserverInstalled=false;
+  function setAutoSaveStatus(message,error=false){const node=$("profileAutoSaveStatus");if(node){node.textContent=message;node.dataset.state=error?"error":"saved";}}
+  function openAutoSaveDb(){
+    if(!("indexedDB" in window))return Promise.resolve(null);
+    if(autoSaveDbPromise)return autoSaveDbPromise;
+    autoSaveDbPromise=new Promise(resolve=>{
+      try{
+        const request=indexedDB.open(AUTOSAVE_DB,1);
+        request.onupgradeneeded=()=>{const db=request.result;if(!db.objectStoreNames.contains("snapshots"))db.createObjectStore("snapshots",{keyPath:"id"});};
+        request.onsuccess=()=>resolve(request.result);request.onerror=()=>resolve(null);request.onblocked=()=>resolve(null);
+      }catch{resolve(null);}
+    });
+    return autoSaveDbPromise;
+  }
+  function collectAppStorage(){
+    const data={};
+    for(let i=0;i<localStorage.length;i++){const key=localStorage.key(i);if(key&&key.startsWith("aryanzz.")&&!key.startsWith("aryanzz.autosave.")){const value=localStorage.getItem(key);if(value!==null)data[key]=value;}}
+    return data;
+  }
+  async function writeAutoSnapshot(){
+    const db=await openAutoSaveDb();if(!db)return false;
+    const snapshot={id:"latest",savedAt:Date.now(),data:collectAppStorage()};
+    return new Promise(resolve=>{try{const tx=db.transaction("snapshots","readwrite");tx.objectStore("snapshots").put(snapshot);tx.oncomplete=()=>resolve(true);tx.onerror=()=>resolve(false);tx.onabort=()=>resolve(false);}catch{resolve(false);}});
+  }
+  function queueAutoSnapshot(){
+    if(autoSaveTimer)clearTimeout(autoSaveTimer);
+    autoSaveTimer=setTimeout(async()=>{const ok=await writeAutoSnapshot();setAutoSaveStatus(ok?"Tersimpan otomatis · cadangan lokal diperbarui.":"Auto-save profil aktif; cadangan otomatis tidak tersedia di browser ini.",!ok);},450);
+  }
+  function readAutoSnapshot(){
+    return openAutoSaveDb().then(db=>new Promise(resolve=>{if(!db){resolve(null);return;}try{const request=db.transaction("snapshots","readonly").objectStore("snapshots").get("latest");request.onsuccess=()=>resolve(request.result||null);request.onerror=()=>resolve(null);}catch{resolve(null);}}));
+  }
+  function installAutoSaveObserver(){
+    if(autoSaveObserverInstalled)return;autoSaveObserverInstalled=true;
+    try{
+      const proto=Storage.prototype,originalSet=proto.setItem,originalRemove=proto.removeItem,originalClear=proto.clear;
+      proto.setItem=function(key,value){const result=originalSet.call(this,key,value);if(this===localStorage&&String(key).startsWith("aryanzz.")&&!String(key).startsWith("aryanzz.autosave."))queueAutoSnapshot();return result;};
+      proto.removeItem=function(key){const result=originalRemove.call(this,key);if(this===localStorage&&String(key).startsWith("aryanzz."))queueAutoSnapshot();return result;};
+      proto.clear=function(){const result=originalClear.call(this);if(this===localStorage)queueAutoSnapshot();return result;};
+    }catch{setAutoSaveStatus("Auto-save otomatis tidak dapat diaktifkan di browser ini.",true);}
+  }
+  function setupBackupActions(){
+    $("exportData")?.addEventListener("click",()=>{
+      const payload={app:"ARYANZZ",version:74,exportedAt:new Date().toISOString(),storage:collectAppStorage()};
+      const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),anchor=document.createElement("a");
+      const date=new Date().toISOString().slice(0,10);anchor.href=url;anchor.download="aryanzz-backup-"+date+".json";document.body.append(anchor);anchor.click();anchor.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);toast("File backup berhasil dibuat.");
+    });
+    $("importData")?.addEventListener("change",async event=>{
+      const input=event.currentTarget,file=input.files?.[0];if(!file)return;
+      try{
+        const payload=JSON.parse(await file.text()),storage=payload?.storage||payload?.data;
+        if(payload?.app!=="ARYANZZ"||!storage||typeof storage!=="object"||Array.isArray(storage))throw new Error("File ini bukan backup ARYANZZ yang valid.");
+        if(!window.confirm("Pulihkan backup ini? Data ARYANZZ yang ada di browser akan diganti."))return;
+        const allowed=Object.entries(storage).filter(([key,value])=>key.startsWith("aryanzz.")&&typeof value==="string");
+        for(let i=localStorage.length-1;i>=0;i--){const key=localStorage.key(i);if(key?.startsWith("aryanzz.")&&!allowed.some(([savedKey])=>savedKey===key))localStorage.removeItem(key);}
+        allowed.forEach(([key,value])=>localStorage.setItem(key,value));
+        toast("Backup dipulihkan. Memuat ulang tampilan…");setTimeout(()=>location.reload(),650);
+      }catch(error){toast(error.message||"Backup tidak dapat dipulihkan.");}finally{input.value="";}
+    });
+    $("restoreAutoBackup")?.addEventListener("click",async()=>{
+      const snapshot=await readAutoSnapshot();
+      if(!snapshot?.data){toast("Belum ada cadangan otomatis yang tersimpan.");return;}
+      if(!window.confirm("Pulihkan cadangan otomatis terakhir dari browser ini? Data ARYANZZ saat ini akan diganti."))return;
+      const allowed=Object.entries(snapshot.data).filter(([key,value])=>key.startsWith("aryanzz.")&&typeof value==="string");
+      for(let i=localStorage.length-1;i>=0;i--){const key=localStorage.key(i);if(key?.startsWith("aryanzz.")&&!allowed.some(([savedKey])=>savedKey===key))localStorage.removeItem(key);}
+      allowed.forEach(([key,value])=>localStorage.setItem(key,value));
+      toast("Cadangan otomatis dipulihkan. Memuat ulang…");setTimeout(()=>location.reload(),650);
+    });
+  }
+
   function init(){
     if(!$("profile"))return;
-    applyDesign();initDeviceHistory();storeImage("profileBanner","banner",1500,520,.78,"Banner");storeImage("profileBackground","background",1600,1000,.72,"Background");
-    setupSurface();setupProfilePreview();profileCounts();setupReveal();setupPremiumEffects();
+    installAutoSaveObserver();applyDesign();initDeviceHistory();
+    storeImage("profileBanner","banner",1500,520,.78,"Banner");
+    storeImage("profileBackground","background",1600,1000,.72,"Background");
+    storeImage("profilePhoto","avatar",520,520,.8,"Foto profil");
+    setupSurface();setupProfilePreview();setupBackupActions();profileCounts();setupReveal();setupPremiumEffects();
     window.addEventListener("storage",()=>{profileCounts();applyDesign();});
     window.addEventListener("aryanzz:profile-assets-updated",applyDesign);
+    queueAutoSnapshot();
   }
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init,{once:true});else init();
 })();
