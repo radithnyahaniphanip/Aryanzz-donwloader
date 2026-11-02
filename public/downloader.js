@@ -462,7 +462,7 @@
     const response=await fetch("/api/youtube/hybrid/info?url="+encodeURIComponent(raw),{cache:"no-store",signal:AbortSignal.timeout(12000)});
     const fallback=await response.json().catch(()=>({}));
     if(response.ok&&fallback.providerReady)return fallback;
-    throw new Error("MP4 belum tersedia. Instance komunitas tidak mengirim stream yang dapat digunakan. Ini bukan kesalahan link; coba lagi nanti.");
+    throw new Error("MP4 belum tersedia saat ini. Instance komunitas tidak mengirim stream yang dapat digunakan. Ini bukan kesalahan link; coba lagi nanti.");
   }
   async function checkLink(url, button) {
     const out = $("downloadResult");
