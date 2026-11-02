@@ -188,6 +188,51 @@
       ]);
     }finally{if(timer)clearTimeout(timer);}
   }
+  function mp4FourCC(bytes,offset){return String.fromCharCode(bytes[offset],bytes[offset+1],bytes[offset+2],bytes[offset+3]);}
+  function mp4ReadMvhdDuration(bytes){
+    const view=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);let offset=0;
+    while(offset+8<=bytes.byteLength){
+      let size=view.getUint32(offset),header=8;const type=mp4FourCC(bytes,offset+4);
+      if(size===1){if(offset+16>bytes.byteLength)break;size=Number(view.getBigUint64(offset+8));header=16;}
+      else if(size===0)size=bytes.byteLength-offset;
+      if(size<header||offset+size>bytes.byteLength)break;
+      if(type==="mvhd"){
+        const p=offset+header,version=view.getUint8(p);
+        const scale=view.getUint32(p+(version===1?20:12));
+        const duration=version===1?Number(view.getBigUint64(p+24)):view.getUint32(p+16);
+        return scale>0&&duration>0?duration/scale:null;
+      }
+      offset+=size;
+    }
+    return null;
+  }
+  async function inspectMp4Blob(blob,expectedDuration=0){
+    let offset=0,boxes=0,hasFtyp=false,hasMoov=false,hasMdat=false,duration=null;
+    while(offset+8<=blob.size&&boxes++<4096){
+      const head=new Uint8Array(await blob.slice(offset,Math.min(blob.size,offset+16)).arrayBuffer());
+      if(head.length<8)break;
+      const view=new DataView(head.buffer,head.byteOffset,head.byteLength);
+      let size=view.getUint32(0),header=8;const type=mp4FourCC(head,4);
+      if(size===1){if(head.length<16)throw new Error("Header MP4 64-bit tidak lengkap.");size=Number(view.getBigUint64(8));header=16;}
+      else if(size===0)size=blob.size-offset;
+      if(!Number.isFinite(size)||size<header||offset+size>blob.size)throw new Error("Struktur MP4 terpotong atau ukuran kotaknya tidak valid ("+type+").");
+      if(type==="ftyp")hasFtyp=true;
+      if(type==="mdat")hasMdat=true;
+      if(type==="moov"){
+        hasMoov=true;
+        const moov=new Uint8Array(await blob.slice(offset+header,offset+size).arrayBuffer());
+        duration=mp4ReadMvhdDuration(moov);
+      }
+      offset+=size;
+    }
+    if(boxes>=4096||offset!==blob.size||!hasFtyp||!hasMoov||!hasMdat)throw new Error("File MP4 belum utuh: struktur ftyp/moov/mdat tidak lengkap. File tidak disimpan.");
+    if(expectedDuration>0&&duration>0){
+      const tolerance=Math.max(3,expectedDuration*0.12);
+      if(Math.abs(duration-expectedDuration)>tolerance)throw new Error("Durasi MP4 hasil unduhan ("+duration.toFixed(1)+" detik) berbeda jauh dari durasi sumber ("+expectedDuration.toFixed(1)+" detik). File ditahan agar tidak menyimpan video yang terpotong.");
+    }
+    if(expectedDuration>5&&duration!==null&&duration<1)throw new Error("Metadata MP4 menunjukkan durasi kurang dari 1 detik, bukan video utuh.");
+    return {duration,hasFtyp,hasMoov,hasMdat};
+  }
 
   let aryanzzFfmpegPromise=null;
   async function loadBrowserFfmpeg(progressText,progressMeta,bar,sizeNote=""){
@@ -800,6 +845,12 @@
       if(responseSize&&received!==responseSize)throw new Error("Transfer tidak lengkap: diterima "+formatDownloadSize(received)+" dari "+formatDownloadSize(responseSize)+". File tidak disimpan.");
       const blob=new Blob(chunks,{type:check.mimeType||selected.mimeType||"application/octet-stream"});
       if(blob.size!==received)throw new Error("Ukuran file hasil rakitan tidak cocok dengan data yang diterima.");
+      if(mode==="video"&&["mp4","m4v","mov"].includes(check.extension)){
+        progressText.textContent="Memeriksa struktur MP4 dan durasi video…";
+        if(progressMeta)progressMeta.textContent="Memastikan kotak video, metadata durasi, dan data gambar/audio lengkap sebelum file disimpan.";
+        const mp4Check=await inspectMp4Blob(blob,Number(info.duration)||Number(selected.duration)||0);
+        if(progressMeta)progressMeta.textContent="Struktur MP4 lengkap"+(mp4Check.duration?" · durasi "+mp4Check.duration.toFixed(1)+" detik":"")+".";
+      }
       await saveBrowserBlob(blob,filename,container,mode==="audio"?"⬇ Simpan audio sekarang":"⬇ Simpan video sekarang");
       bar.style.width="100%";bar.parentElement?.classList.remove("is-indeterminate");bar.parentElement?.setAttribute("aria-valuenow","100");
       progressText.textContent=(mode==="audio"?"Audio ":"Video ")+check.extension.toUpperCase()+" selesai · file utuh ✓";
@@ -1108,7 +1159,16 @@
           preview.src=previewSource.href;preview.controls=true;preview.playsInline=true;preview.preload="metadata";
           if(info.thumbnail)preview.poster=info.thumbnail;
           preview.setAttribute("aria-label","Pratinjau video "+(info.title||"media"));
-          box.append(preview);
+          const previewStatus=make("small","muted","");
+          preview.addEventListener("loadedmetadata",()=>{
+            const actual=Number(preview.duration),expected=Number(info.duration)||0;
+            if(expected>0&&Number.isFinite(actual)&&Math.abs(actual-expected)>Math.max(3,expected*0.12)){
+              previewStatus.textContent="Peringatan: durasi stream "+actual.toFixed(1)+" detik berbeda dari sumber "+expected.toFixed(1)+" detik. Jangan simpan sebelum diperiksa.";
+              previewStatus.className="warning";
+            }else previewStatus.textContent="Pratinjau siap · "+(Number.isFinite(actual)?actual.toFixed(1)+" detik":"durasi belum tersedia");
+          });
+          preview.addEventListener("error",()=>{previewStatus.textContent="Pratinjau gagal diputar. Periksa kembali sumber atau format codec video.";previewStatus.className="warning"});
+          box.append(preview,previewStatus);
         }else{
           const audioPreview=(info.formats||[]).find(item=>item.mode==="audio"&&item.url);
           if(audioPreview?.previewUrl){const preview=make("audio","v737-audio-preview");preview.src=audioPreview.previewUrl;preview.controls=true;preview.preload="metadata";box.append(preview)}
