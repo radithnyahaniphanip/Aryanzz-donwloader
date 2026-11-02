@@ -103,6 +103,7 @@ async function download(request){
 }
 
 const AUDD_MAX_BYTES=10*1024*1024;
+const MAX_YOUTUBE_BYTES=500*1024*1024;
 const MUSIC_RATE_BUCKETS=new Map();
 function isYouTubeUrl(raw){
   try{const u=new URL(raw),h=u.hostname.toLowerCase();return ["http:","https:"].includes(u.protocol)&&["youtube.com","www.youtube.com","m.youtube.com","music.youtube.com","youtu.be","www.youtu.be","youtube-nocookie.com","www.youtube-nocookie.com"].includes(h);}catch{return false;}
