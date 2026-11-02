@@ -246,6 +246,25 @@
   const BROWSER_INVIDIOUS_INSTANCES=[
     "https://yt.chocolatemoo53.com","https://inv.nadeko.net","https://invidious.nerdvpn.de","https://invidious.tiekoetter.com"
   ];
+  async function currentInvidiousInstances(){
+    const fallback=BROWSER_INVIDIOUS_INSTANCES.slice();
+    try{
+      const response=await fetch("https://api.invidious.io/instances.json?sort_by=type,health",{mode:"cors",credentials:"omit",cache:"no-store",signal:AbortSignal.timeout(3000)});
+      if(!response.ok)return fallback;
+      const rows=await response.json();
+      if(!Array.isArray(rows))return fallback;
+      const discovered=rows.map(row=>{
+        const raw=Array.isArray(row)?row[0]:row?.uri;
+        const meta=Array.isArray(row)?row[1]:row;
+        try{
+          const u=new URL(raw);
+          if(u.protocol!=="https:"||u.username||u.password||u.port||meta?.api!==true||meta?.cors!==true||u.hostname.endsWith(".onion"))return null;
+          return u.origin;
+        }catch{return null;}
+      }).filter(Boolean);
+      return [...new Set([...fallback,...discovered])].slice(0,18);
+    }catch{return fallback;}
+  }
   const BROWSER_MEDIA_ROOTS=["kavin.rocks","leptons.xyz","nosebs.ru","privacy.com.de","adminforge.de","piped.yt","drgns.space","owo.si","ducks.party","codespace.cz","reallyaweso.me","private.coffee","darkness.services","orangenet.cc"];
   function browserHybridMediaUrl(raw,trustedOrigin){
     try{
@@ -269,15 +288,16 @@
       if(p)return Number(p[1]);
     }
     const itag=Number(url?.searchParams?.get("itag")||item?.itag);
-    return ({17:144,18:360,22:720,37:1080,59:480,78:480})[itag]||0;
+    return ({18:360,22:720,37:1080,59:480,78:480,82:360,83:480,84:720,85:1080,133:240,134:360,135:480,136:720,137:1080,160:144,264:1440,266:2160,298:720,299:1080})[itag]||0;
   }
   function browserVideoFormat(item,providerInstance,progressiveSource=false){
     const mime=String(item?.mimeType||item?.type||item?.mime_type||item?.mime||"").toLowerCase();
     const container=String(item?.format||item?.container||item?.ext||"").toLowerCase();
     const url=browserHybridMediaUrl(item?.url||item?.urlTemplate||"",providerInstance);
     const height=browserVideoHeight(item,url);
-    const mp4=mime.includes("video/mp4")||mime.includes("video/x-m4v")||container.includes("mpeg_4")||container==="mp4"||container==="m4v"||(progressiveSource&&/\.mp4(?:$|[?#])/i.test(url?.pathname||""));
-    if(!url||![144,240,360,480,720,1080,1440,2160].includes(height)||item?.videoOnly===true||!mp4)return null;
+    const itag=Number(url?.searchParams?.get("itag")||item?.itag);
+    const mp4=mime.includes("video/mp4")||mime.includes("video/x-m4v")||container.includes("mpeg_4")||container==="mp4"||container==="m4v"||String(item?.ext||"").toLowerCase()==="mp4"||String(url?.searchParams?.get("mime")||"").toLowerCase().includes("video/mp4")||(/\.mp4(?:$|[?#])/i.test(url?.pathname||""))||(progressiveSource&&[18,22,37,59,78,82,83,84,85].includes(itag));
+    if(!url||![144,240,360,480,720,1080,1440,2160].includes(height)||item?.videoOnly===true||item?.isVideoOnly===true||item?.video_only===true||!mp4)return null;
     return {mode:"video",height,quality:height+"p",ext:"mp4",mimeType:"video/mp4",url:url.href,bitrate:Number(item.bitrate)||0,progressive:true};
   }
   function browserAudioFormat(item,providerInstance){
@@ -307,9 +327,11 @@
       return {ok:true,providerReady:true,providerName:"Hybrid",provider:"Piped",instance,title:String(data.title).slice(0,300),thumbnail:typeof data.thumbnailUrl==="string"?data.thumbnailUrl:null,duration:Number(data.duration)||null,uploader:String(data.uploader||"").slice(0,160),formats,message:"Stream diperoleh langsung dari browser melalui instance komunitas."};
   }
   async function browserInvidiousInfo(instance,id,signal){
-    const data=await browserProviderJson(instance+"/api/v1/videos/"+encodeURIComponent(id)+"?fields=title,videoId,author,lengthSeconds,videoThumbnails,formatStreams,adaptiveFormats",signal);
-      const formats=browserDedupeFormats([...(Array.isArray(data.formatStreams)?data.formatStreams.map(item=>browserVideoFormat(item,instance,true)).filter(Boolean):[]),...(Array.isArray(data.adaptiveFormats)?data.adaptiveFormats.map(item=>browserAudioFormat(item,instance)).filter(Boolean):[])]);
-      if(!data.title||!formats.some(item=>item.mode==="video"&&item.ext==="mp4"))throw new Error("Instance Invidious ini hanya mengembalikan audio atau tidak memiliki MP4 progresif; lanjutkan ke instance berikutnya");
+    const data=await browserProviderJson(instance+"/api/v1/videos/"+encodeURIComponent(id),signal);
+      const formats=browserDedupeFormats([...((Array.isArray(data.formatStreams)?data.formatStreams:Array.isArray(data.format_streams)?data.format_streams:[]).map(item=>browserVideoFormat(item,instance,true)).filter(Boolean)),...((Array.isArray(data.adaptiveFormats)?data.adaptiveFormats:Array.isArray(data.adaptive_formats)?data.adaptive_formats:[]).map(item=>browserAudioFormat(item,instance)).filter(Boolean))]);
+      const rawVideo=Array.isArray(data.formatStreams)?data.formatStreams:Array.isArray(data.format_streams)?data.format_streams:[];
+      const videoFormats=formats.filter(item=>item.mode==="video"&&item.ext==="mp4");
+      if(!data.title||!videoFormats.length)throw new Error("Tidak menemukan MP4 progresif di "+instance+" (formatStreams: "+rawVideo.length+", MP4 valid: "+videoFormats.length+"). Coba instance berikutnya.");
       const thumb=Array.isArray(data.videoThumbnails)?data.videoThumbnails.find(x=>x.quality==="maxresdefault")||data.videoThumbnails[0]:null;
       return {ok:true,providerReady:true,providerName:"Hybrid",provider:"Invidious",instance,title:String(data.title).slice(0,300),thumbnail:typeof thumb?.url==="string"?thumb.url:null,duration:Number(data.lengthSeconds)||null,uploader:String(data.author||"").slice(0,160),formats,message:"Stream diperoleh langsung dari browser melalui instance komunitas."};
   }
@@ -323,19 +345,22 @@
       catch(error){const reasons=Array.isArray(error?.errors)?error.errors.map((item,i)=>instances[i]+": "+String(item?.message||"gagal")).join(" | "):String(error?.message||"gagal");throw new Error("Semua instance pada kelompok ini gagal: "+reasons.slice(0,900));}
       finally{controllers.forEach(t=>t.abort());}
     };
-    let pipedError;
+    let invidiousError,pipedError;
+    // Prefer Invidious first: its formatStreams endpoint supplies already-muxed MP4.
+    const invidiousInstances=await currentInvidiousInstances();
+    for(let offset=0;offset<invidiousInstances.length;offset+=5){
+      try{return await tryGroup(invidiousInstances.slice(offset,offset+5),browserInvidiousInfo);}
+      catch(error){invidiousError=error;}
+    }
     const pipedInstances=await currentPipedInstances();
     for(let offset=0;offset<pipedInstances.length;offset+=5){
       try{return await tryGroup(pipedInstances.slice(offset,offset+5),browserPipedInfo);}
       catch(error){pipedError=error;}
     }
-    try{return await tryGroup(BROWSER_INVIDIOUS_INSTANCES,browserInvidiousInfo);}
-    catch(invidiousError){
-        const response=await fetch("/api/youtube/hybrid/info?url="+encodeURIComponent(raw),{cache:"no-store",signal:AbortSignal.timeout(35000)});
-        const fallback=await response.json().catch(()=>({}));
-        if(response.ok&&fallback.providerReady)return fallback;
-        throw new Error("Browser dan server belum menemukan instance komunitas yang berfungsi. Piped: "+(pipedError?.message||"gagal")+" · Invidious: "+invidiousError.message);
-    }
+    const response=await fetch("/api/youtube/hybrid/info?url="+encodeURIComponent(raw),{cache:"no-store",signal:AbortSignal.timeout(35000)});
+    const fallback=await response.json().catch(()=>({}));
+    if(response.ok&&fallback.providerReady)return fallback;
+    throw new Error("Belum menemukan stream MP4 progresif. Invidious: "+(invidiousError?.message||"tidak tersedia")+" · Piped: "+(pipedError?.message||"tidak tersedia")+" · Server: "+(fallback.providerMessage||fallback.error||"tidak tersedia"));
   }
   async function checkLink(url, button) {
     const out = $("downloadResult");
