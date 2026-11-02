@@ -23,14 +23,13 @@ const ownerJs=file("../public/owner.js");
 const ownerCss=file("../public/owner.css");
 const audioStudioJs=file("../public/audio-studio.js");
 const audioStudioCss=file("../public/audio-studio.css");
+const imageStudioJs=file("../public/image-studio.js");
+const imageStudioCss=file("../public/image-studio.css");
 const profileJs=file("../public/v25.js");
 const manifest=JSON.parse(file("../public/manifest.webmanifest"));
 const deployWorkflow=file("../.github/workflows/deploy-cloudflare.yml");
 
 const checks=[
-  ["V81.0 social image extraction, image search, and safe proxy endpoints are registered",workerSource.includes("async function socialImageInfo")&&workerSource.includes("async function socialImageSearch")&&workerSource.includes("async function socialImageFile")&&workerSource.includes('url.pathname==="/api/social/images"')&&workerSource.includes('url.pathname==="/api/social/image-search"')&&workerSource.includes('url.pathname==="/api/social-image-file"')],
-  ["V81.0 Image Studio supports public image links, multi-image posts, custom ratios, and local export",html.includes('id="imageStudio"')&&html.includes('id="socialImageAnalyze"')&&html.includes('id="socialImageSearchBtn"')&&html.includes('id="imageStudioPreview"')&&html.includes('id="imageStudioExport"')&&html.includes("is-ratio-shape")&&file("../public/image-studio.js").includes("createImageBitmap")&&file("../public/image-studio.js").includes("/api/social/images")],
-  ["V81.0 image assets are included in the PWA cache",sw.includes("/image-studio.js?v=81.0")&&sw.includes("/image-studio.css?v=81.0")&&html.includes('/image-studio.js?v=81.0')&&html.includes('/image-studio.css?v=81.0')],
 
   ["V73.7 presents a visible tap-to-download link for completed browser files",downloader.includes("function addReadyDownloadLink")&&downloader.includes("youtube-ready-link")&&downloader.includes("Unduh MP4 sekarang")&&!downloader.includes("document.body.append(anchor);anchor.click();anchor.remove();")],
   ["V73.7 adaptive MP4 shows three clear stages and only reaches 100% after the file is ready",downloader.includes("Tahap 1/3 · Video")&&downloader.includes("Tahap 2/3 · Audio")&&downloader.includes("Tahap 3/3 · Menyatukan MP4")&&downloader.includes('bar.style.width="100%"')],
@@ -207,8 +206,24 @@ const checks=[
   ["V80.0 platform logos have consistent branded icon tiles and responsive labels",downloaderCss.includes(".v736-logo{")&&downloaderCss.includes(".v736-instagram{background:linear-gradient")&&downloaderCss.includes("overflow-wrap:anywhere")&&html.includes("12 PLATFORM")],
   ["V80.0 Reddit short video host v.redd.it routes through the Reddit provider",workerSource.includes('"v.redd.it":"reddit"')&&workerSource.includes('id:"reddit",domains:["reddit.com","redd.it","v.redd.it"]')],
 
+
+  ["V80.1 Image Studio editor controls and client-side export are present",html.includes('id="imageStudioFile"')&&html.includes('id="imageEditorCanvas"')&&html.includes('id="imageExport"')&&imageStudioJs.includes("createImageBitmap")&&imageStudioJs.includes("canvas.toBlob")],
+  ["V80.1 Image Studio supports all requested aspect ratios and custom pixel dimensions",html.includes('value="1:1"')&&html.includes('value="4:3"')&&html.includes('value="3:2"')&&html.includes('value="16:9"')&&html.includes('value="9:16"')&&html.includes('value="6:8"')&&html.includes('data-image-ratio="9:16"')&&html.includes('class="image-ratio-gallery"')&&imageStudioJs.includes('syncRatioGallery')&&imageStudioJs.includes('imageCustomWidth')&&imageStudioJs.includes('imageCustomHeight')],
+  ["V80.1 Image Downloader has platform search and public-post extraction controls",html.includes('id="imageSearchPlatform"')&&html.includes('id="imageSearchQuery"')&&html.includes('id="imageExtractButton"')&&workerSource.includes('async function searchSocialImages')&&workerSource.includes('async function imagePostMetadata')],
+  ["V80.1 image downloads use a validated same-origin image proxy and reject non-image content",workerSource.includes('url.pathname==="/api/image/file"')&&workerSource.includes('safePublicMediaUrl(raw)')&&workerSource.includes('image/jpeg')&&workerSource.includes('Sumber tidak mengirim file gambar yang didukung')],
+  ["V80.1 Image Studio CSS and JavaScript are loaded and cached by the service worker",html.includes('/image-studio.css?v=80.1')&&html.includes('/image-studio.js?v=80.1')&&sw.includes('/image-studio.css?v=80.1')&&sw.includes('/image-studio.js?v=80.1')&&imageStudioCss.includes('.image-download-results')],
+  ["V80.1 CapCut and Pinterest marks use updated reference-style SVG paths",html.includes('viewBox="0 0 32 32"')&&html.includes('class="v736-logo v736-pinterest"')&&html.includes('fill="#fff"')]
+
  ];
  for(const [name,ok] of checks){assert.ok(ok,name+" failed");console.log("✔ "+name)}
+
+
+const invalidImageSearch=await worker.fetch(new Request("https://aryanzz.example/api/image/search",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({platform:"pinterest",query:"x"})}),{});
+assert.equal(invalidImageSearch.status,400);
+const blockedImageProxy=await worker.fetch(new Request("https://aryanzz.example/api/image/file?url="+encodeURIComponent("https://localhost/private.jpg")),{});
+assert.equal(blockedImageProxy.status,400);
+console.log("✔ Image search validates short queries and image proxy blocks localhost targets");
+
 
 const healthResponse=await worker.fetch(new Request("https://aryanzz.example/api/health"),{});
 assert.equal(healthResponse.status,200);
@@ -994,19 +1009,6 @@ try{
   assert.equal(healthData.cobalt,false);
   assert.equal(healthData.paidYoutubeProvider,false);
   console.log("✔ Worker health reports V81.0 with no Cobalt or paid YouTube provider");
-
-  const invalidImagePost=await worker.fetch(new Request("https://aryanzz.example/api/social/images",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({url:"https://example.com/not-a-social-post"})}),{});
-  assert.equal(invalidImagePost.status,400);
-  console.log("✔ V81.0 image extraction rejects unsupported non-social URLs before fetching");
-
-  const invalidImageSearch=await worker.fetch(new Request("https://aryanzz.example/api/social/image-search",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({platform:"unknown",query:"test image"})}),{});
-  assert.equal(invalidImageSearch.status,400);
-  console.log("✔ V81.0 image search validates supported platform names");
-
-  const unsafeImage=await worker.fetch(new Request("https://aryanzz.example/api/social-image-file?url="+encodeURIComponent("http://127.0.0.1/private.png")),{}); 
-  assert.equal(unsafeImage.status,400);
-  console.log("✔ V81.0 image proxy rejects non-HTTPS/private-network targets");
-
 
 }finally{
   globalThis.fetch=originalFetch;
