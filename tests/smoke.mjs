@@ -165,7 +165,7 @@ assert.equal(health.version,"73.7");
 assert.equal(health.selfHostedDownloader,false);
 assert.equal(health.youtubeDownloader,true);
 assert.equal(health.mode,"cloudflare-worker-zero-server-hybrid");
-assert.equal(health.platformBackend,"community-handoff");
+assert.equal(health.platformBackend,"public-free-community-api");
 assert.equal(health.directMediaDownload,true);
 assert.equal(health.musicRecognitionConfigured,false);
 assert.equal(health.youtubeApiKeyConfigured,false);
