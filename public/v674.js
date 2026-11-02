@@ -36,7 +36,6 @@ const open=document.createElement("a");open.className="primary";open.href=target
 card.append(title,note,open);results.append(card);
 }
 function render(items,target,q,unavailableCount=0){
-render.unavailableCount=Number(unavailableCount)||0;
 results.replaceChildren();
 if(!items.length){showFallback(target,q);if(help)help.textContent="Belum ada video yang lolos pemeriksaan provider gratis. Tautan yang tidak bisa diputar atau diunduh sengaja disembunyikan. Coba kata kunci lain.";return}
 items.forEach(item=>{
@@ -50,7 +49,7 @@ pick.type="button";pick.className="primary";pick.textContent="Lihat & unduh";
 pick.addEventListener("click",()=>{const input=$("url");if(!input)return;input.value=item.url;setMode("link");$("analyze")?.click();$("downloadResult")?.scrollIntoView({behavior:"smooth",block:"nearest"})});
 info.append(title,meta,snippet,pick);card.append(info);results.append(card);
 });
-if(help)help.textContent=items.length+" video lolos pemeriksaan"+(Number(render.unavailableCount)>0?" · "+Number(render.unavailableCount)+" tautan mati/tidak menyediakan video dilewati":"")+" · pilih hasil untuk memutar dan mengunduh di ARYANZZ.";
+if(help)help.textContent=items.length+" video lolos pemeriksaan"+(Number(unavailableCount)>0?" · "+Number(unavailableCount)+" tautan mati/tidak menyediakan video dilewati":"")+" · pilih hasil untuk memutar dan mengunduh di ARYANZZ.";
 }
 const go=async()=>{
 const q=(searchInput?.value||"").trim();if(!q){if(help)help.textContent="Masukkan judul yang ingin dicari.";return}if(q.length<2){if(help)help.textContent="Masukkan minimal 2 karakter.";return}
