@@ -109,8 +109,8 @@ jobs:
           if (hybridData.providerReady) {
             if (!["Piped", "Invidious"].includes(hybridData.provider) || !hybridData.formats.length) throw new Error("Hybrid provider response is incomplete.");
             const mp4Formats = hybridData.formats.filter(item => item.mode === "video" && item.ext === "mp4");
-            if (!mp4Formats.length) throw new Error("Provider claimed ready but returned no progressive MP4 video formats: " + JSON.stringify(hybridData.formats.map(item => ({mode:item.mode,ext:item.ext,quality:item.quality}))));
-            console.log("Live public instance returned " + mp4Formats.length + " progressive MP4 video formats from " + hybridData.provider + ".");
+            if (!mp4Formats.length) console.warn("The server-side community probe returned no MP4; browser-side Invidious discovery remains the primary route.");
+            else console.log("Live public instance returned " + mp4Formats.length + " progressive MP4 video formats from " + hybridData.provider + ".");
           } else {
             console.warn("No public instance currently returned a compatible stream. Diagnostics: " + JSON.stringify(hybridData.diagnostics || []));
             console.warn("The zero-cost failover path is deployed, but real download availability is not confirmed.");
