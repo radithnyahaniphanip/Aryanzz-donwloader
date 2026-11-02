@@ -61,7 +61,7 @@ function isPlatformLink(raw){
   try{
     const u=new URL(raw),h=u.hostname.toLowerCase();
     if(!["http:","https:"].includes(u.protocol))return false;
-    if(h==="sck.io"||h==="www.sck.io")return /^\\/p\\/[A-Za-z0-9_-]+\\/?$/.test(u.pathname);
+    if(h==="sck.io"||h==="www.sck.io")return u.pathname.startsWith("/p/")&&/^\/p\/[A-Za-z0-9_-]+\/?$/.test(u.pathname);
     return PLATFORM_HOSTS.some(d=>h===d||h.endsWith("."+d));
   }catch{return false;}
 }
@@ -164,6 +164,35 @@ function freeProviderMediaInfo(data,rawUrl,requestUrl){
   if(!formats.length)return null;
   formats.sort((a,b)=>a.mode===b.mode?(b.height-a.height):a.mode==="video"?-1:1);
   return {ok:true,providerName:"Public API",providerReady:true,provider:"Free public provider",source:"Provider komunitas gratis",title,filename:title,duration,thumbnail,type:formats.some(x=>x.mode==="video")?"video":"audio",formats};
+}
+function platformLabel(key){
+  return ({tiktok:"TikTok",instagram:"Instagram",snackvideo:"SnackVideo",capcut:"CapCut",youtube:"YouTube"})[key]||key;
+}
+function providerFailureMessage(key,status,data){
+  const name=platformLabel(key),detail=String(data?.error?.message||data?.error||data?.message||"").slice(0,180);
+  if(status===401||status===403||/private|login|required|sign.?in|permission|unauthorized|forbidden/i.test(detail))return "Tautan "+name+" tidak dapat diakses publik. Pastikan video tidak privat, tidak dibatasi usia/wilayah, dan tidak memerlukan login.";
+  if(status===404||/not found|deleted|removed|expired|unavailable/i.test(detail))return "Video "+name+" tidak ditemukan, sudah dihapus, atau tautan berbagi sudah kedaluwarsa.";
+  if(status===429)return "Provider gratis sedang mencapai batas permintaan untuk "+name+". Tunggu sebentar lalu coba lagi.";
+  if(status>=500||!status)return "Provider gratis "+name+" sedang tidak merespons. Tautan belum dinyatakan rusak; coba lagi beberapa saat.";
+  return detail?"Provider "+name+" menolak tautan: "+detail:"Provider gratis belum bisa mengekstrak tautan "+name+". Pastikan tautan mengarah ke satu video atau template publik.";
+}
+async function freePublicMediaInfo(rawUrl,requestUrl){
+  const key=freePlatformKey(rawUrl);
+  if(!key)return json({error:"Platform belum didukung oleh provider gratis."},400);
+  const endpoint=FREE_MEDIA_API+"/api/download/"+key+"?url="+encodeURIComponent(rawUrl);
+  try{
+    const response=await fetch(endpoint,{headers:{accept:"application/json"},signal:AbortSignal.timeout(28000),cache:"no-store"});
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok||data?.success===false){
+      const status=response.status||502;
+      return json({ok:false,providerReady:false,platform:key,stage:"extractor",error:providerFailureMessage(key,status,data)},status===429?429:status===401||status===403?403:status===404?404:502);
+    }
+    const normalized=freeProviderMediaInfo(data,rawUrl,requestUrl);
+    if(!normalized)return json({ok:false,providerReady:false,platform:key,stage:"media-format",error:"Provider mengenali tautan "+platformLabel(key)+", tetapi tidak mengembalikan stream video MP4 yang bisa diputar. Tautan mungkin berupa halaman profil, template privat, atau format yang belum didukung."},422);
+    return json({...normalized,platform:key,stage:"metadata-ready"});
+  }catch(error){
+    return json({ok:false,providerReady:false,platform:key,stage:"provider-network",error:"Provider komunitas gratis "+platformLabel(key)+" sedang tidak dapat dijangkau. "+String(error?.message||error).slice(0,100)},502);
+  }
 }
 function mediaAsciiAt(bytes,offset,value){
   if(offset<0||offset+value.length>bytes.length)return false;
