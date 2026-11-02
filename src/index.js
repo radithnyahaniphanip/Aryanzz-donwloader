@@ -1587,6 +1587,9 @@ export default {async fetch(request,env){
   if(url.pathname==="/api/music/status"&&request.method==="GET")return musicStatus(env);
   if(url.pathname==="/api/search"&&request.method==="POST")return searchYouTube(request,env);
   if(url.pathname==="/api/social/search"&&request.method==="POST")return searchSocial(request);
+  if(url.pathname==="/api/social/images"&&request.method==="POST")return socialImageInfo(request);
+  if(url.pathname==="/api/social/image-search"&&request.method==="POST")return socialImageSearch(request);
+  if(url.pathname==="/api/social-image-file"&&request.method==="GET")return socialImageFile(request);
   if(url.pathname==="/api/image/search"&&request.method==="POST")return socialImageSearch(request);
   if(url.pathname==="/api/image/extract"&&request.method==="GET")return imageExtractV81(request);
   if(url.pathname==="/api/image/file"&&request.method==="GET")return imageFile(request);
