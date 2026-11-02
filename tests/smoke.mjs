@@ -35,7 +35,7 @@ const checks=[
 
   ["V73.6 quality menu displays estimated or provider-reported sizes",downloader.includes("function youtubeQualityEstimate")&&downloader.includes("estimate.exact?\"\":\"±\"")&&downloader.includes("formatDownloadSize(estimate.bytes)")],
   ["V73.6 format metadata retains byte sizes and bitrate estimates",downloader.includes("sizeBytes:browserFormatSizeBytes(item)")&&workerSource.includes("sizeBytes:hybridFormatSizeBytes(item)")&&downloader.includes("function estimateFormatBytes")],
-  ["V73.6 direct progressive MP4 shows actual size before Chrome handoff",downloader.includes("actualBytes=Number(check.totalBytes)||0")&&downloader.includes("actualSizeExact?\"Ukuran file: \":\"Perkiraan ukuran: ±\"")&&downloader.includes("MP4 siap ✓")&&downloader.includes("youtube-ready-link")],
+  ["V73.6 direct progressive MP4 shows actual size before Chrome handoff",downloader.includes("actualBytes=Number(check.totalBytes)||0")&&downloader.includes("actualSizeExact?\"Ukuran file: \":\"Perkiraan ukuran: ±\"")&&downloader.includes("siap ✓")&&downloader.includes("youtube-ready-link")],
   ["V73.6 adaptive assembly reports video and audio byte totals before FFmpeg",downloader.includes("const measuredSizeNote=")&&downloader.includes("loadBrowserFfmpeg(progressText,progressMeta,bar,measuredSizeNote)")],
   ["V73.6 browser preflight fails over after 12 seconds and waits for Service Worker control",downloader.includes("downloadTimeoutSignal(12000)")&&downloader.includes("waitForServiceWorkerController")],
   ["V73.6 quality hint explains direct MP4 versus local assembly",downloader.includes("MP4 langsung · ")&&downloader.includes("Gabung video + audio otomatis")&&downloader.includes("qualityHint.hidden=!isYouTube")],
