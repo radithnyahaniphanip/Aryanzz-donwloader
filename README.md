@@ -1,4 +1,4 @@
-# ARYANZZ V73.0 — Mobile-resilient media downloader
+# ARYANZZ V73.1 — Mobile-resilient media downloader
 
 Production website: https://aryanzz-donwloader.radithnyahaniphanip.workers.dev/
 
@@ -23,6 +23,13 @@ ARYANZZ is a mobile-first creator workspace hosted on Cloudflare Workers. V73.0 
 | V67.4 | Premium mobile UI refresh, simplified downloader home, searchable Tools Center and Color Studio |
 | V67.6 | Backend health cleanup, title-based YouTube search routed through yt-dlp, clearer AudD/Shazam status, and DJ scan fallback fixes |
 
+
+## V73.1 — Safer high-quality MP4 assembly
+
+- Probes the video and audio component sizes before allocating the FFmpeg files, so an oversized 1440p stream can fall back before downloading hundreds of megabytes.
+- Writes the video track into FFmpeg before downloading the audio track, releasing the first JavaScript buffer instead of holding both full tracks in JavaScript at once.
+- Raises the adaptive merge budget modestly for devices reporting 4 GiB or more while keeping a stricter budget for low-memory phones.
+- Treats browser/WebAssembly out-of-memory errors as a quality-fallback condition and tries a smaller available MP4 instead of stopping immediately.
 
 ## V73.0 — Mobile download reliability
 
