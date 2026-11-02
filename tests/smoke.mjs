@@ -182,7 +182,7 @@ const checks=[
   ["V77.0 social preview and Chrome resume preserve Content-Range and Accept-Ranges",workerSource.includes('headers.set("content-range",rangeHeader)')&&workerSource.includes('headers.set("accept-ranges","bytes")')&&workerSource.includes("socialMimeForExtension(requestedExt,mode)")],
   ["V77.0 social media probes report total size and stop stalled streams",workerSource.includes("const totalBytes=rangeTotal")&&workerSource.includes("async function readSocialChunk")&&workerSource.includes("60 detik. Unduhan dihentikan")],
   ["V77.0 social downloads show real transfer progress and save only after complete Blob",downloader.includes("async function readBrowserChunk")&&downloader.includes("new Blob(chunks")&&downloader.includes("Transfer baru dimulai, belum selesai")&&downloader.includes('bar.style.width="100%"')],
-  ["V77.0 social title search verifies media availability and filters dead links",workerSource.includes("async function verifySocialSearchResult")&&workerSource.includes("const results=checked.filter(Boolean)")&&file("../public/v674.js").includes("Tautan terverifikasi")&&file("../public/v674.js").includes("tautan mati/tidak menyediakan video dilewati")],
+  ["V77.0 social title search verifies metadata and actual CDN media bytes before filtering dead links",workerSource.includes("async function verifySocialSearchResult")&&workerSource.includes("socialMediaFile(new Request(probeUrl.href))")&&workerSource.includes("const results=checked.filter(Boolean)")&&file("../public/v674.js").includes("Tautan terverifikasi")&&file("../public/v674.js").includes("tautan mati/tidak menyediakan video dilewati")],
 
  ];
  for(const [name,ok] of checks){assert.ok(ok,name+" failed");console.log("✔ "+name)}
@@ -295,8 +295,14 @@ try{
 }finally{globalThis.fetch=originalSocialFetch;}
 const originalSocialSearch=globalThis.fetch;
 try{
+  const searchMp4Bytes=Uint8Array.from([0,0,0,24,102,116,121,112,105,115,111,109,0,0,2,0,105,115,111,109,105,115,111,50]);
   globalThis.fetch=async(input,init={})=>{
     const url=new URL(typeof input==="string"?input:input.url);
+    if(url.hostname==="cdn.example"){
+      assert.equal(url.pathname,"/video-1080.mp4");
+      assert.equal(new Headers(init.headers).get("range"),"bytes=0-65535");
+      return new Response(searchMp4Bytes,{status:206,headers:{"content-type":"video/mp4","content-length":String(searchMp4Bytes.length),"content-range":"bytes 0-23/24","accept-ranges":"bytes"}});
+    }
     if(url.hostname==="html.duckduckgo.com"){
       assert.match(url.searchParams.get("q"),/site:tiktok\.com/);
       return new Response(
