@@ -161,7 +161,7 @@
     });
     actions.append(directory,source,copy);box.append(actions);
     const steps=make("ol","v690-steps");
-    ["Buka direktori instance Cobalt dan pilih frontend yang aktif serta mendukung platform sumber.","Tempel URL yang sama pada halaman downloader komunitas tersebut.","Unduh file dari halaman provider. ARYANZZ tidak menerima atau menyimpan media itu."].forEach(t=>steps.append(make("li","",t)));
+    ["Buka direktori downloader komunitas yang tepercaya dan pilih frontend yang aktif serta mendukung platform sumber.","Tempel URL yang sama pada halaman downloader komunitas tersebut.","Unduh file dari halaman provider. ARYANZZ tidak menerima atau menyimpan media itu."].forEach(t=>steps.append(make("li","",t)));
     box.append(steps);
     box.append(make("p","v690-note","Ketersediaan instance, batas pemakaian, dan kebijakan privasi ditentukan pemiliknya. Jangan masukkan kata sandi atau tautan privat. Jika instance tidak tersedia, coba instance lain di direktori."));
     if(error?.message)box.append(make("p","v690-debug","Info: "+(platformName(url)==="Direct Media URL"?error.message:"Postingan sosial memerlukan extractor; URL file MP4/MP3 langsung tetap didukung.")));
@@ -262,13 +262,7 @@
       audioFormat.hidden=true;
       const audioLabel=make("label","label","FORMAT AUDIO");
       audioLabel.style.marginTop="12px";audioLabel.hidden=true;
-      const bitrateLabel=make("label","label","BITRATE AUDIO");
-      bitrateLabel.style.marginTop="12px";bitrateLabel.hidden=true;
-      const audioBitrate=make("select","field");
-      audioBitrate.id="aryAudioBitrate";
-      [["128","128 kbps"],["256","256 kbps"],["320","320 kbps"]].forEach(([value,label])=>{const option=make("option","",label);option.value=value;if(value==="320")option.selected=true;audioBitrate.append(option)});
-      audioBitrate.hidden=true;
-      box.append(audioLabel,audioFormat,bitrateLabel,audioBitrate);
+      box.append(audioLabel,audioFormat);
       const actions = make("div", "feature-row");
       const start = make("button", "primary youtube-start", isYouTube&&!info.providerReady?"Extractor belum aktif":"⬇ Download via Chrome");
       start.type = "button";
@@ -285,8 +279,7 @@
         qualityLabel.style.opacity = mode.value === "audio" ? ".45" : "1";
         audioFormat.hidden=mode.value!=="audio"||directMedia;
         audioLabel.hidden=audioFormat.hidden;
-        audioBitrate.hidden=true;
-        bitrateLabel.hidden=true;
+        
       });
       mode.dispatchEvent(new Event("change"));
       start.addEventListener("click", async () => {
@@ -296,14 +289,13 @@
         start.textContent = "Memproses…";
         try {
           const filename = isYouTube ? await downloadYouTube(url.href,mode.value,Number(quality.value)||720,bar,progressText,info,audioFormat.value) : await downloadFile(url.href, mode.value, Number(quality.value) || 720, bar, progressText, info);
-          progressText.textContent = "Berhasil disimpan: " + filename;
+          progressText.textContent = isYouTube ? "Permintaan unduhan dikirim ke Chrome: " + filename : "Berhasil disimpan: " + filename;
           start.textContent = "Unduhan selesai ✓";
         } catch (error) {
           status(progressText, error.message || "Unduhan gagal.", true);
           start.disabled = false;
           mode.disabled = false;
           quality.disabled = mode.value === "audio"||directMedia;
-          audioBitrate.disabled=false;
           start.textContent = "Coba lagi";
         }
       });
