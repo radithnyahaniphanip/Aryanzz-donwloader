@@ -5,9 +5,10 @@
   const DESIGN_KEY="aryanzz.profile.design.v25";
   const SURFACE_KEY="aryanzz.surface.v25";
   const PROFILE_KEY="aryanzz.profile.info.v25";
+  const MOTION_KEY="aryanzz.motion.v75";
   const AUTOSAVE_DB="aryanzz-auto-save-v74";
   const HISTORY_KEYS=["aryanzz.history.v2","aryanzz-download-history-v1"];
-  const FAV_KEYS=["aryanzz.favorites.v2","aryanzz.favorites.v2"];
+  const FAV_KEYS=["aryanzz.favorites.v2","aryanzz.favorites.v1"];
   const read=(key,fallback)=>{try{return JSON.parse(localStorage.getItem(key)||JSON.stringify(fallback))}catch{return fallback}};
   const write=(key,value)=>{try{localStorage.setItem(key,JSON.stringify(value));return true}catch{return false}};
   let toastTimer;
@@ -86,6 +87,27 @@
     $("profileSave")?.addEventListener("click",()=>{update();toast("Profil tersimpan otomatis.");});
     $("profileReset")?.addEventListener("click",()=>{if(name)name.value="";if(bio)bio.value="";update();toast("Informasi profil direset.");});
   }
+  function setupMotionToggle(){
+    const input=$("profileMotionToggle"),statusEl=$("profileMotionStatus");
+    const reduceMotion=!!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    const saved=localStorage.getItem(MOTION_KEY);
+    const enabled=!reduceMotion&&saved!=="off";
+    document.body.dataset.motion=enabled?"on":"off";
+    if(input){
+      input.checked=enabled;
+      input.disabled=reduceMotion;
+      input.addEventListener("change",()=>{
+        const next=input.checked&&!reduceMotion;
+        document.body.dataset.motion=next?"on":"off";
+        try{localStorage.setItem(MOTION_KEY,next?"on":"off");}catch{}
+        if(statusEl)statusEl.textContent=reduceMotion?"Animasi dibatasi oleh pengaturan aksesibilitas perangkat.":next?"Animasi aktif di beranda, profil, dan halaman alat.":"Animasi dinonaktifkan.";
+        window.dispatchEvent(new Event("aryanzz:motion-changed"));
+        queueAutoSnapshot();
+      });
+    }
+    if(statusEl)statusEl.textContent=reduceMotion?"Animasi dibatasi oleh pengaturan aksesibilitas perangkat.":enabled?"Animasi aktif di beranda, profil, dan halaman alat.":"Animasi dinonaktifkan.";
+  }
+
   function setupReveal(){
     const targets=document.querySelectorAll(".v25-profile-card,.v25-profile-stats>div");
     if(document.body.dataset.motion==="off"){targets.forEach(el=>el.classList.add("v25-visible"));return;}
@@ -168,7 +190,7 @@
   }
   function collectAppStorage(){
     const data={};
-    for(let i=0;i<localStorage.length;i++){const key=localStorage.key(i);if(key&&key.startsWith("aryanzz.")&&!key.startsWith("aryanzz.autosave.")){const value=localStorage.getItem(key);if(value!==null)data[key]=value;}}
+    for(let i=0;i<localStorage.length;i++){const key=localStorage.key(i);if(key&&((key.startsWith("aryanzz.")&&!key.startsWith("aryanzz.autosave."))||key==="aryanzz-download-history-v1")){const value=localStorage.getItem(key);if(value!==null)data[key]=value;}}
     return data;
   }
   async function writeAutoSnapshot(){
@@ -187,14 +209,14 @@
     if(autoSaveObserverInstalled)return;autoSaveObserverInstalled=true;
     try{
       const proto=Storage.prototype,originalSet=proto.setItem,originalRemove=proto.removeItem,originalClear=proto.clear;
-      proto.setItem=function(key,value){const result=originalSet.call(this,key,value);if(this===localStorage&&String(key).startsWith("aryanzz.")&&!String(key).startsWith("aryanzz.autosave."))queueAutoSnapshot();return result;};
-      proto.removeItem=function(key){const result=originalRemove.call(this,key);if(this===localStorage&&String(key).startsWith("aryanzz."))queueAutoSnapshot();return result;};
+      proto.setItem=function(key,value){const result=originalSet.call(this,key,value);if(this===localStorage&&((String(key).startsWith("aryanzz.")&&!String(key).startsWith("aryanzz.autosave."))||String(key)==="aryanzz-download-history-v1"))queueAutoSnapshot();return result;};
+      proto.removeItem=function(key){const result=originalRemove.call(this,key);if(this===localStorage&&(String(key).startsWith("aryanzz.")||String(key)==="aryanzz-download-history-v1"))queueAutoSnapshot();return result;};
       proto.clear=function(){const result=originalClear.call(this);if(this===localStorage)queueAutoSnapshot();return result;};
     }catch{setAutoSaveStatus("Auto-save otomatis tidak dapat diaktifkan di browser ini.",true);}
   }
   function setupBackupActions(){
     $("exportData")?.addEventListener("click",()=>{
-      const payload={app:"ARYANZZ",version:74,exportedAt:new Date().toISOString(),storage:collectAppStorage()};
+      const payload={app:"ARYANZZ",version:75,exportedAt:new Date().toISOString(),storage:collectAppStorage()};
       const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),anchor=document.createElement("a");
       const date=new Date().toISOString().slice(0,10);anchor.href=url;anchor.download="aryanzz-backup-"+date+".json";document.body.append(anchor);anchor.click();anchor.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);toast("File backup berhasil dibuat.");
     });
@@ -204,8 +226,8 @@
         const payload=JSON.parse(await file.text()),storage=payload?.storage||payload?.data;
         if(payload?.app!=="ARYANZZ"||!storage||typeof storage!=="object"||Array.isArray(storage))throw new Error("File ini bukan backup ARYANZZ yang valid.");
         if(!window.confirm("Pulihkan backup ini? Data ARYANZZ yang ada di browser akan diganti."))return;
-        const allowed=Object.entries(storage).filter(([key,value])=>key.startsWith("aryanzz.")&&typeof value==="string");
-        for(let i=localStorage.length-1;i>=0;i--){const key=localStorage.key(i);if(key?.startsWith("aryanzz.")&&!allowed.some(([savedKey])=>savedKey===key))localStorage.removeItem(key);}
+        const allowed=Object.entries(storage).filter(([key,value])=>(key.startsWith("aryanzz.")||key==="aryanzz-download-history-v1")&&typeof value==="string");
+        for(let i=localStorage.length-1;i>=0;i--){const key=localStorage.key(i);if((key?.startsWith("aryanzz.")||key==="aryanzz-download-history-v1")&&!allowed.some(([savedKey])=>savedKey===key))localStorage.removeItem(key);}
         allowed.forEach(([key,value])=>localStorage.setItem(key,value));
         toast("Backup dipulihkan. Memuat ulang tampilan…");setTimeout(()=>location.reload(),650);
       }catch(error){toast(error.message||"Backup tidak dapat dipulihkan.");}finally{input.value="";}
@@ -214,8 +236,8 @@
       const snapshot=await readAutoSnapshot();
       if(!snapshot?.data){toast("Belum ada cadangan otomatis yang tersimpan.");return;}
       if(!window.confirm("Pulihkan cadangan otomatis terakhir dari browser ini? Data ARYANZZ saat ini akan diganti."))return;
-      const allowed=Object.entries(snapshot.data).filter(([key,value])=>key.startsWith("aryanzz.")&&typeof value==="string");
-      for(let i=localStorage.length-1;i>=0;i--){const key=localStorage.key(i);if(key?.startsWith("aryanzz.")&&!allowed.some(([savedKey])=>savedKey===key))localStorage.removeItem(key);}
+      const allowed=Object.entries(snapshot.data).filter(([key,value])=>(key.startsWith("aryanzz.")||key==="aryanzz-download-history-v1")&&typeof value==="string");
+      for(let i=localStorage.length-1;i>=0;i--){const key=localStorage.key(i);if((key?.startsWith("aryanzz.")||key==="aryanzz-download-history-v1")&&!allowed.some(([savedKey])=>savedKey===key))localStorage.removeItem(key);}
       allowed.forEach(([key,value])=>localStorage.setItem(key,value));
       toast("Cadangan otomatis dipulihkan. Memuat ulang…");setTimeout(()=>location.reload(),650);
     });
@@ -227,7 +249,7 @@
     storeImage("profileBanner","banner",1500,520,.78,"Banner");
     storeImage("profileBackground","background",1600,1000,.72,"Background");
     storeImage("profilePhoto","avatar",520,520,.8,"Foto profil");
-    setupSurface();setupProfilePreview();setupBackupActions();profileCounts();setupReveal();setupPremiumEffects();
+    setupSurface();setupProfilePreview();setupBackupActions();setupMotionToggle();profileCounts();setupReveal();setupPremiumEffects();
     window.addEventListener("storage",()=>{profileCounts();applyDesign();});
     window.addEventListener("aryanzz:profile-assets-updated",applyDesign);
     queueAutoSnapshot();

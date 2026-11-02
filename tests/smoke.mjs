@@ -30,7 +30,7 @@ const checks=[
   ["V73.7 presents a visible tap-to-download link for completed browser files",downloader.includes("function addReadyDownloadLink")&&downloader.includes("youtube-ready-link")&&downloader.includes("Unduh MP4 sekarang")&&!downloader.includes("document.body.append(anchor);anchor.click();anchor.remove();")],
   ["V73.7 adaptive MP4 shows three clear stages and only reaches 100% after the file is ready",downloader.includes("Tahap 1/3 · Video")&&downloader.includes("Tahap 2/3 · Audio")&&downloader.includes("Tahap 3/3 · Menyatukan MP4")&&downloader.includes('bar.style.width="100%"')],
   ["V73.7 downloader can cancel in-progress transfers and FFmpeg assembly",downloader.includes("youtube-cancel")&&downloader.includes("activeDownloadController.abort()")&&downloader.includes("activeDownloadFfmpeg.terminate()")],
-  ["V73.7 platform picker covers major social services",html.includes('data-platform="youtube"')&&html.includes('data-platform="tiktok"')&&html.includes('data-platform="instagram"')&&html.includes('data-platform="snackvideo"')&&html.includes('data-platform="pinterest"')&&html.includes('data-platform="facebook"')&&html.includes('data-platform="x"')&&html.includes('data-platform="reddit"')],
+  ["V73.7 platform picker covers major social services",html.includes('data-platform="youtube"')&&html.includes('data-platform="tiktok"')&&html.includes('data-platform="instagram"')&&html.includes('data-platform="snackvideo"')&&html.includes('data-platform="pinterest"')&&html.includes('data-platform="facebook"')&&html.includes('data-platform="x"')&&html.includes('data-platform="reddit"')&&html.includes('data-platform="threads"')&&html.includes('data-platform="soundcloud"')&&html.includes('data-platform="capcut"')],
   ["V73.7 downloader headings and primary labels are Indonesian",html.includes("Semua berawal")&&html.includes("Mau unduh apa?")&&html.includes("Tempel tautan")&&html.includes("Cari judul")],
   ["V73.7 refreshes provider metadata once after HTTP 403/429/5xx and skips already attempted streams",downloader.includes("async function refreshYoutubeProviderInfo")&&downloader.includes("retryState={refreshed:false,attempted:[]}")&&downloader.includes("if(!retryState.refreshed&&retryable)")&&downloader.includes("attempted.has(candidateKey(item))")],
   ["V73.7 bounds provider retries while retaining multiple same-quality instances",downloader.includes("selectProviderCandidates(progressive")&&downloader.includes("selectProviderCandidates(adaptive")&&downloader.includes("selectProviderCandidates(all.filter(item=>item.ext===audioFormat),2,8)")],
@@ -41,7 +41,7 @@ const checks=[
   ["V73.7 direct progressive MP4 shows actual size before Chrome handoff",downloader.includes("actualBytes=Number(check.totalBytes)||0")&&downloader.includes("actualSizeExact?\"Ukuran file: \":\"Perkiraan ukuran: ±\"")&&downloader.includes("siap ✓")&&downloader.includes("youtube-ready-link")],
   ["V73.7 adaptive assembly reports video and audio byte totals before FFmpeg",downloader.includes("const measuredSizeNote=")&&downloader.includes("loadBrowserFfmpeg(progressText,progressMeta,bar,measuredSizeNote)")],
   ["V73.7 browser preflight fails over after 12 seconds and waits for Service Worker control",downloader.includes("downloadTimeoutSignal(12000)")&&downloader.includes("waitForServiceWorkerController")],
-  ["V73.7 quality hint explains direct MP4 versus local assembly",downloader.includes("MP4 langsung · ")&&downloader.includes("Gabung video + audio otomatis")&&downloader.includes("qualityHint.hidden=!isYouTube")],
+  ["V73.7 quality hint explains direct MP4 versus local assembly",downloader.includes("MP4 langsung · ")&&downloader.includes("Gabung video + audio otomatis")&&downloader.includes('qualityHint.hidden=mode.value==="audio"||(!isYouTube&&!(info.providerName==="Public API"&&heights.length))')],
 
   ["V73.7 Service Worker streams approved media from the browser and preserves download headers",sw.includes('u.pathname==="/api/youtube/hybrid/browser-file"')&&sw.includes("fetch(validation.url")&&sw.includes('"content-disposition"')&&sw.includes("headers.range=range")&&sw.includes('mode:"cors"')],
   ["V73.7 Worker validates browser-side media URLs against trusted provider instances",workerSource.includes("async function hybridYoutubeValidate")&&workerSource.includes("hybridMediaUrl(rawStream,trustedInstance)")&&workerSource.includes("/api/youtube/hybrid/validate")],
@@ -51,9 +51,14 @@ const checks=[
   ["V73.7 adaptive MP4 prepares FFmpeg in parallel with the video component download",downloader.includes("const [downloadedVideo,readyFfmpeg]=await Promise.all([")&&downloader.includes("loadBrowserFfmpeg(progressText,progressMeta,bar,measuredSizeNote)")&&downloader.includes("fetchYoutubeTrack(videoItem,info,maxTrack,bar,progressText,progressMeta,\"Tahap 1/3 · Video\"")&&downloader.includes("await ffmpeg.writeFile(inputVideo,videoBytes);videoBytes=null;")&&downloader.includes("await ffmpeg.writeFile(inputAudio,audioBytes);audioBytes=null;")],
   ["V73.7 direct media proxy forwards byte ranges and preserves resume headers",workerSource.includes('getUpstream(parsed,"GET",range)')&&workerSource.includes('request.headers.get("range")')&&workerSource.includes('"content-range"')&&workerSource.includes('status:upstream.status')],
   ["V73.7 adaptive progress updates while each 1 MiB chunk is streamed",downloader.includes("reader=response.body?.getReader()")&&downloader.includes("received:received+inFlight")&&downloader.includes("Potongan 1 MB disimpan lokal")],
-  ["V74.0 page title",html.includes("ARYANZZ V74.0 — Ruang Kreatif")],
-  ["V59.5 versioned assets",html.includes("/v15.js?v=59.5")&&html.includes("/owner.js?v=59.5")&&html.includes("/downloader.js?v=73.7.1")&&html.includes("/downloader.css?v=73.7")&&html.includes("/v59.css?v=59.5")&&html.includes("/editor-pro.css?v=65.0")&&html.includes("/editor.js?v=65.0")],
-  ["service worker cache and V59.5 assets",html.includes("navigator.serviceWorker.register")&&sw.includes("aryanzz-v74-0")&&sw.includes("/editor.js?v=65.0")],
+  ["V75.0 adds Threads, SoundCloud and CapCut to the unified platform picker",html.includes('data-platform="threads"')&&html.includes('data-platform="soundcloud"')&&html.includes('data-platform="capcut"')&&workerSource.includes('soundcloud:["soundcloud.com"],capcut:["capcut.com"]')],
+  ["V75.0 TikTok quality selector is populated from real provider resolutions",workerSource.includes("const rawQuality=item?.height??item?.quality??item?.resolution??item?.qualityLabel??label;")&&downloader.includes("available.map(value=>[value,value+\"p · tersedia\"])")&&downloader.includes("n>=100&&n<=4320")],
+  ["V75.0 title search routes YouTube through hybrid public search and displays in-page result cards",workerSource.includes("async function hybridYouTubeSearch(query)")&&workerSource.includes('if(url.pathname==="/api/search"&&request.method==="POST")return searchYouTube(request,env)')&&file("../public/v674.js").includes('selected==="youtube"?"/api/search":"/api/social/search"')&&file("../public/v674.js").includes('pick.textContent="Lihat & unduh"')],
+  ["V75.0 non-YouTube 100 percent means the download link is ready, not that Chrome finished transferring the file",downloader.includes("Kesiapan tautan unduhan")&&downloader.includes("Persiapan 100% · ketuk tombol")&&downloader.includes("Tautan unduhan siap")],
+  ["V75.0 custom output filename is honored by the public social provider",downloader.includes("info.outputName||info.title")&&downloader.includes("info.outputName||info.filename")],
+  ["V75.0 page title",html.includes("ARYANZZ V75.0 — Ruang Kreatif")],
+  ["V59.5 versioned assets",html.includes("/v15.js?v=59.5")&&html.includes("/owner.js?v=59.5")&&html.includes("/downloader.js?v=75.0")&&html.includes("/downloader.css?v=75.0")&&html.includes("/v59.css?v=59.5")&&html.includes("/editor-pro.css?v=65.0")&&html.includes("/editor.js?v=65.0")],
+  ["service worker cache and V59.5 assets",html.includes("navigator.serviceWorker.register")&&sw.includes("aryanzz-v75-0")&&sw.includes("/editor.js?v=65.0")],
   ["downloader input, result and backend status",html.includes('id="analyze"')&&html.includes('id="downloadResult"')&&html.includes('id="backendStatus"')],
   ["unified self-hosted downloader API",downloader.includes('postJson("/api/info"')&&downloader.includes('"/api/direct-file?url="')&&downloader.includes("PLATFORM_NAMES")&&!downloader.toLowerCase().includes("savenow")],
   ["single capture-phase universal URL handler",downloader.includes('button.addEventListener("click"')&&downloader.includes("event.stopImmediatePropagation()")&&downloader.includes("}, true);")],
@@ -83,10 +88,10 @@ const checks=[
   ["V73.7 progressive MP4 is preflighted then streamed directly to Chrome",workerSource.includes('u.searchParams.get("probe")==="1"')&&downloader.includes("probe=1")&&downloader.includes("youtube-ready-link")&&downloader.includes("Tekan tombol unduh di bawah")],
   ["V73.7 Worker validates dynamic Invidious origins against the public registry",workerSource.includes("currentHybridInvidiousInstances()")&&workerSource.includes("if(known)trustedInstance=instanceOrigin")],
   ["V72 FFmpeg merge uses stream copy into MP4",downloader.includes("muxYoutubeMp4")&&downloader.includes('"copy"')&&downloader.includes('"+faststart"')],
-  ["V72 local FFmpeg worker bootstrap is included",file("../public/ffmpeg-worker-bootstrap.js").includes("@ffmpeg/ffmpeg@0.12.10")&&file("../public/sw.js").includes("/ffmpeg-worker-bootstrap.js?v=73.7")],
+  ["V72 local FFmpeg worker bootstrap is included",file("../public/ffmpeg-worker-bootstrap.js").includes("@ffmpeg/ffmpeg@0.12.10")&&file("../public/sw.js").includes("/ffmpeg-worker-bootstrap.js?v=75.0")],
   ["V72 parses adaptive video-only MP4 plus matching M4A audio",workerSource.includes("adaptiveSource=false")&&workerSource.includes("hybridVideoFormat(item,instance,true,true)")&&workerSource.includes("videoOnly")&&downloader.includes('adaptive.map(item=>String(item?.type||item?.mimeType||')],
   ["V72 browser remuxes separate tracks locally with FFmpeg WASM",downloader.includes("loadBrowserFfmpeg")&&downloader.includes("classWorkerURL")&&downloader.includes("ffmpeg.exec")&&downloader.includes('"copy"')&&downloader.includes("muxYoutubeMp4")],
-  ["V72 FFmpeg worker bootstrap is same-origin and cached",file("../public/ffmpeg-worker-bootstrap.js").includes("@ffmpeg/ffmpeg@0.12.10")&&sw.includes("/ffmpeg-worker-bootstrap.js?v=73.7")],
+  ["V72 FFmpeg worker bootstrap is same-origin and cached",file("../public/ffmpeg-worker-bootstrap.js").includes("@ffmpeg/ffmpeg@0.12.10")&&sw.includes("/ffmpeg-worker-bootstrap.js?v=75.0")],
   ["Hybrid stream download is restricted to approved media hosts",workerSource.includes("function hybridMediaUrl")&&workerSource.includes("googlevideo.com")&&workerSource.includes("HYBRID_MEDIA_ROOTS")],
   ["Hybrid download uses attachment streaming and range requests",workerSource.includes("function hybridYoutubeFile")&&workerSource.includes("trustedInstance")&&workerSource.includes("content-disposition")&&workerSource.includes("headers.range=range")],
   ["No Cobalt or paid SaveNow downloader remains",!workerSource.includes("cobaltConfig")&&!workerSource.includes("SAVENOW_BASE")&&!workerSource.includes("SAVENOW_API_KEY")],
@@ -137,14 +142,14 @@ const checks=[
   ["DJ mix scan uses AudD Enterprise endpoint",html.includes('id="musicFileScanButton"')&&html.includes('id="musicScanSkip"')&&musicJs.includes('/api/music/scan-video')&&workerSource.includes("enterprise.audd.io")],
   ["Music Finder supports file, video URL and microphone",musicJs.includes("captureMediaSample")&&musicJs.includes("getUserMedia")&&musicJs.includes("/api/music/recognize")&&musicJs.includes("musicVideoUrl")],
   ["AudD errors expose provider code and actionable quota guidance",workerSource.includes("function auddFailure")&&workerSource.includes("providerErrorCode")&&workerSource.includes("kode 901")&&workerSource.includes("kode 902")],
-  ["V74.0 runs without a self-hosted or paid extractor",workerSource.includes('version:"74.0"')&&workerSource.includes('mode:"cloudflare-worker-zero-server-hybrid"')&&workerSource.includes('platformBackend:"public-free-community-api"')&&!workerSource.includes("DOWNLOADER_CONTAINER")],
+  ["V74.0 runs without a self-hosted or paid extractor",workerSource.includes('version:"75.0"')&&workerSource.includes('mode:"cloudflare-worker-zero-server-hybrid"')&&workerSource.includes('platformBackend:"public-free-community-api"')&&!workerSource.includes("DOWNLOADER_CONTAINER")],
   ["Shazam fallback covers standard AudD auth/quota failures",workerSource.includes("shazamRecognize(audioBlob,env)")&&workerSource.includes("providerErrorCode")&&serverSource.includes("/api/music/recognize")&&serverSource.includes("shazam_recognize.py")],
   ["DJ mix scans fall back to Shazam when AudD Enterprise errors",workerSource.includes("shazamScan(fallbackSource")&&serverSource.includes("/api/music/scan")&&serverSource.includes("scanShazamMedia")],
   ["Docker backend includes yt-dlp, FFmpeg and ShazamIO",file("../Dockerfile").includes("yt-dlp")&&file("../Dockerfile").includes("shazamio==0.9.0")&&serverSource.includes("ffprobe")],
   ["Music Finder responsive styling",musicCss.includes(".music-grid")&&musicCss.includes("@media(max-width:620px)")],
   ["Video URL DJ scanning goes directly through AudD Enterprise",workerSource.includes('fetch("https://enterprise.audd.io/"')&&!musicJs.includes("identifyVideoUrl(url,startSeconds)")],
   ["tool hub remains available",html.includes('id="allTools"')],
-  ["PWA manifest version",manifest.name.includes("V74.0")],
+  ["PWA manifest version",manifest.name.includes("V75.0")],
   ["V67.7 visual assets are loaded",html.includes("/v677.css?v=67.7")&&html.includes("/v677.js?v=67.7")&&sw.includes("/v677.css?v=67.7")&&sw.includes("/v677.js?v=67.7")],
   ["V67.7 home remains focused on the downloader",html.includes('id="home"')&&html.includes('id="downloadLinkMode"')&&!html.slice(html.indexOf('id="home"'),html.indexOf('id="toolsArea"')).includes('id="toolGrid"')],
   ["V67.7 feature identity map covers all tools",file("../public/v677.js").includes("const ICONS=")&&["speed","checker","queue","editor","musicFinder","history","imageTools","pdfTools","qrTools","securityTools","colorStudio","profile","owner","about","help"].every(id=>file("../public/v677.js").includes(id))],
@@ -153,13 +158,13 @@ const checks=[
   ["V67.9 remaining tools have branded backgrounds",v677css.includes('data-feature="gradientStudio"')&&v677css.includes('data-feature="fileHash"')&&v677css.includes("#editor .editor-pro-head")&&v677css.includes("#profile .v25-profile-cover")],
   ["V67.9 Color Studio favorites and clipboard work after redesign",v677js.includes("palette.onclick=async event")&&v677js.includes("favorites.onclick=async event")&&v677js.includes('localStorage.setItem("aryanzz.color-favorites.v674"')&&v677js.includes("copyExpandedColor")],
 
-  ["V74.0 service worker cache and creative assets",sw.includes("aryanzz-v74-0")&&sw.includes("/v680.css?v=71.0")&&sw.includes("/v680.js?v=71.0")&&html.includes("/v680.js?v=71.0")],
+  ["V74.0 service worker cache and creative assets",sw.includes("aryanzz-v75-0")&&sw.includes("/v680.css?v=71.0")&&sw.includes("/v680.js?v=71.0")&&html.includes("/v680.js?v=71.0")],
   ["V67.9 downloader preserves direct-source details",downloader.includes("function responseFilename")&&downloader.includes("const directMedia=!!info.extension&&!info.extractor")&&downloader.includes("/api/platform/status")],
   ["V73.7 unified title search renders social results in-page",file("../public/v674.js").includes('youtube:{name:"YouTube"')&&file("../public/v674.js").includes("/api/social/search")&&file("../public/v674.js").includes("Lihat & unduh")&&html.includes('data-platform="snackvideo"')],
   ["V67.9 direct media whitelist includes common formats",workerSource.includes('"mkv"')&&workerSource.includes('"avi"')&&workerSource.includes('"aiff"')&&workerSource.includes('"opus"')],
   ["V73.7 Gradient Studio controls are wired",html.includes('id="gradientStudio"')&&html.includes('id="gradientRandom"')&&html.includes('id="gradientPng"')&&file("../public/v680.js").includes("function renderGradient")],
   ["V73.7 File Hash Checker uses local Web Crypto",html.includes('id="fileHash"')&&html.includes('id="hashCompute"')&&file("../public/v680.js").includes("crypto.subtle.digest")],
-  ["V74.0 Audio Studio is reachable from the tools grid",html.includes('id="audioStudio"')&&html.includes('data-panel="audioStudio"')&&html.includes('/audio-studio.js?v=74.0')&&html.includes('/audio-studio.css?v=74.0')],
+  ["V74.0 Audio Studio is reachable from the tools grid",html.includes('id="audioStudio"')&&html.includes('data-panel="audioStudio"')&&html.includes('/audio-studio.js?v=75.0')&&html.includes('/audio-studio.css?v=75.0')],
   ["V74.0 local MP4/audio to MP3 conversion supports pitch, volume, and 10-band EQ",audioStudioJs.includes("libmp3lame")&&audioStudioJs.includes("asetrate=44100*")&&audioStudioJs.includes("equalizer=f=")&&audioStudioJs.includes("alimiter=limit=0.95")&&html.includes('id="audioStudioEq"')],
   ["V74.0 audio conversion has cancellation, progress, safe filename, and size guard",audioStudioJs.includes("audioStudioCancel")&&audioStudioJs.includes('setProgress(100, "done")')&&audioStudioJs.includes("MAX_FILE_BYTES")&&audioStudioJs.includes('safeName($("audioStudioName").value)')&&audioStudioCss.includes(".audio-progress-track")],
   ["V74.0 profile banner/photo remove controls are conditional and non-overlapping",profileJs.includes("if(removeBanner)removeBanner.hidden=!d.banner")&&profileJs.includes("if(removeAvatar)removeAvatar.hidden=!d.avatar")&&file("../public/v25.css").includes(".v25-cover-actions")],
@@ -174,7 +179,7 @@ const checks=[
 const healthResponse=await worker.fetch(new Request("https://aryanzz.example/api/health"),{});
 assert.equal(healthResponse.status,200);
 const health=await healthResponse.json();
-assert.equal(health.version,"74.0");
+assert.equal(health.version,"75.0");
 assert.equal(health.selfHostedDownloader,false);
 assert.equal(health.youtubeDownloader,true);
 assert.equal(health.mode,"cloudflare-worker-zero-server-hybrid");
@@ -198,7 +203,8 @@ try{
     assert.equal(url.pathname,"/api/download/tiktok");
     assert.equal(url.searchParams.get("url"),"https://www.tiktok.com/@demo/video/1234567890");
     return new Response(JSON.stringify({success:true,normalized:{kind:"media",title:"Test TikTok",thumbnail:"https://cdn.example/thumb.jpg",duration:14,media:[
-      {label:"Video 720p",type:"video",url:"https://cdn.example/video.mp4",height:720},
+      {label:"Video 720p",type:"video",url:"https://cdn.example/video-720.mp4",height:720},
+      {label:"Video Full HD",type:"video",url:"https://cdn.example/video-1080.mp4",quality:"1080p"},
       {label:"Audio MP3",type:"audio",url:"https://cdn.example/audio.mp3"}
     ]}}),{status:200,headers:{"content-type":"application/json"}});
   };
@@ -210,9 +216,11 @@ try{
   const socialData=await socialInfo.json();
   assert.equal(socialData.providerName,"Public API");
   assert.equal(socialData.title,"Test TikTok");
-  assert.equal(socialData.formats.length,2);
+  assert.equal(socialData.formats.length,3);
   assert.equal(socialData.formats[0].mode,"video");
-  assert.equal(socialData.formats[1].mode,"audio");
+  assert.equal(socialData.formats[0].height,1080,"1080p text labels must normalize into a selectable resolution");
+  assert.equal(socialData.formats[1].height,720);
+  assert.equal(socialData.formats[2].mode,"audio");
   assert.match(socialData.formats[0].downloadUrl,/api\/fetch-media/);
   console.log("✔ Free public provider resolves TikTok links into previewable MP4 and MP3 choices");
 }finally{globalThis.fetch=originalSocialFetch;}
@@ -753,7 +761,7 @@ try{
 
   const health=await worker.fetch(new Request("https://aryanzz.example/api/health"),{});
   const healthData=await health.json();
-  assert.equal(healthData.version,"74.0");
+  assert.equal(healthData.version,"75.0");
   assert.equal(healthData.cobalt,false);
   assert.equal(healthData.paidYoutubeProvider,false);
   console.log("✔ Worker health reports V73.7 with no Cobalt or paid YouTube provider");
