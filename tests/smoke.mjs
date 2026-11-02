@@ -460,8 +460,8 @@ try{
   const health=await worker.fetch(new Request("https://aryanzz.example/api/health"),backendEnv);
   const healthData=await health.json();
   assert.equal(healthData.platformBackend,"public-free-community-api");
-  assert.equal(healthData.platformExtraction,false);
-  console.log("✔ V73.7 health keeps the no-server mode active");
+  assert.equal(healthData.platformExtraction,true);
+  console.log("✔ V73.7 health confirms free public extraction without a self-hosted server");
 }finally{globalThis.fetch=originalFallbackFetch;}
 
 const originalEnterpriseFetch=globalThis.fetch;
