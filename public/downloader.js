@@ -273,7 +273,7 @@
     try{
       const directProbe=await fetchWithHeaderTimeout(direct.href,{mode:"cors",credentials:"omit",headers:{Range:"bytes=0-0"},cache:"no-store"},15000);
       const directRangeHeader=directProbe.headers.get("content-range")||"";
-      const directTotal=Number(directRangeHeader.match(/\\/(\\d+)$/)?.[1]||0);
+      const directTotal=Number(directRangeHeader.match(/\/(\d+)$/)?.[1]||0);
       const directType=String(directProbe.headers.get("content-type")||"").toLowerCase();
       if(directProbe.status===206&&directTotal>0&&!directType.includes("text/html")&&!directType.includes("application/json")){
         await directProbe.body?.cancel().catch(()=>{});
