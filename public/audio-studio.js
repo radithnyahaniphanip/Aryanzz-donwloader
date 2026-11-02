@@ -16,7 +16,7 @@
   const formatSize = bytes => bytes < 1048576 ? (bytes / 1024).toFixed(0) + " KB" : (bytes / 1048576).toFixed(1) + " MB";
   const safeName = value => String(value || "aryanzz-audio").normalize("NFKC").replace(/[\\/:*?"<>|\u0000-\u001f]/g, " ").replace(/\s+/g, " ").trim().replace(/\.[^.]+$/, "").slice(0, 80) || "aryanzz-audio";
   const setStatus = message => { const node = $("audioStudioStatus"); if (node) node.textContent = message; };
-  const safeMetadata = value => String(value || "").replace(/[\\u0000-\\u001f\\u007f]/g, " ").replace(/\\s+/g, " ").trim().slice(0, 120);
+  const safeMetadata = value => String(value || "").replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim().slice(0, 120);
   function setProgress(value, state = "running") {
     const track = $("audioStudioProgressTrack"), bar = $("audioStudioProgressBar");
     const percent = Math.max(0, Math.min(100, Number(value) || 0));
