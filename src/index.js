@@ -311,7 +311,7 @@ async function hybridYoutubeFile(request){
     finally{await reader.cancel().catch(()=>{});}
     if(!first||first.done||!first.value?.byteLength)return json({error:"Provider tidak mengirim data media pada pemeriksaan awal."},502);
     const contentRange=response.headers.get("content-range")||"";
-    const totalMatch=contentRange.match(/\\/(\\d+)$/);
+    const totalMatch=contentRange.match(/\/(\d+)$/);
     const totalBytes=totalMatch?Number(totalMatch[1]):(response.status===200?size:null);
     return json({ok:true,status:response.status,contentType,contentLength:size||null,contentRange:contentRange||null,totalBytes:totalBytes||null,acceptRanges:response.headers.get("accept-ranges")||null});
   }
@@ -329,7 +329,7 @@ async function hybridYoutubeFile(request){
 function hybridThumbnailHostAllowed(url,instanceOrigin){
   const host=url.hostname.toLowerCase();
   const youtubeImage=host==="i.ytimg.com"||host==="img.youtube.com"||host==="yt3.ggpht.com"||host==="yt4.ggpht.com"||host.endsWith(".ytimg.com")||host.endsWith(".googleusercontent.com");
-  const instanceImage=!!instanceOrigin&&url.origin===instanceOrigin&&/^\\/(?:vi|vi_webp)\\//.test(url.pathname);
+  const instanceImage=!!instanceOrigin&&url.origin===instanceOrigin&&/^\/(?:vi|vi_webp)\//.test(url.pathname);
   return url.protocol==="https:"&&!url.username&&!url.password&&(youtubeImage||instanceImage);
 }
 async function hybridYoutubeThumbnail(request){
@@ -366,7 +366,7 @@ async function hybridYoutubeThumbnail(request){
   const size=Number(response.headers.get("content-length")||0);
   if(size>15*1024*1024){await response.body.cancel();return json({error:"Thumbnail melebihi batas 15 MB."},413)}
   const ext=contentType==="image/webp"?"webp":contentType==="image/png"?"png":contentType==="image/avif"?"avif":"jpg";
-  const filename=hybridFilename((u.searchParams.get("title")||"aryanzz-thumbnail").replace(/\\.[^.]+$/,""),ext);
+  const filename=hybridFilename((u.searchParams.get("title")||"aryanzz-thumbnail").replace(/\.[^.]+$/,""),ext);
   let received=0;
   const limited=response.body.pipeThrough(new TransformStream({transform(chunk,controller){received+=chunk.byteLength;if(received>15*1024*1024){controller.error(new Error("Thumbnail melebihi batas 15 MB."));return;}controller.enqueue(chunk)}}));
   return new Response(limited,{status:200,headers:{"content-type":contentType,"content-disposition":"attachment; filename*=UTF-8''"+encodeURIComponent(filename),"cache-control":"no-store","x-content-type-options":"nosniff"}});
