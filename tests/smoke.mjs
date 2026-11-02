@@ -228,14 +228,24 @@ try{
   assert.equal(socialData.formats[1].height,720);
   assert.equal(socialData.formats[2].mode,"audio");
   assert.match(socialData.formats[0].downloadUrl,/api\/social-file/);
+  assert.match(socialData.formats[0].previewUrl,/preview=1/);
   assert.equal(new URL(socialData.formats[0].downloadUrl).origin,"https://aryanzz.example");
   const mp4Bytes=Uint8Array.from([0,0,0,24,102,116,121,112,105,115,111,109,0,0,2,0,105,115,111,109,105,115,111,50]);
   globalThis.fetch=async(input,init={})=>{
     const url=new URL(typeof input==="string"?input:input.url);
     assert.equal(url.hostname,"cdn.example");
     assert.equal(url.pathname,"/video-1080.mp4");
-    assert.equal(new Headers(init.headers).get("referer"),"https://www.tiktok.com/");
-    return new Response(mp4Bytes,{status:200,headers:{"content-type":"video/mp4","content-length":String(mp4Bytes.length)}});
+    const headers=new Headers(init.headers);
+    assert.equal(headers.get("referer"),"https://www.tiktok.com/");
+    const range=headers.get("range");
+    if(range){
+      const match=range.match(/^bytes=(\d+)-(\d*)$/);assert.ok(match,"range request must be valid");
+      const first=Number(match[1]),last=Math.min(mp4Bytes.length-1,match[2]?Number(match[2]):mp4Bytes.length-1);
+      if(first>=mp4Bytes.length)return new Response(null,{status:416,headers:{"content-range":"bytes */"+mp4Bytes.length}});
+      const body=mp4Bytes.slice(first,last+1);
+      return new Response(body,{status:206,headers:{"content-type":"video/mp4","content-length":String(body.length),"content-range":"bytes "+first+"-"+last+"/"+mp4Bytes.length,"accept-ranges":"bytes"}});
+    }
+    return new Response(mp4Bytes,{status:200,headers:{"content-type":"video/mp4","content-length":String(mp4Bytes.length),"accept-ranges":"bytes"}});
   };
   const socialProbeUrl=new URL(socialData.formats[0].downloadUrl);socialProbeUrl.searchParams.set("probe","1");
   const socialProbe=await worker.fetch(new Request(socialProbeUrl.href),{});
@@ -244,11 +254,24 @@ try{
   assert.equal(socialProbeData.valid,true);
   assert.equal(socialProbeData.mimeType,"video/mp4");
   assert.equal(socialProbeData.extension,"mp4");
+  assert.equal(socialProbeData.bytes,mp4Bytes.length,"range preflight must report the complete source size, not only the first chunk");
   const socialFile=await worker.fetch(new Request(socialData.formats[0].downloadUrl),{});
   assert.equal(socialFile.status,200);
   assert.equal(socialFile.headers.get("content-type"),"video/mp4");
+  assert.equal(socialFile.headers.get("content-length"),String(mp4Bytes.length));
   assert.match(socialFile.headers.get("content-disposition"),/Test_TikTok\.mp4/);
   assert.deepEqual(new Uint8Array(await socialFile.arrayBuffer()),mp4Bytes);
+  const previewUrl=new URL(socialData.formats[0].previewUrl);
+  const previewFirst=await worker.fetch(new Request(previewUrl.href,{headers:{range:"bytes=0-15"}}),{});
+  assert.equal(previewFirst.status,206);
+  assert.equal(previewFirst.headers.get("content-range"),"bytes 0-15/24");
+  assert.match(previewFirst.headers.get("content-disposition"),/^inline;/);
+  assert.equal((await previewFirst.arrayBuffer()).byteLength,16);
+  const previewSeek=await worker.fetch(new Request(previewUrl.href,{headers:{range:"bytes=16-23"}}),{});
+  assert.equal(previewSeek.status,206);
+  assert.equal(previewSeek.headers.get("content-range"),"bytes 16-23/24");
+  assert.equal((await previewSeek.arrayBuffer()).byteLength,8);
+  console.log("✔ Social video preview supports same-origin HTTP ranges, seeking and inline playback");
   console.log("✔ Social video downloads are proxied, signature-checked and stream intact");
   globalThis.fetch=async()=>new Response("<html>blocked</html>",{status:200,headers:{"content-type":"text/html"}});
   const htmlError=await worker.fetch(new Request(socialProbeUrl.href),{});
@@ -257,17 +280,34 @@ try{
   const truncated=await worker.fetch(new Request(socialProbeUrl.href),{});
   assert.equal(truncated.status,502,"truncated media must fail preflight");
   globalThis.fetch=async()=>new Response(mp4Bytes,{status:206,headers:{"content-type":"video/mp4","content-length":"24","content-range":"bytes 0-23/100"}});
-  const partial=await worker.fetch(new Request(socialProbeUrl.href),{});
-  assert.equal(partial.status,502,"partial responses must not be presented as complete videos");
-  console.log("✔ Free public provider resolves TikTok links into previewable MP4 and MP3 choices");
+  const partialProbe=await worker.fetch(new Request(socialProbeUrl.href),{});
+  assert.equal(partialProbe.status,200,"a valid range preflight should be accepted");
+  assert.equal((await partialProbe.json()).bytes,100,"Content-Range must expose the full file size");
+  const unsolicitedPartial=await worker.fetch(new Request(socialData.formats[0].downloadUrl),{});
+  assert.equal(unsolicitedPartial.status,502,"an unsolicited partial response must not be presented as a complete download");
+  console.log("✔ Social media preflight rejects HTML and truncated media, and reports full size from Content-Range");
 }finally{globalThis.fetch=originalSocialFetch;}
 const originalSocialSearch=globalThis.fetch;
 try{
   globalThis.fetch=async(input,init={})=>{
     const url=new URL(typeof input==="string"?input:input.url);
-    assert.equal(url.hostname,"html.duckduckgo.com");
-    assert.match(url.searchParams.get("q"),/site:tiktok\.com/);
-    return new Response('<a class="result__a" href="https://www.tiktok.com/@demo/video/1234567890">DJ Tabola Bale - TikTok</a><div class="result__snippet">Public video result</div>',{status:200,headers:{"content-type":"text/html"}});
+    if(url.hostname==="html.duckduckgo.com"){
+      assert.match(url.searchParams.get("q"),/site:tiktok\.com/);
+      return new Response(
+        '<a class="result__a" href="https://www.tiktok.com/@demo/video/1234567890">DJ Tabola Bale - TikTok</a><div class="result__snippet">Public video result</div>'+
+        '<a class="result__a" href="https://www.tiktok.com/@dead/video/9999999999">Dead TikTok result</a><div class="result__snippet">Unavailable video</div>',
+        {status:200,headers:{"content-type":"text/html"}}
+      );
+    }
+    assert.equal(url.hostname,"btch-downloader-api-green.vercel.app");
+    assert.equal(url.pathname,"/api/download/tiktok");
+    const target=url.searchParams.get("url");
+    if(target==="https://www.tiktok.com/@dead/video/9999999999")
+      return new Response(JSON.stringify({success:false,error:"Video not found"}),{status:404,headers:{"content-type":"application/json"}});
+    assert.equal(target,"https://www.tiktok.com/@demo/video/1234567890");
+    return new Response(JSON.stringify({success:true,normalized:{kind:"media",title:"Verified DJ Tabola Bale",thumbnail:"https://cdn.example/thumb.jpg",duration:28,media:[
+      {label:"Video MP4",type:"video",url:"https://cdn.example/video-1080.mp4",height:1080}
+    ]}}),{status:200,headers:{"content-type":"application/json"}});
   };
   const socialSearch=await worker.fetch(new Request("https://aryanzz.example/api/social/search",{
     method:"POST",headers:{"content-type":"application/json"},
@@ -275,10 +315,12 @@ try{
   }),{});
   assert.equal(socialSearch.status,200);
   const socialSearchData=await socialSearch.json();
-  assert.equal(socialSearchData.results.length,1);
-  assert.match(socialSearchData.results[0].title,/DJ Tabola Bale/);
-  assert.match(socialSearchData.results[0].url,/tiktok\.com/);
-  console.log("✔ Social title search returns selectable results inside ARYANZZ");
+  assert.equal(socialSearchData.results.length,1,"unreachable social links must be filtered before display");
+  assert.match(socialSearchData.results[0].title,/Verified DJ Tabola Bale/);
+  assert.equal(socialSearchData.results[0].duration,28);
+  assert.equal(socialSearchData.results[0].verified,true);
+  assert.equal(socialSearchData.unavailableCount,1);
+  console.log("✔ Social title search shows only provider-verified videos and skips dead links");
 }finally{globalThis.fetch=originalSocialSearch;}
 const originalYoutubeSearch=globalThis.fetch;
 try{
