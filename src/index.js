@@ -43,11 +43,11 @@ function fileName(u,ext){let n;try{n=decodeURIComponent(u.pathname.split("/").po
 async function getUpstream(parsed,method="HEAD",range=null){
   let current=parsed;
   for(let i=0;i<5;i++){
-    const headers={"user-agent":"ARYANZZ/73.6 media fetch"};
+    const headers={"user-agent":"ARYANZZ/73.7 media fetch"};
     if(method==="GET"&&range&&/^bytes=\d*-\d*(?:,\d*-\d*)*$/.test(range))headers.range=range;
     let response=await fetch(current.url.toString(),{method,redirect:"manual",headers});
     if(method==="HEAD"&&[403,405,501].includes(response.status)){
-      response=await fetch(current.url.toString(),{method:"GET",redirect:"manual",headers:{"user-agent":"ARYANZZ/73.6 media fetch","range":"bytes=0-0"}});
+      response=await fetch(current.url.toString(),{method:"GET",redirect:"manual",headers:{"user-agent":"ARYANZZ/73.7 media fetch","range":"bytes=0-0"}});
       if(response.body)response.body.cancel().catch(()=>{});
     }
     if(![301,302,303,307,308].includes(response.status))return {response,parsed:current};
