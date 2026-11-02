@@ -257,21 +257,20 @@ async function socialMediaFile(request){
   const contentLength=Number(upstream.headers.get("content-length")||0)||0;
   const responseIsPartial=upstream.status===206;
   const expectedBytes=responseIsPartial?(contentLength||Math.max(0,rangeEnd-rangeStart+1)):(contentLength||expectedHint);
-  const totalBytes=rangeTotal||expectedBytes||expectedHint||0;
+  const totalBytes=rangeTotal||(!responseIsPartial?expectedBytes:0)||expectedHint||0;
   let detected=null;
-  if(rangeStart===0||!responseIsPartial)detected=detectSocialMediaSignature(prefix,mode);
-  else if(preview)detected=socialMimeForExtension(requestedExt,mode);
+  if(preview){
+    detected=socialMimeForExtension(requestedExt,mode);
+    if(rangeStart===0&&prefixLength>=8){const signature=detectSocialMediaSignature(prefix,mode);if(!signature||signature.ext!==detected?.ext)detected=null;}
+  }else if(rangeStart===0||!responseIsPartial)detected=detectSocialMediaSignature(prefix,mode);
+  else if(responseIsPartial)detected=socialMimeForExtension(requestedExt,mode);
   if(!detected||detected.mode!==mode){
     await reader.cancel().catch(()=>{});
     return json({error:"File ditolak: isi file tidak cocok dengan video/audio yang diminta. ARYANZZ tidak akan menyimpan file rusak dengan ekstensi palsu."},415);
   }
-  if(browserRange&&responseIsPartial&&!rangeMatch){
+  if(responseIsPartial&&!rangeMatch){
     await reader.cancel().catch(()=>{});
     return json({error:"Provider mengirim respons rentang tanpa Content-Range yang valid."},502);
-  }
-  if(browserRange&&responseIsPartial&&rangeStart>0&&!preview&&mode==="video"){
-    // Range downloads are permitted only for a known, validated media object; the
-    // extension and original URL were supplied by the same verified metadata response.
   }
   if(finished&&expectedBytes&&prefixLength!==expectedBytes){
     await reader.cancel().catch(()=>{});
