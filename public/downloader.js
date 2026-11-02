@@ -4,7 +4,7 @@
   const $ = id => document.getElementById(id);
   const FORMATS = {
     audio: [["mp3","MP3 Audio"],["m4a","M4A Audio"]],
-    video: [[360,"360p"],[480,"480p"],[720,"720p HD"],[1080,"1080p Full HD"],[1440,"1440p · 2K"],[2160,"2160p · 4K"]]
+    video: [[144,"144p"],[240,"240p"],[360,"360p"],[480,"480p"],[720,"720p HD"],[1080,"1080p Full HD"],[1440,"1440p · 2K"],[2160,"2160p · 4K"]]
   };
   const PLATFORM_NAMES = [
     ["youtube.com","YouTube"],["youtu.be","YouTube"],["tiktok.com","TikTok"],
@@ -148,7 +148,7 @@
       return filename;
     }catch(browserError){
       try{
-        const target="/api/youtube/hybrid/file?url="+encodeURIComponent(direct.href)+"&ext="+encodeURIComponent(selected.ext)+"&title="+encodeURIComponent(info.title||"aryanzz-youtube");
+        const target="/api/youtube/hybrid/file?url="+encodeURIComponent(direct.href)+"&ext="+encodeURIComponent(selected.ext)+"&title="+encodeURIComponent(info.title||"aryanzz-youtube")+"&instance="+encodeURIComponent(info.instance||"");
         const fallback=await fetch(target,{cache:"no-store",signal:AbortSignal.timeout(120000)});
         if(!fallback.ok){const detail=await fallback.json().catch(()=>({}));throw new Error(detail.error||("Worker HTTP "+fallback.status));}
         browserMediaContentType(fallback,mode);
@@ -258,7 +258,7 @@
       return null;
     }catch{return null;}
   }
-  function browserVideoHeight(item){
+  function browserVideoHeight(item,url){
     const direct=Number(item?.height);
     if(Number.isFinite(direct)&&direct>=100&&direct<=4320)return direct;
     const labels=[item?.qualityLabel,item?.quality,item?.resolution,item?.size,item?.label].filter(Boolean).map(String);
@@ -268,12 +268,13 @@
       const p=label.match(/(?:^|\D)(\d{3,4})\s*p(?:\D|$)/i);
       if(p)return Number(p[1]);
     }
-    return 0;
+    const itag=Number(url?.searchParams?.get("itag")||item?.itag);
+    return ({17:144,18:360,22:720,37:1080,59:480,78:480})[itag]||0;
   }
   function browserVideoFormat(item,providerInstance,progressiveSource=false){
     const mime=String(item?.mimeType||item?.type||item?.mime_type||item?.mime||"").toLowerCase();
     const container=String(item?.format||item?.container||item?.ext||"").toLowerCase();
-    const height=browserVideoHeight(item);
+    const height=browserVideoHeight(item,url);
     const url=browserHybridMediaUrl(item?.url||item?.urlTemplate||"",providerInstance);
     const mp4=mime.includes("video/mp4")||mime.includes("video/x-m4v")||container.includes("mpeg_4")||container==="mp4"||container==="m4v"||(progressiveSource&&/\.mp4(?:$|[?#])/i.test(url?.pathname||""));
     if(!url||![144,240,360,480,720,1080,1440,2160].includes(height)||item?.videoOnly===true||!mp4)return null;
@@ -402,7 +403,7 @@
       quality.id = "aryQuality";
       const directMedia=!!info.extension&&!info.extractor;
       const heights = Array.isArray(info.formats)
-        ? [...new Set(info.formats.map(item => Number(typeof item === "number" ? item : item.height)).filter(n => [360,480,720,1080,1440,2160].includes(n)))].sort((a,b) => a-b)
+        ? [...new Set(info.formats.map(item => Number(typeof item === "number" ? item : item.height)).filter(n => [144,240,360,480,720,1080,1440,2160].includes(n)))].sort((a,b) => a-b)
         : [];
       if(directMedia){
         const sourceOption=make("option","","Original · file sumber");sourceOption.value="0";quality.append(sourceOption);quality.disabled=true;
