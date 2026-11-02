@@ -1,4 +1,4 @@
-name: Validate ARYANZZ V68.0
+name: Validate ARYANZZ V73.7
 
 on:
   pull_request:
@@ -30,3 +30,5 @@ jobs:
           node --check public/editor.js
       - name: Check Python syntax
         run: python3 -m py_compile server/shazam_recognize.py
+      - name: Run V73.7 smoke tests
+        run: node tests/smoke.mjs
