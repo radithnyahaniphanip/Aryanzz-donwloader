@@ -2,7 +2,7 @@
 
 Production website: https://aryanzz-donwloader.radithnyahaniphanip.workers.dev/
 
-ARYANZZ is a mobile-first creator workspace hosted on Cloudflare Workers. V70.1 uses a zero-server design: direct media links are streamed by the Worker, while social-media links are handed off to community-operated downloader frontends. No private extraction server or paid hosting is required.
+ARYANZZ is a mobile-first creator workspace hosted on Cloudflare Workers. V71.0 uses a zero-server design: direct media links are streamed by the Worker, while YouTube formats are discovered through public Piped and Invidious community instances. No Cobalt, Docker Desktop, private extraction server, or paid downloader provider is required.
 
 ## V65.0 release scope
 
