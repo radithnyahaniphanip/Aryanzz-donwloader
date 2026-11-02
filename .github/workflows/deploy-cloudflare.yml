@@ -77,6 +77,9 @@ jobs:
           }
           const downloaderResponse = await fetch(base + "/downloader.js?v=73.7", { cache: "no-store" });
           const downloaderSource = await downloaderResponse.text();
+          if (!downloaderSource.includes("Provider komunitas menolak stream") || !downloaderSource.includes('postJson("/api/info",{url})')) {
+            throw new Error("Live YouTube downloader is missing its public-free-provider fallback after 403/429.");
+          }
           if (!downloaderSource.includes('info.providerName==="Public API"') || !downloaderSource.includes("v737-media-preview") || !downloaderSource.includes("selected.downloadUrl")) {
             throw new Error("Live downloader is missing V73.7 in-page social preview or public-provider download handling.");
           }

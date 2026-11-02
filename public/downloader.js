@@ -602,6 +602,17 @@
         }
       }catch(error){failures.push("Pembaruan provider: "+String(error.message||error).slice(0,140));}
     }
+    if(!retryState.publicFallback){
+      progressText.textContent="Provider komunitas menolak stream · mencoba jalur publik gratis alternatif…";
+      progressMeta.textContent="ARYANZZ mencoba sumber publik kedua tanpa server pribadi atau layanan berbayar.";
+      try{
+        const publicInfo=await postJson("/api/info",{url});
+        if(publicInfo.providerName==="Public API"&&publicInfo.providerReady){
+          progressText.textContent="Sumber alternatif tersedia · menyiapkan tautan unduh…";
+          return await downloadFile(url,mode,quality,bar,progressText,publicInfo,audioFormat);
+        }
+      }catch(error){failures.push("Provider publik alternatif: "+String(error.message||error).slice(0,150));}
+    }
     throw new Error("Semua jalur "+(mode==="video"?"MP4":"audio")+" yang tersedia gagal. "+(failures.slice(0,4).join(" | ")||"Coba kualitas lain atau ulangi nanti."));
   }
   async function downloadFile(url, mode, quality, bar, progressText, info={}) {
