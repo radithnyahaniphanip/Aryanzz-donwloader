@@ -353,9 +353,13 @@ async function verifySocialSearchResult(result,requestUrl){
     const data=await response.json().catch(()=>({}));
     if(data?.success===false)return null;
     const info=freeProviderMediaInfo(data,result.url,requestUrl);
-    const playable=info?.formats?.some(item=>item.mode==="video"&&!item.videoOnly&&item.previewUrl&&item.downloadUrl);
+    const playable=info?.formats?.find(item=>item.mode==="video"&&!item.videoOnly&&item.previewUrl&&item.downloadUrl);
     if(!playable)return null;
-    return {...result,title:info.title||result.title,thumbnail:info.thumbnail||null,duration:info.duration||null,verified:true,downloadable:true};
+    const probeUrl=new URL(playable.downloadUrl);probeUrl.searchParams.set("probe","1");
+    const mediaCheck=await socialMediaFile(new Request(probeUrl.href));
+    const mediaData=await mediaCheck.json().catch(()=>({}));
+    if(!mediaCheck.ok||!mediaData.valid)return null;
+    return {...result,title:info.title||result.title,thumbnail:info.thumbnail||null,duration:info.duration||null,verified:true,downloadable:true,mediaType:mediaData.mimeType};
   }catch{return null}
 }
 async function searchSocial(request){
