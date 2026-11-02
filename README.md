@@ -1,4 +1,4 @@
-# ARYANZZ V69.0 — Gradient Studio, File Hash & Tools Center
+# ARYANZZ V69.2 — YouTube flow & TikTok diagnostics
 
 Production website: https://aryanzz-donwloader.radithnyahaniphanip.workers.dev/
 
@@ -31,6 +31,14 @@ ARYANZZ is a mobile-first creator workspace hosted on Cloudflare Workers. V69.0 
 - Music Finder status distinguishes an installed AudD token from the configured Shazam fallback. A configured token does not imply remaining AudD quota; AudD usage is still controlled by the provider.
 - Shazam DJ fallback samples now honor the consecutive-sample setting and remain capped at 30 segments per scan to limit server load. AudD Enterprise can process up to 100 segments where the account permits it.
 - Removed the duplicate Express health route so the backend reports one current version and a consistent feature list.
+
+## V69.2 — YouTube flow and TikTok diagnostics
+
+- YouTube URLs now use the dedicated `/api/youtube/info`, `/api/youtube/download`, `/api/youtube/progress`, and `/api/youtube/file` endpoints rather than the generic direct-file endpoint.
+- If no downloader provider key is configured, the Worker attempts a public YouTube oEmbed preview and clearly marks downloading as unavailable. It does not silently configure or charge a third-party provider.
+- If a provider key is explicitly configured by the owner, the UI can start a job, poll progress, and stream the completed file through the Worker.
+- TikTok short URLs remain on the community-provider handoff path in the zero-server edition. A post URL is not the same as a direct MP4 file URL.
+- The supplied test links could not be fetched by the web inspection tool in this environment, so no claim is made that either real-world download succeeded. Automated tests use mocked provider responses and validate routing only.
 
 ## V69.0 — Zero-server Free Edition
 

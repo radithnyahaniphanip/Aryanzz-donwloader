@@ -87,6 +87,46 @@
     const plain=/filename="?([^";]+)"?/i.exec(header);
     return plain?plain[1].trim():"";
   }
+  function youtubeFormat(mode,quality){
+    if(mode==="audio")return "mp3";
+    const q=Number(quality)||720;
+    return q>=2160?"4k":String([360,720,1080,1440].includes(q)?q:720);
+  }
+  async function downloadYouTube(url,mode,quality,bar,progressText,info={}){
+    const format=youtubeFormat(mode,quality);
+    const startResponse=await fetch("/api/youtube/download",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({url,format}),cache:"no-store"});
+    const start=await startResponse.json().catch(()=>({}));
+    if(!startResponse.ok)throw new Error(start.error||"Provider YouTube belum siap.");
+    let job=start;
+    if(job.pending){
+      for(let attempt=0;attempt<120;attempt++){
+        await new Promise(resolve=>setTimeout(resolve,1500));
+        const response=await fetch("/api/youtube/progress",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:job.id,format,info:{title:info.title,thumbnail:info.thumbnail}}),cache:"no-store"});
+        job=await response.json().catch(()=>({}));
+        if(!response.ok)throw new Error(job.error||"Gagal memeriksa progres YouTube.");
+        const pct=Math.max(0,Math.min(99,Math.round(Number(job.progress||0)/10)));
+        bar.style.width=pct+"%";
+        progressText.textContent=job.text||("Menyiapkan file YouTube… "+pct+"%");
+        if(!job.pending)break;
+      }
+      if(job.pending)throw new Error("Proses YouTube terlalu lama. Coba lagi nanti.");
+    }
+    if(!job.result)throw new Error("Provider belum memberikan hasil file yang valid.");
+    const fileUrl="/api/youtube/file?id="+encodeURIComponent(job.id||"")+"&format="+encodeURIComponent(format);
+    if(!job.id)throw new Error("Provider mengirim URL langsung yang belum didukung oleh jalur file aman.");
+    const response=await fetch(fileUrl,{cache:"no-store"});
+    if(!response.ok){const e=await response.json().catch(()=>({}));throw new Error(e.error||"File YouTube belum siap diunduh.");}
+    const blob=await response.blob();
+    if(!blob.size)throw new Error("File YouTube kosong.");
+    const ext=format==="mp3"?"mp3":format==="m4a"?"m4a":"mp4";
+    const filename=safeFilename(responseFilename(response.headers.get("content-disposition"))||info.title||("aryanzz-youtube."+ext));
+    const objectUrl=URL.createObjectURL(blob),a=document.createElement("a");
+    a.href=objectUrl;a.download=filename;document.body.append(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(objectUrl),90000);
+    bar.style.width="100%";progressText.textContent="Selesai · "+(blob.size/1048576).toFixed(1)+" MB";
+    remember(url,filename,mode,quality);
+    return filename;
+  }
   async function downloadFile(url, mode, quality, bar, progressText, info={}) {
     const response = await fetch("/api/download", {
       method: "POST",
@@ -200,7 +240,11 @@
     button.disabled = true;
     button.textContent = "Memeriksa…";
     try {
-      const info = await postJson("/api/info", {url:url.href});
+      const host=url.hostname.toLowerCase();
+      const isYouTube=["youtube.com","www.youtube.com","m.youtube.com","music.youtube.com","youtu.be","www.youtu.be"].includes(host);
+      const info=isYouTube
+        ? await (async()=>{const response=await fetch("/api/youtube/info?url="+encodeURIComponent(url.href),{cache:"no-store"});const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.error||"Gagal memeriksa video YouTube.");return data;})()
+        : await postJson("/api/info", {url:url.href});
       box.replaceChildren();
       const header = make("div", "youtube-heading");
       if (info.thumbnail) {
@@ -220,6 +264,12 @@
       details.append(make("small", "muted", [info.extractor || info.source || platformName(url), duration(info.duration), info.size ? (info.size / 1048576).toFixed(1) + " MB" : ""].filter(Boolean).join(" · ")));
       header.append(details);
       box.append(header);
+      if(isYouTube&&!info.providerReady){
+        box.append(make("p","v690-note",info.providerMessage||"Preview tersedia, tetapi mesin unduhan YouTube belum dikonfigurasi. Tidak ada biaya atau saldo yang akan digunakan."));
+        const source=make("a","tag","Buka video YouTube ↗");source.href=url.href;source.target="_blank";source.rel="noopener noreferrer";source.style.display="inline-block";box.append(source);
+        box.append(make("p","muted","Unduhan YouTube di dalam ARYANZZ akan aktif hanya jika tersedia provider yang diizinkan dan tidak menimbulkan biaya tanpa persetujuan."));
+        return;
+      }
 
       const formatLabel = make("label", "label", "PILIH FORMAT");
       const mode = make("select", "field");
@@ -281,7 +331,7 @@
         quality.disabled = true;
         start.textContent = "Memproses…";
         try {
-          const filename = await downloadFile(url.href, mode.value, Number(quality.value) || 720, bar, progressText, info);
+          const filename = isYouTube ? await downloadYouTube(url.href,mode.value,Number(quality.value)||720,bar,progressText,info) : await downloadFile(url.href, mode.value, Number(quality.value) || 720, bar, progressText, info);
           progressText.textContent = "Berhasil disimpan: " + filename;
           start.textContent = "Unduhan selesai ✓";
         } catch (error) {
@@ -294,7 +344,8 @@
       });
     } catch (error) {
       const platform=platformName(url);
-      if(platform!=="Direct Media URL")showCommunityFallback(out,error,url);
+      if(platform==="YouTube")showError(out,error,url.href);
+      else if(platform!=="Direct Media URL")showCommunityFallback(out,error,url);
       else showError(out,error,url.href);
     } finally {
       button.disabled = false;

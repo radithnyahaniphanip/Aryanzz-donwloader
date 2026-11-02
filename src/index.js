@@ -149,7 +149,25 @@ function youtubeInfoUrl(raw){return isYouTubeUrl(raw)?raw:null;}
 async function youtubeInfo(request,env){
   const url=new URL(request.url).searchParams.get("url")||"";
   if(!youtubeInfoUrl(url))return json({error:"URL YouTube tidak valid."},400);
-  if(!env.SAVENOW_API_KEY)return json({error:"API key downloader YouTube belum dipasang di Cloudflare Worker."},503);
+  if(!env.SAVENOW_API_KEY){
+    try{
+      const oembedUrl=new URL("https://www.youtube.com/oembed");
+      oembedUrl.searchParams.set("url",url);
+      oembedUrl.searchParams.set("format","json");
+      const oembed=await fetch(oembedUrl.toString(),{headers:{accept:"application/json"},signal:AbortSignal.timeout(10000)});
+      if(oembed.ok){
+        const preview=await oembed.json();
+        if(preview.title)return json({
+          ok:true,providerReady:false,
+          providerMessage:"Informasi video berhasil ditemukan. Mesin unduhan YouTube belum dikonfigurasi. ARYANZZ tidak akan mengaktifkan layanan berbayar atau memotong saldo otomatis.",
+          title:String(preview.title).slice(0,300),
+          thumbnail:typeof preview.thumbnail_url==="string"?preview.thumbnail_url:null,
+          duration:null,source:"YouTube"
+        });
+      }
+    }catch{}
+    return json({error:"Preview YouTube tidak tersedia dan mesin unduhan gratis belum terhubung. Tidak ada biaya yang dikenakan."},503);
+  }
   const params=new URLSearchParams({function:"i",api:env.SAVENOW_API_KEY,u:url});
   const response=await savenowRequest("/ajax/api.php?"+params.toString(),env);
   const data=response.data||{};
