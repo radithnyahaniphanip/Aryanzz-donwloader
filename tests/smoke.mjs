@@ -67,7 +67,7 @@ const checks=[
   ["V73.4 browser retains provider errors without waiting for further batches",downloader.includes("Provider errors are retained")&&!downloader.includes("if(available.length)break")],
   ["V73.4 browser aggregates provider instances and retries same-quality streams",downloader.includes("const available=[]")&&downloader.includes("for(const selected of candidates)")&&downloader.includes("selected.instance||info.instance")],
   ["V73.4 Invidious requests its local proxy URLs in both Worker and browser paths",workerSource.includes("?local=true")&&downloader.includes("?local=true")],
-  ["V73.4 progressive MP4 is preflighted then streamed directly to Chrome",workerSource.includes('u.searchParams.get("probe")==="1"')&&downloader.includes("probe=1")&&downloader.includes("Chrome mengelola transfer dan dapat meneruskan unduhan di latar belakang")],
+  ["V73.4 progressive MP4 is preflighted then streamed directly to Chrome",workerSource.includes('u.searchParams.get("probe")==="1"')&&downloader.includes("probe=1")&&downloader.includes("Chrome menampilkan progres dan ukuran unduhan sebenarnya di notifikasi")],
   ["V73.4 Worker validates dynamic Invidious origins against the public registry",workerSource.includes("currentHybridInvidiousInstances()")&&workerSource.includes("if(known)trustedInstance=instanceOrigin")],
   ["V72 FFmpeg merge uses stream copy into MP4",downloader.includes("muxYoutubeMp4")&&downloader.includes('"copy"')&&downloader.includes('"+faststart"')],
   ["V72 local FFmpeg worker bootstrap is included",file("../public/ffmpeg-worker-bootstrap.js").includes("@ffmpeg/ffmpeg@0.12.10")&&file("../public/sw.js").includes("/ffmpeg-worker-bootstrap.js?v=73.4")],
@@ -89,7 +89,7 @@ const checks=[
   ["Invidious media URLs are resolved against the active instance and allowed for download",downloader.includes("new URL(raw,trustedOrigin||undefined)")&&downloader.includes("browserHybridMediaUrl(selected.url,instance)")],
   ["MP4 quality options are derived from actual available video streams",downloader.includes("const hasVideo=")&&downloader.includes("if(videoOption)videoOption.disabled=!hasVideo")],
 
-  ["Progressive MP4 uses a one-byte Worker preflight and direct Chrome attachment streaming",downloader.includes("probe=1")&&downloader.includes("anchor.download=filename")&&downloader.includes("Chrome mengelola transfer dan dapat meneruskan unduhan di latar belakang")&&workerSource.includes("content-disposition")],
+  ["Progressive MP4 uses a one-byte Worker preflight and direct Chrome attachment streaming",downloader.includes("probe=1")&&downloader.includes("anchor.download=filename")&&downloader.includes("Chrome menampilkan progres dan ukuran unduhan sebenarnya di notifikasi")&&workerSource.includes("content-disposition")],
   ["Adaptive MP4 remux fallback uses device-aware memory budgets",downloader.includes("function youtubeMuxMemoryBudget")&&downloader.includes("maxTrack:280*1024*1024")&&downloader.includes("maxCombined:440*1024*1024")&&downloader.includes("melewati batas aman memori perangkat")&&downloader.includes("progressiveFallback")],
   ["Browser CORS failure on adaptive tracks is reported instead of claiming success",downloader.includes("browserError=error")&&downloader.includes("detail.error||browserError.message")],
   ["legacy competing downloader handler removed",!v15.includes("button.onclick=async()=>{")],
