@@ -123,17 +123,18 @@ function youtubeVideoId(raw){
 function hybridMediaUrl(raw,trustedOrigin){
   try{const u=new URL(raw,trustedOrigin||undefined);if(u.protocol!=="https:"||u.username||u.password)return null;const h=u.hostname.toLowerCase();if(h==="googlevideo.com"||h.endsWith(".googlevideo.com"))return u;if(HYBRID_MEDIA_ROOTS.some(root=>h===root||h.endsWith("."+root)))return u;if(trustedOrigin&&u.origin===new URL(trustedOrigin).origin)return u;return null;}catch{return null;}
 }
-function hybridVideoHeight(item){
+function hybridVideoHeight(item,url){
   const direct=Number(item?.height);if(Number.isFinite(direct)&&direct>=100&&direct<=4320)return direct;
   for(const label of [item?.qualityLabel,item?.quality,item?.resolution,item?.size,item?.label].filter(Boolean).map(String)){
     const dimensions=label.match(/\d{2,4}\s*[x×]\s*(\d{2,4})/i);if(dimensions)return Number(dimensions[1]);
     const p=label.match(/(?:^|\D)(\d{3,4})\s*p(?:\D|$)/i);if(p)return Number(p[1]);
   }
-  return 0;
+  const itag=Number(url?.searchParams?.get("itag")||item?.itag);
+  return ({17:144,18:360,22:720,37:1080,59:480,78:480})[itag]||0;
 }
 function hybridVideoFormat(item,instance){
   const mime=String(item?.mimeType||item?.type||item?.mime_type||item?.mime||"").toLowerCase(),container=String(item?.format||item?.container||item?.ext||"").toLowerCase();
-  const height=hybridVideoHeight(item),url=hybridMediaUrl(item?.url||item?.urlTemplate||"",instance);
+  const url=hybridMediaUrl(item?.url||item?.urlTemplate||"",instance),height=hybridVideoHeight(item,url);
   const mp4=mime.includes("video/mp4")||mime.includes("video/x-m4v")||container.includes("mpeg_4")||container==="mp4"||container==="m4v"||(/\.mp4(?:$|[?#])/i.test(url?.pathname||""));
   if(!url||![144,240,360,480,720,1080,1440,2160].includes(height)||item?.videoOnly===true||!mp4)return null;
   return {mode:"video",height,quality:height+"p",ext:"mp4",mimeType:"video/mp4",url:url.toString(),bitrate:Number(item.bitrate)||0};
@@ -184,8 +185,10 @@ function hybridFilename(title,ext){
   return clean.toLowerCase().endsWith("."+ext)?clean:clean+"."+ext;
 }
 async function hybridYoutubeFile(request){
-  const u=new URL(request.url),stream=hybridMediaUrl(u.searchParams.get("url")||""),ext=String(u.searchParams.get("ext")||"mp4").toLowerCase();
-  if(!stream)return json({error:"URL stream tidak berasal dari host media yang diizinkan."},400);
+  const u=new URL(request.url),rawStream=u.searchParams.get("url")||"",instance=u.searchParams.get("instance")||"";
+  const trustedInstance=[...PIPED_PUBLIC_INSTANCES,...INVIDIOUS_PUBLIC_INSTANCES].some(candidate=>{try{return new URL(candidate).origin===new URL(instance).origin}catch{return false}})?instance:undefined;
+  const stream=hybridMediaUrl(rawStream,trustedInstance),ext=String(u.searchParams.get("ext")||"mp4").toLowerCase();
+  if(!stream)return json({error:"URL stream tidak berasal dari host media yang diizinkan atau instance komunitas tidak dikenal."},400);
   if(!["mp4","m4a","mp3","webm","opus","ogg","wav","flac"].includes(ext))return json({error:"Format file tidak didukung."},400);
   const title=hybridFilename(u.searchParams.get("title"),ext),range=request.headers.get("range");let current=stream,response;
   try{
@@ -193,7 +196,7 @@ async function hybridYoutubeFile(request){
       const headers={accept:"*/*","user-agent":"Mozilla/5.0 (compatible; ARYANZZ/71.0)"};if(range&&/^bytes=\d*-\d*(,\d*-\d*)*$/.test(range))headers.range=range;
       response=await fetch(current.toString(),{headers,redirect:"manual",signal:AbortSignal.timeout(30000)});
       if(![301,302,303,307,308].includes(response.status))break;const loc=response.headers.get("location");if(!loc)break;
-      const next=hybridMediaUrl(new URL(loc,current).toString());if(!next)return json({error:"Redirect stream menuju host yang tidak diizinkan."},502);current=next;
+      const next=hybridMediaUrl(new URL(loc,current).toString(),trustedInstance);if(!next)return json({error:"Redirect stream menuju host yang tidak diizinkan."},502);current=next;
     }
   }catch(e){return json({error:"Gagal mengambil stream dari instance komunitas: "+String(e.message||"network error").slice(0,160)},502)}
   if(!response||![200,206].includes(response.status)||!response.body)return json({error:"Stream tidak tersedia atau ditolak (HTTP "+(response?.status||502)+"). Coba format/instance lain."},502);
