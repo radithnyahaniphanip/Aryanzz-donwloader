@@ -405,7 +405,7 @@
       });
       const [downloadedVideo,readyFfmpeg]=await Promise.all([videoTask,loadBrowserFfmpeg(progressText,progressMeta,bar,measuredSizeNote)]);
       videoBytes=downloadedVideo;ffmpeg=readyFfmpeg;
-      const videoSize=videoBytes.byteLength;
+      const videoSize=videoBytes.byteLength,track=bar.parentElement;
       progressMeta.textContent=measuredSizeNote+" Mesin MP4 disiapkan bersamaan dengan unduhan video agar waktu tunggu lebih singkat.";
       await ffmpeg.writeFile(inputVideo,videoBytes);videoBytes=null;
       progressText.textContent="Tahap 2/3 · Mengambil komponen suara…";
@@ -413,7 +413,6 @@
       audioBytes=await fetchYoutubeTrack(audioItem,info,maxTrack,bar,progressText,progressMeta,"Tahap 2/3 · Audio",38,38,speed,audioProbe);
       if(videoSize+audioBytes.byteLength>maxCombined)throw new Error("Gabungan media "+formatDownloadSize(videoSize+audioBytes.byteLength)+" melewati batas aman memori HP. ARYANZZ mencoba kualitas lebih rendah.");
       await ffmpeg.writeFile(inputAudio,audioBytes);audioBytes=null;
-      const track=bar.parentElement;
       track?.classList.add("is-indeterminate");
       progressText.textContent="Tahap 3/3 · Menyatukan MP4…";
       progressMeta.textContent="Target: 1 file MP4 · penggabungan lokal. Jangan tutup tab sampai file diserahkan ke Chrome.";
