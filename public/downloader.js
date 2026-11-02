@@ -133,13 +133,13 @@
     return aryanzzFfmpegPromise;
   }
   async function fetchYoutubeTrack(item,info,maxBytes,progressText,label){
-    const direct=browserHybridMediaUrl(item.url,info.instance);
+    const direct=browserHybridMediaUrl(item.url,item.instance||info.instance);
     if(!direct)throw new Error("Alamat stream "+label+" tidak lolos pemeriksaan keamanan.");
     let response,browserError;
     try{response=await fetch(direct.href,{mode:"cors",credentials:"omit",cache:"no-store",signal:AbortSignal.timeout(120000)});if(!response.ok)throw new Error("HTTP "+response.status);}
     catch(error){
       browserError=error;
-      const target="/api/youtube/hybrid/file?url="+encodeURIComponent(direct.href)+"&ext="+encodeURIComponent(item.ext)+"&title="+encodeURIComponent((info.title||"youtube")+"-"+label)+"&instance="+encodeURIComponent(info.instance||"");
+      const target="/api/youtube/hybrid/file?url="+encodeURIComponent(direct.href)+"&ext="+encodeURIComponent(item.ext)+"&title="+encodeURIComponent((info.title||"youtube")+"-"+label)+"&instance="+encodeURIComponent(item.instance||info.instance||"");
       response=await fetch(target,{cache:"no-store",signal:AbortSignal.timeout(120000)});
       if(!response.ok){const detail=await response.json().catch(()=>({}));throw new Error(label+" tidak bisa diambil: "+(detail.error||browserError.message||"CORS"));}
     }
@@ -185,38 +185,19 @@
     }
   }
 
-  async function downloadYouTube(url,mode,quality,bar,progressText,info={},audioFormat="m4a"){
-    if(info.providerName!=="Hybrid"||!info.providerReady)throw new Error("Tidak ada stream gratis yang tersedia dari instance komunitas saat ini.");
-    const candidates=(Array.isArray(info.formats)?info.formats:[]).filter(item=>item.mode===mode&&item.url);
-    let selected=null;
-    if(mode==="audio")selected=candidates.find(item=>item.ext===audioFormat)||candidates[0];
-    else{
-      const wanted=Number(quality)||720;
-      const chooseAtHeight=height=>candidates.filter(item=>Number(item.height)===height).sort((a,b)=>Number(Boolean(a.videoOnly))-Number(Boolean(b.videoOnly)))[0];
-      selected=chooseAtHeight(wanted)||candidates.filter(item=>Number(item.height)<=wanted).sort((a,b)=>Number(b.height)-Number(a.height)||Number(Boolean(a.videoOnly))-Number(Boolean(b.videoOnly)))[0]||candidates.slice().sort((a,b)=>Number(b.height)-Number(a.height)||Number(Boolean(a.videoOnly))-Number(Boolean(b.videoOnly)))[0];
-    }
-    if(!selected)throw new Error("Kualitas/format yang dipilih tidak tersedia dari sumber komunitas.");
-    if(mode==="video"&&selected.videoOnly){
-      const audioItem=(info.formats||[]).filter(item=>item.mode==="audio"&&item.ext==="m4a").sort((a,b)=>Number(b.bitrate)-Number(a.bitrate))[0];
-      if(!audioItem)throw new Error("Stream video terpisah ditemukan, tetapi pasangan audio M4A tidak tersedia.");
-      return muxYoutubeMp4(selected,audioItem,{...info,url},bar,progressText);
-    }
+  async function downloadYoutubeProgressiveCandidate(url,mode,selected,info,bar,progressText,quality){
     const filename=safeFilename((info.title||"aryanzz-youtube")+"."+selected.ext);
-    progressText.textContent="Mengambil stream langsung dari browser…";
-    const direct=browserHybridMediaUrl(selected.url,info.instance);
+    const instance=selected.instance||info.instance;
+    const direct=browserHybridMediaUrl(selected.url,instance);
     if(!direct)throw new Error("Alamat stream tidak lolos pemeriksaan keamanan.");
+    let browserError;
     try{
-      const controller=new AbortController();
-      const timer=setTimeout(()=>controller.abort(),120000);
-      let response;
-      try{response=await fetch(direct.href,{mode:"cors",credentials:"omit",cache:"no-store",signal:controller.signal});}
-      finally{clearTimeout(timer);}
+      const response=await fetch(direct.href,{mode:"cors",credentials:"omit",cache:"no-store",signal:AbortSignal.timeout(120000)});
       if(!response.ok)throw new Error("HTTP "+response.status);
       browserMediaContentType(response,mode);
       const total=Number(response.headers.get("content-length")||0),maxBytes=250*1024*1024;
       if(total>maxBytes)throw new Error("File lebih dari 250 MB; pilih kualitas lebih rendah.");
-      const reader=response.body?.getReader();
-      if(!reader)throw new Error("Browser tidak menyediakan stream pembacaan file.");
+      const reader=response.body?.getReader();if(!reader)throw new Error("Browser tidak menyediakan stream pembacaan file.");
       const chunks=[];let received=0;
       while(true){
         const part=await reader.read();if(part.done)break;
@@ -227,27 +208,53 @@
         else progressText.textContent="Mengunduh · "+(received/1048576).toFixed(1)+" MB";
       }
       if(!received)throw new Error("Stream kosong.");
-      const blob=new Blob(chunks,{type:selected.mimeType||response.headers.get("content-type")||"application/octet-stream"});
+      const blob=new Blob(chunks,{type:selected.mimeType||"video/mp4"});
       await saveBrowserBlob(blob,filename);
-      bar.style.width="100%";progressText.textContent="File siap disimpan oleh Chrome · "+(received/1048576).toFixed(1)+" MB";
-      remember(url,filename,mode,quality);
-      return filename;
-    }catch(browserError){
+      bar.style.width="100%";progressText.textContent="MP4 siap disimpan oleh Chrome · "+(received/1048576).toFixed(1)+" MB";
+      remember(url,filename,mode,quality);return filename;
+    }catch(error){browserError=error;}
+    const target="/api/youtube/hybrid/file?url="+encodeURIComponent(direct.href)+"&ext="+encodeURIComponent(selected.ext)+"&title="+encodeURIComponent(info.title||"aryanzz-youtube")+"&instance="+encodeURIComponent(instance||"");
+    const fallback=await fetch(target,{cache:"no-store",signal:AbortSignal.timeout(120000)});
+    if(!fallback.ok){const detail=await fallback.json().catch(()=>({}));throw new Error("Browser: "+String(browserError.message||"CORS")+". Worker: "+String(detail.error||("HTTP "+fallback.status)));}
+    browserMediaContentType(fallback,mode);
+    const blob=await fallback.blob();
+    if(blob.size>250*1024*1024)throw new Error("File melebihi batas 250 MB untuk penyimpanan browser.");
+    await saveBrowserBlob(blob,filename);
+    bar.style.width="100%";progressText.textContent="MP4 diterima melalui Worker · "+(blob.size/1048576).toFixed(1)+" MB";
+    remember(url,filename,mode,quality);return filename;
+  }
+
+  async function downloadYouTube(url,mode,quality,bar,progressText,info={},audioFormat="m4a"){
+    if(info.providerName!=="Hybrid"||!info.providerReady)throw new Error("Tidak ada stream gratis yang tersedia dari instance komunitas saat ini.");
+    const all=(Array.isArray(info.formats)?info.formats:[]).filter(item=>item.mode===mode&&item.url);
+    let candidates=[];
+    if(mode==="audio"){
+      candidates=all.filter(item=>item.ext===audioFormat);
+      if(!candidates.length)candidates=all;
+    }else{
+      const wanted=Number(quality)||720;
+      const heights=[...new Set(all.map(item=>Number(item.height)).filter(Number.isFinite).filter(height=>height>0))].sort((a,b)=>b-a);
+      const chosen=heights.includes(wanted)?wanted:heights.filter(height=>height<=wanted).sort((a,b)=>b-a)[0]||heights[0];
+      candidates=all.filter(item=>Number(item.height)===chosen).sort((a,b)=>Number(Boolean(a.videoOnly))-Number(Boolean(b.videoOnly))||Number(b.bitrate)-Number(a.bitrate));
+    }
+    if(!candidates.length)throw new Error("Kualitas/format yang dipilih tidak tersedia dari penyedia yang merespons.");
+    const failures=[];
+    for(const selected of candidates){
+      const instance=selected.instance||info.instance;
+      progressText.textContent="Mencoba penyedia "+(selected.provider||"komunitas")+" · "+(selected.quality||selected.ext)+"…";
       try{
-        const target="/api/youtube/hybrid/file?url="+encodeURIComponent(direct.href)+"&ext="+encodeURIComponent(selected.ext)+"&title="+encodeURIComponent(info.title||"aryanzz-youtube")+"&instance="+encodeURIComponent(info.instance||"");
-        const fallback=await fetch(target,{cache:"no-store",signal:AbortSignal.timeout(120000)});
-        if(!fallback.ok){const detail=await fallback.json().catch(()=>({}));throw new Error(detail.error||("Worker HTTP "+fallback.status));}
-        browserMediaContentType(fallback,mode);
-        const blob=await fallback.blob();
-        if(blob.size>250*1024*1024)throw new Error("File melebihi batas 250 MB untuk penyimpanan browser.");
-        await saveBrowserBlob(blob,filename);
-        bar.style.width="100%";progressText.textContent="File diterima melalui jalur Worker · "+(blob.size/1048576).toFixed(1)+" MB";
-        remember(url,filename,mode,quality);
-        return filename;
-      }catch(proxyError){
-        throw new Error("Unduhan browser gagal: "+String(browserError.message||"CORS")+". Jalur Worker juga gagal: "+String(proxyError.message||"network error")+". Coba instance lain atau ulangi nanti.");
+        if(mode==="video"&&selected.videoOnly){
+          const audios=(info.formats||[]).filter(item=>item.mode==="audio"&&item.ext==="m4a"&&(!instance||!item.instance||item.instance===instance)).sort((a,b)=>Number(b.bitrate)-Number(a.bitrate));
+          const audioItem=audios[0];
+          if(!audioItem)throw new Error("Pasangan audio M4A dari penyedia yang sama tidak tersedia.");
+          return await muxYoutubeMp4(selected,audioItem,{...info,url},bar,progressText);
+        }
+        return await downloadYoutubeProgressiveCandidate(url,mode,selected,info,bar,progressText,quality);
+      }catch(error){
+        failures.push((selected.provider||"provider")+" "+(instance||"")+": "+String(error.message||error).slice(0,180));
       }
     }
+    throw new Error("Semua stream pada kualitas ini gagal diunduh. ARYANZZ sudah mencoba "+candidates.length+" jalur penyedia. "+(failures[0]||"Coba kualitas lebih rendah atau ulangi nanti."));
   }
   async function downloadFile(url, mode, quality, bar, progressText, info={}) {
     const sourceExt=/^[a-z0-9]{2,8}$/i.test(info.extension||"")?info.extension.toLowerCase():"";
@@ -442,22 +449,28 @@
     if(!match||! /^[A-Za-z0-9_-]{6,20}$/.test(match))throw new Error("ID video YouTube tidak valid.");
     const tryGroup=(instances,fn)=>{
       const controllers=instances.map(()=>browserProviderTimeout(6500));
-      const promise=Promise.any(instances.map((instance,i)=>fn(instance,match,controllers[i].signal).finally(()=>controllers[i].clear())));
+      const promise=Promise.all(instances.map((instance,i)=>fn(instance,match,controllers[i].signal)
+        .then(result=>({...result,instance:result.instance||instance,formats:(result.formats||[]).map(format=>({...format,instance:format.instance||instance,provider:format.provider||result.provider}))}))
+        .catch(()=>null)));
       return {promise,abort:()=>controllers.forEach(controller=>controller.abort())};
     };
     const [invidiousInstances,pipedInstances]=await Promise.all([currentInvidiousInstances(),currentPipedInstances()]);
     const batches=Math.max(Math.ceil(invidiousInstances.length/5),Math.ceil(pipedInstances.length/5));
+    const available=[];
     for(let batch=0;batch<batches;batch++){
       const groups=[];
       const inv=invidiousInstances.slice(batch*5,batch*5+5),piped=pipedInstances.slice(batch*5,batch*5+5);
       if(inv.length)groups.push(tryGroup(inv,browserInvidiousInfo));
       if(piped.length)groups.push(tryGroup(piped,browserPipedInfo));
       if(!groups.length)break;
-      try{
-        const result=await Promise.any(groups.map(group=>group.promise));
-        groups.forEach(group=>group.abort());
-        return result;
-      }catch(error){groups.forEach(group=>group.abort());}
+      const results=await Promise.all(groups.map(group=>group.promise));
+      groups.forEach(group=>group.abort());
+      available.push(...results.flat().filter(Boolean));
+    }
+    if(available.length){
+      const primary=available.find(item=>item.provider==="Piped")||available[0];
+      const formats=browserDedupeFormats(available.flatMap(result=>(result.formats||[]).map(format=>({...format,instance:format.instance||result.instance,provider:format.provider||result.provider}))));
+      return {...primary,providerReady:true,formats,providers:available.map(item=>({provider:item.provider,instance:item.instance,formatCount:item.formats?.length||0}))};
     }
     const response=await fetch("/api/youtube/hybrid/info?url="+encodeURIComponent(raw),{cache:"no-store",signal:AbortSignal.timeout(12000)});
     const fallback=await response.json().catch(()=>({}));
