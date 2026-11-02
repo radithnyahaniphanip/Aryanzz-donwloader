@@ -158,7 +158,7 @@ async function hybridYoutubeInfo(request){
   const raw=new URL(request.url).searchParams.get("url")||"";if(!isYouTubeUrl(raw))return json({error:"URL YouTube tidak valid."},400);
   const id=youtubeVideoId(raw);if(!id||!/^[A-Za-z0-9_-]{6,20}$/.test(id))return json({error:"ID video YouTube tidak valid."},400);
   const attempts=[];
-  const piped=PIPED_PUBLIC_INSTANCES.slice(0,8);
+  const piped=PIPED_PUBLIC_INSTANCES;
   // Probe a small batch at a time so one click does not fan out to every community operator.
   for(let offset=0;offset<piped.length;offset+=3){
     const batch=piped.slice(offset,offset+3);
