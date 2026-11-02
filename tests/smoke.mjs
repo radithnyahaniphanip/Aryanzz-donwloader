@@ -31,7 +31,10 @@ const checks=[
   ["video quality options available",downloader.includes('[360,"360p"]')&&downloader.includes('[720,"720p HD"]')&&downloader.includes('[1080,"1080p Full HD"]')&&downloader.includes('[2160,"2160p · 4K"]')],
   ["Piped audio-only responses do not preempt Invidious progressive MP4 discovery",downloader.includes("Instance Piped tidak menyediakan MP4 progresif")&&downloader.includes("Tidak menemukan MP4 progresif")&&downloader.includes("currentInvidiousInstances")&&workerSource.includes('formats.some(item=>item.mode==="video")')],
   ["Hybrid YouTube API uses Piped and Invidious public instance failover",workerSource.includes("/streams/")&&workerSource.includes("/api/v1/videos/")&&workerSource.includes("PIPED_PUBLIC_INSTANCES")&&workerSource.includes("INVIDIOUS_PUBLIC_INSTANCES")],
-  ["V72 parses adaptive video-only MP4 plus matching M4A audio",workerSource.includes("adaptiveSource=false")&&workerSource.includes("hybridVideoFormat(item,instance,true,true)")&&workerSource.includes("videoOnly")&&downloader.includes("adaptive.map(item=>String(item?.type||item?.mimeType||")."],
+  ["V72 Piped parser retains adaptive video-only MP4 with audio",workerSource.includes("videoOnly=adaptiveSource")&&workerSource.includes("formats.some(audio=>audio.mode==="audio"&&audio.ext==="m4a")")],
+  ["V72 FFmpeg merge uses stream copy into MP4",downloader.includes("muxYoutubeMp4")&&downloader.includes('" -c"')===false&&downloader.includes('"copy"')&&downloader.includes('" +faststart"')],
+  ["V72 local FFmpeg worker bootstrap is included",file("../public/ffmpeg-worker-bootstrap.js").includes("@ffmpeg/ffmpeg@0.12.10")&&file("../public/sw.js").includes("/ffmpeg-worker-bootstrap.js?v=72.0")],
+  ["V72 parses adaptive video-only MP4 plus matching M4A audio",workerSource.includes("adaptiveSource=false")&&workerSource.includes("hybridVideoFormat(item,instance,true,true)")&&workerSource.includes("videoOnly")&&downloader.includes('adaptive.map(item=>String(item?.type||item?.mimeType||')],
   ["V72 browser remuxes separate tracks locally with FFmpeg WASM",downloader.includes("loadBrowserFfmpeg")&&downloader.includes("classWorkerURL")&&downloader.includes("ffmpeg.exec")&&downloader.includes('"copy"')&&downloader.includes("muxYoutubeMp4")],
   ["V72 FFmpeg worker bootstrap is same-origin and cached",file("../public/ffmpeg-worker-bootstrap.js").includes("@ffmpeg/ffmpeg@0.12.10")&&sw.includes("/ffmpeg-worker-bootstrap.js?v=72.0")],
   ["Hybrid stream download is restricted to approved media hosts",workerSource.includes("function hybridMediaUrl")&&workerSource.includes("googlevideo.com")&&workerSource.includes("HYBRID_MEDIA_ROOTS")],
@@ -420,7 +423,7 @@ try{
           {url:"https://rr1---sn.googlevideo.com/videoplayback?itag=18",type:"video/mp4; codecs=avc1",container:"mp4",qualityLabel:"360p",resolution:"640x360"},
           {url:"https://rr1---sn.googlevideo.com/videoplayback?itag=22",container:"mp4",itag:"22"}
         ],
-        adaptiveFormats:[{url:"https://rr1---sn.googlevideo.com/videoplayback?itag=140",type:"audio/mp4; codecs=mp4a.40.2",audioQuality:"AUDIO_QUALITY_MEDIUM"}]
+        adaptiveFormats:[{url:"https://rr1---sn.googlevideo.com/videoplayback?itag=137",type:"video/mp4; codecs=avc1",qualityLabel:"1080p",itag:"137"},{url:"https://rr1---sn.googlevideo.com/videoplayback?itag=140",type:"audio/mp4; codecs=mp4a.40.2",audioQuality:"AUDIO_QUALITY_MEDIUM"}]
       }),{status:200,headers:{"content-type":"application/json"}});
     }
     if(url.hostname==="pipedproxy-bom.kavin.rocks"||url.hostname==="rr1---sn.googlevideo.com"){
@@ -495,6 +498,7 @@ try{
   assert.ok(invidiousData.formats.some(x=>x.mode==="video"&&x.height===360));
   assert.ok(invidiousData.formats.some(x=>x.mode==="video"&&x.height===720),"itag-only progressive MP4 should infer 720p");
   assert.ok(invidiousData.formats.some(x=>x.mode==="audio"&&x.ext==="m4a"));
+  assert.ok(invidiousData.formats.some(x=>x.mode==="video"&&x.videoOnly===true&&x.height===1080),"adaptive video-only MP4 should be retained for browser-side muxing");
   console.log("✔ Invidious fallback is used when Piped instances are unavailable");
 
   const noInstance=await worker.fetch(new Request("https://aryanzz.example/api/youtube/hybrid/info?url="+encodeURIComponent("https://www.youtube.com/watch?v=NORESULT")),{}); 
