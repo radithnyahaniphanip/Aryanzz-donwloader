@@ -179,7 +179,7 @@ async function hybridFetchJson(url,parentSignal){
   const abort=()=>controller.abort();
   if(parentSignal){if(parentSignal.aborted)controller.abort();else parentSignal.addEventListener("abort",abort,{once:true});}
   try{
-    const response=await fetch(url,{headers:{accept:"application/json","user-agent":"ARYANZZ/72.8 (public-instance failover)"},signal:controller.signal,cache:"no-store"});
+    const response=await fetch(url,{headers:{accept:"application/json","user-agent":"ARYANZZ/72.9 (public-instance failover)"},signal:controller.signal,cache:"no-store"});
     if(!response.ok)throw new Error("HTTP "+response.status);
     if(!(response.headers.get("content-type")||"").toLowerCase().includes("json"))throw new Error("Respons bukan JSON");
     return await response.json();
@@ -287,7 +287,7 @@ async function hybridYoutubeFile(request){
   const title=hybridFilename(u.searchParams.get("title"),ext),range=probe?"bytes=0-0":request.headers.get("range");let current=stream,response;
   try{
     for(let i=0;i<4;i++){
-      const headers={accept:"*/*","user-agent":"Mozilla/5.0 (compatible; ARYANZZ/72.8)"};
+      const headers={accept:"*/*","user-agent":"Mozilla/5.0 (compatible; ARYANZZ/72.9)"};
       if(range&&/^bytes=\d*-\d*(,\d*-\d*)*$/.test(range))headers.range=range;
       response=await fetch(current.toString(),{headers,redirect:"manual",signal:AbortSignal.timeout(30000)});
       if(![301,302,303,307,308].includes(response.status))break;
@@ -310,7 +310,10 @@ async function hybridYoutubeFile(request){
     try{first=await reader.read()}catch(e){return json({error:"Gagal membaca byte awal stream: "+String(e.message||"network error").slice(0,120)},502)}
     finally{await reader.cancel().catch(()=>{});}
     if(!first||first.done||!first.value?.byteLength)return json({error:"Provider tidak mengirim data media pada pemeriksaan awal."},502);
-    return json({ok:true,status:response.status,contentType,contentLength:size||null});
+    const contentRange=response.headers.get("content-range")||"";
+    const totalMatch=contentRange.match(/\\/(\\d+)$/);
+    const totalBytes=totalMatch?Number(totalMatch[1]):(response.status===200?size:null);
+    return json({ok:true,status:response.status,contentType,contentLength:size||null,contentRange:contentRange||null,totalBytes:totalBytes||null,acceptRanges:response.headers.get("accept-ranges")||null});
   }
   const mime=ext==="mp4"?"video/mp4":ext==="m4a"?"audio/mp4":ext==="mp3"?"audio/mpeg":ext==="webm"?"video/webm":ext==="opus"?"audio/ogg":ext==="ogg"?"audio/ogg":ext==="wav"?"audio/wav":"audio/flac";
   const headers=new Headers({"content-type":mime,"content-disposition":"attachment; filename*=UTF-8''"+encodeURIComponent(title),"cache-control":"no-store","x-content-type-options":"nosniff","accept-ranges":response.headers.get("accept-ranges")||"bytes"});
@@ -322,6 +325,51 @@ async function hybridYoutubeFile(request){
     controller.enqueue(chunk);
   }}));
   return new Response(limited,{status:response.status,headers});
+}
+function hybridThumbnailHostAllowed(url,instanceOrigin){
+  const host=url.hostname.toLowerCase();
+  const youtubeImage=host==="i.ytimg.com"||host==="img.youtube.com"||host==="yt3.ggpht.com"||host==="yt4.ggpht.com"||host.endsWith(".ytimg.com")||host.endsWith(".googleusercontent.com");
+  const instanceImage=!!instanceOrigin&&url.origin===instanceOrigin&&/^\\/(?:vi|vi_webp)\\//.test(url.pathname);
+  return url.protocol==="https:"&&!url.username&&!url.password&&(youtubeImage||instanceImage);
+}
+async function hybridYoutubeThumbnail(request){
+  const u=new URL(request.url),raw=u.searchParams.get("url")||"",instance=u.searchParams.get("instance")||"";
+  let image;try{image=new URL(raw)}catch{return json({error:"URL thumbnail tidak valid."},400)}
+  let instanceOrigin=null;
+  try{
+    const candidate=new URL(instance);
+    if(candidate.protocol==="https:"&&!candidate.username&&!candidate.password&&!candidate.port&&candidate.pathname==="/"&&!candidate.search&&!candidate.hash){
+      const staticInstances=[...PIPED_PUBLIC_INSTANCES,...INVIDIOUS_PUBLIC_INSTANCES];
+      let known=staticInstances.some(value=>{try{return new URL(value).origin===candidate.origin}catch{return false}});
+      if(!known){
+        const [pipedInstances,invidiousInstances]=await Promise.all([currentHybridPipedInstances(),currentHybridInvidiousInstances()]);
+        known=[...pipedInstances,...invidiousInstances].some(value=>{try{return new URL(value).origin===candidate.origin}catch{return false}});
+      }
+      if(known)instanceOrigin=candidate.origin;
+    }
+  }catch{}
+  if(!hybridThumbnailHostAllowed(image,instanceOrigin))return json({error:"Host thumbnail tidak termasuk sumber YouTube yang diizinkan."},400);
+  let current=image,response;
+  try{
+    for(let i=0;i<4;i++){
+      response=await fetch(current.toString(),{headers:{accept:"image/avif,image/webp,image/*"},redirect:"manual",cache:"no-store",signal:AbortSignal.timeout(15000)});
+      if(![301,302,303,307,308].includes(response.status))break;
+      const location=response.headers.get("location");if(!location)return json({error:"Redirect thumbnail tidak memiliki tujuan."},502);
+      const next=new URL(location,current);
+      if(!hybridThumbnailHostAllowed(next,instanceOrigin))return json({error:"Redirect thumbnail menuju host yang tidak diizinkan."},502);
+      current=next;
+    }
+  }catch(error){return json({error:"Gagal mengambil thumbnail: "+String(error.message||"network error").slice(0,120)},502)}
+  if(!response||response.status!==200||!response.body)return json({error:"Thumbnail tidak tersedia (HTTP "+(response?.status||502)+")."},502);
+  const contentType=String(response.headers.get("content-type")||"").split(";")[0].toLowerCase();
+  if(!contentType.startsWith("image/")){await response.body.cancel().catch(()=>{});return json({error:"Sumber tidak mengirim gambar thumbnail."},502)}
+  const size=Number(response.headers.get("content-length")||0);
+  if(size>15*1024*1024){await response.body.cancel();return json({error:"Thumbnail melebihi batas 15 MB."},413)}
+  const ext=contentType==="image/webp"?"webp":contentType==="image/png"?"png":contentType==="image/avif"?"avif":"jpg";
+  const filename=hybridFilename((u.searchParams.get("title")||"aryanzz-thumbnail").replace(/\\.[^.]+$/,""),ext);
+  let received=0;
+  const limited=response.body.pipeThrough(new TransformStream({transform(chunk,controller){received+=chunk.byteLength;if(received>15*1024*1024){controller.error(new Error("Thumbnail melebihi batas 15 MB."));return;}controller.enqueue(chunk)}}));
+  return new Response(limited,{status:200,headers:{"content-type":contentType,"content-disposition":"attachment; filename*=UTF-8''"+encodeURIComponent(filename),"cache-control":"no-store","x-content-type-options":"nosniff"}});
 }
 function youtubeInfoUrl(raw){return isYouTubeUrl(raw)?raw:null;}
 async function youtubeInfo(request,env){return hybridYoutubeInfo(request);}
@@ -607,8 +655,9 @@ export default {async fetch(request,env){
   if(url.pathname==="/api/youtube/status"&&request.method==="GET")return json({ok:true,service:"ARYANZZ YouTube Backend",youtubeDownloader:true,provider:"Dynamic Piped + Invidious hybrid",paidProvider:false,cobalt:false,supportedAudio:["M4A","MP3","WEBM","OPUS"],supportedVideo:["360","480","720","1080","1440","2160"]});
   if(url.pathname==="/api/youtube/hybrid/info"&&request.method==="GET")return hybridYoutubeInfo(request);
   if(url.pathname==="/api/youtube/hybrid/file"&&request.method==="GET")return hybridYoutubeFile(request);
+   if(url.pathname==="/api/youtube/hybrid/thumbnail"&&request.method==="GET")return hybridYoutubeThumbnail(request);
   if(url.pathname==="/api/youtube/info"&&request.method==="GET")return youtubeInfo(request,env);
-    if(url.pathname==="/api/health"&&request.method==="GET")return json({ok:true,service:"ARYANZZ",version:"72.8",mode:"cloudflare-worker-zero-server-hybrid",directMediaDownload:true,selfHostedDownloader:false,youtubeDownloader:true,youtubeApiKeyConfigured:false,cobalt:false,paidYoutubeProvider:false,musicRecognitionConfigured:!!env.AUDD_API_TOKEN,musicFallbackReady:false,musicVideoRecognitionReady:false,platformExtraction:false,platformBackend:"community-handoff"});
+    if(url.pathname==="/api/health"&&request.method==="GET")return json({ok:true,service:"ARYANZZ",version:"72.9",mode:"cloudflare-worker-zero-server-hybrid",directMediaDownload:true,selfHostedDownloader:false,youtubeDownloader:true,youtubeApiKeyConfigured:false,cobalt:false,paidYoutubeProvider:false,musicRecognitionConfigured:!!env.AUDD_API_TOKEN,musicFallbackReady:false,musicVideoRecognitionReady:false,platformExtraction:false,platformBackend:"community-handoff"});
   if(url.pathname==="/api/info"&&request.method==="POST"){const proxied=await proxyPlatform(request,env,"/api/info");if(proxied)return proxied;return info(request);}
   if(url.pathname==="/api/direct-file"&&request.method==="GET")return download(request);
   if(url.pathname==="/api/download"&&request.method==="POST"){const proxied=await proxyPlatform(request,env,"/api/download");if(proxied)return proxied;return download(request);}
