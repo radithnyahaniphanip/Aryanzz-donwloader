@@ -61,7 +61,10 @@ function isPlatformLink(raw){
 async function proxyPlatform(request,env,path){
   let body;try{body=await request.clone().json()}catch{return json({error:"Body JSON tidak valid."},400)}
   if(!isPlatformLink(body?.url))return null;
-  if(!env.PLATFORM_API_ORIGIN)return json({error:"Backend ekstraksi platform belum dihubungkan. Tautan file media langsung tetap bisa diunduh."},503);
+  // A social-domain URL may still be a direct media file (for example a CDN MP4).
+  // Let the direct-file pipeline handle it before requiring a platform extractor.
+  try{parseMediaUrl(body.url);return null}catch{}
+  if(!env.PLATFORM_API_ORIGIN)return json({error:"Link postingan platform ini memerlukan extractor yang diizinkan. Untuk unduhan langsung, gunakan URL file media MP4/MP3 asli."},503);
   if(!env.PLATFORM_API_TOKEN)return json({error:"Token backend belum dikonfigurasi pada Cloudflare Worker."},503);
   let origin;try{const parsed=new URL(env.PLATFORM_API_ORIGIN);if(parsed.protocol!=="https:"||parsed.username||parsed.password)throw new Error("origin tidak aman");origin=parsed.origin}catch{return json({error:"Konfigurasi backend harus berupa URL HTTPS yang valid."},500)}
   try{
