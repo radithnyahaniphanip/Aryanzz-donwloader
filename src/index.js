@@ -40,16 +40,18 @@ function parseMediaUrl(raw){
   return {url:u,ext};
 }
 function fileName(u,ext){let n;try{n=decodeURIComponent(u.pathname.split("/").pop()||"")}catch{n=""}n=(n||"aryanzz-media."+ext).replace(/[^a-zA-Z0-9._-]/g,"_").slice(0,100);if(!n.includes("."))n+="."+ext;return n}
-async function getUpstream(parsed,method="HEAD"){
+async function getUpstream(parsed,method="HEAD",range=null){
   let current=parsed;
   for(let i=0;i<5;i++){
-    let response=await fetch(current.url.toString(),{method,redirect:"manual",headers:{"user-agent":"ARYANZZ/2.0 media fetch"}});
+    const headers={"user-agent":"ARYANZZ/73.0 media fetch"};
+    if(method==="GET"&&range&&/^bytes=\d*-\d*(?:,\d*-\d*)*$/.test(range))headers.range=range;
+    let response=await fetch(current.url.toString(),{method,redirect:"manual",headers});
     if(method==="HEAD"&&[403,405,501].includes(response.status)){
-      response=await fetch(current.url.toString(),{method:"GET",redirect:"manual",headers:{"user-agent":"ARYANZZ/2.0 media fetch","range":"bytes=0-0"}});
+      response=await fetch(current.url.toString(),{method:"GET",redirect:"manual",headers:{"user-agent":"ARYANZZ/73.0 media fetch","range":"bytes=0-0"}});
       if(response.body)response.body.cancel().catch(()=>{});
     }
     if(![301,302,303,307,308].includes(response.status))return {response,parsed:current};
-    const loc=response.headers.get("location");if(!loc) return {response,parsed:current};
+    const loc=response.headers.get("location");if(!loc)return {response,parsed:current};
     current=parseMediaUrl(new URL(loc,current.url).toString());
   }
   throw new Error("Terlalu banyak pengalihan URL.");
@@ -79,7 +81,9 @@ async function info(request){
   try{
     const {response,parsed:final}=await getUpstream(parsed,"HEAD");
     if(!response.ok)return json({error:"Server sumber menjawab HTTP "+response.status+"."},502);
-    const size=Number(response.headers.get("content-length")||0);
+    const contentRange=String(response.headers.get("content-range")||"");
+    const totalMatch=contentRange.match(/\/(\d+)$/);
+    const size=Number(totalMatch?.[1]||response.headers.get("content-length")||0);
     if(size>MAX_BYTES)return json({error:"File melebihi batas 100 MB."},413);
     return json({ok:true,title:fileName(final.url,final.ext),filename:fileName(final.url,final.ext),extension:final.ext,type:["mp3","m4a","aac","wav","ogg","oga","flac","opus","wma","aiff","aif"].includes(final.ext)?"audio":"video",size:size||null,mime:response.headers.get("content-type")||null,source:final.url.hostname});
   }catch(e){return json({error:e.message||"Gagal memeriksa file."},502)}
@@ -89,17 +93,33 @@ async function download(request){
   if(request.method==="GET")body={url:new URL(request.url).searchParams.get("url")||""};
   else{try{body=await request.json()}catch{return json({error:"Body JSON tidak valid."},400)}}
   let parsed;try{parsed=parseMediaUrl(body?.url)}catch(e){return json({error:e.message},400)}
+  const range=request.headers.get("range");
   let upstream;
-  try{const result=await getUpstream(parsed,"GET");upstream=result.response;parsed=result.parsed}
+  try{const result=await getUpstream(parsed,"GET",range);upstream=result.response;parsed=result.parsed}
   catch(e){return json({error:e.message||"Tidak dapat menghubungi server sumber."},502)}
-  if(!upstream.ok||!upstream.body)return json({error:"Server sumber tidak menyediakan file (HTTP "+upstream.status+")."},502);
+  if(upstream.status===416){
+    const headers=new Headers();
+    for(const name of ["content-range","accept-ranges","etag","last-modified"])if(upstream.headers.get(name))headers.set(name,upstream.headers.get(name));
+    await upstream.body?.cancel().catch(()=>{});
+    return new Response(null,{status:416,headers});
+  }
+  if(![200,206].includes(upstream.status)||!upstream.body)return json({error:"Server sumber tidak menyediakan file (HTTP "+upstream.status+")."},502);
   const size=Number(upstream.headers.get("content-length")||0);
-  if(size>MAX_BYTES){await upstream.body.cancel();return json({error:"Ukuran file melebihi batas 100 MB."},413)}
+  const contentRange=String(upstream.headers.get("content-range")||"");
+  const totalMatch=contentRange.match(/\/(\d+)$/);
+  const totalSize=Number(totalMatch?.[1]||size);
+  if(totalSize>MAX_BYTES){await upstream.body.cancel();return json({error:"Ukuran file melebihi batas 100 MB."},413)}
   let received=0;
   const limited=upstream.body.pipeThrough(new TransformStream({transform(chunk,controller){received+=chunk.byteLength;if(received>MAX_BYTES){controller.error(new Error("File melebihi batas 100 MB."));return}controller.enqueue(chunk)}}));
-  const headers=new Headers({"content-type":upstream.headers.get("content-type")||"application/octet-stream","content-disposition":'attachment; filename="'+fileName(parsed.url,parsed.ext)+'"',"cache-control":"no-store","x-content-type-options":"nosniff"});
-  if(size)headers.set("content-length",String(size));
-  return new Response(limited,{status:200,headers});
+  const headers=new Headers({
+    "content-type":upstream.headers.get("content-type")||"application/octet-stream",
+    "content-disposition":'attachment; filename="'+fileName(parsed.url,parsed.ext)+'"',
+    "cache-control":"no-store",
+    "x-content-type-options":"nosniff"
+  });
+  for(const name of ["content-length","content-range","accept-ranges","etag","last-modified"])if(upstream.headers.get(name))headers.set(name,upstream.headers.get(name));
+  if(!headers.has("accept-ranges"))headers.set("accept-ranges","none");
+  return new Response(limited,{status:upstream.status,headers});
 }
 
 const AUDD_MAX_BYTES=10*1024*1024;
@@ -179,7 +199,7 @@ async function hybridFetchJson(url,parentSignal){
   const abort=()=>controller.abort();
   if(parentSignal){if(parentSignal.aborted)controller.abort();else parentSignal.addEventListener("abort",abort,{once:true});}
   try{
-    const response=await fetch(url,{headers:{accept:"application/json","user-agent":"ARYANZZ/72.9 (public-instance failover)"},signal:controller.signal,cache:"no-store"});
+    const response=await fetch(url,{headers:{accept:"application/json","user-agent":"ARYANZZ/73.0 (public-instance failover)"},signal:controller.signal,cache:"no-store"});
     if(!response.ok)throw new Error("HTTP "+response.status);
     if(!(response.headers.get("content-type")||"").toLowerCase().includes("json"))throw new Error("Respons bukan JSON");
     return await response.json();
@@ -295,7 +315,7 @@ async function hybridYoutubeFile(request){
   const title=hybridFilename(u.searchParams.get("title"),ext),range=probe?"bytes=0-0":request.headers.get("range");let current=stream,response;
   try{
     for(let i=0;i<4;i++){
-      const headers={accept:"*/*","user-agent":"Mozilla/5.0 (compatible; ARYANZZ/72.9)"};
+      const headers={accept:"*/*","user-agent":"Mozilla/5.0 (compatible; ARYANZZ/73.0)"};
       if(range&&/^bytes=\d*-\d*(,\d*-\d*)*$/.test(range))headers.range=range;
       const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),30000);
       try{response=await fetch(current.toString(),{headers,redirect:"manual",signal:controller.signal});}
@@ -667,7 +687,7 @@ export default {async fetch(request,env){
   if(url.pathname==="/api/youtube/hybrid/file"&&request.method==="GET")return hybridYoutubeFile(request);
    if(url.pathname==="/api/youtube/hybrid/thumbnail"&&request.method==="GET")return hybridYoutubeThumbnail(request);
   if(url.pathname==="/api/youtube/info"&&request.method==="GET")return youtubeInfo(request,env);
-    if(url.pathname==="/api/health"&&request.method==="GET")return json({ok:true,service:"ARYANZZ",version:"72.9",mode:"cloudflare-worker-zero-server-hybrid",directMediaDownload:true,selfHostedDownloader:false,youtubeDownloader:true,youtubeApiKeyConfigured:false,cobalt:false,paidYoutubeProvider:false,musicRecognitionConfigured:!!env.AUDD_API_TOKEN,musicFallbackReady:false,musicVideoRecognitionReady:false,platformExtraction:false,platformBackend:"community-handoff"});
+    if(url.pathname==="/api/health"&&request.method==="GET")return json({ok:true,service:"ARYANZZ",version:"73.0",mode:"cloudflare-worker-zero-server-hybrid",directMediaDownload:true,selfHostedDownloader:false,youtubeDownloader:true,youtubeApiKeyConfigured:false,cobalt:false,paidYoutubeProvider:false,musicRecognitionConfigured:!!env.AUDD_API_TOKEN,musicFallbackReady:false,musicVideoRecognitionReady:false,platformExtraction:false,platformBackend:"community-handoff"});
   if(url.pathname==="/api/info"&&request.method==="POST"){const proxied=await proxyPlatform(request,env,"/api/info");if(proxied)return proxied;return info(request);}
   if(url.pathname==="/api/direct-file"&&request.method==="GET")return download(request);
   if(url.pathname==="/api/download"&&request.method==="POST"){const proxied=await proxyPlatform(request,env,"/api/download");if(proxied)return proxied;return download(request);}
