@@ -39,7 +39,7 @@ const checks=[
   ["Piped instance list refreshes from the official directory with a snapshot fallback",downloader.includes("raw.githubusercontent.com/TeamPiped/documentation/main/content/docs/public-instances/index.md")&&downloader.includes("currentPipedInstances")],
   ["Browser stream URLs are restricted to approved HTTPS media hosts",downloader.includes("function browserHybridMediaUrl")&&downloader.includes("googlevideo.com")&&downloader.includes("BROWSER_MEDIA_ROOTS")],
   ["Browser download shows byte progress and caps in-memory downloads at 250 MB",downloader.includes("new Blob(chunks")&&downloader.includes("250*1024*1024")&&downloader.includes("Mengunduh ")],
-  ["Browser CORS failure is reported instead of claiming a successful download",downloader.includes("Browser tidak dapat membaca stream langsung")&&!downloader.includes("Tautan cadangan Worker dikirim ke Chrome")],
+  ["Browser CORS failure is reported instead of claiming a successful download",downloader.includes("browserMediaContentType")&&downloader.includes("Jalur Worker juga gagal")],
   ["legacy competing downloader handler removed",!v15.includes("button.onclick=async()=>{")],
   ["owner header controls are real buttons",html.includes('class="owner-menu-mark" type="button" data-panel="allTools"')&&html.includes('aria-label="Buka riwayat unduhan"')&&html.includes('aria-label="Buka personalisasi profil"')],
   ["owner view hides home and uses dark palette",ownerCss.includes('body[data-view="owner"] #home{display:none!important}')&&ownerCss.includes("background:linear-gradient(145deg,#13223a,#0d1728)")],
