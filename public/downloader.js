@@ -123,7 +123,7 @@
         const mod=await import(moduleUrl);
         const ffmpeg=new mod.FFmpeg();
         [coreURL,wasmURL]=await Promise.all([loadBlob(coreBase+"/ffmpeg-core.js","text/javascript"),loadBlob(coreBase+"/ffmpeg-core.wasm","application/wasm")]);
-        await ffmpeg.load({coreURL,wasmURL,classWorkerURL:new URL("/ffmpeg-worker-bootstrap.js",location.origin).href});
+        await ffmpeg.load({coreURL,wasmURL,classWorkerURL:new URL("/ffmpeg-worker-bootstrap.js?v=72.0",location.origin).href});
         return ffmpeg;
       }finally{
         if(coreURL)URL.revokeObjectURL(coreURL);
@@ -394,7 +394,7 @@
     return {mode:"audio",height:0,quality:String(item.quality||item.audioQuality||item.bitrate||"Audio"),ext,mimeType:mime.split(";")[0],url:url.href,bitrate:Number(item.bitrate)||0};
   }
   function browserDedupeFormats(formats){
-    const seen=new Set();return formats.filter(f=>{const key=f.mode+":"+f.height+":"+f.ext+":"+f.url.split("?")[0];if(seen.has(key))return false;seen.add(key);return true;}).sort((a,b)=>a.mode===b.mode?(a.mode==="video"?a.height-b.height:b.bitrate-a.bitrate):a.mode==="video"?-1:1).map((f,i)=>({...f,id:"f"+i}));
+    const seen=new Set();return formats.filter(f=>{const key=f.mode+":"+f.height+":"+f.ext+":"+(f.videoOnly?"video-only":"muxed")+":"+f.url.split("?")[0];if(seen.has(key))return false;seen.add(key);return true;}).sort((a,b)=>a.mode===b.mode?(a.mode==="video"?a.height-b.height:b.bitrate-a.bitrate):a.mode==="video"?-1:1).map((f,i)=>({...f,id:"f"+i}));
   }
   async function browserProviderJson(url,signal){
     const response=await fetch(url,{mode:"cors",credentials:"omit",headers:{accept:"application/json"},cache:"no-store",signal});
