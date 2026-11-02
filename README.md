@@ -1,8 +1,8 @@
-# ARYANZZ V69.2 — YouTube flow & TikTok diagnostics
+# ARYANZZ V70.0 — Native Chrome Download Studio
 
 Production website: https://aryanzz-donwloader.radithnyahaniphanip.workers.dev/
 
-ARYANZZ is a mobile-first creator workspace hosted on Cloudflare Workers. V69.2 uses a zero-server design: direct media links are streamed by the Worker, while social-media links are handed off to community-operated downloader frontends. No private extraction server or paid hosting is required.
+ARYANZZ is a mobile-first creator workspace hosted on Cloudflare Workers. V70.0 uses a zero-server design: direct media links are streamed by the Worker, while social-media links are handed off to community-operated downloader frontends. No private extraction server or paid hosting is required.
 
 ## V65.0 release scope
 
@@ -32,7 +32,7 @@ ARYANZZ is a mobile-first creator workspace hosted on Cloudflare Workers. V69.2 
 - Shazam DJ fallback samples now honor the consecutive-sample setting and remain capped at 30 segments per scan to limit server load. AudD Enterprise can process up to 100 segments where the account permits it.
 - Removed the duplicate Express health route so the backend reports one current version and a consistent feature list.
 
-## V69.2 — YouTube flow and TikTok diagnostics
+## V70.0 — YouTube flow and TikTok diagnostics
 
 - YouTube URLs now use the dedicated `/api/youtube/info`, `/api/youtube/download`, `/api/youtube/progress`, and `/api/youtube/file` endpoints rather than the generic direct-file endpoint.
 - If no downloader provider key is configured, the Worker attempts a public YouTube oEmbed preview and clearly marks downloading as unavailable. It does not silently configure or charge a third-party provider.
@@ -40,9 +40,9 @@ ARYANZZ is a mobile-first creator workspace hosted on Cloudflare Workers. V69.2 
 - TikTok short URLs remain on the community-provider handoff path in the zero-server edition. A post URL is not the same as a direct MP4 file URL.
 - The supplied test links could not be fetched by the web inspection tool in this environment, so no claim is made that either real-world download succeeded. Automated tests use mocked provider responses and validate routing only.
 
-## V69.2 — Zero-server Free Edition
+## V70.0 — Zero-server Free Edition
 
-ARYANZZ V69.2 removes the requirement for a self-hosted extraction server. Cloudflare Workers continues to host the website and handles direct media URLs only. No Render, Railway, VPS, Docker host, paid extractor, or private server is required.
+ARYANZZ V70.0 removes the requirement for a self-hosted extraction server. Cloudflare Workers continues to host the website and handles direct media URLs only. No Render, Railway, VPS, Docker host, paid extractor, or private server is required.
 
 ### Download behavior
 
@@ -238,3 +238,13 @@ The API listens on port 3000 by default. Set `ALLOWED_ORIGINS` if browser client
 ## Legacy API note
 
 The older `/api/youtube/*` SaveNow endpoints remain in the Worker for backward compatibility with older clients. The V59.5 downloader page does not call those endpoints; the primary downloader uses the self-hosted yt-dlp backend. The editor UI is V60.0.
+
+
+## V70.0 — Native Chrome Download Studio
+
+- Direct media URLs now use a GET attachment endpoint so Chrome/Android receives a normal browser download instead of buffering the entire file in page JavaScript.
+- Completed YouTube jobs, when an explicitly enabled provider is available, are handed to Chrome through the attachment endpoint; the browser handles download progress.
+- Paid SaveNow extraction is disabled by default. It requires the explicit Worker flag `ALLOW_PAID_YOUTUBE_PROVIDER=true`; the deployment does not set this flag. This prevents accidental balance use.
+- YouTube metadata preview remains available via oEmbed. When no free extractor is configured, format choices are visible but the Download button is disabled with an honest explanation.
+- TikTok extraction/community routing is paused in this release to focus on YouTube and direct media files.
+- Formats offered by the UI are not a guarantee of source availability; actual resolutions depend on the extractor and source.
