@@ -113,6 +113,7 @@
     $("ownerEditProfile")?.addEventListener("click", () => window.aryanzzShowPanel?.("profile"));
     window.addEventListener("storage", () => { renderOwnerProfile(); renderLinks(); });
     window.addEventListener("aryanzz:profile-assets-updated", renderOwnerProfile);
+    window.addEventListener("aryanzz:profile-assets-updated", renderOwnerProfile);
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init, { once: true });
   else init();
