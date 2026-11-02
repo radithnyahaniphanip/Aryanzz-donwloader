@@ -8,6 +8,8 @@ const workerSource=file("../src/index.js");
 const sw=file("../public/sw.js");
 const v15=file("../public/v15.js");
 const downloader=file("../public/downloader.js");
+const v674=file("../public/v674.js");
+const downloaderCss=file("../public/downloader.css");
 const v677css=file("../public/v677.css");
 const v677js=file("../public/v677.js");
 const editor=file("../public/editor.js");
@@ -180,7 +182,7 @@ const checks=[
   ["V74.0 YouTube MP4 assembly shows preparation state and has a bounded FFmpeg load timeout",downloader.includes("Mesin MP4 belum siap setelah 90 detik")&&downloader.includes("Menunggu mesin MP4 siap sebelum mengambil audio")],
   ["V79.0 all 12 social platforms render in a fixed five-column grid without horizontal scrolling",html.includes('data-platform="youtube"')&&html.includes('data-platform="tiktok"')&&html.includes('data-platform="instagram"')&&html.includes('data-platform="snackvideo"')&&html.includes('data-platform="capcut"')&&html.includes('data-platform="pinterest"')&&html.includes('data-platform="facebook"')&&html.includes('data-platform="x"')&&html.includes('data-platform="reddit"')&&html.includes('data-platform="vimeo"')&&html.includes('data-platform="threads"')&&html.includes('data-platform="soundcloud"')&&downloaderCss.includes("grid-template-columns:repeat(5,minmax(0,1fr))")&&downloaderCss.includes("overflow:visible;align-items:stretch")],
   ["V79.0 SoundCloud title search supports audio-only verified results",workerSource.includes('key==="soundcloud"')&&workerSource.includes("mediaMode:playable.mode")&&v674.includes('item.mediaMode==="audio"?"Audio":"Video"')],
-  ["V79.0 Pinterest short pin.it URLs are accepted by the paste normalizer",downloader.includes("pin\\\\.it")&&workerSource.includes('"pin.it":"pinterest"')],
+  ["V79.0 Pinterest short pin.it URLs are accepted by the paste normalizer",downloader.includes("pin\\.it")&&workerSource.includes('"pin.it":"pinterest"')],
   ["V79.0 paste handler normalizes share text, schemeless links and common social domains",downloader.includes("function normalizeMediaInput")&&downloader.includes("const url = normalizeMediaInput(raw)")&&downloader.includes("instagr.am")&&downloader.includes("capcut.com")],
   ["V79.0 CapCut and Instagram short domains are identified in the frontend and Worker",downloader.includes('["capcut.com","CapCut"]')&&downloader.includes('["instagr.am","Instagram"]')&&workerSource.includes('"instagr.am":"instagram"')],
   ["V79.0 social video download and quality controls expose only genuine MP4/M4V files",downloader.includes('!["mp4","m4v"].includes(String(item.ext||"").toLowerCase())')&&downloader.includes("const qualityFormats=")&&downloader.includes("tidak akan mengganti ekstensi")],
