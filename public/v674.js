@@ -25,7 +25,7 @@ const platforms={
 let selected="youtube",searchController=null;
 const setMode=v=>{const link=v==="link";if(x)x.hidden=!link;if(y)y.hidden=link;if(a){a.classList.toggle("active",link);a.setAttribute("aria-selected",String(link))}if(b){b.classList.toggle("active",!link);b.setAttribute("aria-selected",String(!link))}};
 a?.addEventListener("click",()=>setMode("link"));b?.addEventListener("click",()=>setMode("title"));
-const setPlatform=id=>{selected=platforms[id]?id:"youtube";picker?.querySelectorAll("[data-platform]").forEach(btn=>{const active=btn.dataset.platform===selected;btn.classList.toggle("active",active);btn.setAttribute("aria-pressed",String(active))});const name=platforms[selected].name;const label=y?.querySelector("label");if(label)label.textContent="CARI JUDUL DI "+name.toUpperCase();if(searchInput)searchInput.placeholder=selected==="youtube"?"Contoh: DJ tabola bale":"Ketik judul yang ingin dicari…";if(help)help.textContent="Hasil akan ditampilkan di ARYANZZ jika provider pencarian tersedia.";setMode("title")};
+const setPlatform=id=>{selected=platforms[id]?id:"youtube";picker?.querySelectorAll("[data-platform]").forEach(btn=>{const active=btn.dataset.platform===selected;btn.classList.toggle("active",active);btn.setAttribute("aria-pressed",String(active))});const name=platforms[selected].name;const label=y?.querySelector("label");if(label)label.textContent="CARI JUDUL DI "+name.toUpperCase();if(searchInput)searchInput.placeholder=selected==="youtube"?"Contoh: DJ tabola bale":"Ketik judul yang ingin dicari…";if(help)help.textContent="Hasil video atau audio akan ditampilkan di ARYANZZ jika provider pencarian tersedia.";setMode("title")};
 picker?.addEventListener("click",e=>{const btn=e.target.closest("[data-platform]");if(btn)setPlatform(btn.dataset.platform)});
 const duration=v=>{if(!Number.isFinite(Number(v)))return "";const n=Math.max(0,Math.floor(Number(v)));return Math.floor(n/60)+":"+String(n%60).padStart(2,"0")};
 function showFallback(target,q){
@@ -37,19 +37,19 @@ card.append(title,note,open);results.append(card);
 }
 function render(items,target,q,unavailableCount=0){
 results.replaceChildren();
-if(!items.length){showFallback(target,q);if(help)help.textContent="Belum ada video yang lolos pemeriksaan provider gratis. Tautan yang tidak bisa diputar atau diunduh sengaja disembunyikan. Coba kata kunci lain.";return}
+if(!items.length){showFallback(target,q);if(help)help.textContent="Belum ada media yang lolos pemeriksaan provider gratis. Tautan yang tidak bisa diputar atau diunduh sengaja disembunyikan. Coba kata kunci lain.";return}
 items.forEach(item=>{
 const card=document.createElement("article");card.className="v674-search-result v737-media-result";
 if(item.thumbnail){try{const u=new URL(item.thumbnail);if(u.protocol==="https:"){const img=document.createElement("img");img.src=u.href;img.alt="Pratinjau "+(item.title||"media");img.loading="lazy";card.append(img)}}catch{}}
 const info=document.createElement("div"),title=document.createElement("h3"),meta=document.createElement("p"),snippet=document.createElement("p"),pick=document.createElement("button");
-title.textContent=item.title||"Video tanpa judul";
-meta.textContent=[item.channel,target.name,duration(item.duration),item.verified?"✓ Tautan terverifikasi":""].filter(Boolean).join(" · ");
+title.textContent=item.title||"Media tanpa judul";
+meta.textContent=[item.channel,target.name,item.mediaMode==="audio"?"Audio":"Video",duration(item.duration),item.verified?"✓ Tautan terverifikasi":""].filter(Boolean).join(" · ");
 snippet.textContent=item.snippet||"Pilih hasil ini untuk memeriksa pratinjau dan format unduhan.";
 pick.type="button";pick.className="primary";pick.textContent="Lihat & unduh";
 pick.addEventListener("click",()=>{const input=$("url");if(!input)return;input.value=item.url;setMode("link");$("analyze")?.click();$("downloadResult")?.scrollIntoView({behavior:"smooth",block:"nearest"})});
 info.append(title,meta,snippet,pick);card.append(info);results.append(card);
 });
-if(help)help.textContent=items.length+" video lolos pemeriksaan"+(Number(unavailableCount)>0?" · "+Number(unavailableCount)+" tautan mati/tidak menyediakan video dilewati":"")+" · pilih hasil untuk memutar dan mengunduh di ARYANZZ.";
+if(help)help.textContent=items.length+" media lolos pemeriksaan"+(Number(unavailableCount)>0?" · "+Number(unavailableCount)+" tautan mati/tidak menyediakan media dilewati":"")+" · pilih hasil untuk memutar dan mengunduh di ARYANZZ.";
 }
 const go=async()=>{
 const q=(searchInput?.value||"").trim();if(!q){if(help)help.textContent="Masukkan judul yang ingin dicari.";return}if(q.length<2){if(help)help.textContent="Masukkan minimal 2 karakter.";return}
