@@ -2,7 +2,7 @@
 
 Production website: https://aryanzz-donwloader.radithnyahaniphanip.workers.dev/
 
-ARYANZZ is a mobile-first creator workspace. Cloudflare Workers serves the website and securely proxies supported platform requests to a separate Docker backend running yt-dlp, FFmpeg and ShazamIO. This external-backend architecture avoids requiring Cloudflare Workers Paid Containers.
+ARYANZZ is a mobile-first creator workspace hosted on Cloudflare Workers. V69.0 uses a zero-server design: direct media links are streamed by the Worker, while social-media links are handed off to community-operated downloader frontends. No private extraction server or paid hosting is required.
 
 ## V65.0 release scope
 
