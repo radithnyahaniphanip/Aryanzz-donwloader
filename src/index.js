@@ -69,18 +69,7 @@ async function proxyPlatform(request,env,path){
     return new Response(response.body,{status:response.status,headers:{"content-type":response.headers.get("content-type")||"application/json","content-disposition":response.headers.get("content-disposition")||"","cache-control":"no-store"}});
   }catch{return json({error:"Backend ekstraksi sedang tidak dapat dijangkau."},502)}
 }
-async function platformStatus(env){
-  const configured=!!(env.PLATFORM_API_ORIGIN&&env.PLATFORM_API_TOKEN);
-  if(!configured)return json({ok:false,configured:false,engine:"yt-dlp + FFmpeg",platforms:PLATFORM_HOSTS,message:"Server ekstraksi belum dihubungkan."});
-  let origin;
-  try{const parsed=new URL(env.PLATFORM_API_ORIGIN);if(parsed.protocol!=="https:"||parsed.username||parsed.password)throw new Error("origin tidak aman");origin=parsed.origin}
-  catch{return json({ok:false,configured:true,error:"URL backend harus HTTPS."},500)}
-  try{
-    const response=await fetch(origin+"/api/health",{headers:{accept:"application/json","authorization":"Bearer "+env.PLATFORM_API_TOKEN},signal:AbortSignal.timeout(8000),cache:"no-store"});
-    const data=await response.json().catch(()=>({}));
-    return json({ok:response.ok&&data.ok===true,configured:true,engine:data.engine||"yt-dlp + FFmpeg",version:data.version||null,platforms:data.platforms||PLATFORM_HOSTS});
-  }catch{return json({ok:false,configured:true,error:"Server ekstraksi belum merespons.",engine:"yt-dlp + FFmpeg",platforms:PLATFORM_HOSTS},502)}
-}
+async function platformStatus(env){return json({ok:true,configured:false,backend:"community-handoff",mode:"zero-server",engine:"browser direct download + community provider handoff",platforms:PLATFORM_HOSTS,message:"ARYANZZ tidak menjalankan server ekstraksi sendiri. Tautan file langsung dapat diunduh; tautan media sosial diarahkan ke provider komunitas."});}
 async function info(request){
   let body;try{body=await request.json()}catch{return json({error:"Body JSON tidak valid."},400)}
   let parsed;try{parsed=parseMediaUrl(body?.url)}catch(e){return json({error:e.message},400)}
@@ -605,7 +594,7 @@ export default {async fetch(request,env){
   if(url.pathname==="/api/youtube/download"&&request.method==="POST")return youtubeStart(request,env);
   if(url.pathname==="/api/youtube/progress"&&request.method==="POST")return youtubeProgress(request,env);
   if(url.pathname==="/api/youtube/file"&&request.method==="GET")return youtubeFile(request,env);
-  if(url.pathname==="/api/health"&&request.method==="GET")return json({ok:true,service:"ARYANZZ",version:"68.0",mode:"cloudflare-worker+external-yt-dlp",directMediaDownload:true,selfHostedDownloader:!!(env.PLATFORM_API_ORIGIN&&env.PLATFORM_API_TOKEN),youtubeDownloader:true,youtubeApiKeyConfigured:!!env.SAVENOW_API_KEY,musicRecognitionConfigured:!!env.AUDD_API_TOKEN,musicFallbackReady:!!(env.PLATFORM_API_ORIGIN&&env.PLATFORM_API_TOKEN),musicVideoRecognitionReady:!!(env.PLATFORM_API_ORIGIN&&env.PLATFORM_API_TOKEN),platformExtraction:!!(env.PLATFORM_API_ORIGIN&&env.PLATFORM_API_TOKEN),platformBackend:env.PLATFORM_API_ORIGIN&&env.PLATFORM_API_TOKEN?"external":"not-configured"});
+  if(url.pathname==="/api/health"&&request.method==="GET")return json({ok:true,service:"ARYANZZ",version:"69.0",mode:"cloudflare-worker-zero-server",directMediaDownload:true,selfHostedDownloader:false,youtubeDownloader:false,youtubeApiKeyConfigured:false,musicRecognitionConfigured:!!env.AUDD_API_TOKEN,musicFallbackReady:false,musicVideoRecognitionReady:false,platformExtraction:false,platformBackend:"community-handoff"});
   if(url.pathname==="/api/info"&&request.method==="POST"){const proxied=await proxyPlatform(request,env,"/api/info");if(proxied)return proxied;return info(request);}
   if(url.pathname==="/api/download"&&request.method==="POST"){const proxied=await proxyPlatform(request,env,"/api/download");if(proxied)return proxied;return download(request);}
   if(url.pathname.startsWith("/api/"))return json({error:"Endpoint tidak ditemukan."},404);

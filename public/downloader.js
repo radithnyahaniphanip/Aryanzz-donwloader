@@ -1,4 +1,4 @@
-/* ARYANZZ V59.5 — unified self-hosted downloader controller */
+/* ARYANZZ V69.0 — zero-server direct downloader and community handoff */
 (() => {
   "use strict";
   const $ = id => document.getElementById(id);
@@ -160,13 +160,40 @@
       out.append(link);
     }
   }
+  function showCommunityFallback(out,error,url){
+    out.hidden=false;out.replaceChildren();
+    const box=make("section","youtube-result v690-fallback");
+    box.append(make("span","v690-kicker","SERVERLESS DOWNLOAD · COMMUNITY ROUTE"));
+    box.append(make("b","v690-title","Link media sosial terdeteksi"));
+    box.append(make("p","muted","ARYANZZ berjalan tanpa server ekstraksi sendiri. Tautan file media langsung bisa diproses di sini; tautan dari platform sosial perlu dibuka melalui instance downloader komunitas yang sedang tersedia."));
+    const actions=make("div","v690-actions");
+    const directory=make("a","primary","Cari downloader komunitas ↗");
+    directory.href="https://cobalt.directory/";directory.target="_blank";directory.rel="noopener noreferrer";
+    const source=make("a","tag","Buka tautan sumber ↗");
+    source.href=url.href;source.target="_blank";source.rel="noopener noreferrer";
+    const copy=make("button","tag","Salin link");copy.type="button";
+    copy.addEventListener("click",async()=>{
+      try{
+        if(navigator.clipboard&&window.isSecureContext)await navigator.clipboard.writeText(url.href);
+        else{const area=make("textarea");area.value=url.href;area.style.position="fixed";area.style.opacity="0";document.body.append(area);area.select();if(!document.execCommand("copy"))throw new Error("copy");area.remove();}
+        copy.textContent="Link tersalin ✓";
+      }catch{copy.textContent="Salin manual dari kolom URL";}
+    });
+    actions.append(directory,source,copy);box.append(actions);
+    const steps=make("ol","v690-steps");
+    ["Buka direktori instance Cobalt dan pilih frontend yang aktif serta mendukung platform sumber.","Tempel URL yang sama pada halaman downloader komunitas tersebut.","Unduh file dari halaman provider. ARYANZZ tidak menerima atau menyimpan media itu."].forEach(t=>steps.append(make("li","",t)));
+    box.append(steps);
+    box.append(make("p","v690-note","Ketersediaan instance, batas pemakaian, dan kebijakan privasi ditentukan pemiliknya. Jangan masukkan kata sandi atau tautan privat. Jika instance tidak tersedia, coba instance lain di direktori."));
+    if(error?.message)box.append(make("p","v690-debug","Info: "+error.message));
+    out.append(box);
+  }
   async function checkLink(url, button) {
     const out = $("downloadResult");
     out.hidden = false;
     out.replaceChildren();
     const box = make("section", "youtube-result");
     const heading = make("b", "", "Memeriksa " + platformName(url) + "…");
-    const intro = make("p", "muted", "Mengambil informasi media dari backend ARYANZZ.");
+    const intro = make("p", "muted", "Memeriksa apakah tautan bisa diunduh langsung dari browser ARYANZZ.");
     box.append(heading, intro);
     out.append(box);
     const oldText = button.textContent;
@@ -227,8 +254,8 @@
           quality.append(option);
         });
       }
-      const audioHint = make("p", "muted", directMedia?(info.type==="audio"?"File audio langsung akan diunduh dalam format sumber, tanpa konversi.":"File video langsung akan diunduh dalam kualitas aslinya."): "Audio akan diekspor sebagai MP3. Kualitas video mengikuti format yang tersedia dari sumber.");
-      const note = make("p", "youtube-note", "Unduh hanya media milik sendiri atau konten yang memang diizinkan. Ketersediaan format mengikuti sumber dan dukungan yt-dlp.");
+      const audioHint = make("p", "muted", directMedia?(info.type==="audio"?"File audio langsung akan diunduh dalam format sumber, tanpa konversi.":"File video langsung akan diunduh dalam kualitas aslinya."): "Audio/video mengikuti format yang tersedia dari sumber. Tidak ada server ekstraksi milik ARYANZZ.");
+      const note = make("p", "youtube-note", "Unduh hanya media milik sendiri atau konten yang memang diizinkan. Kualitas mengikuti file sumber.");
       box.append(formatLabel, mode, qualityLabel, quality, audioHint, note);
 
       const progress = make("div", "progress-track");
@@ -266,7 +293,9 @@
         }
       });
     } catch (error) {
-      showError(out, error, url.href);
+      const platform=platformName(url);
+      if(platform!=="Direct Media URL")showCommunityFallback(out,error,url);
+      else showError(out,error,url.href);
     } finally {
       button.disabled = false;
       button.textContent = oldText;
@@ -280,7 +309,7 @@
       const health=await healthResponse.json().catch(()=>({}));
       if(!healthResponse.ok||!health.platformExtraction){
         node.dataset.state="warn";
-        node.textContent="Backend ekstraksi platform belum terhubung. File media langsung tetap dapat diunduh.";
+        node.textContent="Mode gratis tanpa server aktif · tautan file langsung dapat diunduh di sini; tautan sosial memakai provider komunitas.";
         return;
       }
       const response=await fetch("/api/platform/status",{cache:"no-store"});
@@ -294,7 +323,7 @@
       }
     }catch{
       node.dataset.state="warn";
-      node.textContent="Status backend belum dapat diperiksa. File media langsung tetap tersedia.";
+      node.textContent="Mode tanpa server: file media langsung tetap tersedia; tautan sosial memerlukan provider komunitas.";
     }
   }
   function init() {

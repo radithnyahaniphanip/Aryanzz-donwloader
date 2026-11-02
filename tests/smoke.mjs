@@ -22,9 +22,9 @@ const downloaderCss=file("../public/downloader.css");
 const manifest=JSON.parse(file("../public/manifest.webmanifest"));
 
 const checks=[
-  ["V68.0 page title",html.includes("ARYANZZ V68.0 — All-in-One Creative Space")],
-  ["V59.5 versioned assets",html.includes("/v15.js?v=59.5")&&html.includes("/owner.js?v=59.5")&&html.includes("/downloader.js?v=59.5")&&html.includes("/downloader.css?v=59.5")&&html.includes("/v59.css?v=59.5")&&html.includes("/editor-pro.css?v=65.0")&&html.includes("/editor.js?v=65.0")],
-  ["service worker cache and V59.5 assets",html.includes("/sw.js?v=68.0")&&sw.includes("aryanzz-v68-0")&&sw.includes("/editor.js?v=65.0")&&sw.includes("/editor-pro.css?v=65.0")&&sw.includes("/v59.css?v=59.5")],
+  ["V69.0 page title",html.includes("ARYANZZ V69.0 — All-in-One Creative Space")],
+  ["V59.5 versioned assets",html.includes("/v15.js?v=59.5")&&html.includes("/owner.js?v=59.5")&&html.includes("/downloader.js?v=69.0")&&html.includes("/downloader.css?v=59.5")&&html.includes("/v59.css?v=59.5")&&html.includes("/editor-pro.css?v=65.0")&&html.includes("/editor.js?v=65.0")],
+  ["service worker cache and V59.5 assets",html.includes("/sw.js?v=69.0")&&sw.includes("aryanzz-v69-0")&&sw.includes("/editor.js?v=65.0")&&sw.includes("/editor-pro.css?v=65.0")&&sw.includes("/v59.css?v=59.5")],
   ["downloader input, result and backend status",html.includes('id="analyze"')&&html.includes('id="downloadResult"')&&html.includes('id="backendStatus"')],
   ["unified self-hosted downloader API",downloader.includes('postJson("/api/info"')&&downloader.includes('fetch("/api/download"')&&downloader.includes("PLATFORM_NAMES")&&!downloader.toLowerCase().includes("savenow")],
   ["single capture-phase universal URL handler",downloader.includes('button.addEventListener("click"')&&downloader.includes("event.stopImmediatePropagation()")&&downloader.includes("}, true);")],
@@ -50,18 +50,18 @@ const checks=[
   ["V65.0 chroma key live preview and export",html.includes('id="editorPreviewCanvas"')&&html.includes('id="editorChromaEnabled"')&&editor.includes("function applyChromaKey")&&editor.includes("drawFrame(previewCtx")],
   ["V65.0 animated captions",html.includes('id="editorTextAnimation"')&&editor.includes("function textAnimationState")&&editor.includes("overlay.dataset.animation")],
   ["Music Finder panel and tool card",html.includes('id="musicFinder"')&&html.includes('data-panel="musicFinder"')],
-  ["Music Finder assets and PWA cache",html.includes("/music-recognition.js?v=68.0")&&html.includes("/music-recognition.css?v=68.0")&&sw.includes("/music-recognition.js?v=68.0")&&sw.includes("/music-recognition.css?v=68.0")],
+  ["Music Finder assets and PWA cache",html.includes("/music-recognition.js?v=69.0")&&html.includes("/music-recognition.css?v=69.0")&&sw.includes("/music-recognition.js?v=69.0")&&sw.includes("/music-recognition.css?v=69.0")],
   ["DJ mix scan uses AudD Enterprise endpoint",html.includes('id="musicFileScanButton"')&&html.includes('id="musicScanSkip"')&&musicJs.includes('/api/music/scan-video')&&workerSource.includes("enterprise.audd.io")],
   ["Music Finder supports file, video URL and microphone",musicJs.includes("captureMediaSample")&&musicJs.includes("getUserMedia")&&musicJs.includes("/api/music/recognize")&&musicJs.includes("musicVideoUrl")],
   ["AudD errors expose provider code and actionable quota guidance",workerSource.includes("function auddFailure")&&workerSource.includes("providerErrorCode")&&workerSource.includes("kode 901")&&workerSource.includes("kode 902")],
-  ["External yt-dlp backend is wired into the Worker",workerSource.includes("PLATFORM_API_ORIGIN")&&workerSource.includes("PLATFORM_API_TOKEN")&&workerSource.includes("external-yt-dlp")&&!workerSource.includes("DOWNLOADER_CONTAINER")&&!file("../wrangler.toml").includes("[[containers]]")],
+  ["V69.0 runs without a self-hosted extractor",workerSource.includes('version:"69.0"')&&workerSource.includes('mode:"cloudflare-worker-zero-server"')&&workerSource.includes('platformBackend:"community-handoff"')&&!workerSource.includes("DOWNLOADER_CONTAINER")],
   ["Shazam fallback covers standard AudD auth/quota failures",workerSource.includes("shazamRecognize(audioBlob,env)")&&workerSource.includes("providerErrorCode")&&serverSource.includes("/api/music/recognize")&&serverSource.includes("shazam_recognize.py")],
   ["DJ mix scans fall back to Shazam when AudD Enterprise errors",workerSource.includes("shazamScan(fallbackSource")&&serverSource.includes("/api/music/scan")&&serverSource.includes("scanShazamMedia")],
   ["Docker backend includes yt-dlp, FFmpeg and ShazamIO",file("../Dockerfile").includes("yt-dlp")&&file("../Dockerfile").includes("shazamio==0.9.0")&&serverSource.includes("ffprobe")],
   ["Music Finder responsive styling",musicCss.includes(".music-grid")&&musicCss.includes("@media(max-width:620px)")],
   ["Video URL DJ scanning goes directly through AudD Enterprise",workerSource.includes('fetch("https://enterprise.audd.io/"')&&!musicJs.includes("identifyVideoUrl(url,startSeconds)")],
   ["tool hub remains available",html.includes('id="allTools"')],
-  ["PWA manifest version",manifest.name.includes("V68.0")],
+  ["PWA manifest version",manifest.name.includes("V69.0")],
   ["V67.7 visual assets are loaded",html.includes("/v677.css?v=67.7")&&html.includes("/v677.js?v=67.7")&&sw.includes("/v677.css?v=67.7")&&sw.includes("/v677.js?v=67.7")],
   ["V67.7 home remains focused on the downloader",html.includes('id="home"')&&html.includes('id="downloadLinkMode"')&&!html.slice(html.indexOf('id="home"'),html.indexOf('id="toolsArea"')).includes('id="toolGrid"')],
   ["V67.7 feature identity map covers all tools",file("../public/v677.js").includes("const ICONS=")&&["speed","checker","queue","editor","musicFinder","history","imageTools","pdfTools","qrTools","securityTools","colorStudio","profile","owner","about","help"].every(id=>file("../public/v677.js").includes(id))],
@@ -70,28 +70,32 @@ const checks=[
   ["V67.9 remaining tools have branded backgrounds",v677css.includes('data-feature="gradientStudio"')&&v677css.includes('data-feature="fileHash"')&&v677css.includes("#editor .editor-pro-head")&&v677css.includes("#profile .v25-profile-cover")],
   ["V67.9 Color Studio favorites and clipboard work after redesign",v677js.includes("palette.onclick=async event")&&v677js.includes("favorites.onclick=async event")&&v677js.includes('localStorage.setItem("aryanzz.color-favorites.v674"')&&v677js.includes("copyExpandedColor")],
 
-  ["V68.0 service worker cache and missing tool assets",sw.includes("aryanzz-v68-0")&&sw.includes("/v680.css?v=68.0")&&sw.includes("/v680.js?v=68.0")&&html.includes("/v680.js?v=68.0")],
+  ["V69.0 service worker cache and creative assets",sw.includes("aryanzz-v69-0")&&sw.includes("/v680.css?v=69.0")&&sw.includes("/v680.js?v=69.0")&&html.includes("/v680.js?v=69.0")],
   ["V67.9 downloader preserves direct-source details",downloader.includes("function responseFilename")&&downloader.includes("const directMedia=!!info.extension&&!info.extractor")&&downloader.includes("/api/platform/status")],
-  ["V67.9 title search supports external yt-dlp backend",workerSource.includes('fetch(origin+"/api/search"')&&workerSource.includes('"authorization":"Bearer "+env.PLATFORM_API_TOKEN')],
+  ["V69.0 title search has no-server YouTube handoff",file("../public/v674.js").includes("Buka hasil YouTube")&&file("../public/v674.js").includes("salin tautan video")],
   ["V67.9 direct media whitelist includes common formats",workerSource.includes('"mkv"')&&workerSource.includes('"avi"')&&workerSource.includes('"aiff"')&&workerSource.includes('"opus"')],
-  ["V68.0 Gradient Studio controls are wired",html.includes('id="gradientStudio"')&&html.includes('id="gradientRandom"')&&html.includes('id="gradientPng"')&&file("../public/v680.js").includes("function renderGradient")],
-  ["V68.0 File Hash Checker uses local Web Crypto",html.includes('id="fileHash"')&&html.includes('id="hashCompute"')&&file("../public/v680.js").includes("crypto.subtle.digest")],
+  ["V69.0 Gradient Studio controls are wired",html.includes('id="gradientStudio"')&&html.includes('id="gradientRandom"')&&html.includes('id="gradientPng"')&&file("../public/v680.js").includes("function renderGradient")],
+  ["V69.0 File Hash Checker uses local Web Crypto",html.includes('id="fileHash"')&&html.includes('id="hashCompute"')&&file("../public/v680.js").includes("crypto.subtle.digest")],
 ];
 for(const [name,ok] of checks){assert.ok(ok,name+" failed");console.log("✔ "+name)}
 
 const healthResponse=await worker.fetch(new Request("https://aryanzz.example/api/health"),{});
 assert.equal(healthResponse.status,200);
 const health=await healthResponse.json();
-assert.equal(health.version,"68.0");
+assert.equal(health.version,"69.0");
 assert.equal(health.selfHostedDownloader,false);
-assert.equal(health.youtubeDownloader,true);
+assert.equal(health.youtubeDownloader,false);
+assert.equal(health.mode,"cloudflare-worker-zero-server");
+assert.equal(health.platformBackend,"community-handoff");
+assert.equal(health.directMediaDownload,true);
 assert.equal(health.musicRecognitionConfigured,false);
 assert.equal(health.youtubeApiKeyConfigured,false);
-console.log("✔ V68.0 Worker health and self-hosted downloader status");
+console.log("✔ V69.0 Worker health and zero-server status");
 const platformStatusResponse=await worker.fetch(new Request("https://aryanzz.example/api/platform/status"),{});
 assert.equal(platformStatusResponse.status,200);
 const platformStatus=await platformStatusResponse.json();
 assert.equal(platformStatus.configured,false);
+assert.equal(platformStatus.backend,"community-handoff");
 assert.ok(platformStatus.platforms.includes("youtube.com"));
 console.log("✔ Platform status clearly reports missing self-hosted backend");
 const disconnected=await worker.fetch(new Request("https://aryanzz.example/api/info",{
@@ -222,7 +226,7 @@ try{
   const externalData=await externalSearch.json();
   assert.equal(externalData.results.length,1);
   assert.equal(externalData.results[0].id,"EXT123");
-  console.log("✔ V67.9 title search works through a configured HTTPS backend and filters non-YouTube URLs");
+  console.log("✔ Legacy title-search endpoint remains backward compatible");
 }finally{globalThis.fetch=originalSearchFetch;}
 
 const insecureSearch=await worker.fetch(new Request("https://aryanzz.example/api/search",{
@@ -307,9 +311,9 @@ try{
   assert.equal((await externalStatus.json()).ok,true);
   const health=await worker.fetch(new Request("https://aryanzz.example/api/health"),backendEnv);
   const healthData=await health.json();
-  assert.equal(healthData.platformBackend,"external");
-  assert.equal(healthData.platformExtraction,true);
-  console.log("✔ External yt-dlp backend health and platform routing are reported correctly");
+  assert.equal(healthData.platformBackend,"community-handoff");
+  assert.equal(healthData.platformExtraction,false);
+  console.log("✔ V69.0 health keeps the no-server mode active");
 }finally{globalThis.fetch=originalFallbackFetch;}
 
 const originalEnterpriseFetch=globalThis.fetch;
@@ -453,4 +457,4 @@ try{
   globalThis.fetch=originalFetch;
 }
 
-console.log("\nARYANZZ V68.0 downloader, title search, Gradient Studio, file hashing and music recognition smoke tests passed.");
+console.log("\nARYANZZ V69.0 zero-server downloader, community handoff, Gradient Studio, file hashing and music recognition smoke tests passed.");

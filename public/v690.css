@@ -1,0 +1,14 @@
+/* ARYANZZ V69.0 — zero-server community handoff */
+.v690-fallback{display:flex;flex-direction:column;gap:12px;padding:16px;border:1px solid rgba(104,156,220,.28);border-radius:16px;background:linear-gradient(145deg,rgba(18,36,61,.96),rgba(13,23,42,.98))}
+.v690-kicker{color:#70d6e8;font-size:10px;font-weight:900;letter-spacing:.16em}
+.v690-title{font-size:17px;color:#f4f8ff}
+.v690-fallback>p{margin:0;line-height:1.6}
+.v690-actions{display:flex;flex-wrap:wrap;gap:8px}
+.v690-actions a,.v690-actions button{display:inline-flex;align-items:center;justify-content:center;text-decoration:none;min-height:42px}
+.v690-steps{margin:0;padding-left:21px;color:#c3d3e9;font-size:12px;line-height:1.7}
+.v690-note{padding:10px 12px;border-left:3px solid #d7a94c;border-radius:8px;background:#241e13;color:#e2cea8;font-size:11px;line-height:1.6}
+.v690-debug{font-size:10px;opacity:.65}
+.v690-search-fallback{display:flex;flex-direction:column;gap:10px;padding:14px;border:1px solid #2b4565;border-radius:13px;background:#0b1728}
+.v690-search-fallback p{margin:0;color:#afc1d9;font-size:12px;line-height:1.6}
+.v690-search-fallback a{align-self:flex-start;text-decoration:none}
+@media(max-width:520px){.v690-actions>*{flex:1 1 100%}}

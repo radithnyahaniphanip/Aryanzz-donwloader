@@ -1,8 +1,8 @@
-# ARYANZZ V68.0 — Gradient Studio, File Hash & Tools Center
+# ARYANZZ V69.0 — Gradient Studio, File Hash & Tools Center
 
 Production website: https://aryanzz-donwloader.radithnyahaniphanip.workers.dev/
 
-ARYANZZ is a mobile-first creator workspace. Cloudflare Workers serves the website and securely proxies supported platform requests to a separate Docker backend running yt-dlp, FFmpeg and ShazamIO. This external-backend architecture avoids requiring Cloudflare Workers Paid Containers.
+ARYANZZ is a mobile-first creator workspace hosted on Cloudflare Workers. V69.0 uses a zero-server design: direct media links are streamed by the Worker, while social-media links are handed off to community-operated downloader frontends. No private extraction server or paid hosting is required.
 
 ## V65.0 release scope
 
@@ -31,6 +31,30 @@ ARYANZZ is a mobile-first creator workspace. Cloudflare Workers serves the websi
 - Music Finder status distinguishes an installed AudD token from the configured Shazam fallback. A configured token does not imply remaining AudD quota; AudD usage is still controlled by the provider.
 - Shazam DJ fallback samples now honor the consecutive-sample setting and remain capped at 30 segments per scan to limit server load. AudD Enterprise can process up to 100 segments where the account permits it.
 - Removed the duplicate Express health route so the backend reports one current version and a consistent feature list.
+
+## V69.0 — Zero-server Free Edition
+
+ARYANZZ V69.0 removes the requirement for a self-hosted extraction server. Cloudflare Workers continues to host the website and handles direct media URLs only. No Render, Railway, VPS, Docker host, paid extractor, or private server is required.
+
+### Download behavior
+
+- **Direct media URLs:** supported media file links (for example MP4, WebM, MP3, M4A, WAV and other allowlisted formats) can be inspected and streamed through the Cloudflare Worker to the browser. Source host CORS does not apply to the server-side Worker fetch, but source host access controls, redirects, and anti-hotlink rules can still prevent a download.
+- **Social-media URLs:** ARYANZZ detects the platform and provides a handoff to the Cobalt community-instance directory. The user selects a currently active community frontend and pastes the same link there. ARYANZZ does not proxy community APIs or pretend those services are guaranteed. Instance owners control availability, supported platforms, rate limits, and privacy policies.
+- **Search by title:** works without an extractor by opening YouTube's own search results. The user copies the chosen video URL back into the Link URL tab.
+- **History and favorites:** remain local in the user's browser.
+
+### Important limitations
+
+There is no reliable, permissionless, permanently free public API that ARYANZZ can use to extract every social-media platform from inside its own interface. Cobalt's public API documentation says there is no generally available pre-hosted API and hosted instances should only be used with permission. Community instances are independently operated and can go offline, require a challenge, or limit usage. Therefore social-media downloads are a community-provider handoff, not native one-click downloads inside ARYANZZ.
+
+Cloudflare Workers Free currently provides 100,000 requests/day, 10 ms CPU time per invocation, and 50 external subrequests per invocation. It is suitable for lightweight URL validation and proxying direct media streams, not running yt-dlp/FFmpeg extraction itself.
+
+### Privacy and safety
+
+- ARYANZZ does not store downloaded media on its own server.
+- Do not paste private links, login cookies, or account credentials into third-party community providers.
+- Download only content you own or are authorized to save.
+- Provider availability and supported formats can change at any time.
 
 ## V68.1 — External extraction server
 
