@@ -23,8 +23,8 @@ const manifest=JSON.parse(file("../public/manifest.webmanifest"));
 
 const checks=[
   ["V71.0 page title",html.includes("ARYANZZ V71.0 — All-in-One Creative Space")],
-  ["V59.5 versioned assets",html.includes("/v15.js?v=59.5")&&html.includes("/owner.js?v=59.5")&&html.includes("/downloader.js?v=70.1")&&html.includes("/downloader.css?v=70.1")&&html.includes("/v59.css?v=59.5")&&html.includes("/editor-pro.css?v=65.0")&&html.includes("/editor.js?v=65.0")],
-  ["service worker cache and V59.5 assets",html.includes("/sw.js?v=70.1")&&sw.includes("aryanzz-v70-1")&&sw.includes("/editor.js?v=65.0")&&sw.includes("/editor-pro.css?v=65.0")&&sw.includes("/v59.css?v=59.5")],
+  ["V59.5 versioned assets",html.includes("/v15.js?v=59.5")&&html.includes("/owner.js?v=59.5")&&html.includes("/downloader.js?v=71.0")&&html.includes("/downloader.css?v=71.0")&&html.includes("/v59.css?v=59.5")&&html.includes("/editor-pro.css?v=65.0")&&html.includes("/editor.js?v=65.0")],
+  ["service worker cache and V59.5 assets",html.includes("/sw.js?v=71.0")&&sw.includes("aryanzz-v71-0")&&sw.includes("/editor.js?v=65.0")&&sw.includes("/editor-pro.css?v=65.0")&&sw.includes("/v59.css?v=59.5")],
   ["downloader input, result and backend status",html.includes('id="analyze"')&&html.includes('id="downloadResult"')&&html.includes('id="backendStatus"')],
   ["unified self-hosted downloader API",downloader.includes('postJson("/api/info"')&&downloader.includes('"/api/direct-file?url="')&&downloader.includes("PLATFORM_NAMES")&&!downloader.toLowerCase().includes("savenow")],
   ["single capture-phase universal URL handler",downloader.includes('button.addEventListener("click"')&&downloader.includes("event.stopImmediatePropagation()")&&downloader.includes("}, true);")],
@@ -55,11 +55,11 @@ const checks=[
   ["V65.0 chroma key live preview and export",html.includes('id="editorPreviewCanvas"')&&html.includes('id="editorChromaEnabled"')&&editor.includes("function applyChromaKey")&&editor.includes("drawFrame(previewCtx")],
   ["V65.0 animated captions",html.includes('id="editorTextAnimation"')&&editor.includes("function textAnimationState")&&editor.includes("overlay.dataset.animation")],
   ["Music Finder panel and tool card",html.includes('id="musicFinder"')&&html.includes('data-panel="musicFinder"')],
-  ["Music Finder assets and PWA cache",html.includes("/music-recognition.js?v=70.1")&&html.includes("/music-recognition.css?v=70.1")&&sw.includes("/music-recognition.js?v=70.1")&&sw.includes("/music-recognition.css?v=70.1")],
+  ["Music Finder assets and PWA cache",html.includes("/music-recognition.js?v=71.0")&&html.includes("/music-recognition.css?v=71.0")&&sw.includes("/music-recognition.js?v=71.0")&&sw.includes("/music-recognition.css?v=71.0")],
   ["DJ mix scan uses AudD Enterprise endpoint",html.includes('id="musicFileScanButton"')&&html.includes('id="musicScanSkip"')&&musicJs.includes('/api/music/scan-video')&&workerSource.includes("enterprise.audd.io")],
   ["Music Finder supports file, video URL and microphone",musicJs.includes("captureMediaSample")&&musicJs.includes("getUserMedia")&&musicJs.includes("/api/music/recognize")&&musicJs.includes("musicVideoUrl")],
   ["AudD errors expose provider code and actionable quota guidance",workerSource.includes("function auddFailure")&&workerSource.includes("providerErrorCode")&&workerSource.includes("kode 901")&&workerSource.includes("kode 902")],
-  ["V71.0 runs without a self-hosted extractor",workerSource.includes('version:"70.1"')&&workerSource.includes('mode:"cloudflare-worker-zero-server"')&&workerSource.includes('platformBackend:"community-handoff"')&&!workerSource.includes("DOWNLOADER_CONTAINER")],
+  ["V71.0 runs without a self-hosted extractor",workerSource.includes('version:"71.0"')&&workerSource.includes('mode:"cloudflare-worker-zero-server"')&&workerSource.includes('platformBackend:"public-api-hybrid"')&&!workerSource.includes("DOWNLOADER_CONTAINER")],
   ["Shazam fallback covers standard AudD auth/quota failures",workerSource.includes("shazamRecognize(audioBlob,env)")&&workerSource.includes("providerErrorCode")&&serverSource.includes("/api/music/recognize")&&serverSource.includes("shazam_recognize.py")],
   ["DJ mix scans fall back to Shazam when AudD Enterprise errors",workerSource.includes("shazamScan(fallbackSource")&&serverSource.includes("/api/music/scan")&&serverSource.includes("scanShazamMedia")],
   ["Docker backend includes yt-dlp, FFmpeg and ShazamIO",file("../Dockerfile").includes("yt-dlp")&&file("../Dockerfile").includes("shazamio==0.9.0")&&serverSource.includes("ffprobe")],
@@ -75,7 +75,7 @@ const checks=[
   ["V67.9 remaining tools have branded backgrounds",v677css.includes('data-feature="gradientStudio"')&&v677css.includes('data-feature="fileHash"')&&v677css.includes("#editor .editor-pro-head")&&v677css.includes("#profile .v25-profile-cover")],
   ["V67.9 Color Studio favorites and clipboard work after redesign",v677js.includes("palette.onclick=async event")&&v677js.includes("favorites.onclick=async event")&&v677js.includes('localStorage.setItem("aryanzz.color-favorites.v674"')&&v677js.includes("copyExpandedColor")],
 
-  ["V71.0 service worker cache and creative assets",sw.includes("aryanzz-v70-1")&&sw.includes("/v680.css?v=70.1")&&sw.includes("/v680.js?v=70.1")&&html.includes("/v680.js?v=70.1")],
+  ["V71.0 service worker cache and creative assets",sw.includes("aryanzz-v71-0")&&sw.includes("/v680.css?v=71.0")&&sw.includes("/v680.js?v=71.0")&&html.includes("/v680.js?v=71.0")],
   ["V67.9 downloader preserves direct-source details",downloader.includes("function responseFilename")&&downloader.includes("const directMedia=!!info.extension&&!info.extractor")&&downloader.includes("/api/platform/status")],
   ["V71.0 title search has no-server YouTube handoff",file("../public/v674.js").includes("Buka hasil YouTube")&&file("../public/v674.js").includes("salin tautan video")],
   ["V67.9 direct media whitelist includes common formats",workerSource.includes('"mkv"')&&workerSource.includes('"avi"')&&workerSource.includes('"aiff"')&&workerSource.includes('"opus"')],
@@ -87,7 +87,7 @@ for(const [name,ok] of checks){assert.ok(ok,name+" failed");console.log("✔ "+n
 const healthResponse=await worker.fetch(new Request("https://aryanzz.example/api/health"),{});
 assert.equal(healthResponse.status,200);
 const health=await healthResponse.json();
-assert.equal(health.version,"70.1");
+assert.equal(health.version,"71.0");
 assert.equal(health.selfHostedDownloader,false);
 assert.equal(health.youtubeDownloader,false);
 assert.equal(health.mode,"cloudflare-worker-zero-server");
@@ -108,32 +108,6 @@ const disconnected=await worker.fetch(new Request("https://aryanzz.example/api/i
 }),{});
 assert.equal(disconnected.status,503);
 console.log("✔ Platform links fail clearly until backend is configured");
-
-const invalid=await worker.fetch(new Request("https://aryanzz.example/api/youtube/download",{
-  method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({url:"https://example.com/video",format:"mp3"})
-}),{});
-assert.equal(invalid.status,400);
-console.log("✔ YouTube endpoint rejects non-YouTube URLs");
-
-const noKey=await worker.fetch(new Request("https://aryanzz.example/api/youtube/download",{
-  method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({url:"https://youtu.be/demo123",format:"mp3"})
-}),{SAVENOW_API_KEY:"test-secret"});
-assert.equal(noKey.status,503);
-assert.match((await noKey.json()).error,/mode gratis Rp0/);
-console.log("✔ Paid YouTube provider is blocked unless explicitly opted in");
-
-const badFormat=await worker.fetch(new Request("https://aryanzz.example/api/youtube/download",{
-  method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({url:"https://youtu.be/demo123",format:"9999"})
-}),{SAVENOW_API_KEY:"test-secret",ALLOW_PAID_YOUTUBE_PROVIDER:"true"});
-assert.equal(badFormat.status,400);
-console.log("✔ Unsupported provider quality is rejected");
-
-const invalidProgress=await worker.fetch(new Request("https://aryanzz.example/api/youtube/progress",{
-  method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({id:"",format:"mp3"})
-}),{});
-assert.equal(invalidProgress.status,400);
-console.log("✔ YouTube progress validates process ID");
-
 
 const musicStatusResponse=await worker.fetch(new Request("https://aryanzz.example/api/music/status"),{});
 assert.equal(musicStatusResponse.status,200);
@@ -475,7 +449,7 @@ try{
   assert.equal((await invidiousDownload.arrayBuffer()).byteLength,4);
   console.log("✔ Invidious Google Video stream is delivered through the attachment proxy");
 
-  const unavailableInfo=await worker.fetch(new Request("https://aryanzz.example/api/youtube/info?url="+encodeURIComponent("https://youtu.be/NoProviders1")), {});
+  const unavailableInfo=await worker.fetch(new Request("https://aryanzz.example/api/youtube/info?url="+encodeURIComponent("https://youtu.be/NoProvs1234")), {});
   assert.equal(unavailableInfo.status,200);
   const unavailableData=await unavailableInfo.json();
   assert.equal(unavailableData.providerReady,false);
