@@ -59,7 +59,7 @@
 
 
 /* V73.6 platform picker and compact download controls */
-/* V79.0 — fixed 5-column social picker; no horizontal scrolling */
+/* V79.0 legacy social picker styles superseded by V80.0 below */
 .v736-platforms{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;padding:6px 1px 12px;margin:0 0 4px;overflow:visible;align-items:stretch}
 .v736-platform{width:100%;min-width:0;min-height:76px;padding:9px 3px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;border:1px solid #2b405d;border-radius:15px;background:linear-gradient(160deg,#101e32,#0a1423);color:#b7c7df;font-size:10px;font-weight:800;white-space:normal;transition:transform .16s ease,border-color .16s ease,background .16s ease,box-shadow .16s ease}
 .v736-platform:active{transform:scale(.96)}
@@ -103,3 +103,115 @@ body[data-motion="off"] .youtube-result .progress-fill{animation:none!important;
 .youtube-engine-status[hidden]{display:none!important}
 .youtube-result .progress-track.is-indeterminate .progress-fill{width:34%!important;animation:aryanzzDownloadSweep 1.25s ease-in-out infinite;background:linear-gradient(90deg,#347cff,#46d6e9,#8a78ff,#347cff);background-size:220% 100%}
 @media(max-width:420px){.youtube-engine-status{font-size:9px;padding:8px 9px}.youtube-embed-wrap{border-radius:12px}}
+
+
+/* V80.0 — unified 12-platform social picker, fixed five-column grid */
+.v736-platforms{
+  display:grid!important;
+  grid-template-columns:repeat(5,minmax(0,1fr))!important;
+  gap:8px;
+  width:100%;
+  min-width:0;
+  padding:8px 0 13px;
+  margin:0 0 5px;
+  overflow:visible!important;
+  align-items:stretch;
+}
+.v736-platform{
+  box-sizing:border-box;
+  width:100%;
+  min-width:0!important;
+  max-width:100%;
+  min-height:82px;
+  padding:9px 3px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:7px;
+  overflow:hidden;
+  border:1px solid #293d5b;
+  border-radius:15px;
+  background:linear-gradient(155deg,#14233a 0%,#0a1425 100%);
+  color:#c5d2e8;
+  font-size:10px;
+  font-weight:800;
+  white-space:normal;
+  box-shadow:inset 0 1px #ffffff0a,0 5px 14px #0002;
+  transition:transform .16s ease,border-color .16s ease,background .16s ease,box-shadow .16s ease;
+}
+.v736-platform:hover{
+  transform:translateY(-2px);
+  border-color:#5878ad;
+  background:linear-gradient(155deg,#1b3150,#101d32);
+}
+.v736-platform:active{transform:scale(.96)}
+.v736-platform:focus-visible{outline:2px solid #8bb4ff;outline-offset:2px}
+.v736-platform.active{
+  border-color:#7c9cff;
+  background:linear-gradient(150deg,#263e68,#152745);
+  color:#fff;
+  box-shadow:0 0 0 1px #7c9cff55,0 8px 20px #4268c533,inset 0 1px #ffffff20;
+}
+.v736-platform span:last-child{
+  display:block;
+  width:100%;
+  max-width:100%;
+  min-width:0;
+  font-size:clamp(8px,2.5vw,10px);
+  line-height:1.15;
+  text-align:center;
+  white-space:normal!important;
+  overflow-wrap:anywhere;
+  word-break:normal;
+}
+.v736-logo{
+  box-sizing:border-box;
+  width:34px;
+  height:34px;
+  padding:5px;
+  display:grid;
+  place-items:center;
+  flex:0 0 34px;
+  border:1px solid #ffffff18;
+  border-radius:11px;
+  background:linear-gradient(145deg,#253650,#101b2c);
+  box-shadow:0 4px 10px #0003;
+}
+.v736-logo svg{width:24px;height:24px;max-width:100%;max-height:100%;display:block;overflow:visible}
+.v736-youtube{background:#f0253b;color:#fff;border-radius:10px}
+.v736-tiktok{background:#090d14;color:#fff;filter:drop-shadow(-1px 0 #25f4ee) drop-shadow(1px 1px #fe2c55)}
+.v736-instagram{background:linear-gradient(145deg,#7044cf,#e84c8c 58%,#ffad54);color:#fff}
+.v736-snack{background:linear-gradient(145deg,#ffb52e,#ff5948);color:#fff}
+.v736-capcut{background:linear-gradient(145deg,#202b3d,#090d16);color:#fff}
+.v736-pinterest{background:#e60023;color:#fff;border-radius:50%}
+.v736-facebook{background:#1877f2;color:#fff;border-radius:50%;align-items:center}
+.v736-x{background:#05070b;color:#fff;border-radius:50%}
+.v736-reddit{background:#ff4500;color:#fff;border-radius:50%}
+.v736-vimeo{background:#1ab7ea;color:#fff}
+.v736-threads{background:#171a25;color:#fff}
+.v736-soundcloud{background:linear-gradient(135deg,#ff6b22,#ffb52e);color:#fff}
+.v75-platform-note{margin:7px 0 14px;color:#9eb0ce;font-size:10px;line-height:1.65}
+@media(max-width:480px){
+  .v736-platforms{grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:6px;padding-top:6px}
+  .v736-platform{min-width:0!important;min-height:70px;padding:7px 2px;gap:6px;border-radius:12px}
+  .v736-logo{width:31px;height:31px;flex-basis:31px;padding:4px;border-radius:9px}
+  .v736-logo svg{width:23px;height:23px}
+  .v736-platform span:last-child{font-size:8px;line-height:1.1}
+}
+@media(max-width:340px){
+  .v736-platforms{gap:4px}
+  .v736-platform{min-height:66px;padding:6px 1px}
+  .v736-platform span:last-child{font-size:7.5px}
+}
+@media(min-width:700px){
+  .v736-platforms{gap:10px}
+  .v736-platform{min-height:88px}
+  .v736-logo{width:36px;height:36px;flex-basis:36px}
+  .v736-logo svg{width:25px;height:25px}
+}
+@media(prefers-reduced-motion:reduce){.v736-platform{transition:none}}
+
+
+.v80-platform-picker-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:2px 1px 0;color:#a9bbd8;font-size:9px;font-weight:900;letter-spacing:1.4px}
+.v80-platform-picker-head span:last-child{color:#7e96bb;font-size:8px;letter-spacing:1px}
