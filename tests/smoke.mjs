@@ -68,8 +68,9 @@ const checks=[
   ["Invidious media URLs are resolved against the active instance and allowed for download",downloader.includes("new URL(raw,trustedOrigin||undefined)")&&downloader.includes("browserHybridMediaUrl(selected.url,instance)")],
   ["MP4 quality options are derived from actual available video streams",downloader.includes("const hasVideo=")&&downloader.includes("if(videoOption)videoOption.disabled=!hasVideo")],
 
-  ["Browser download shows byte progress and caps in-memory downloads at 250 MB",downloader.includes("new Blob(chunks")&&downloader.includes("250*1024*1024")&&downloader.includes("Mengunduh ")],
-  ["Browser CORS failure is reported instead of claiming a successful download",downloader.includes("browserMediaContentType")&&downloader.includes('"Browser: "')&&downloader.includes("Worker: ")],
+  ["Progressive MP4 uses a one-byte Worker preflight and direct Chrome attachment streaming",downloader.includes("probe=1")&&downloader.includes("anchor.download=filename")&&downloader.includes("Chrome menampilkan progres dan sisa waktu sebenarnya")&&workerSource.includes("content-disposition")],
+  ["Adaptive MP4 remux fallback remains bounded for mobile memory",downloader.includes("maxTrack=110*1024*1024")&&downloader.includes("maxCombined=180*1024*1024")&&downloader.includes("melebihi batas memori HP")],
+  ["Browser CORS failure on adaptive tracks is reported instead of claiming success",downloader.includes("browserError=error")&&downloader.includes("detail.error||browserError.message")],
   ["legacy competing downloader handler removed",!v15.includes("button.onclick=async()=>{")],
   ["owner header controls are real buttons",html.includes('class="owner-menu-mark" type="button" data-panel="allTools"')&&html.includes('aria-label="Buka riwayat unduhan"')&&html.includes('aria-label="Buka personalisasi profil"')],
   ["owner view hides home and uses dark palette",ownerCss.includes('body[data-view="owner"] #home{display:none!important}')&&ownerCss.includes("background:linear-gradient(145deg,#13223a,#0d1728)")],
