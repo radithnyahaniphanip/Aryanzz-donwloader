@@ -1,4 +1,4 @@
-name: Validate ARYANZZ V71.1
+name: Validate ARYANZZ V71.2
 on:
   push:
     branches: [main]
