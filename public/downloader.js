@@ -208,6 +208,17 @@
     "https://pipedapi.ducks.party","https://piped-api.codespace.cz","https://pipedapi.reallyaweso.me",
     "https://api.piped.private.coffee","https://pipedapi.darkness.services","https://pipedapi.orangenet.cc"
   ];
+  async function currentPipedInstances(){
+    const fallback=BROWSER_PIPED_INSTANCES.slice();
+    try{
+      const response=await fetch("https://raw.githubusercontent.com/TeamPiped/documentation/main/content/docs/public-instances/index.md",{mode:"cors",credentials:"omit",cache:"no-store",signal:AbortSignal.timeout(2500)});
+      if(!response.ok)return fallback;
+      const markdown=await response.text();
+      const found=[...markdown.matchAll(/https:\/\/(?:pipedapi(?:-libre)?|piped-api|api\.piped)\.[a-z0-9.-]+/gi)].map(m=>m[0].replace(/\/$/,""));
+      const safe=found.filter(origin=>{try{const u=new URL(origin);return u.protocol==="https:"&&/^(?:pipedapi(?:-libre)?|piped-api|api\.piped)\.[a-z0-9.-]+$/i.test(u.hostname);}catch{return false;}});
+      return [...new Set([...safe,...fallback])].slice(0,24);
+    }catch{return fallback;}
+  }
   const BROWSER_INVIDIOUS_INSTANCES=[
     "https://inv.nadeko.net","https://invidious.nerdvpn.de","https://yt.chocolatemoo53.com","https://invidious.tiekoetter.com"
   ];
@@ -265,8 +276,9 @@
       finally{controllers.forEach(t=>t.abort());}
     };
     let pipedError;
-    for(let offset=0;offset<BROWSER_PIPED_INSTANCES.length;offset+=5){
-      try{return await tryGroup(BROWSER_PIPED_INSTANCES.slice(offset,offset+5),browserPipedInfo);}
+    const pipedInstances=await currentPipedInstances();
+    for(let offset=0;offset<pipedInstances.length;offset+=5){
+      try{return await tryGroup(pipedInstances.slice(offset,offset+5),browserPipedInfo);}
       catch(error){pipedError=error;}
     }
     try{return await tryGroup(BROWSER_INVIDIOUS_INSTANCES,browserInvidiousInfo);}
