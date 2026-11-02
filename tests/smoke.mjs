@@ -405,7 +405,7 @@ try{
   }),{});
   assert.equal(directSocialFileInfo.status,200);
   assert.equal((await directSocialFileInfo.json()).extension,"mp4");
-  const directSocialFile=await worker.fetch(new Request("https://aryanzz.example/api/direct-file?url="+encodeURIComponent("https://cdn.instagram.com/sample.mp4"))),{});
+  const directSocialFile=await worker.fetch(new Request("https://aryanzz.example/api/direct-file?url="+encodeURIComponent("https://cdn.instagram.com/sample.mp4")),{});
   assert.equal(directSocialFile.status,200);
   assert.match(directSocialFile.headers.get("content-disposition"),/sample\.mp4/);
   assert.equal((await directSocialFile.arrayBuffer()).byteLength,4);
