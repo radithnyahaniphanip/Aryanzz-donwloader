@@ -43,5 +43,5 @@ body[data-theme="light"] .v674-search-result h3{color:#1b2440}
 .v736-soundcloud{background:linear-gradient(135deg,#ff6b22,#ffb52e)!important;color:#fff!important}
 .v736-capcut{background:linear-gradient(135deg,#171d29,#45536b)!important;color:#fff!important}
 .v736-platform{min-width:0}
-.v736-platform span:last-child{white-space:nowrap}
-@media(max-width:430px){.v75-platform-note{font-size:9px}.v736-platform{min-width:74px}}
+.v736-platform span:last-child{white-space:normal}
+@media(max-width:430px){.v75-platform-note{font-size:9px}.v736-platform{min-width:0}}
