@@ -1,8 +1,20 @@
-# ARYANZZ V70.0 — Native Chrome Download Studio
+
+## V70.1 — Authorized Cobalt YouTube handoff and native Chrome download
+
+- YouTube extraction can use a Cobalt instance only when the operator configures an HTTPS instance they own or have explicit permission to integrate.
+- Configure Cloudflare Worker variables/secrets: `COBALT_API_ORIGIN` (HTTPS origin only), optional `COBALT_API_KEY`, and optional `COBALT_API_AUTH_SCHEME` (`Api-Key` or `Bearer`). Never use the shared public `api.cobalt.tools` endpoint without explicit permission.
+- When configured, the YouTube preview identifies Cobalt as the active provider. The Download via Chrome action sends the selected video quality or audio format/bitrate to the Worker, which redirects the browser to the Cobalt tunnel/file URL so Chrome can handle the download.
+- Supported UI video targets: 360p, 480p, 720p, 1080p, 1440p and 2160p (4K). These are requested target qualities, not a promise that every source offers each quality. Cobalt determines actual availability.
+- Supported Cobalt audio formats: MP3, OGG, WAV and OPUS, with 128/256/320 kbps targets.
+- TikTok is intentionally disabled in this release. Direct media-file URLs remain supported.
+- SaveNow remains opt-in only via `ALLOW_PAID_YOUTUBE_PROVIDER=true`; no paid provider is activated by default. A configured Cobalt instance is preferred over SaveNow.
+- The integration does not bypass platform access controls or make protected/unavailable videos downloadable. Users must have the right to download the content.
+
+# ARYANZZ V70.1 — Native Chrome Download Studio
 
 Production website: https://aryanzz-donwloader.radithnyahaniphanip.workers.dev/
 
-ARYANZZ is a mobile-first creator workspace hosted on Cloudflare Workers. V70.0 uses a zero-server design: direct media links are streamed by the Worker, while social-media links are handed off to community-operated downloader frontends. No private extraction server or paid hosting is required.
+ARYANZZ is a mobile-first creator workspace hosted on Cloudflare Workers. V70.1 uses a zero-server design: direct media links are streamed by the Worker, while social-media links are handed off to community-operated downloader frontends. No private extraction server or paid hosting is required.
 
 ## V65.0 release scope
 
@@ -32,7 +44,7 @@ ARYANZZ is a mobile-first creator workspace hosted on Cloudflare Workers. V70.0 
 - Shazam DJ fallback samples now honor the consecutive-sample setting and remain capped at 30 segments per scan to limit server load. AudD Enterprise can process up to 100 segments where the account permits it.
 - Removed the duplicate Express health route so the backend reports one current version and a consistent feature list.
 
-## V70.0 — YouTube flow and TikTok diagnostics
+## V70.1 — YouTube flow and TikTok diagnostics
 
 - YouTube URLs now use the dedicated `/api/youtube/info`, `/api/youtube/download`, `/api/youtube/progress`, and `/api/youtube/file` endpoints rather than the generic direct-file endpoint.
 - If no downloader provider key is configured, the Worker attempts a public YouTube oEmbed preview and clearly marks downloading as unavailable. It does not silently configure or charge a third-party provider.
@@ -40,9 +52,9 @@ ARYANZZ is a mobile-first creator workspace hosted on Cloudflare Workers. V70.0 
 - TikTok short URLs remain on the community-provider handoff path in the zero-server edition. A post URL is not the same as a direct MP4 file URL.
 - The supplied test links could not be fetched by the web inspection tool in this environment, so no claim is made that either real-world download succeeded. Automated tests use mocked provider responses and validate routing only.
 
-## V70.0 — Zero-server Free Edition
+## V70.1 — Zero-server Free Edition
 
-ARYANZZ V70.0 removes the requirement for a self-hosted extraction server. Cloudflare Workers continues to host the website and handles direct media URLs only. No Render, Railway, VPS, Docker host, paid extractor, or private server is required.
+ARYANZZ V70.1 removes the requirement for a self-hosted extraction server. Cloudflare Workers continues to host the website and handles direct media URLs only. No Render, Railway, VPS, Docker host, paid extractor, or private server is required.
 
 ### Download behavior
 
@@ -240,7 +252,7 @@ The API listens on port 3000 by default. Set `ALLOWED_ORIGINS` if browser client
 The older `/api/youtube/*` SaveNow endpoints remain in the Worker for backward compatibility with older clients. The V59.5 downloader page does not call those endpoints; the primary downloader uses the self-hosted yt-dlp backend. The editor UI is V60.0.
 
 
-## V70.0 — Native Chrome Download Studio
+## V70.1 — Native Chrome Download Studio
 
 - Direct media URLs now use a GET attachment endpoint so Chrome/Android receives a normal browser download instead of buffering the entire file in page JavaScript.
 - Completed YouTube jobs, when an explicitly enabled provider is available, are handed to Chrome through the attachment endpoint; the browser handles download progress.
