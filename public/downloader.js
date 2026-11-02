@@ -395,6 +395,28 @@
           }
         } catch {}
       }
+      if(info.thumbnail){
+        const thumbAction=make("button","tag","↓ Unduh thumbnail");thumbAction.type="button";
+        thumbAction.addEventListener("click",async()=>{
+          const safe=safeUrl(info.thumbnail);if(!safe)return;
+          thumbAction.disabled=true;thumbAction.textContent="Menyiapkan thumbnail…";
+          try{
+            const response=await fetch(safe.href,{mode:"cors",credentials:"omit",cache:"no-store"});
+            if(!response.ok)throw new Error("HTTP "+response.status);
+            if(!(response.headers.get("content-type")||"").toLowerCase().startsWith("image/"))throw new Error("Sumber bukan gambar.");
+            const blob=await response.blob();if(!blob.size)throw new Error("Thumbnail kosong.");
+            const objectUrl=URL.createObjectURL(blob),a=make("a");
+            a.href=objectUrl;a.download=safeFilename((info.title||"aryanzz-thumbnail").replace(/\.[^.]+$/,"")+".jpg","aryanzz-thumbnail.jpg");
+            document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(objectUrl),60000);
+            thumbAction.textContent="Thumbnail tersimpan ✓";
+          }catch(error){
+            thumbAction.disabled=false;thumbAction.textContent="Buka thumbnail ↗";
+            thumbAction.onclick=()=>window.open(safe.href,"_blank","noopener");
+            box.append(make("p","muted","Situs sumber memblokir unduhan langsung. Thumbnail dibuka di tab baru agar bisa disimpan manual."));
+          }
+        });
+        box.append(thumbAction);
+      }
       const details = make("div", "youtube-details");
       details.append(make("b", "youtube-title", info.title || info.filename || "Media siap diunduh"));
       details.append(make("small", "muted", [info.extractor || info.source || platformName(url), duration(info.duration), info.size ? (info.size / 1048576).toFixed(1) + " MB" : ""].filter(Boolean).join(" · ")));
