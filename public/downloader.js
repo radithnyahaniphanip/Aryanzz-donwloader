@@ -110,7 +110,7 @@
   async function loadBrowserFfmpeg(progressText){
     if(aryanzzFfmpegPromise)return aryanzzFfmpegPromise;
     aryanzzFfmpegPromise=(async()=>{
-      progressText.textContent="Memuat mesin penggabung MP4 di HP (sekitar 30 MB, sekali unduh)…";
+      progressText.textContent="Menyiapkan mesin penggabung MP4 (sekitar 30 MB pada pemakaian pertama)…";
       const moduleUrl="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js";
       const coreBase="https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm";
       const loadBlob=async(url,type)=>{
@@ -123,7 +123,7 @@
         const mod=await import(moduleUrl);
         const ffmpeg=new mod.FFmpeg();
         [coreURL,wasmURL]=await Promise.all([loadBlob(coreBase+"/ffmpeg-core.js","text/javascript"),loadBlob(coreBase+"/ffmpeg-core.wasm","application/wasm")]);
-        await ffmpeg.load({coreURL,wasmURL,classWorkerURL:new URL("/ffmpeg-worker-bootstrap.js?v=72.1",location.origin).href});
+        await ffmpeg.load({coreURL,wasmURL,classWorkerURL:new URL("/ffmpeg-worker-bootstrap.js?v=72.3",location.origin).href});
         return ffmpeg;
       }finally{
         if(coreURL)URL.revokeObjectURL(coreURL);
@@ -161,7 +161,7 @@
   }
   async function muxYoutubeMp4(videoItem,audioItem,info,bar,progressText){
     const maxTrack=110*1024*1024,maxCombined=180*1024*1024;
-    progressText.textContent="Mengambil video dan audio terpisah untuk digabungkan di HP…";
+    progressText.textContent="Mode gabung aktif: mengambil video + audio terpisah. Proses ini lebih lama; kualitas 360p/480p biasanya lebih cepat.";
     const videoBytes=await fetchYoutubeTrack(videoItem,info,maxTrack,progressText,"video");
     const audioBytes=await fetchYoutubeTrack(audioItem,info,maxTrack,progressText,"audio M4A");
     if(videoBytes.byteLength+audioBytes.byteLength>maxCombined)throw new Error("Gabungan stream terlalu besar untuk mode hemat memori. Pilih kualitas 360p atau 480p.");
@@ -169,7 +169,7 @@
     const inputVideo="aryanzz-video.mp4",inputAudio="aryanzz-audio.m4a",output="aryanzz-output.mp4";
     try{
       await ffmpeg.writeFile(inputVideo,videoBytes);await ffmpeg.writeFile(inputAudio,audioBytes);
-      progressText.textContent="Menggabungkan audio + video di HP… jangan tutup Chrome.";
+      progressText.textContent="Tahap 2/2 · menggabungkan audio + video di HP. Jangan tutup Chrome.";
       const code=await ffmpeg.exec(["-i",inputVideo,"-i",inputAudio,"-map","0:v:0","-map","1:a:0","-c","copy","-movflags","+faststart","-shortest",output],120000);
       if(code!==0)throw new Error("FFmpeg tidak dapat menggabungkan codec stream ini (kode "+code+").");
       const result=await ffmpeg.readFile(output);
@@ -455,14 +455,12 @@
       return {promise,abort:()=>controllers.forEach(controller=>{controller.clear();controller.abort();})};
     };
     const [invidiousInstances,pipedInstances]=await Promise.all([currentInvidiousInstances(),currentPipedInstances()]);
-    const batches=Math.max(Math.ceil(invidiousInstances.length/5),Math.ceil(pipedInstances.length/5));
     const available=[];
-    for(let batch=0;batch<batches;batch++){
-      const groups=[];
-      const inv=invidiousInstances.slice(batch*5,batch*5+5),piped=pipedInstances.slice(batch*5,batch*5+5);
-      if(inv.length)groups.push(tryGroup(inv,browserInvidiousInfo));
-      if(piped.length)groups.push(tryGroup(piped,browserPipedInfo));
-      if(!groups.length)break;
+    const groups=[];
+    const inv=invidiousInstances.slice(0,5),piped=pipedInstances.slice(0,5);
+    if(inv.length)groups.push(tryGroup(inv,browserInvidiousInfo));
+    if(piped.length)groups.push(tryGroup(piped,browserPipedInfo));
+    if(groups.length){
       const results=await Promise.all(groups.map(group=>group.promise));
       groups.forEach(group=>group.abort());
       available.push(...results.flat().filter(Boolean));
@@ -580,11 +578,14 @@
         FORMATS.video.filter(item => available.includes(Number(item[0]))).forEach(([value,label]) => {
           const option = make("option", "", label);
           option.value = String(value);
-          if (Number(value) === (heights.includes(720)?720:available[0])) option.selected = true;
+          const progressiveHeights=(info.formats||[]).filter(item=>item.mode==="video"&&!item.videoOnly&&Number(item.height)>0).map(item=>Number(item.height));
+          const quickHeight=progressiveHeights.filter(height=>height<=480).sort((a,b)=>a-b)[0]||available.filter(height=>height<=480).sort((a,b)=>a-b)[0]||available.filter(height=>height<=720).sort((a,b)=>b-a)[0]||available[0];
+          if (Number(value) === quickHeight) option.selected = true;
+          option.textContent=label+(progressiveHeights.includes(Number(value))?" · ⚡ Cepat":" · perlu gabung");
           quality.append(option);
         });
       }
-      const audioHint = make("p", "muted", directMedia?(info.type==="audio"?"File audio langsung akan diunduh dalam format sumber, tanpa konversi.":"File video langsung akan diunduh dalam kualitas aslinya."):isYouTube?(info.providerReady?"Kualitas mengikuti stream yang tersedia. Jika sumber memisahkan video dan audio, ARYANZZ akan menggabungkannya menjadi MP4 di HP.":"Tidak ada stream yang tersedia sekarang; coba lagi nanti."):"Audio/video mengikuti format yang tersedia dari sumber. Tidak ada server ekstraksi milik ARYANZZ.");
+      const audioHint = make("p", "muted", directMedia?(info.type==="audio"?"File audio langsung akan diunduh dalam format sumber, tanpa konversi.":"File video langsung akan diunduh dalam kualitas aslinya."):isYouTube?(info.providerReady?"⚡ Mode Cepat aktif: kualitas awal dipilih otomatis hingga 480p dan mengutamakan MP4 siap unduh. Kualitas bertanda perlu gabung memakai FFmpeg dan lebih lambat.":"Tidak ada stream yang tersedia sekarang; coba lagi nanti."):"Audio/video mengikuti format yang tersedia dari sumber. Tidak ada server ekstraksi milik ARYANZZ.");
       const note = make("p", "youtube-note", "Unduh hanya media milik sendiri atau konten yang memang diizinkan. Kualitas mengikuti file sumber.");
       box.append(formatLabel, mode, qualityLabel, quality, audioHint, note);
 
