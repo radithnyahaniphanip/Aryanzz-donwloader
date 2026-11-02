@@ -121,7 +121,7 @@ assert.match((await noKey.json()).error,/mode gratis Rp0/);
 console.log("✔ Paid YouTube provider is blocked unless explicitly opted in");
 
 const badFormat=await worker.fetch(new Request("https://aryanzz.example/api/youtube/download",{
-  method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({url:"https://youtu.be/demo123",format:"480"})
+  method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({url:"https://youtu.be/demo123",format:"9999"})
 }),{SAVENOW_API_KEY:"test-secret",ALLOW_PAID_YOUTUBE_PROVIDER:"true"});
 assert.equal(badFormat.status,400);
 console.log("✔ Unsupported provider quality is rejected");
