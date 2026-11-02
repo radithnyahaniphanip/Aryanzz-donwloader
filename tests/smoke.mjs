@@ -87,7 +87,7 @@ const checks=[
   ["Hybrid stream download is restricted to approved media hosts",workerSource.includes("function hybridMediaUrl")&&workerSource.includes("googlevideo.com")&&workerSource.includes("HYBRID_MEDIA_ROOTS")],
   ["Hybrid download uses attachment streaming and range requests",workerSource.includes("function hybridYoutubeFile")&&workerSource.includes("trustedInstance")&&workerSource.includes("content-disposition")&&workerSource.includes("headers.range=range")],
   ["No Cobalt or paid SaveNow downloader remains",!workerSource.includes("cobaltConfig")&&!workerSource.includes("SAVENOW_BASE")&&!workerSource.includes("SAVENOW_API_KEY")],
-  ["TikTok is intentionally disabled while YouTube is prioritized",downloader.includes('["tiktok.com","TikTok"]')&&downloader.includes("showCommunityFallback(out,null,url)")],
+  ["TikTok social links use the no-server platform handoff",downloader.includes('["tiktok.com","TikTok"]')&&downloader.includes("showCommunityFallback(out,null,url)")],
   ["YouTube UI uses hybrid API and actual returned formats",downloader.includes("/api/youtube/hybrid/info")&&downloader.includes("/api/youtube/hybrid/file")&&downloader.includes("info.formats")&&downloader.includes("providerName!==\"Hybrid\"")],
   ["Browser-first hybrid lookup tries public Piped and Invidious instances",downloader.includes("browserHybridYoutubeInfo")&&downloader.includes("BROWSER_PIPED_INSTANCES")&&downloader.includes("BROWSER_INVIDIOUS_INSTANCES")],
   ["Piped instance list refreshes from the official directory with a snapshot fallback",downloader.includes("raw.githubusercontent.com/TeamPiped/documentation/main/content/docs/public-instances/index.md")&&downloader.includes("currentPipedInstances")],
@@ -99,7 +99,7 @@ const checks=[
   ["Invidious media URLs are resolved against the active instance and allowed for download",downloader.includes("new URL(raw,trustedOrigin||undefined)")&&downloader.includes("browserHybridMediaUrl(selected.url,instance)")],
   ["MP4 quality options are derived from actual available video streams",downloader.includes("const hasVideo=")&&downloader.includes("if(videoOption)videoOption.disabled=!hasVideo")],
 
-  ["Progressive MP4 uses a one-byte Worker preflight and direct Chrome attachment streaming",downloader.includes("probe=1")&&downloader.includes("anchor.download=filename")&&downloader.includes("youtube-ready-link")&&downloader.includes("Tekan tombol unduh di bawah")&&workerSource.includes("content-disposition")],
+  ["Progressive MP4 uses a one-byte Worker preflight and direct Chrome attachment streaming",downloader.includes("probe=1")&&downloader.includes("link.download=filename")&&downloader.includes("youtube-ready-link")&&downloader.includes("Tekan tombol unduh di bawah")&&workerSource.includes("content-disposition")],
   ["Adaptive MP4 remux fallback uses device-aware memory budgets",downloader.includes("function youtubeMuxMemoryBudget")&&downloader.includes("maxTrack:280*1024*1024")&&downloader.includes("maxCombined:440*1024*1024")&&downloader.includes("melewati batas aman memori perangkat")&&downloader.includes("progressiveFallback")],
   ["Browser CORS failure on adaptive tracks is reported instead of claiming success",downloader.includes("browserError=error")&&downloader.includes("detail.error||browserError.message")],
   ["legacy competing downloader handler removed",!v15.includes("button.onclick=async()=>{")],
