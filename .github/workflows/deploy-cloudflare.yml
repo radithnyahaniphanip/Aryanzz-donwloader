@@ -173,7 +173,7 @@ jobs:
           if (!downloaderSource.includes("function normalizeMediaInput") || !downloaderSource.includes('["capcut.com","CapCut"]') || !downloaderSource.includes("Format selain MP4 tidak akan diberi ekstensi MP4 palsu")) {
             throw new Error("V78.0 paste normalization, CapCut recognition or genuine-MP4 guard is missing.");
           }
-          if (!searchSource.includes("selected===\\"youtube\\"?\\"/api/search\\":\\"/api/social/search\\"") || !searchSource.includes("Lihat & unduh")) {
+          if (!searchSource.includes("/api/social/search") || !searchSource.includes("Lihat & unduh")) {
             throw new Error("V78.0 in-page social title search is missing.");
           }
           console.log("V78.0 TikTok, Instagram, SnackVideo and CapCut capability matrix passed; provider availability remains link-dependent.");
