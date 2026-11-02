@@ -16,7 +16,7 @@
     ["bilibili.com","Bilibili"],["b23.tv","Bilibili"],["vk.com","VK"],["ok.ru","OK.ru"],
     ["rutube.ru","Rutube"],["likee.video","Likee"],["snapchat.com","Snapchat"],
     ["imgur.com","Imgur"],["bandcamp.com","Bandcamp"],["mixcloud.com","Mixcloud"],
-    ["ted.com","TED"],["archive.org","Internet Archive"]
+    ["ted.com","TED"],["archive.org","Internet Archive"],["snackvideo.com","SnackVideo"],["threads.net","Threads"],["bluesky.app","Bluesky"],["kick.com","Kick"],["rumble.com","Rumble"],["odysee.com","Odysee"]
   ];
   let activeDownloadController=null,activeDownloadFfmpeg=null;
   function downloadTimeoutSignal(ms){
@@ -176,6 +176,7 @@
     if(!blob||!blob.size)throw new Error("File kosong.");
     const objectUrl=URL.createObjectURL(blob);
     addReadyDownloadLink(container,objectUrl,filename,"⬇ Unduh MP4 sekarang");
+    setTimeout(()=>URL.revokeObjectURL(objectUrl),10*60*1000);
     return objectUrl;
   }
 
@@ -192,16 +193,18 @@
       const moduleUrl="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js";
       const coreBase="https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm";
       const loadBlob=async(url,type)=>{
-        const response=await fetch(url,{mode:"cors",credentials:"omit",cache:"force-cache"});
+        const response=await fetch(url,{mode:"cors",credentials:"omit",cache:"force-cache",signal:downloadTimeoutSignal(60000)});
         if(!response.ok)throw new Error("CDN FFmpeg HTTP "+response.status);
         return URL.createObjectURL(new Blob([await response.arrayBuffer()],{type}));
       };
       let coreURL,wasmURL;
       try{
         const mod=await import(moduleUrl);
+        if(activeDownloadController?.signal.aborted)throw new Error("Unduhan dibatalkan.");
         const ffmpeg=new mod.FFmpeg();activeDownloadFfmpeg=ffmpeg;
         [coreURL,wasmURL]=await Promise.all([loadBlob(coreBase+"/ffmpeg-core.js","text/javascript"),loadBlob(coreBase+"/ffmpeg-core.wasm","application/wasm")]);
         await ffmpeg.load({coreURL,wasmURL,classWorkerURL:new URL("/ffmpeg-worker-bootstrap.js?v=73.6",location.origin).href});
+        if(activeDownloadController?.signal.aborted){ffmpeg.terminate();throw new Error("Unduhan dibatalkan.");}
         return ffmpeg;
       }finally{
         if(coreURL)URL.revokeObjectURL(coreURL);
@@ -328,7 +331,7 @@
       const response=await fetch(target+"&probe=1",{cache:"no-store",signal:downloadTimeoutSignal(12000)});
       const check=await response.json().catch(()=>({}));
       if(response.ok&&check.ok)return {target,totalBytes:Number(check.totalBytes)||0,status:Number(check.status)||0};
-    }catch{}
+    }catch(error){if(activeDownloadController?.signal.aborted)throw new Error("Unduhan dibatalkan.");}
     return null;
   }
   async function fetchYoutubeTrack(item,info,maxBytes,bar,progressText,progressMeta,label,base,span,speed,probeResult=null){
@@ -577,6 +580,7 @@
         }
         return await downloadYoutubeProgressiveCandidate(url,mode,selected,info,bar,progressText,progressMeta,quality);
       }catch(error){
+        if(activeDownloadController?.signal.aborted)throw new Error("Unduhan dibatalkan.");
         const reason=String(error.message||error).slice(0,180);
         failures.push((selected.provider||"provider")+" "+(instance||"")+": "+reason);
         if(mode==="video"&&/memori|RAM|terlalu besar|out of memory|allocation failed/i.test(reason)){
@@ -647,6 +651,7 @@
         }
         return await downloadYoutubeProgressiveCandidate(url,mode,selected,info,bar,progressText,progressMeta,quality);
       }catch(error){
+        if(activeDownloadController?.signal.aborted)throw new Error("Unduhan dibatalkan.");
         const reason=String(error.message||error).slice(0,180);
         failures.push((selected.provider||"provider")+" "+(instance||"")+": "+reason);
         if(mode==="video"&&/memori|RAM|terlalu besar|out of memory|allocation failed/i.test(reason)){
@@ -666,6 +671,7 @@
     addReadyDownloadLink(bar.parentElement?.parentElement,fileUrl,filename,"⬇ Unduh file sekarang");
     bar.style.width="100%";bar.parentElement?.classList.remove("is-indeterminate");bar.parentElement?.setAttribute("aria-valuenow","100");
     progressText.textContent="File siap · "+filename;
+    remember(url,filename,mode,quality);
     return filename;
   }
   function showError(out, error, url) {
@@ -932,11 +938,11 @@
       header.append(details);
       box.append(header);
       if(isYouTube){
-        const providerNote=make("p",info.providerReady?"youtube-provider-state":"youtube-provider-state is-offline",info.providerReady?("Sumber aktif: "+info.provider+" · "+info.instance):info.providerMessage||"Instance komunitas sedang tidak tersedia.");
+        const providerNote=make("p",info.providerReady?"youtube-provider-state":"youtube-provider-state is-offline",info.providerReady?"Sumber tersedia":info.providerMessage||"Sumber sedang sibuk.");
         box.append(providerNote);
       }
 
-      const formatLabel = make("label", "label", "PILIH FORMAT");
+      const formatLabel = make("label", "label", "FORMAT");
       const mode = make("select", "field");
       mode.id = "aryMode";
       [["video",isYouTube?"Video MP4":"Video"],["audio",isYouTube?"Audio saja":"Audio MP3 / M4A"]].forEach(([value,label]) => {
@@ -954,7 +960,7 @@
         if(audioOption)audioOption.disabled=!hasAudio;
         if(!hasVideo&&hasAudio)mode.value="audio";
       }
-      const qualityLabel = make("label", "label", "KUALITAS VIDEO");
+      const qualityLabel = make("label", "label", "KUALITAS");
       qualityLabel.style.marginTop = "12px";
       const quality = make("select", "field");
       quality.id = "aryQuality";
@@ -995,17 +1001,18 @@
         if(qualityHint.hidden)return;
         if(!estimate){qualityHint.textContent="Ukuran belum diberikan provider; ukuran asli akan terbaca saat stream diperiksa.";return;}
         const size=estimate.bytes?(estimate.exact?"Ukuran sumber: ":"Perkiraan ukuran: ±")+formatDownloadSize(estimate.bytes)+". ":"";
-        qualityHint.textContent=estimate.kind==="direct"?size+"MP4 ini sudah menyatu dan bisa langsung dikirim ke Chrome tanpa mesin perakit.":size+"Sumber memisahkan video dan audio; perlu dirakit menjadi satu MP4 dengan mesin lokal sekitar 30 MB.";
+        qualityHint.textContent=estimate.kind==="direct"?"MP4 langsung · "+size:"Gabung video + audio otomatis · "+size;
       };
-      const speedLabel=make("label","label","MODE KECEPATAN TRANSFER");
+      const speedLabel=make("label","label","KECEPATAN");
       speedLabel.style.marginTop="12px";
       const speedSelect=make("select","field");
       speedSelect.id="aryDownloadSpeed";
-      [[1,"Speed · 1 jalur"],[3,"Max Speed · 3 jalur"],[5,"Mega Speed · 5 jalur"]].forEach(([value,label])=>{const option=make("option","",label);option.value=String(value);if(value===3)option.selected=true;speedSelect.append(option)});
+      [[1,"Normal · 1 jalur"],[3,"Cepat · 3 jalur"],[5,"Maksimal · 5 jalur"]].forEach(([value,label])=>{const option=make("option","",label);option.value=String(value);if(value===3)option.selected=true;speedSelect.append(option)});
       speedLabel.hidden=!isYouTube;speedSelect.hidden=!isYouTube;
       const audioHint = make("p", "muted", directMedia?(info.type==="audio"?"File audio langsung diunduh melalui Chrome; pengelola unduhan browser menangani kecepatan dan percobaan ulang.":"File video langsung diunduh melalui Chrome; sumber yang mendukung Range dapat dilanjutkan oleh pengelola unduhan."):isYouTube?(info.providerReady?(progressiveHeights.length?"MP4 langsung diprioritaskan. Chrome mengelola unduhan di latar belakang; mode kecepatan berlaku pada stream terpisah yang mendukung Range.":"Sumber memisahkan video dan suara; ARYANZZ merakitnya menjadi satu MP4. Potongan 1 MB disimpan lokal. Jika halaman tertutup, buka link yang sama, periksa lagi, lalu tekan Unduh untuk melanjutkan. Tab harus tetap terbuka saat tahap perakitan MP4. Mode kecepatan memakai 1, 3, atau 5 jalur bila server mendukung Range."):"Provider belum menyediakan stream saat ini; coba lagi nanti."):"Tautan platform perlu provider yang mendukung ekstraksi. Tautan file langsung memakai pengelola unduhan Chrome.");
-      const note = make("p", "youtube-note", "Unduh hanya media milik sendiri atau konten yang memang diizinkan. Kualitas mengikuti file sumber.");
-      box.append(formatLabel, mode, qualityLabel, quality, qualityHint, speedLabel, speedSelect, audioHint, note);
+      const note = make("p", "youtube-note", "Hanya unduh konten milikmu atau yang diizinkan.");
+      audioHint.hidden=true;
+      box.append(formatLabel, mode, qualityLabel, quality, qualityHint, speedLabel, speedSelect, note);
 
       const progress = make("div", "progress-track is-idle");
       progress.setAttribute("role","progressbar");
@@ -1017,7 +1024,7 @@
       bar.style.width = "0%";
       progress.append(bar);
       const progressText = make("p", "muted", "Siap. Tekan Unduh untuk memulai satu file hasil.");
-      const progressMeta = make("small","download-progress-meta","Target: 1 file MP4 · potongan yang selesai disimpan lokal untuk melanjutkan saat dicoba lagi.");
+      const progressMeta = make("small","download-progress-meta","Siap diunduh.");
       const audioFormat=make("select","field");
       audioFormat.id="aryAudioFormat";
       const audioChoices=isYouTube&&info.providerName==="Hybrid"?[...new Set((info.formats||[]).filter(item=>item.mode==="audio").map(item=>item.ext))].map(ext=>[ext,ext.toUpperCase()]):[["mp3","MP3"],["m4a","M4A"]];
