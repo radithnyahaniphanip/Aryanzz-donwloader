@@ -76,3 +76,8 @@
 .youtube-cancel[hidden]{display:none!important}
 .youtube-ready-link{display:flex!important;width:100%;margin-top:8px;min-height:54px;font-size:15px}
 @media(max-width:480px){.v736-platform{min-width:70px;min-height:58px;padding:6px 7px}.v736-platforms{gap:6px}}
+
+/* V73.7 unified in-page social media preview */
+.youtube-result .v737-media-preview{display:block;width:100%;max-height:420px;aspect-ratio:16/9;object-fit:contain;background:#050b14;border:1px solid #365276;border-radius:14px}
+.youtube-result .v737-audio-preview{display:block;width:100%;margin:4px 0 8px}
+.youtube-result .youtube-ready-link{overflow-wrap:anywhere}
