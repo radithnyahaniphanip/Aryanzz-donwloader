@@ -104,7 +104,7 @@ async function download(request){
 
 const SAVENOW_BASE="https://p.savenow.to";
 const YOUTUBE_AUDIO_FORMATS=new Set(["mp3","m4a","webm","aac","flac","opus","ogg","wav"]);
-const YOUTUBE_VIDEO_FORMATS=new Set(["360","720","1080","1440","mp44k"]);
+const YOUTUBE_VIDEO_FORMATS=new Set(["360","480","720","1080","1440","mp44k"]);
 const MAX_YOUTUBE_BYTES=500*1024*1024;
 const AUDD_MAX_BYTES=10*1024*1024;
 const MUSIC_RATE_BUCKETS=new Map();
