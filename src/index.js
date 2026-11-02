@@ -179,7 +179,7 @@ async function hybridFetchJson(url,parentSignal){
   const abort=()=>controller.abort();
   if(parentSignal){if(parentSignal.aborted)controller.abort();else parentSignal.addEventListener("abort",abort,{once:true});}
   try{
-    const response=await fetch(url,{headers:{accept:"application/json","user-agent":"ARYANZZ/72.1 (public-instance failover)"},signal:controller.signal,cache:"no-store"});
+    const response=await fetch(url,{headers:{accept:"application/json","user-agent":"ARYANZZ/72.2 (public-instance failover)"},signal:controller.signal,cache:"no-store"});
     if(!response.ok)throw new Error("HTTP "+response.status);
     if(!(response.headers.get("content-type")||"").toLowerCase().includes("json"))throw new Error("Respons bukan JSON");
     return await response.json();
@@ -210,15 +210,13 @@ async function currentHybridInvidiousInstances(){
   }catch{return fallback;}
 }
 async function hybridProbeGroup(instances,pathFor,parser){
-  const controllers=instances.map(()=>new AbortController());
-  try{
-    return await Promise.any(instances.map(async(instance,index)=>{
-      const data=await hybridFetchJson(instance+pathFor,controllers[index].signal);
-      const result=parser(data,instance);
-      if(!result)throw new Error("Instance tidak menyediakan pasangan stream MP4/audio yang didukung.");
-      return result;
-    }));
-  }finally{controllers.forEach(controller=>controller.abort());}
+  const settled=await Promise.allSettled(instances.map(async instance=>{
+    const data=await hybridFetchJson(instance+pathFor);
+    const result=parser(data,instance);
+    if(!result)throw new Error("Instance tidak menyediakan pasangan stream MP4/audio yang didukung.");
+    return result;
+  }));
+  return settled.filter(item=>item.status==="fulfilled").map(item=>item.value);
 }
 function hybridFromPiped(data,instance){
   const formats=dedupeHybridFormats([...(Array.isArray(data.videoStreams)?data.videoStreams.map(item=>hybridVideoFormat(item,instance)).filter(Boolean):[]),...(Array.isArray(data.audioStreams)?data.audioStreams.map(item=>hybridAudioFormat(item,instance)).filter(Boolean):[])]);
@@ -239,14 +237,17 @@ async function hybridYoutubeInfo(request){
   const id=youtubeVideoId(raw);
   if(!id||!/^[A-Za-z0-9_-]{6,20}$/.test(id))return json({error:"ID video YouTube tidak valid."},400);
   const [piped,inv]=await Promise.all([currentHybridPipedInstances(),currentHybridInvidiousInstances()]);
-  const probes=[];
-  if(piped.length)probes.push(hybridProbeGroup(piped,"/streams/"+encodeURIComponent(id),hybridFromPiped));
-  if(inv.length)probes.push(hybridProbeGroup(inv,"/api/v1/videos/"+encodeURIComponent(id),hybridFromInvidious));
-  try{
-    const result=await Promise.any(probes);
-    return json({...result,formats:(result.formats||[]).map((format,index)=>({...format,id:"f"+index}))});
-  }catch(error){
-    const failures=(error?.errors||[]).flatMap(item=>item?.errors||[item]).slice(0,12).map(item=>String(item?.message||"provider tidak tersedia").slice(0,110));
+  const [pipedResults,invResults]=await Promise.all([
+    hybridProbeGroup(piped,"/streams/"+encodeURIComponent(id),hybridFromPiped),
+    hybridProbeGroup(inv,"/api/v1/videos/"+encodeURIComponent(id),hybridFromInvidious)
+  ]);
+  const available=[...pipedResults,...invResults];
+  if(available.length){
+    const primary=available.find(item=>item.provider==="Piped")||available[0];
+    const formats=dedupeHybridFormats(available.flatMap(result=>(result.formats||[]).map(format=>({...format,instance:result.instance,provider:result.provider}))));
+    return json({...primary,providerReady:true,formats:formats.map((format,index)=>({...format,id:"f"+index})),providers:available.map(item=>({provider:item.provider,instance:item.instance,formatCount:item.formats?.length||0}))});
+  }
+  {
     let preview={};
     try{const u=new URL("https://www.youtube.com/oembed");u.searchParams.set("url",raw);u.searchParams.set("format","json");const res=await fetch(u.toString(),{headers:{accept:"application/json"},signal:AbortSignal.timeout(5000)});if(res.ok)preview=await res.json();}catch{}
     return json({ok:true,providerReady:false,providerName:"Hybrid",provider:"Unavailable",title:String(preview.title||"Video YouTube").slice(0,300),thumbnail:typeof preview.thumbnail_url==="string"?preview.thumbnail_url:null,formats:[],providerMessage:"Instance komunitas belum memberikan stream MP4 yang dapat digunakan. Link video tetap valid; coba lagi nanti atau gunakan file yang memang dapat diunduh dari pemiliknya.",diagnostics:failures});
@@ -569,7 +570,7 @@ export default {async fetch(request,env){
   if(url.pathname==="/api/youtube/hybrid/info"&&request.method==="GET")return hybridYoutubeInfo(request);
   if(url.pathname==="/api/youtube/hybrid/file"&&request.method==="GET")return hybridYoutubeFile(request);
   if(url.pathname==="/api/youtube/info"&&request.method==="GET")return youtubeInfo(request,env);
-    if(url.pathname==="/api/health"&&request.method==="GET")return json({ok:true,service:"ARYANZZ",version:"72.1",mode:"cloudflare-worker-zero-server-hybrid",directMediaDownload:true,selfHostedDownloader:false,youtubeDownloader:true,youtubeApiKeyConfigured:false,cobalt:false,paidYoutubeProvider:false,musicRecognitionConfigured:!!env.AUDD_API_TOKEN,musicFallbackReady:false,musicVideoRecognitionReady:false,platformExtraction:false,platformBackend:"community-handoff"});
+    if(url.pathname==="/api/health"&&request.method==="GET")return json({ok:true,service:"ARYANZZ",version:"72.2",mode:"cloudflare-worker-zero-server-hybrid",directMediaDownload:true,selfHostedDownloader:false,youtubeDownloader:true,youtubeApiKeyConfigured:false,cobalt:false,paidYoutubeProvider:false,musicRecognitionConfigured:!!env.AUDD_API_TOKEN,musicFallbackReady:false,musicVideoRecognitionReady:false,platformExtraction:false,platformBackend:"community-handoff"});
   if(url.pathname==="/api/info"&&request.method==="POST"){const proxied=await proxyPlatform(request,env,"/api/info");if(proxied)return proxied;return info(request);}
   if(url.pathname==="/api/direct-file"&&request.method==="GET")return download(request);
   if(url.pathname==="/api/download"&&request.method==="POST"){const proxied=await proxyPlatform(request,env,"/api/download");if(proxied)return proxied;return download(request);}
