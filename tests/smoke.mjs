@@ -565,7 +565,7 @@ try{
   assert.equal(dynamicInvidiousFile.status,200);
   assert.equal((await dynamicInvidiousFile.arrayBuffer()).byteLength,4);
   console.log("✔ Dynamically discovered Invidious origins are validated before proxy streaming");
-  const blockedInvidiousProbe=await worker.fetch(new Request(invidiousProxyFileUrl.replace("itag=18","itag=403")+"&probe=1"),{});
+  const blockedInvidiousProbe=await worker.fetch(new Request(invidiousProxyFileUrl.replace("%3D18","%3D403")+"&probe=1"),{});
   assert.equal(blockedInvidiousProbe.status,502);
   console.log("✔ A 403 media response fails preflight and is not reported as a successful download");
   console.log("✔ Invidious fallback is used when Piped instances are unavailable");
