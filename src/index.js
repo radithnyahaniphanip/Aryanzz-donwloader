@@ -141,8 +141,20 @@ function dedupeHybridFormats(formats){
   const seen=new Set();return formats.filter(f=>{const key=f.mode+":"+f.height+":"+f.ext+":"+f.url.split("?")[0];if(seen.has(key))return false;seen.add(key);return true;}).sort((a,b)=>a.mode===b.mode?(a.mode==="video"?a.height-b.height:b.bitrate-a.bitrate):a.mode==="video"?-1:1);
 }
 async function hybridFetchJson(url){
-  const response=await fetch(url,{headers:{accept:"application/json","user-agent":"ARYANZZ/71.0 (public-instance failover)"},signal:AbortSignal.timeout(4500)});
-  if(!response.ok)throw new Error("HTTP "+response.status);if(!(response.headers.get("content-type")||"").includes("json"))throw new Error("Respons bukan JSON");return response.json();
+  let directError="direct request failed";
+  try{
+    const response=await fetch(url,{headers:{accept:"application/json","user-agent":"ARYANZZ/71.1 (public-instance failover)"},signal:AbortSignal.timeout(4500)});
+    if(response.ok&&(response.headers.get("content-type")||"").includes("json"))return await response.json();
+    directError="direct HTTP "+response.status;
+  }catch(e){directError=String(e.message||"direct request failed").slice(0,100);}
+  // The free public relay is used only for small, unauthenticated JSON metadata GETs.
+  // Media bytes are downloaded from the returned stream URL, not through this 6 MiB relay.
+  try{
+    const relay=await fetch("https://proxy.cors.dev/"+url,{headers:{accept:"application/json"},signal:AbortSignal.timeout(10000)});
+    if(!relay.ok)throw new Error("relay HTTP "+relay.status);
+    if(!(relay.headers.get("content-type")||"").includes("json"))throw new Error("relay response is not JSON");
+    return await relay.json();
+  }catch(e){throw new Error(directError+"; public CORS relay: "+String(e.message||"failed").slice(0,100));}
 }
 function hybridFromPiped(data,instance){
   const formats=dedupeHybridFormats([...(Array.isArray(data.videoStreams)?data.videoStreams.map(hybridVideoFormat).filter(Boolean):[]),...(Array.isArray(data.audioStreams)?data.audioStreams.map(hybridAudioFormat).filter(Boolean):[])]);
@@ -182,7 +194,7 @@ async function hybridYoutubeFile(request){
   const title=hybridFilename(u.searchParams.get("title"),ext),range=request.headers.get("range");let current=stream,response;
   try{
     for(let i=0;i<4;i++){
-      const headers={accept:"*/*","user-agent":"Mozilla/5.0 (compatible; ARYANZZ/71.0)"};if(range&&/^bytes=\d*-\d*(,\d*-\d*)*$/.test(range))headers.range=range;
+      const headers={accept:"*/*","user-agent":"Mozilla/5.0 (compatible; ARYANZZ/71.1)"};if(range&&/^bytes=\d*-\d*(,\d*-\d*)*$/.test(range))headers.range=range;
       response=await fetch(current.toString(),{headers,redirect:"manual",signal:AbortSignal.timeout(30000)});
       if(![301,302,303,307,308].includes(response.status))break;const loc=response.headers.get("location");if(!loc)break;
       const next=hybridMediaUrl(new URL(loc,current).toString());if(!next)return json({error:"Redirect stream menuju host yang tidak diizinkan."},502);current=next;
@@ -486,7 +498,7 @@ export default {async fetch(request,env){
   if(url.pathname==="/api/youtube/hybrid/info"&&request.method==="GET")return hybridYoutubeInfo(request);
   if(url.pathname==="/api/youtube/hybrid/file"&&request.method==="GET")return hybridYoutubeFile(request);
   if(url.pathname==="/api/youtube/info"&&request.method==="GET")return youtubeInfo(request,env);
-    if(url.pathname==="/api/health"&&request.method==="GET")return json({ok:true,service:"ARYANZZ",version:"71.0",mode:"cloudflare-worker-zero-server-hybrid",directMediaDownload:true,selfHostedDownloader:false,youtubeDownloader:true,youtubeApiKeyConfigured:false,cobalt:false,paidYoutubeProvider:false,musicRecognitionConfigured:!!env.AUDD_API_TOKEN,musicFallbackReady:false,musicVideoRecognitionReady:false,platformExtraction:false,platformBackend:"community-handoff"});
+    if(url.pathname==="/api/health"&&request.method==="GET")return json({ok:true,service:"ARYANZZ",version:"71.1",mode:"cloudflare-worker-zero-server-hybrid",directMediaDownload:true,selfHostedDownloader:false,youtubeDownloader:true,youtubeApiKeyConfigured:false,cobalt:false,paidYoutubeProvider:false,musicRecognitionConfigured:!!env.AUDD_API_TOKEN,musicFallbackReady:false,musicVideoRecognitionReady:false,platformExtraction:false,platformBackend:"community-handoff"});
   if(url.pathname==="/api/info"&&request.method==="POST"){const proxied=await proxyPlatform(request,env,"/api/info");if(proxied)return proxied;return info(request);}
   if(url.pathname==="/api/direct-file"&&request.method==="GET")return download(request);
   if(url.pathname==="/api/download"&&request.method==="POST"){const proxied=await proxyPlatform(request,env,"/api/download");if(proxied)return proxied;return download(request);}
