@@ -628,17 +628,17 @@ function socialImageProxyUrl(raw,requestUrl,filename,download=false){
   if(download)out.searchParams.set("download","1");
   return out.href;
 }
-function collectImageUrls(value,output,depth=0){
+function collectImageUrls(value,output,depth=0,forceImage=false){
   if(depth>6||value==null)return;
   if(typeof value==="string"){
     const candidate=value.replace(/\\u0026/g,"&").replace(/\\u003d/g,"=").replace(/\\\//g,"/");
-    if(/^https?:\/\//i.test(candidate)&&(/\.(?:jpe?g|png|webp|gif|avif|bmp)(?:[?#]|$)/i.test(candidate)||/image|photo|picture/i.test(candidate)))output.push(candidate);
+    if(/^https?:\/\//i.test(candidate)&&(forceImage||/\.(?:jpe?g|png|webp|gif|avif|bmp)(?:[?#]|$)/i.test(candidate)||/image|photo|picture/i.test(candidate)))output.push(candidate);
     return;
   }
-  if(Array.isArray(value)){for(const item of value.slice(0,80))collectImageUrls(item,output,depth+1);return}
+  if(Array.isArray(value)){for(const item of value.slice(0,80))collectImageUrls(item,output,depth+1,forceImage);return}
   if(typeof value==="object"){
-    for(const key of ["url","contentUrl","image","images","photo","photos","src","display_url","download_url","image_url","original","large","thumbnail_src","media_url","media_url_https"]){
-      if(value[key]!==undefined)collectImageUrls(value[key],output,depth+1);
+    for(const key of ["url","contentUrl","image","images","photo","photos","picture","pictures","src","display_url","download_url","image_url","original","large","thumbnail_src","media_url","media_url_https"]){
+      if(value[key]!==undefined)collectImageUrls(value[key],output,depth+1,["image","images","photo","photos","picture","pictures","image_url"].includes(key)||forceImage);
     }
   }
 }
@@ -720,12 +720,21 @@ async function fetchSocialPostHtml(pageUrl){
 }
 function providerImageCandidates(data){
   const output=[],n=data?.normalized||{},r=data?.result||{};
-  for(const list of [n.media,n.images,n.photos,n.pictures,r.images,r.photos,r.pictures,r.media,r.gallery,r.carousel,n.gallery,n.carousel]){
-    if(Array.isArray(list))for(const item of list){
-      if(typeof item==="string")output.push({url:item,type:"image"});
-      else if(item&&typeof item==="object")output.push({...item,url:item.url||item.image_url||item.download_url||item.src||item.display_url,type:item.type||item.kind||"image"});
+  const add=(list,assumeImage)=>{
+    if(!Array.isArray(list))return;
+    for(const item of list.slice(0,80)){
+      if(typeof item==="string"){if(assumeImage)output.push({url:item,type:"image"});continue}
+      if(!item||typeof item!=="object")continue;
+      const url=item.url||item.image_url||item.download_url||item.src||item.display_url||item.media_url||item.media_url_https;
+      const ext=String(item.ext||item.extension||imageExtensionFromUrl(url||"")).toLowerCase();
+      const mime=String(item.mime_type||item.mime||item.content_type||"").toLowerCase();
+      const explicit=String(item.type||item.kind||item.media_type||"").toLowerCase();
+      const inferred=assumeImage||explicit==="image"||explicit==="photo"||explicit==="picture"||mime.startsWith("image/")||SOCIAL_IMAGE_EXTENSIONS.has(ext);
+      output.push({...item,url,type:inferred?"image":explicit});
     }
-  }
+  };
+  for(const list of [n.images,n.photos,n.pictures,n.gallery,r.images,r.photos,r.pictures,r.gallery,n.carousel,r.carousel])add(list,true);
+  for(const list of [n.media,r.media])add(list,false);
   for(const item of [n.image,n.image_url,n.imageUrl,n.photo,n.photo_url,n.cover,r.image,r.image_url,r.imageUrl,r.photo,r.photo_url,r.cover]){
     if(typeof item==="string")output.push({url:item,type:"image"});
     else if(item&&typeof item==="object")output.push({...item,url:item.url||item.image_url||item.src,type:"image"});
@@ -755,14 +764,17 @@ async function resolveSocialImagePost(rawUrl,requestUrl){
   const seen=new Set(),images=[];
   for(const item of rawCandidates){
     const safe=safePublicMediaUrl(item.url);if(!safe||seen.has(safe.href))continue;
-    const ext=String(item.ext||imageExtensionFromUrl(safe.href)||"jpg").toLowerCase();
-    if(!SOCIAL_IMAGE_EXTENSIONS.has(ext)&&!["image","photo","picture"].includes(String(item.type||"").toLowerCase()))continue;
+    const ext=String(item.ext||item.extension||imageExtensionFromUrl(safe.href)||"").toLowerCase();
+    const type=String(item.type||item.kind||item.media_type||"").toLowerCase();
+    if(ext&&!SOCIAL_IMAGE_EXTENSIONS.has(ext))continue;
+    if(!SOCIAL_IMAGE_EXTENSIONS.has(ext)&&!["image","photo","picture"].includes(type))continue;
     seen.add(safe.href);
-    const filename="aryanzz-"+(images.length+1)+"."+(ext==="jpeg"?"jpg":ext);
+    const finalExt=ext==="jpeg"?"jpg":(ext||"jpg");
+    const filename="aryanzz-"+(images.length+1)+"."+finalExt;
     images.push({
       title:providerTitle||"Gambar postingan",url:safe.href,
       width:Number(item.width)||null,height:Number(item.height)||null,
-      ext:ext==="jpeg"?"jpg":ext,filename,
+      ext:finalExt,filename,
       previewUrl:socialImageProxyUrl(safe.href,requestUrl,filename,false),
       downloadUrl:socialImageProxyUrl(safe.href,requestUrl,filename,true)
     });
