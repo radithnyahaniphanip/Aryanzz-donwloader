@@ -3,10 +3,29 @@ name: Deploy ARYANZZ V75.0 to Cloudflare Workers
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 jobs:
+  test:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Run ARYANZZ smoke tests
+        run: npm test
+
   deploy:
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -113,6 +132,12 @@ jobs:
           }
           const pageResponse = await fetch(base + "/", { cache: "no-store" });
           const pageSource = await pageResponse.text();
+          if (!pageSource.includes('data-platform="threads"') || !pageSource.includes('data-platform="soundcloud"') || !pageSource.includes('data-platform="capcut"')) {
+            throw new Error("V75.0 universal media picker is missing Threads, SoundCloud, or CapCut.");
+          }
+          if (!downloaderSource.includes("available.map(value=>[value,value+\"p · tersedia\"])") || !downloaderSource.includes("Persiapan 100% · ketuk tombol") || !downloaderSource.includes("Kesiapan tautan unduhan")) {
+            throw new Error("V75.0 social quality selector or honest link-ready progress is missing.");
+          }
           if (!pageResponse.ok || !pageSource.includes("ARYANZZ V75.0") || !pageSource.includes("restoreAutoBackup") || !pageSource.includes("audioStudio") || !pageSource.includes("profileMotionToggle") || !pageSource.includes("Kontrol banner profil") || !pageSource.includes("audioStudioTempo") || !pageSource.includes("audioStudioTitle")) {
             throw new Error("V74.0 page, profile backup, or Audio Studio markup is not live.");
           }
