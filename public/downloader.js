@@ -242,6 +242,7 @@
       remember(info.url||"",filename,"video",videoItem.height);
       return filename;
     }finally{
+      // Keep the FFmpeg engine warm after its first load; remove only per-download media files.
       for(const name of [inputVideo,inputAudio,output])try{await ffmpeg.deleteFile(name)}catch{}
     }
   }
