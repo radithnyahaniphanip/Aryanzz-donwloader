@@ -190,7 +190,7 @@
     $("imageOutputQuality").addEventListener("input",()=>{$("imageOutputQualityValue").textContent=$("imageOutputQuality").value+"%";});
     $("imageRotateLeft").addEventListener("click",()=>{state.rotation=(state.rotation+270)%360;drawPreview();});
     $("imageRotateRight").addEventListener("click",()=>{state.rotation=(state.rotation+90)%360;drawPreview();});
-    $("imageReset").addEventListener("click",()=>{if(!state.bitmap)return;state.rotation=0;$("imageRatio").value="source";$("imageResolution").value="medium";$("imageFit").value="cover";$("imageOutputFormat").value="image/jpeg";$("imageOutputQuality").value="90";$("imageOutputQualityValue").textContent="90%";updateCustomVisibility();drawPreview();});
+    $("imageReset").addEventListener("click",()=>{if(!state.bitmap)return;state.rotation=0;$("imageRatio").value="source";$("imageResolution").value="medium";$("imageFit").value="cover";$("imageOutputFormat").value="image/jpeg";$("imageOutputQuality").value="90";$("imageOutputQualityValue").textContent="90%";updateCustomVisibility();syncRatioGallery();drawPreview();});
     document.querySelectorAll("[data-image-ratio]").forEach(button=>button.addEventListener("click",()=>{$("imageRatio").value=button.dataset.imageRatio;updateCustomVisibility();syncRatioGallery();drawPreview();}));
     $("imageExport").addEventListener("click",exportImage);
     $("imageExtractButton").addEventListener("click",extractImages);
