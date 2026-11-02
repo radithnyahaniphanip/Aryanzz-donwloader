@@ -1,10 +1,10 @@
 {
-  "name": "ARYANZZ V70.1 — All-in-One Creative Space",
-  "short_name": "ARYANZZ V70.1",
+  "name": "ARYANZZ V71.0 — All-in-One Creative Space",
+  "short_name": "ARYANZZ V71.0",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "background_color": "#070b16",
   "theme_color": "#070b16",
-  "description": "A clean, mobile-first media downloader with zero-server direct media downloads, community provider handoff, and creative tools."
+  "description": "A mobile-first downloader using public Piped and Invidious community APIs, direct media downloads, and creative tools."
 }
