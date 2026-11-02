@@ -182,7 +182,6 @@
     }
     progressText.textContent="Memuat mesin perakit MP4 · hanya untuk kualitas video+audio terpisah…";
     progressMeta.textContent=(sizeNote?sizeNote+" ":"")+"Mesin lokal sekitar 30 MB diperlukan untuk menyatukan kedua komponen menjadi satu MP4.";
-    bar.parentElement?.classList.add("is-indeterminate");
     aryanzzFfmpegPromise=(async()=>{
       const moduleUrl="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js";
       const coreBase="https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm";
@@ -384,10 +383,14 @@
       if(videoTotal&&audioTotal&&videoTotal+audioTotal>maxCombined)throw new Error("Gabungan media "+formatDownloadSize(videoTotal+audioTotal)+" melewati batas aman memori HP. ARYANZZ mencoba kualitas lebih rendah.");
       const measuredSizeNote=videoTotal&&audioTotal?"Ukuran terukur: video "+formatDownloadSize(videoTotal)+" + audio "+formatDownloadSize(audioTotal)+" = "+formatDownloadSize(videoTotal+audioTotal)+".":"Ukuran komponen belum diberikan provider.";
       progressMeta.textContent=measuredSizeNote+" Mode "+({1:"Speed",3:"Max Speed",5:"Mega Speed"}[Number(speed)]||"Max Speed")+" aktif jika sumber mendukung Range.";
-      progressText.textContent="Mengambil komponen video…";
-      videoBytes=await fetchYoutubeTrack(videoItem,info,maxTrack,bar,progressText,progressMeta,"Komponen video",0,38,speed,videoProbe);
+      progressText.textContent="Mengunduh video sambil menyiapkan mesin MP4…";
+      const [downloadedVideo,readyFfmpeg]=await Promise.all([
+        fetchYoutubeTrack(videoItem,info,maxTrack,bar,progressText,progressMeta,"Komponen video",0,38,speed,videoProbe),
+        loadBrowserFfmpeg(progressText,progressMeta,bar,measuredSizeNote)
+      ]);
+      videoBytes=downloadedVideo;ffmpeg=readyFfmpeg;
       const videoSize=videoBytes.byteLength;
-      ffmpeg=await loadBrowserFfmpeg(progressText,progressMeta,bar,measuredSizeNote);
+      progressMeta.textContent=measuredSizeNote+" Mesin MP4 disiapkan bersamaan dengan unduhan video agar waktu tunggu lebih singkat.";
       await ffmpeg.writeFile(inputVideo,videoBytes);videoBytes=null;
       progressText.textContent="Mengambil komponen suara…";
       audioBytes=await fetchYoutubeTrack(audioItem,info,maxTrack,bar,progressText,progressMeta,"Komponen suara",38,38,speed,audioProbe);
@@ -492,7 +495,108 @@
     remember(url,filename,mode,actualQuality||quality);
     return filename;
   }
-  async function downloadYouTube(url,mode,quality,bar,progressText,progressMeta,info={},audioFormat="m4a",speed=3){
+  async function refreshYoutubeProviderInfo(raw,previousInfo){
+    const endpoint="/api/youtube/hybrid/info?url="+encodeURIComponent(raw);
+    const response=await fetch(endpoint,{cache:"no-store",signal:AbortSignal.timeout(12000)});
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok||!data.providerReady||!Array.isArray(data.formats)||!data.formats.length)return null;
+    const fresh=data.formats.map(item=>({...item,instance:item.instance||data.instance,provider:item.provider||data.provider}));
+    const old=Array.isArray(previousInfo.formats)?previousInfo.formats:[];
+    const formats=browserDedupeFormats([...fresh,...old]);
+    const providers=[...(Array.isArray(data.providers)?data.providers:[]),...(Array.isArray(previousInfo.providers)?previousInfo.providers:[])];
+    const uniqueProviders=[...new Map(providers.filter(item=>item?.instance).map(item=>[item.instance,item])).values()];
+    return {...data,...previousInfo,providerName:"Hybrid",providerReady:true,formats,providers:uniqueProviders,diagnostics:[...(data.diagnostics||[]),...(previousInfo.diagnostics||[])].slice(0,20)};
+  }
+  async function downloadYouTube(url,mode,quality,bar,progressText,progressMeta,info={},audioFormat="m4a",speed=3,retryState={refreshed:false,attempted:[]}){
+    if(info.providerName!=="Hybrid"||!info.providerReady)throw new Error("Tidak ada stream gratis yang tersedia dari instance komunitas saat ini.");
+    const attempted=new Set(Array.isArray(retryState.attempted)?retryState.attempted:[]);
+    const candidateKey=item=>[item.instance||info.instance,item.mode,item.height||0,item.videoOnly?"video-only":"muxed",item.url].join("|");
+    const selectProviderCandidates=(formats,maxPerHeight=3,maxTotal=4)=>{
+      const counts=new Map(),instances=new Set(),selected=[];
+      for(const item of formats){
+        const height=Number(item.height)||0,instance=String(item.instance||info.instance||"");
+        const key=height+"|"+instance;
+        if(instances.has(key)||(counts.get(height)||0)>=maxPerHeight)continue;
+        instances.add(key);counts.set(height,(counts.get(height)||0)+1);selected.push(item);
+        if(selected.length>=maxTotal)break;
+      }
+      return selected;
+    };
+    const all=(Array.isArray(info.formats)?info.formats:[]).filter(item=>item.mode===mode&&item.url);
+    let candidates=[];
+    if(mode==="audio"){
+      candidates=selectProviderCandidates(all.filter(item=>item.ext===audioFormat),2,8);
+      if(!candidates.length)candidates=selectProviderCandidates(all,2,8);
+    }else{
+      const wanted=Number(quality)||480;
+      const videoMp4=all.filter(item=>item.ext==="mp4"&&Number(item.height)>0);
+      const progressive=videoMp4.filter(item=>!item.videoOnly);
+      const adaptive=videoMp4.filter(item=>item.videoOnly);
+      const orderByRequestedQuality=formats=>{
+        const below=formats.filter(item=>Number(item.height)<=wanted).sort((a,b)=>Number(b.height)-Number(a.height)||Number(b.bitrate)-Number(a.bitrate));
+        const above=formats.filter(item=>Number(item.height)>wanted).sort((a,b)=>Number(a.height)-Number(b.height)||Number(b.bitrate)-Number(a.bitrate));
+        return [...below,...above];
+      };
+      const exactProgressive=selectProviderCandidates(progressive.filter(item=>Number(item.height)===wanted).sort((a,b)=>Number(b.bitrate)-Number(a.bitrate)),3,4);
+      const exactAdaptive=selectProviderCandidates(adaptive.filter(item=>Number(item.height)===wanted).sort((a,b)=>Number(b.bitrate)-Number(a.bitrate)),3,4);
+      const progressiveFallback=selectProviderCandidates(orderByRequestedQuality(progressive.filter(item=>Number(item.height)!==wanted)),2,4);
+      const adaptiveFallback=selectProviderCandidates(orderByRequestedQuality(adaptive.filter(item=>Number(item.height)!==wanted)),2,4);
+      candidates=[...exactProgressive,...exactAdaptive,...progressiveFallback,...adaptiveFallback];
+      if(candidates[0]?.videoOnly){
+        progressText.textContent="Kualitas "+wanted+"p · menyiapkan satu MP4 otomatis.";
+        progressMeta.textContent="ARYANZZ memeriksa beberapa provider untuk kualitas ini, lalu mencoba MP4 langsung yang lebih ringan bila diperlukan.";
+      }else{
+        const best=Number(candidates[0]?.height)||0;
+        progressText.textContent="Mode MP4 langsung · "+(best?best+"p":"kualitas sumber")+" diprioritaskan.";
+        progressMeta.textContent="MP4 yang sudah menyatu dikirim ke Chrome tanpa mesin perakit lokal.";
+      }
+    }
+    const seen=new Set();
+    candidates=candidates.filter(item=>{
+      const key=candidateKey(item);
+      if(seen.has(key)||attempted.has(key))return false;
+      seen.add(key);return true;
+    });
+    if(!candidates.length)throw new Error("Provider tidak menyediakan format "+(mode==="video"?"MP4":"audio")+" baru yang dapat dicoba.");
+    const failures=[];
+    for(const selected of candidates){
+      const instance=selected.instance||info.instance;
+      attempted.add(candidateKey(selected));
+      progressText.textContent="Menguji "+(selected.provider||"provider")+" · "+(selected.height?selected.height+"p":"audio")+"…";
+      progressMeta.textContent="Jika provider menolak stream (403/429), ARYANZZ otomatis beralih ke provider lain yang menyediakan format setara.";
+      try{
+        if(mode==="video"&&selected.videoOnly){
+          const audios=(info.formats||[]).filter(item=>item.mode==="audio"&&item.ext==="m4a"&&(!instance||!item.instance||item.instance===instance)).sort((a,b)=>Number(b.bitrate)-Number(a.bitrate));
+          const audioItem=audios[0];
+          if(!audioItem)throw new Error("Komponen media tidak lengkap pada provider ini.");
+          return await muxYoutubeMp4(selected,audioItem,{...info,url},bar,progressText,progressMeta,speed);
+        }
+        return await downloadYoutubeProgressiveCandidate(url,mode,selected,info,bar,progressText,progressMeta,quality);
+      }catch(error){
+        const reason=String(error.message||error).slice(0,180);
+        failures.push((selected.provider||"provider")+" "+(instance||"")+": "+reason);
+        if(mode==="video"&&/memori|RAM|terlalu besar|out of memory|allocation failed/i.test(reason)){
+          const next=candidates.find(item=>item!==selected&&Number(item.height)<Number(selected.height));
+          progressText.textContent="Kualitas "+selected.height+"p terlalu berat · mencoba "+(next?next.height+"p":"kualitas MP4 yang lebih ringan")+"…";
+          progressMeta.textContent="Data yang sudah tersimpan tetap dipertahankan. Mode "+({1:"Speed",3:"Max Speed",5:"Mega Speed"}[Number(speed)]||"Max Speed")+" aktif jika server mendukung Range.";
+        }
+      }
+    }
+    const retryable=failures.some(item=>/HTTP (?:403|429|5\d\d)|koneksi browser|provider juga menolak|network|failed to fetch|ditolak|stream tidak tersedia/i.test(item));
+    if(!retryState.refreshed&&retryable){
+      progressText.textContent="Provider menolak stream · memperbarui daftar sumber…";
+      progressMeta.textContent="ARYANZZ meminta ulang alamat stream agar tautan kedaluwarsa atau instance yang baru pulih bisa dicoba.";
+      try{
+        const refreshed=await refreshYoutubeProviderInfo(url,info);
+        if(refreshed){
+          const hasNew=(refreshed.formats||[]).some(item=>item.mode===mode&&item.url&&!attempted.has(candidateKey(item)));
+          if(hasNew)return await downloadYouTube(url,mode,quality,bar,progressText,progressMeta,refreshed,audioFormat,speed,{refreshed:true,attempted:[...attempted]});
+        }
+      }catch(error){failures.push("Pembaruan provider: "+String(error.message||error).slice(0,140));}
+    }
+    throw new Error("Semua jalur "+(mode==="video"?"MP4":"audio")+" yang tersedia gagal. "+(failures.slice(0,4).join(" | ")||"Coba kualitas lain atau ulangi nanti."));
+  }
+  async function downloadFile(url, mode, quality, bar, progressText, info={}) {
     if(info.providerName!=="Hybrid"||!info.providerReady)throw new Error("Tidak ada stream gratis yang tersedia dari instance komunitas saat ini.");
     const all=(Array.isArray(info.formats)?info.formats:[]).filter(item=>item.mode===mode&&item.url);
     let candidates=[];
