@@ -24,6 +24,13 @@ jobs:
       - name: Install Worker dependencies
         run: npm install --no-audit --no-fund
 
+      - name: Deploy Worker and static assets
+        run: wrangler deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      # Update secrets only after a Worker version has been deployed.
       - name: Configure AudD music recognition secret
         env:
           AUDD_API_TOKEN: ${{ secrets.AUDD_API_TOKEN }}
@@ -43,12 +50,6 @@ jobs:
         run: |
           wrangler secret delete PLATFORM_API_ORIGIN || true
           wrangler secret delete PLATFORM_API_TOKEN || true
-
-      - name: Deploy Worker and static assets
-        run: wrangler deploy
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
       - name: Smoke test live Worker and V71.4 creative assets
         env:
