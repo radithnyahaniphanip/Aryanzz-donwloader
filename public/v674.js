@@ -19,38 +19,57 @@ const platforms={
  reddit:{name:"Reddit",url:q=>"https://www.reddit.com/search/?q="+encodeURIComponent(q)},
  vimeo:{name:"Vimeo",url:q=>"https://vimeo.com/search?q="+encodeURIComponent(q)}
 };
-let selected="youtube";
+let selected="youtube",searchController=null;
 const setMode=v=>{const link=v==="link";if(x)x.hidden=!link;if(y)y.hidden=link;if(a){a.classList.toggle("active",link);a.setAttribute("aria-selected",String(link))}if(b){b.classList.toggle("active",!link);b.setAttribute("aria-selected",String(!link))}};
 a?.addEventListener("click",()=>setMode("link"));b?.addEventListener("click",()=>setMode("title"));
-const setPlatform=id=>{selected=platforms[id]?id:"youtube";picker?.querySelectorAll("[data-platform]").forEach(btn=>{const active=btn.dataset.platform===selected;btn.classList.toggle("active",active);btn.setAttribute("aria-pressed",String(active))});const name=platforms[selected].name;const label=y?.querySelector("label");if(label)label.textContent="CARI JUDUL DI "+name.toUpperCase();if(searchInput)searchInput.placeholder=selected==="youtube"?"Contoh: DJ tabola bale":"Ketik judul yang ingin dicari…";if(help)help.textContent="Pencarian akan dibuka melalui "+name+".";setMode("title")};
+const setPlatform=id=>{selected=platforms[id]?id:"youtube";picker?.querySelectorAll("[data-platform]").forEach(btn=>{const active=btn.dataset.platform===selected;btn.classList.toggle("active",active);btn.setAttribute("aria-pressed",String(active))});const name=platforms[selected].name;const label=y?.querySelector("label");if(label)label.textContent="CARI JUDUL DI "+name.toUpperCase();if(searchInput)searchInput.placeholder=selected==="youtube"?"Contoh: DJ tabola bale":"Ketik judul yang ingin dicari…";if(help)help.textContent="Hasil akan ditampilkan di ARYANZZ jika provider pencarian tersedia.";setMode("title")};
 picker?.addEventListener("click",e=>{const btn=e.target.closest("[data-platform]");if(btn)setPlatform(btn.dataset.platform)});
-const duration=v=>{if(!Number.isFinite(Number(v)))return "Durasi tidak tersedia";const n=Math.max(0,Math.floor(Number(v)));return Math.floor(n/60)+":"+String(n%60).padStart(2,"0")};
+const duration=v=>{if(!Number.isFinite(Number(v)))return "";const n=Math.max(0,Math.floor(Number(v)));return Math.floor(n/60)+":"+String(n%60).padStart(2,"0")};
+function showFallback(target,q){
+const card=document.createElement("article");card.className="v674-search-result v736-search-handoff";
+const title=document.createElement("h3");title.textContent="Pencarian "+target.name+" belum tersedia";
+const note=document.createElement("p");note.textContent="Provider pencarian gratis sedang tidak mengirim hasil. Kamu tetap bisa membuka pencarian "+target.name+" dari sini.";
+const open=document.createElement("a");open.className="primary";open.href=target.url(q);open.target="_blank";open.rel="noopener noreferrer";open.textContent="Buka pencarian "+target.name+" ↗";
+card.append(title,note,open);results.append(card);
+}
+function render(items,target,q){
+results.replaceChildren();
+if(!items.length){showFallback(target,q);if(help)help.textContent="Belum ada hasil dari provider gratis. Coba kata kunci lain.";return}
+items.forEach(item=>{
+const card=document.createElement("article");card.className="v674-search-result v737-media-result";
+if(item.thumbnail){try{const u=new URL(item.thumbnail);if(u.protocol==="https:"){const img=document.createElement("img");img.src=u.href;img.alt="Pratinjau "+(item.title||"media");img.loading="lazy";card.append(img)}}catch{}}
+const info=document.createElement("div"),title=document.createElement("h3"),meta=document.createElement("p"),snippet=document.createElement("p"),pick=document.createElement("button");
+title.textContent=item.title||"Video tanpa judul";
+meta.textContent=[item.channel,target.name,duration(item.duration)].filter(Boolean).join(" · ");
+snippet.textContent=item.snippet||"Pilih hasil ini untuk memeriksa pratinjau dan format unduhan.";
+pick.type="button";pick.className="primary";pick.textContent="Lihat & unduh";
+pick.addEventListener("click",()=>{const input=$("url");if(!input)return;input.value=item.url;setMode("link");$("analyze")?.click();$("downloadResult")?.scrollIntoView({behavior:"smooth",block:"nearest"})});
+info.append(title,meta,snippet,pick);card.append(info);results.append(card);
+});
+if(help)help.textContent=items.length+" hasil ditemukan · pilih video untuk melihat pratinjau di ARYANZZ.";
+}
 const go=async()=>{
 const q=(searchInput?.value||"").trim();if(!q){if(help)help.textContent="Masukkan judul yang ingin dicari.";return}if(q.length<2){if(help)help.textContent="Masukkan minimal 2 karakter.";return}
+searchController?.abort();searchController=new AbortController();
 results.hidden=false;results.replaceChildren();
-const target=platforms[selected],link=target.url(q);
-if(selected==="youtube"){
-const loading=document.createElement("div");loading.className="v674-search-loading";loading.textContent="Mencari di YouTube…";results.append(loading);
+const target=platforms[selected],loading=document.createElement("div");loading.className="v674-search-loading";loading.textContent="Mencari di "+target.name+"…";results.append(loading);
 const btn=$("titleSearchBtn");if(btn){btn.disabled=true;btn.textContent="Mencari…"}
+if(help)help.textContent="Sedang mengambil hasil pencarian dari provider publik gratis.";
 try{
-const response=await fetch("/api/search",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({query:q}),cache:"no-store",signal:AbortSignal.timeout(8000)});
-const data=await response.json().catch(()=>({}));if(!response.ok)throw Error(data.error||"Pencarian internal belum aktif.");
+const endpoint=selected==="youtube"?"/api/search":"/api/social/search";
+const response=await fetch(endpoint,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({query:q,platform:selected}),cache:"no-store",signal:AbortSignal.any([searchController.signal,AbortSignal.timeout(18000)])});
+const data=await response.json().catch(()=>({}));
+if(!response.ok)throw Error(data.error||"Provider pencarian menjawab HTTP "+response.status+".");
 const items=Array.isArray(data.results)?data.results:[];
-if(items.length){results.replaceChildren();items.forEach(item=>{const card=document.createElement("article");card.className="v674-search-result";if(item.thumbnail){try{const u=new URL(item.thumbnail);if(u.protocol==="https:"){const img=document.createElement("img");img.src=u.href;img.alt="Thumbnail";img.loading="lazy";card.append(img)}}catch{}}const info=document.createElement("div"),title=document.createElement("h3"),meta=document.createElement("p"),pick=document.createElement("button");title.textContent=item.title||"Video tanpa judul";meta.textContent=[item.channel,duration(item.duration)].filter(Boolean).join(" · ");pick.type="button";pick.textContent="Pilih video";pick.onclick=()=>{const input=$("url");input.value=item.url;setMode("link");$("analyze")?.click()};info.append(title,meta,pick);card.append(info);results.append(card)});if(help)help.textContent=items.length+" hasil ditemukan.";return}
-}catch{}
-finally{if(btn){btn.disabled=false;btn.textContent="Cari ⌕"}}
-}
-results.replaceChildren();
-const card=document.createElement("article");card.className="v674-search-result v736-search-handoff";
-const title=document.createElement("h3");title.textContent="Hasil pencarian "+target.name;
-const note=document.createElement("p");note.textContent="Buka hasil di "+target.name+", pilih video, lalu salin tautannya ke ARYANZZ.";
-const open=document.createElement("a");open.className="primary";open.href=link;open.target="_blank";open.rel="noopener noreferrer";open.textContent="Buka hasil "+target.name+" ↗";
-card.append(title,note,open);results.append(card);
-if(help)help.textContent="Hasil dibuka di "+target.name+". Tempel tautan publik di tab Tempel tautan untuk memeriksa dukungan unduhan.";
+render(items,target,q);
+}catch(error){
+if(error?.name==="AbortError")return;
+results.replaceChildren();showFallback(target,q);
+if(help)help.textContent=String(error?.message||"Pencarian belum tersedia.").slice(0,180);
+}finally{if(btn){btn.disabled=false;btn.textContent="Cari ⌕"}}
 };
 $("titleSearchBtn")?.addEventListener("click",go);searchInput?.addEventListener("keydown",e=>{if(e.key==="Enter")go()});
-}
-function initTools(){const input=$("toolSearch"),grid=$("toolGrid"),filters=$("toolFilters"),empty=$("toolEmpty");if(!input||!grid||!filters)return;let category="all";const cards=[...grid.querySelectorAll(".tool")];const apply=()=>{let n=0;const q=input.value.toLowerCase().trim();cards.forEach(c=>{const show=(category==="all"||c.dataset.category===category)&&c.textContent.toLowerCase().includes(q);c.hidden=!show;if(show)n++});empty.hidden=n>0};filters.onclick=e=>{const b=e.target.closest("[data-tool-filter]");if(!b)return;category=b.dataset.toolFilter;filters.querySelectorAll("button").forEach(x=>x.classList.toggle("active",x===b));apply()};input.oninput=apply}
+}function initTools(){const input=$("toolSearch"),grid=$("toolGrid"),filters=$("toolFilters"),empty=$("toolEmpty");if(!input||!grid||!filters)return;let category="all";const cards=[...grid.querySelectorAll(".tool")];const apply=()=>{let n=0;const q=input.value.toLowerCase().trim();cards.forEach(c=>{const show=(category==="all"||c.dataset.category===category)&&c.textContent.toLowerCase().includes(q);c.hidden=!show;if(show)n++});empty.hidden=n>0};filters.onclick=e=>{const b=e.target.closest("[data-tool-filter]");if(!b)return;category=b.dataset.toolFilter;filters.querySelectorAll("button").forEach(x=>x.classList.toggle("active",x===b));apply()};input.oninput=apply}
 const rand=(a,b)=>Math.random()*(b-a)+a;
 function toHex(h,s,l){s/=100;l/=100;const k=n=>(n+h/30)%12,a=s*Math.min(l,1-l),f=n=>l-a*Math.max(-1,Math.min(k(n)-3,Math.min(9-k(n),1)));return "#"+[f(0),f(8),f(4)].map(v=>Math.round(v*255).toString(16).padStart(2,"0")).join("").toUpperCase()}
 const modes={all:()=>[rand(0,360),rand(58,96),rand(38,68)],primary:()=>[[0,85,54],[220,85,54],[120,65,42]][Math.floor(Math.random()*3)],secondary:()=>[[60,80,52],[180,70,42],[300,65,52]][Math.floor(Math.random()*3)],tertiary:()=>[[30,82,56],[90,65,48],[150,65,42],[210,78,52],[270,65,58],[330,75,56]][Math.floor(Math.random()*6)],pastel:()=>[rand(0,360),rand(34,58),rand(76,91)],neon:()=>[rand(0,360),rand(92,100),rand(48,63)],metallic:()=>[rand(0,360),rand(14,42),rand(36,70)],rare:()=>[rand(0,360),rand(75,100),rand(28,66)],nature:()=>[[105,55,36],[145,48,38],[75,58,45],[35,65,48],[185,55,42],[15,55,46]][Math.floor(Math.random()*6)],cyber:()=>[[185,95,50],[220,95,58],[270,82,62],[300,92,58],[165,90,42],[245,75,55]][Math.floor(Math.random()*6)],sunset:()=>[[8,88,62],[18,92,58],[32,90,62],[335,82,62],[285,55,56],[355,80,72]][Math.floor(Math.random()*6)],monochrome:()=>[rand(0,360),0,rand(12,90)]};
