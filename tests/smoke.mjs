@@ -22,9 +22,9 @@ const downloaderCss=file("../public/downloader.css");
 const manifest=JSON.parse(file("../public/manifest.webmanifest"));
 
 const checks=[
-  ["V72.8 page title",html.includes("ARYANZZ V72.8 — All-in-One Creative Space")],
-  ["V59.5 versioned assets",html.includes("/v15.js?v=59.5")&&html.includes("/owner.js?v=59.5")&&html.includes("/downloader.js?v=72.8")&&html.includes("/downloader.css?v=72.4")&&html.includes("/v59.css?v=59.5")&&html.includes("/editor-pro.css?v=65.0")&&html.includes("/editor.js?v=65.0")],
-  ["service worker cache and V59.5 assets",html.includes("navigator.serviceWorker.register")&&sw.includes("aryanzz-v72-8")&&sw.includes("/editor.js?v=65.0")],
+  ["V72.9 page title",html.includes("ARYANZZ V72.9 — All-in-One Creative Space")],
+  ["V59.5 versioned assets",html.includes("/v15.js?v=59.5")&&html.includes("/owner.js?v=59.5")&&html.includes("/downloader.js?v=72.9")&&html.includes("/downloader.css?v=72.5")&&html.includes("/v59.css?v=59.5")&&html.includes("/editor-pro.css?v=65.0")&&html.includes("/editor.js?v=65.0")],
+  ["service worker cache and V59.5 assets",html.includes("navigator.serviceWorker.register")&&sw.includes("aryanzz-v72-9")&&sw.includes("/editor.js?v=65.0")],
   ["downloader input, result and backend status",html.includes('id="analyze"')&&html.includes('id="downloadResult"')&&html.includes('id="backendStatus"')],
   ["unified self-hosted downloader API",downloader.includes('postJson("/api/info"')&&downloader.includes('"/api/direct-file?url="')&&downloader.includes("PLATFORM_NAMES")&&!downloader.toLowerCase().includes("savenow")],
   ["single capture-phase universal URL handler",downloader.includes('button.addEventListener("click"')&&downloader.includes("event.stopImmediatePropagation()")&&downloader.includes("}, true);")],
@@ -33,26 +33,31 @@ const checks=[
   ["Hybrid YouTube API uses Piped and Invidious public instance failover",workerSource.includes("/streams/")&&workerSource.includes("/api/v1/videos/")&&workerSource.includes("PIPED_PUBLIC_INSTANCES")&&workerSource.includes("INVIDIOUS_PUBLIC_INSTANCES")],
   ["V72 format deduplication keeps muxed and video-only variants separate",workerSource.includes('(f.videoOnly?"video-only":"muxed")')&&downloader.includes('(f.videoOnly?"video-only":"muxed")')],
   ["V72 Piped parser retains adaptive video-only MP4 with audio",workerSource.includes("videoOnly=adaptiveSource")&&workerSource.includes('formats.some(audio=>audio.mode===\"audio\"&&audio.ext===\"m4a\")')],
-  ["V72.8 worker aggregates multiple healthy provider instances and attaches each origin to its formats",workerSource.includes("const available=[...pipedProbe.results,...invProbe.results]")&&workerSource.includes("instance:result.instance,provider:result.provider")&&workerSource.includes("const settled=await Promise.all(instances.map")&&workerSource.includes("diagnostics:diagnostics.slice(0,20)")],
-  ["V72.8 browser probes only first provider batch for faster result display",downloader.includes("const inv=invidiousInstances.slice(0,10),piped=pipedInstances.slice(0,20)")&&downloader.includes("diagnostics.push({provider,instance,error:")&&!downloader.includes("const batches=Math.max(Math.ceil(invidiousInstances.length/5)")],
-  ["V72.8 prioritizes health-ranked dynamic Invidious instances before stale fallbacks",downloader.includes("new Set([...discovered,...fallback])")&&workerSource.includes("new Set([...discovered,...fallback])")],
-  ["V72.8 probes a wider but bounded set of community providers",downloader.includes("invidiousInstances.slice(0,10),piped=pipedInstances.slice(0,20)")&&workerSource.includes("piped.slice(0,20)")&&workerSource.includes("inv.slice(0,10)")],
-  ["V72.8 defaults to the highest available progressive quality up to 480p",downloader.includes("quickPool.filter(height=>height<=480).sort((a,b)=>b-a)[0]")&&downloader.includes("MP4 langsung")],
-  ["V72.8 prefers one complete progressive MP4 and honors an explicitly selected adaptive quality",downloader.includes("const exactProgressive=progressive.filter")&&downloader.includes("const exactAdaptive=adaptive.filter")&&downloader.includes("if(exactProgressive.length)")],
-  ["V72.8 merges adaptive tracks internally as one MP4 without exposing a separate audio file",downloader.includes("Komponen MP4 1/2")&&downloader.includes("Komponen MP4 2/2")&&downloader.includes("tidak ada file audio terpisah yang disimpan")],
-  ["V72.8 shows transfer speed, remaining-time estimate and indeterminate progress",downloader.includes("function updateDownloadProgress")&&downloader.includes("sisa tahap")&&downloader.includes("is-indeterminate")],
-  ["V72.8 hides audio format and bitrate controls outside audio mode",downloaderCss.includes(".youtube-result [hidden]{display:none!important}")&&downloader.includes("audioLabel.hidden=audioFormat.hidden")],
-  ["V72.8 keeps FFmpeg warm after first use",downloader.includes("Keep the FFmpeg engine warm")&&!downloader.includes("ffmpeg.terminate();aryanzzFfmpegPromise=null")],
-  ["V72.8 browser retains provider errors without waiting for further batches",downloader.includes("Provider errors are retained")&&!downloader.includes("if(available.length)break")],
-  ["V72.8 browser aggregates provider instances and retries same-quality streams",downloader.includes("const available=[]")&&downloader.includes("for(const selected of candidates)")&&downloader.includes("selected.instance||info.instance")],
-  ["V72.8 Invidious requests its local proxy URLs in both Worker and browser paths",workerSource.includes("?local=true")&&downloader.includes("?local=true")],
-  ["V72.8 progressive MP4 is preflighted then streamed directly to Chrome",workerSource.includes('u.searchParams.get("probe")==="1"')&&downloader.includes("probe=1")&&downloader.includes("Chrome menampilkan progres dan sisa waktu sebenarnya")],
-  ["V72.8 Worker validates dynamic Invidious origins against the public registry",workerSource.includes("currentHybridInvidiousInstances()")&&workerSource.includes("if(known)trustedInstance=instanceOrigin")],
+  ["V72.9 worker aggregates multiple healthy provider instances and attaches each origin to its formats",workerSource.includes("const available=[...pipedProbe.results,...invProbe.results]")&&workerSource.includes("instance:result.instance,provider:result.provider")&&workerSource.includes("const settled=await Promise.all(instances.map")&&workerSource.includes("diagnostics:diagnostics.slice(0,20)")],
+  ["V72.9 browser probes only first provider batch for faster result display",downloader.includes("const inv=invidiousInstances.slice(0,10),piped=pipedInstances.slice(0,20)")&&downloader.includes("diagnostics.push({provider,instance,error:")&&!downloader.includes("const batches=Math.max(Math.ceil(invidiousInstances.length/5)")],
+  ["V72.9 prioritizes health-ranked dynamic Invidious instances before stale fallbacks",downloader.includes("new Set([...discovered,...fallback])")&&workerSource.includes("new Set([...discovered,...fallback])")],
+  ["V72.9 probes a wider but bounded set of community providers",downloader.includes("invidiousInstances.slice(0,10),piped=pipedInstances.slice(0,20)")&&workerSource.includes("piped.slice(0,20)")&&workerSource.includes("inv.slice(0,10)")],
+  ["V72.9 defaults to the highest available progressive quality up to 480p",downloader.includes("quickPool.filter(height=>height<=480).sort((a,b)=>b-a)[0]")&&downloader.includes("MP4 langsung")],
+  ["V72.9 prefers one complete progressive MP4 and honors an explicitly selected adaptive quality",downloader.includes("const exactProgressive=progressive.filter")&&downloader.includes("const exactAdaptive=adaptive.filter")&&downloader.includes("if(exactProgressive.length)")],
+  ["V72.9 merges adaptive tracks internally as one MP4 without exposing a separate audio file",downloader.includes("Komponen MP4 1/2")&&downloader.includes("Komponen MP4 2/2")&&downloader.includes("tidak ada file audio terpisah yang disimpan")],
+  ["V72.9 shows transfer speed, remaining-time estimate and indeterminate progress",downloader.includes("function updateDownloadProgress")&&downloader.includes("sisa tahap")&&downloader.includes("is-indeterminate")&&downloader.includes("indexedDB.open(\\\"aryanzz-download-resume\\\"")],
+  ["V72.9 mobile adaptive downloads use parallel HTTP ranges and resumable IndexedDB chunks",downloader.includes("fetchYoutubeTrackRanges")&&downloader.includes("Range:")&&downloader.includes("readDownloadChunk")&&downloader.includes("writeDownloadChunk")&&downloader.includes("downloadResumePrefix")],
+  ["V72.9 Speed, Max Speed and Mega Speed controls are wired to adaptive downloads",downloader.includes("Speed · 1 jalur")&&downloader.includes("Max Speed · 3 jalur")&&downloader.includes("Mega Speed · 5 jalur")&&downloader.includes("Number(speedSelect.value)||3")],
+  ["V72.9 adaptive memory budget scales with device memory and retries lower MP4 quality",downloader.includes("function youtubeMuxMemoryBudget")&&downloader.includes("navigator.deviceMemory")&&downloader.includes("progressiveFallback")&&downloader.includes("kualitas lebih rendah")],
+  ["V72.9 thumbnail download is placed beside the preview and uses the safe Worker proxy",downloader.includes("youtube-thumb-wrap")&&downloader.includes("youtube-thumb-download")&&downloader.includes("/api/youtube/hybrid/thumbnail")&&workerSource.includes("function hybridYoutubeThumbnail")],
+  ["V72.9 Worker probe returns total bytes and range metadata for resumable chunks",workerSource.includes("totalBytes:totalBytes||null")&&workerSource.includes("contentRange:contentRange||null")&&workerSource.includes("headers.range=range")],
+  ["V72.9 hides audio format and bitrate controls outside audio mode",downloaderCss.includes(".youtube-result [hidden]{display:none!important}")&&downloader.includes("audioLabel.hidden=audioFormat.hidden")],
+  ["V72.9 keeps FFmpeg warm after first use",downloader.includes("Keep the FFmpeg engine warm")&&!downloader.includes("ffmpeg.terminate();aryanzzFfmpegPromise=null")],
+  ["V72.9 browser retains provider errors without waiting for further batches",downloader.includes("Provider errors are retained")&&!downloader.includes("if(available.length)break")],
+  ["V72.9 browser aggregates provider instances and retries same-quality streams",downloader.includes("const available=[]")&&downloader.includes("for(const selected of candidates)")&&downloader.includes("selected.instance||info.instance")],
+  ["V72.9 Invidious requests its local proxy URLs in both Worker and browser paths",workerSource.includes("?local=true")&&downloader.includes("?local=true")],
+  ["V72.9 progressive MP4 is preflighted then streamed directly to Chrome",workerSource.includes('u.searchParams.get("probe")==="1"')&&downloader.includes("probe=1")&&downloader.includes("Chrome menampilkan progres dan sisa waktu sebenarnya")],
+  ["V72.9 Worker validates dynamic Invidious origins against the public registry",workerSource.includes("currentHybridInvidiousInstances()")&&workerSource.includes("if(known)trustedInstance=instanceOrigin")],
   ["V72 FFmpeg merge uses stream copy into MP4",downloader.includes("muxYoutubeMp4")&&downloader.includes('"copy"')&&downloader.includes('"+faststart"')],
-  ["V72 local FFmpeg worker bootstrap is included",file("../public/ffmpeg-worker-bootstrap.js").includes("@ffmpeg/ffmpeg@0.12.10")&&file("../public/sw.js").includes("/ffmpeg-worker-bootstrap.js?v=72.8")],
+  ["V72 local FFmpeg worker bootstrap is included",file("../public/ffmpeg-worker-bootstrap.js").includes("@ffmpeg/ffmpeg@0.12.10")&&file("../public/sw.js").includes("/ffmpeg-worker-bootstrap.js?v=72.9")],
   ["V72 parses adaptive video-only MP4 plus matching M4A audio",workerSource.includes("adaptiveSource=false")&&workerSource.includes("hybridVideoFormat(item,instance,true,true)")&&workerSource.includes("videoOnly")&&downloader.includes('adaptive.map(item=>String(item?.type||item?.mimeType||')],
   ["V72 browser remuxes separate tracks locally with FFmpeg WASM",downloader.includes("loadBrowserFfmpeg")&&downloader.includes("classWorkerURL")&&downloader.includes("ffmpeg.exec")&&downloader.includes('"copy"')&&downloader.includes("muxYoutubeMp4")],
-  ["V72 FFmpeg worker bootstrap is same-origin and cached",file("../public/ffmpeg-worker-bootstrap.js").includes("@ffmpeg/ffmpeg@0.12.10")&&sw.includes("/ffmpeg-worker-bootstrap.js?v=72.8")],
+  ["V72 FFmpeg worker bootstrap is same-origin and cached",file("../public/ffmpeg-worker-bootstrap.js").includes("@ffmpeg/ffmpeg@0.12.10")&&sw.includes("/ffmpeg-worker-bootstrap.js?v=72.9")],
   ["Hybrid stream download is restricted to approved media hosts",workerSource.includes("function hybridMediaUrl")&&workerSource.includes("googlevideo.com")&&workerSource.includes("HYBRID_MEDIA_ROOTS")],
   ["Hybrid download uses attachment streaming and range requests",workerSource.includes("function hybridYoutubeFile")&&workerSource.includes("trustedInstance")&&workerSource.includes("content-disposition")&&workerSource.includes("headers.range=range")],
   ["No Cobalt or paid SaveNow downloader remains",!workerSource.includes("cobaltConfig")&&!workerSource.includes("SAVENOW_BASE")&&!workerSource.includes("SAVENOW_API_KEY")],
@@ -102,14 +107,14 @@ const checks=[
   ["DJ mix scan uses AudD Enterprise endpoint",html.includes('id="musicFileScanButton"')&&html.includes('id="musicScanSkip"')&&musicJs.includes('/api/music/scan-video')&&workerSource.includes("enterprise.audd.io")],
   ["Music Finder supports file, video URL and microphone",musicJs.includes("captureMediaSample")&&musicJs.includes("getUserMedia")&&musicJs.includes("/api/music/recognize")&&musicJs.includes("musicVideoUrl")],
   ["AudD errors expose provider code and actionable quota guidance",workerSource.includes("function auddFailure")&&workerSource.includes("providerErrorCode")&&workerSource.includes("kode 901")&&workerSource.includes("kode 902")],
-  ["V72.8 runs without a self-hosted extractor",workerSource.includes('version:"72.8"')&&workerSource.includes('mode:"cloudflare-worker-zero-server-hybrid"')&&workerSource.includes('platformBackend:"community-handoff"')&&!workerSource.includes("DOWNLOADER_CONTAINER")],
+  ["V72.9 runs without a self-hosted extractor",workerSource.includes('version:"72.9"')&&workerSource.includes('mode:"cloudflare-worker-zero-server-hybrid"')&&workerSource.includes('platformBackend:"community-handoff"')&&!workerSource.includes("DOWNLOADER_CONTAINER")],
   ["Shazam fallback covers standard AudD auth/quota failures",workerSource.includes("shazamRecognize(audioBlob,env)")&&workerSource.includes("providerErrorCode")&&serverSource.includes("/api/music/recognize")&&serverSource.includes("shazam_recognize.py")],
   ["DJ mix scans fall back to Shazam when AudD Enterprise errors",workerSource.includes("shazamScan(fallbackSource")&&serverSource.includes("/api/music/scan")&&serverSource.includes("scanShazamMedia")],
   ["Docker backend includes yt-dlp, FFmpeg and ShazamIO",file("../Dockerfile").includes("yt-dlp")&&file("../Dockerfile").includes("shazamio==0.9.0")&&serverSource.includes("ffprobe")],
   ["Music Finder responsive styling",musicCss.includes(".music-grid")&&musicCss.includes("@media(max-width:620px)")],
   ["Video URL DJ scanning goes directly through AudD Enterprise",workerSource.includes('fetch("https://enterprise.audd.io/"')&&!musicJs.includes("identifyVideoUrl(url,startSeconds)")],
   ["tool hub remains available",html.includes('id="allTools"')],
-  ["PWA manifest version",manifest.name.includes("V72.8")],
+  ["PWA manifest version",manifest.name.includes("V72.9")],
   ["V67.7 visual assets are loaded",html.includes("/v677.css?v=67.7")&&html.includes("/v677.js?v=67.7")&&sw.includes("/v677.css?v=67.7")&&sw.includes("/v677.js?v=67.7")],
   ["V67.7 home remains focused on the downloader",html.includes('id="home"')&&html.includes('id="downloadLinkMode"')&&!html.slice(html.indexOf('id="home"'),html.indexOf('id="toolsArea"')).includes('id="toolGrid"')],
   ["V67.7 feature identity map covers all tools",file("../public/v677.js").includes("const ICONS=")&&["speed","checker","queue","editor","musicFinder","history","imageTools","pdfTools","qrTools","securityTools","colorStudio","profile","owner","about","help"].every(id=>file("../public/v677.js").includes(id))],
@@ -118,19 +123,19 @@ const checks=[
   ["V67.9 remaining tools have branded backgrounds",v677css.includes('data-feature="gradientStudio"')&&v677css.includes('data-feature="fileHash"')&&v677css.includes("#editor .editor-pro-head")&&v677css.includes("#profile .v25-profile-cover")],
   ["V67.9 Color Studio favorites and clipboard work after redesign",v677js.includes("palette.onclick=async event")&&v677js.includes("favorites.onclick=async event")&&v677js.includes('localStorage.setItem("aryanzz.color-favorites.v674"')&&v677js.includes("copyExpandedColor")],
 
-  ["V72.8 service worker cache and creative assets",sw.includes("aryanzz-v72-8")&&sw.includes("/v680.css?v=71.0")&&sw.includes("/v680.js?v=71.0")&&html.includes("/v680.js?v=71.0")],
+  ["V72.9 service worker cache and creative assets",sw.includes("aryanzz-v72-9")&&sw.includes("/v680.css?v=71.0")&&sw.includes("/v680.js?v=71.0")&&html.includes("/v680.js?v=71.0")],
   ["V67.9 downloader preserves direct-source details",downloader.includes("function responseFilename")&&downloader.includes("const directMedia=!!info.extension&&!info.extractor")&&downloader.includes("/api/platform/status")],
-  ["V72.8 title search has no-server YouTube handoff",file("../public/v674.js").includes("Buka hasil YouTube")&&file("../public/v674.js").includes("salin tautan video")],
+  ["V72.9 title search has no-server YouTube handoff",file("../public/v674.js").includes("Buka hasil YouTube")&&file("../public/v674.js").includes("salin tautan video")],
   ["V67.9 direct media whitelist includes common formats",workerSource.includes('"mkv"')&&workerSource.includes('"avi"')&&workerSource.includes('"aiff"')&&workerSource.includes('"opus"')],
-  ["V72.8 Gradient Studio controls are wired",html.includes('id="gradientStudio"')&&html.includes('id="gradientRandom"')&&html.includes('id="gradientPng"')&&file("../public/v680.js").includes("function renderGradient")],
-  ["V72.8 File Hash Checker uses local Web Crypto",html.includes('id="fileHash"')&&html.includes('id="hashCompute"')&&file("../public/v680.js").includes("crypto.subtle.digest")],
+  ["V72.9 Gradient Studio controls are wired",html.includes('id="gradientStudio"')&&html.includes('id="gradientRandom"')&&html.includes('id="gradientPng"')&&file("../public/v680.js").includes("function renderGradient")],
+  ["V72.9 File Hash Checker uses local Web Crypto",html.includes('id="fileHash"')&&html.includes('id="hashCompute"')&&file("../public/v680.js").includes("crypto.subtle.digest")],
 ];
 for(const [name,ok] of checks){assert.ok(ok,name+" failed");console.log("✔ "+name)}
 
 const healthResponse=await worker.fetch(new Request("https://aryanzz.example/api/health"),{});
 assert.equal(healthResponse.status,200);
 const health=await healthResponse.json();
-assert.equal(health.version,"72.8");
+assert.equal(health.version,"72.9");
 assert.equal(health.selfHostedDownloader,false);
 assert.equal(health.youtubeDownloader,true);
 assert.equal(health.mode,"cloudflare-worker-zero-server-hybrid");
@@ -138,7 +143,7 @@ assert.equal(health.platformBackend,"community-handoff");
 assert.equal(health.directMediaDownload,true);
 assert.equal(health.musicRecognitionConfigured,false);
 assert.equal(health.youtubeApiKeyConfigured,false);
-console.log("✔ V72.8 Worker health and zero-server status");
+console.log("✔ V72.9 Worker health and zero-server status");
 const platformStatusResponse=await worker.fetch(new Request("https://aryanzz.example/api/platform/status"),{});
 assert.equal(platformStatusResponse.status,200);
 const platformStatus=await platformStatusResponse.json();
@@ -164,7 +169,7 @@ const legacyProgressEndpoint=await worker.fetch(new Request("https://aryanzz.exa
   method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({id:"job-123",format:"mp3"})
 }),{});
 assert.equal(legacyProgressEndpoint.status,404);
-console.log("✔ Legacy paid downloader/progress endpoints are removed in V72.8");
+console.log("✔ Legacy paid downloader/progress endpoints are removed in V72.9");
 
 const musicStatusResponse=await worker.fetch(new Request("https://aryanzz.example/api/music/status"),{});
 assert.equal(musicStatusResponse.status,200);
@@ -349,7 +354,7 @@ try{
   const healthData=await health.json();
   assert.equal(healthData.platformBackend,"community-handoff");
   assert.equal(healthData.platformExtraction,false);
-  console.log("✔ V72.8 health keeps the no-server mode active");
+  console.log("✔ V72.9 health keeps the no-server mode active");
 }finally{globalThis.fetch=originalFallbackFetch;}
 
 const originalEnterpriseFetch=globalThis.fetch;
@@ -434,6 +439,9 @@ try{
         ],
         audioStreams:[{mimeType:"audio/mp4",format:"M4A",quality:"128 kbps",bitrate:128000,url:id==="DYNAMIC1"?"https://pipedproxy.example.org/videoplayback?itag=140&sig=test":"https://pipedproxy-bom.kavin.rocks/videoplayback?itag=140&sig=test"}]
       }),{status:200,headers:{"content-type":"application/json"}});
+    }
+    if(url.hostname==="i.ytimg.com"&&url.pathname==="/vi/4dpnHLPMQGs/hqdefault.jpg"){
+      return new Response(new Uint8Array([255,216,255]),{status:200,headers:{"content-type":"image/jpeg","content-length":"3"}});
     }
     if(url.hostname==="inv.nadeko.net"&&url.pathname==="/videoplayback"){
       if(url.searchParams.get("itag")==="403")return new Response("forbidden",{status:403});
@@ -554,12 +562,25 @@ try{
   const invidiousProxyFileUrl="https://aryanzz.example/api/youtube/hybrid/file?url="+encodeURIComponent("https://inv.nadeko.net/videoplayback?itag=18&sig=proxy")+"&ext=mp4&title="+encodeURIComponent("Invidious Proxy Test")+"&instance="+encodeURIComponent("https://inv.nadeko.net");
   const invidiousProxyProbe=await worker.fetch(new Request(invidiousProxyFileUrl+"&probe=1"),{});
   assert.equal(invidiousProxyProbe.status,200);
-  assert.equal((await invidiousProxyProbe.json()).ok,true);
+  const invidiousProbeData=await invidiousProxyProbe.json();
+  assert.equal(invidiousProbeData.ok,true);
+  assert.equal(invidiousProbeData.totalBytes,4);
+  assert.equal(invidiousProbeData.contentRange,"bytes 0-0/4");
+  console.log("✔ MP4 preflight returns the real total byte count for resumable range downloads");
   const invidiousProxyFile=await worker.fetch(new Request(invidiousProxyFileUrl),{});
   assert.equal(invidiousProxyFile.status,200);
   assert.match(invidiousProxyFile.headers.get("content-disposition"),/Invidious%20Proxy%20Test\.mp4/);
   assert.equal((await invidiousProxyFile.arrayBuffer()).byteLength,4);
   console.log("✔ Invidious local proxy stream passes one-byte preflight and streams directly as an attachment");
+  const thumbnailUrl="https://aryanzz.example/api/youtube/hybrid/thumbnail?url="+encodeURIComponent("https://i.ytimg.com/vi/4dpnHLPMQGs/hqdefault.jpg")+"&title="+encodeURIComponent("Test YouTube Thumbnail");
+  const thumbnailResponse=await worker.fetch(new Request(thumbnailUrl),{});
+  assert.equal(thumbnailResponse.status,200);
+  assert.equal(thumbnailResponse.headers.get("content-type"),"image/jpeg");
+  assert.match(thumbnailResponse.headers.get("content-disposition"),/Test%20YouTube%20Thumbnail\\.jpg/);
+  assert.equal((await thumbnailResponse.arrayBuffer()).byteLength,3);
+  const blockedThumbnail=await worker.fetch(new Request("https://aryanzz.example/api/youtube/hybrid/thumbnail?url="+encodeURIComponent("https://evil.example/thumb.jpg")),{}); 
+  assert.equal(blockedThumbnail.status,400);
+  console.log("✔ Thumbnail proxy streams allowed YouTube images as attachments and blocks untrusted hosts");
   const dynamicInvidiousFileUrl="https://aryanzz.example/api/youtube/hybrid/file?url="+encodeURIComponent("https://inv.dynamic.example/videoplayback?itag=18")+"&ext=mp4&title=Dynamic%20Invidious&instance="+encodeURIComponent("https://inv.dynamic.example");
   const dynamicInvidiousFile=await worker.fetch(new Request(dynamicInvidiousFileUrl),{});
   assert.equal(dynamicInvidiousFile.status,200);
@@ -588,13 +609,13 @@ try{
 
   const health=await worker.fetch(new Request("https://aryanzz.example/api/health"),{});
   const healthData=await health.json();
-  assert.equal(healthData.version,"72.8");
+  assert.equal(healthData.version,"72.9");
   assert.equal(healthData.cobalt,false);
   assert.equal(healthData.paidYoutubeProvider,false);
-  console.log("✔ Worker health reports V72.8 with no Cobalt or paid YouTube provider");
+  console.log("✔ Worker health reports V72.9 with no Cobalt or paid YouTube provider");
 
 }finally{
   globalThis.fetch=originalFetch;
 }
 
-console.log("\nARYANZZ V72.8 YouTube flow, TikTok community handoff, zero-server downloader, Gradient Studio, file hashing and music recognition smoke tests passed.");
+console.log("\nARYANZZ V72.9 mobile-resumable YouTube flow, thumbnail proxy, speed modes, TikTok community handoff, zero-server downloader, Gradient Studio, file hashing and music recognition smoke tests passed.");
