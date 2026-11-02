@@ -45,3 +45,6 @@ body[data-theme="light"] .v674-search-result h3{color:#1b2440}
 .v736-platform{min-width:0}
 .v736-platform span:last-child{white-space:normal}
 @media(max-width:430px){.v75-platform-note{font-size:9px}.v736-platform{min-width:0}}
+
+.v736-pinterest{background:transparent!important;color:#e60023!important}
+.v736-pinterest svg{display:block;width:100%;height:100%}
