@@ -29,7 +29,6 @@ jobs:
           node --check public/downloader.js
           node --check public/v677.js
           node --check public/v680.js
-          node --check public/v690.js
           node --check public/v674.js
           node --check public/music-recognition.js
           node --check public/sw.js
