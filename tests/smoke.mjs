@@ -110,31 +110,19 @@ const disconnected=await worker.fetch(new Request("https://aryanzz.example/api/i
 assert.equal(disconnected.status,503);
 console.log("✔ Platform links fail clearly until backend is configured");
 
-const invalid=await worker.fetch(new Request("https://aryanzz.example/api/youtube/download",{
-  method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({url:"https://example.com/video",format:"mp3"})
-}),{});
-assert.equal(invalid.status,400);
-console.log("✔ YouTube endpoint rejects non-YouTube URLs");
+const invalidHybrid=await worker.fetch(new Request("https://aryanzz.example/api/youtube/hybrid/info?url="+encodeURIComponent("https://example.com/video")),{}); 
+assert.equal(invalidHybrid.status,400);
+console.log("✔ Hybrid YouTube endpoint rejects non-YouTube URLs");
 
-const noKey=await worker.fetch(new Request("https://aryanzz.example/api/youtube/download",{
+const legacyPaidEndpoint=await worker.fetch(new Request("https://aryanzz.example/api/youtube/download",{
   method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({url:"https://youtu.be/demo123",format:"mp3"})
-}),{SAVENOW_API_KEY:"test-secret"});
-assert.equal(noKey.status,503);
-assert.match((await noKey.json()).error,/mode gratis Rp0/);
-console.log("✔ Paid YouTube provider is blocked unless explicitly opted in");
-
-const badFormat=await worker.fetch(new Request("https://aryanzz.example/api/youtube/download",{
-  method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({url:"https://youtu.be/demo123",format:"9999"})
-}),{SAVENOW_API_KEY:"test-secret",ALLOW_PAID_YOUTUBE_PROVIDER:"true"});
-assert.equal(badFormat.status,400);
-console.log("✔ Unsupported provider quality is rejected");
-
-const invalidProgress=await worker.fetch(new Request("https://aryanzz.example/api/youtube/progress",{
-  method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({id:"",format:"mp3"})
 }),{});
-assert.equal(invalidProgress.status,400);
-console.log("✔ YouTube progress validates process ID");
-
+assert.equal(legacyPaidEndpoint.status,404);
+const legacyProgressEndpoint=await worker.fetch(new Request("https://aryanzz.example/api/youtube/progress",{
+  method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({id:"job-123",format:"mp3"})
+}),{});
+assert.equal(legacyProgressEndpoint.status,404);
+console.log("✔ Legacy paid downloader/progress endpoints are removed in V71.0");
 
 const musicStatusResponse=await worker.fetch(new Request("https://aryanzz.example/api/music/status"),{});
 assert.equal(musicStatusResponse.status,200);
