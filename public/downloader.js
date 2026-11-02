@@ -180,8 +180,8 @@
       remember(info.url||"",filename,"video",videoItem.height);
       return filename;
     }finally{
+      // Keep the FFmpeg engine warm for the next download in this tab; only clear temporary files.
       for(const name of [inputVideo,inputAudio,output])try{await ffmpeg.deleteFile(name)}catch{}
-      ffmpeg.terminate();aryanzzFfmpegPromise=null;
     }
   }
 
@@ -236,6 +236,14 @@
       const heights=[...new Set(all.map(item=>Number(item.height)).filter(Number.isFinite).filter(height=>height>0))].sort((a,b)=>b-a);
       const chosen=heights.includes(wanted)?wanted:heights.filter(height=>height<=wanted).sort((a,b)=>b-a)[0]||heights[0];
       candidates=all.filter(item=>Number(item.height)===chosen).sort((a,b)=>Number(Boolean(a.videoOnly))-Number(Boolean(b.videoOnly))||Number(b.bitrate)-Number(a.bitrate));
+      if(candidates.length&&candidates.every(item=>item.videoOnly)){
+        const fast=all.filter(item=>!item.videoOnly&&Number(item.height)>0&&Number(item.height)<=chosen).sort((a,b)=>Number(b.height)-Number(a.height)||Number(b.bitrate)-Number(a.bitrate));
+        if(fast.length){
+          const actual=Number(fast[0].height);
+          progressText.textContent="MP4 cepat: kualitas "+chosen+"p perlu penggabungan. Memakai "+actual+"p agar unduhan lebih cepat tanpa FFmpeg…";
+          candidates=fast.filter(item=>Number(item.height)===actual);
+        }
+      }
     }
     if(!candidates.length)throw new Error("Kualitas/format yang dipilih tidak tersedia dari penyedia yang merespons.");
     const failures=[];
@@ -448,7 +456,7 @@
     const match=(()=>{try{const u=new URL(raw);if(["youtu.be","www.youtu.be"].includes(u.hostname))return u.pathname.split("/").filter(Boolean)[0]||null;return u.searchParams.get("v")||u.pathname.match(/^\/(?:shorts|embed|live|v)\/([A-Za-z0-9_-]{6,20})/)?.[1]||null;}catch{return null;}})();
     if(!match||! /^[A-Za-z0-9_-]{6,20}$/.test(match))throw new Error("ID video YouTube tidak valid.");
     const tryGroup=(instances,fn)=>{
-      const controllers=instances.map(()=>browserProviderTimeout(6500));
+      const controllers=instances.map(()=>browserProviderTimeout(5000));
       const promise=Promise.all(instances.map((instance,i)=>fn(instance,match,controllers[i].signal)
         .then(result=>({...result,instance:result.instance||instance,formats:(result.formats||[]).map(format=>({...format,instance:format.instance||instance,provider:format.provider||result.provider}))}))
         .catch(()=>null).finally(()=>controllers[i].clear())));
@@ -464,6 +472,8 @@
       const results=await Promise.all(groups.map(group=>group.promise));
       groups.forEach(group=>group.abort());
       available.push(...results.flat().filter(Boolean));
+      // Return after the first healthy batch; later instances are only needed for download failover.
+      if(available.length)break;
     }
     if(available.length){
       const primary=available.find(item=>item.provider==="Piped")||available[0];
