@@ -37,7 +37,7 @@ const checks=[
   ["V72.3 browser probes only first provider batch for faster result display",downloader.includes("const inv=invidiousInstances.slice(0,5),piped=pipedInstances.slice(0,5)")&&!downloader.includes("const batches=Math.max(Math.ceil(invidiousInstances.length/5)")],
   ["V72.3 defaults to progressive MP4 at or below 480p",downloader.includes("progressiveHeights.filter(height=>height<=480)")&&downloader.includes("· ⚡ Cepat")],
   ["V72.3 labels adaptive formats that require FFmpeg",downloader.includes("· perlu gabung")&&downloader.includes("FFmpeg dan lebih lambat")],
-  ["V72.3 automatically falls back to the highest progressive MP4 when selected quality requires muxing",downloader.includes("candidates.every(item=>item.videoOnly)")&&downloader.includes("Memakai "+actual+"p agar unduhan lebih cepat tanpa FFmpeg")],
+  ["V72.3 automatically falls back to the highest progressive MP4 when selected quality requires muxing",downloader.includes("candidates.every(item=>item.videoOnly)")&&downloader.includes("agar unduhan lebih cepat tanpa FFmpeg")],
   ["V72.3 keeps FFmpeg warm after first use",downloader.includes("Keep the FFmpeg engine warm")&&!downloader.includes("ffmpeg.terminate();aryanzzFfmpegPromise=null")],
   ["V72.3 first provider batch returns without waiting for further batches",downloader.includes("Only the first five instances per provider")&&!downloader.includes("if(available.length)break")],
   ["V72.3 browser aggregates provider instances and retries same-quality streams",downloader.includes("const available=[]")&&downloader.includes("for(const selected of candidates)")&&downloader.includes("selected.instance||info.instance")],
