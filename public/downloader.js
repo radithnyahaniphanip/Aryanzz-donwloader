@@ -258,11 +258,22 @@
       return null;
     }catch{return null;}
   }
+  function browserVideoHeight(item){
+    const direct=Number(item?.height);
+    if(Number.isFinite(direct)&&direct>=100&&direct<=4320)return direct;
+    const labels=[item?.qualityLabel,item?.quality,item?.resolution,item?.size,item?.label].filter(Boolean).map(String);
+    for(const label of labels){
+      const dimensions=label.match(/\d{2,4}\s*[x×]\s*(\d{2,4})/i);
+      if(dimensions)return Number(dimensions[1]);
+      const p=label.match(/(?:^|\D)(\d{3,4})\s*p(?:\D|$)/i);
+      if(p)return Number(p[1]);
+    }
+    return 0;
+  }
   function browserVideoFormat(item,providerInstance,progressiveSource=false){
     const mime=String(item?.mimeType||item?.type||item?.mime_type||item?.mime||"").toLowerCase();
     const container=String(item?.format||item?.container||item?.ext||"").toLowerCase();
-    const qualityText=String(item?.qualityLabel||item?.quality||item?.resolution||item?.size||"");
-    const height=Number(item?.height)||Number((qualityText.match(/(\d{3,4})\s*p?/i)||[])[1])||0;
+    const height=browserVideoHeight(item);
     const url=browserHybridMediaUrl(item?.url||item?.urlTemplate||"",providerInstance);
     const mp4=mime.includes("video/mp4")||mime.includes("video/x-m4v")||container.includes("mpeg_4")||container==="mp4"||container==="m4v"||(progressiveSource&&/\.mp4(?:$|[?#])/i.test(url?.pathname||""));
     if(!url||![144,240,360,480,720,1080,1440,2160].includes(height)||item?.videoOnly===true||!mp4)return null;
