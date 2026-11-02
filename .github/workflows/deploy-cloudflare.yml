@@ -24,6 +24,15 @@ jobs:
       - name: Install Worker dependencies
         run: npm install --no-audit --no-fund
 
+      - name: Validate V71.0 before deployment
+        run: |
+          node --check src/index.js
+          node --check public/downloader.js
+          node --check tests/smoke.mjs
+          node --check tests/public-api-live.mjs
+          node tests/smoke.mjs
+          node tests/public-api-live.mjs
+
       - name: Configure AudD music recognition secret
         env:
           AUDD_API_TOKEN: ${{ secrets.AUDD_API_TOKEN }}
