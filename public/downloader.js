@@ -169,7 +169,7 @@
   function addReadyDownloadLink(container,href,filename,label){
     container?.querySelector(".youtube-ready-link")?.remove();
     const link=make("a","youtube-download youtube-ready-link",label||"⬇ Unduh file sekarang");
-    link.href=href;link.download=filename;link.rel="noopener";link.setAttribute("aria-label","Unduh "+filename);
+    link.href=href;if(filename)link.download=filename;else link.removeAttribute("download");link.rel="noopener";link.setAttribute("aria-label",filename?"Unduh "+filename:(label||"Unduh media"));
     container?.append(link);return link;
   }
   async function saveBrowserBlob(blob,filename,container){
@@ -718,7 +718,7 @@
   }
   async function downloadFile(url, mode, quality, bar, progressText, info={}, requestedAudioFormat="mp3",progressMeta=null) {
     if(info.providerName==="Public API"){
-      const all=(Array.isArray(info.formats)?info.formats:[]).filter(item=>item.mode===mode&&item.downloadUrl);
+      const all=(Array.isArray(info.formats)?info.formats:[]).filter(item=>item.mode===mode&&item.downloadUrl&&!(mode==="video"&&item.videoOnly));
       let selected=null;
       if(mode==="audio"){
         selected=all.find(item=>item.ext===requestedAudioFormat)||all[0]||null;
@@ -731,17 +731,23 @@
           return aBelow?bh-ah:ah-bh;
         })[0]||all[0]||null;
       }
-      if(!selected)throw new Error("Provider gratis tidak menyediakan "+(mode==="audio"?"audio MP3/M4A":"video MP4")+" untuk tautan ini.");
+      if(!selected)throw new Error("Provider gratis tidak menyediakan stream "+(mode==="audio"?"audio":"video lengkap dengan suara")+". Pilih kualitas lain atau coba tautan lain.");
       const ready=safeUrl(selected.downloadUrl);
-      if(!ready)throw new Error("Provider mengirim alamat unduhan yang tidak valid.");
-      const ext=selected.ext|| (mode==="audio"?"mp3":"mp4");
-      const filename=safeFilename((info.outputName||info.title||"aryanzz-media").replace(/\.(?:mp4|mp3|m4a|webm|mov)$/i,"")+"."+ext);
-      addReadyDownloadLink(bar.parentElement?.parentElement,ready.href,filename,mode==="audio"?"⬇ Unduh MP3 sekarang":"⬇ Unduh MP4 sekarang");
+      if(!ready||ready.origin!==location.origin||ready.pathname!=="/api/social-file")throw new Error("Tautan unduhan tidak melewati pemeriksaan keamanan ARYANZZ.");
+      const probeUrl=new URL(ready.href);probeUrl.searchParams.set("probe","1");
+      progressText.textContent="Memeriksa isi file media sebelum unduhan…";
+      if(progressMeta)progressMeta.textContent="ARYANZZ memeriksa tanda format video/audio dan ukuran stream agar halaman error atau file terpotong tidak tersimpan sebagai MP4.";
+      const probeResponse=await fetch(probeUrl.href,{cache:"no-store",credentials:"same-origin",signal:downloadTimeoutSignal(18000)});
+      const check=await probeResponse.json().catch(()=>({}));
+      if(!probeResponse.ok||!check.valid)throw new Error(check.error||"Pemeriksaan file media gagal (HTTP "+probeResponse.status+").");
+      const size=Number(check.bytes)||Number(selected.filesize)||0;
+      const sizeLabel=size?" · "+formatDownloadSize(size):"";
+      addReadyDownloadLink(bar.parentElement?.parentElement,ready.href,"",mode==="audio"?"⬇ Unduh audio terverifikasi sekarang":"⬇ Unduh video terverifikasi sekarang");
       bar.style.width="100%";bar.parentElement?.classList.remove("is-indeterminate");bar.parentElement?.setAttribute("aria-valuenow","100");
-      progressText.textContent="Tautan unduhan siap · "+filename;
-      if(progressMeta)progressMeta.textContent="Persiapan 100% · ketuk tombol “Unduh MP4/MP3 sekarang” di bawah. Proses transfer file sesungguhnya akan ditampilkan oleh Chrome, bukan bar persiapan ini.";
-      remember(url,filename,mode,quality);
-      return filename;
+      progressText.textContent=(mode==="audio"?"Audio ":"Video ")+check.extension.toUpperCase()+" terverifikasi ✓";
+      if(progressMeta)progressMeta.textContent="Format aktual: "+check.mimeType+sizeLabel+". Transfer penuh akan diperiksa lagi; jika byte tidak lengkap, Chrome akan menerima kegagalan, bukan file rusak yang dianggap selesai.";
+      remember(url,check.filename||info.title,mode,quality);
+      return check.filename||info.title;
     }
     const sourceExt=/^[a-z0-9]{2,8}$/i.test(info.extension||"")?info.extension.toLowerCase():"";
     const ext=sourceExt||(mode==="audio"?"mp3":"mp4");
