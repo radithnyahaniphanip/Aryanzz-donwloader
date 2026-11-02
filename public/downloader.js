@@ -634,7 +634,7 @@
       const formatLabel = make("label", "label", "PILIH FORMAT");
       const mode = make("select", "field");
       mode.id = "aryMode";
-      [["video","Video"],["audio","Audio MP3 / M4A"]].forEach(([value,label]) => {
+      [["video",isYouTube?"Video MP4":"Video"],["audio",isYouTube?"Audio saja":"Audio MP3 / M4A"]].forEach(([value,label]) => {
         const option = make("option", "", label);
         option.value = value;
         mode.append(option);
@@ -657,6 +657,8 @@
       const heights = Array.isArray(info.formats)
         ? [...new Set(info.formats.map(item => Number(typeof item === "number" ? item : item.height)).filter(n => [144,240,360,480,720,1080,1440,2160].includes(n)))].sort((a,b) => a-b)
         : [];
+      const progressiveHeights=[...new Set((info.formats||[]).filter(item=>item.mode==="video"&&item.ext==="mp4"&&!item.videoOnly&&Number(item.height)>0).map(item=>Number(item.height)))].sort((a,b)=>a-b);
+      const adaptiveHeights=[...new Set((info.formats||[]).filter(item=>item.mode==="video"&&item.ext==="mp4"&&item.videoOnly&&Number(item.height)>0).map(item=>Number(item.height)))].sort((a,b)=>a-b);
       if(directMedia){
         const sourceOption=make("option","","Original · file sumber");sourceOption.value="0";quality.append(sourceOption);quality.disabled=true;
         qualityLabel.textContent="KUALITAS SUMBER";
@@ -666,25 +668,31 @@
         mode.disabled=true;
       }else{
         const available = heights.length ? heights : (isYouTube?[]:[360,480,720,1080,1440,2160]);
+        const quickPool=progressiveHeights.length?progressiveHeights:(adaptiveHeights.length?adaptiveHeights:available);
+        const quickHeight=quickPool.filter(height=>height<=480).sort((a,b)=>b-a)[0]||quickPool.filter(height=>height<=720).sort((a,b)=>b-a)[0]||quickPool.slice().sort((a,b)=>a-b)[0];
         FORMATS.video.filter(item => available.includes(Number(item[0]))).forEach(([value,label]) => {
           const option = make("option", "", label);
           option.value = String(value);
-          const progressiveHeights=(info.formats||[]).filter(item=>item.mode==="video"&&!item.videoOnly&&Number(item.height)>0).map(item=>Number(item.height));
-          const quickHeight=progressiveHeights.filter(height=>height<=480).sort((a,b)=>a-b)[0]||available.filter(height=>height<=480).sort((a,b)=>a-b)[0]||available.filter(height=>height<=720).sort((a,b)=>b-a)[0]||available[0];
           if (Number(value) === quickHeight) option.selected = true;
-          option.textContent=label+(progressiveHeights.includes(Number(value))?" · ⚡ Cepat":" · perlu gabung");
+          if(isYouTube)option.textContent=label+(progressiveHeights.includes(Number(value))?" · MP4 langsung":" · rakit otomatis");
           quality.append(option);
         });
       }
-      const audioHint = make("p", "muted", directMedia?(info.type==="audio"?"File audio langsung akan diunduh dalam format sumber, tanpa konversi.":"File video langsung akan diunduh dalam kualitas aslinya."):isYouTube?(info.providerReady?"⚡ Mode Cepat aktif: kualitas awal dipilih otomatis hingga 480p dan mengutamakan MP4 siap unduh. Kualitas bertanda perlu gabung memakai FFmpeg dan lebih lambat.":"Tidak ada stream yang tersedia sekarang; coba lagi nanti."):"Audio/video mengikuti format yang tersedia dari sumber. Tidak ada server ekstraksi milik ARYANZZ.");
+      const audioHint = make("p", "muted", directMedia?(info.type==="audio"?"File audio langsung akan diunduh dalam format sumber, tanpa konversi.":"File video langsung akan diunduh dalam kualitas aslinya."):isYouTube?(info.providerReady?(progressiveHeights.length?"Mode Cepat: satu stream MP4 lengkap diprioritaskan. Jika kualitas tinggi hanya tersedia terpisah, ARYANZZ dapat merakitnya otomatis menjadi satu file MP4.":"Sumber hanya menyediakan komponen video dan suara terpisah. ARYANZZ merakitnya otomatis menjadi satu MP4; tidak ada file audio terpisah yang disimpan."):"Tidak ada stream yang tersedia sekarang; coba lagi nanti."):"Audio/video mengikuti format yang tersedia dari sumber. Tidak ada server ekstraksi milik ARYANZZ.");
       const note = make("p", "youtube-note", "Unduh hanya media milik sendiri atau konten yang memang diizinkan. Kualitas mengikuti file sumber.");
       box.append(formatLabel, mode, qualityLabel, quality, audioHint, note);
 
-      const progress = make("div", "progress-track");
+      const progress = make("div", "progress-track is-idle");
+      progress.setAttribute("role","progressbar");
+      progress.setAttribute("aria-label","Progres unduhan");
+      progress.setAttribute("aria-valuemin","0");
+      progress.setAttribute("aria-valuemax","100");
+      progress.setAttribute("aria-valuenow","0");
       const bar = make("div", "progress-fill");
       bar.style.width = "0%";
       progress.append(bar);
-      const progressText = make("p", "muted", "Siap. Pilih format dan kualitas, lalu mulai unduh.");
+      const progressText = make("p", "muted", "Siap. Tekan Unduh untuk memulai satu file hasil.");
+      const progressMeta = make("small","download-progress-meta","Target: 1 file MP4 · estimasi waktu muncul setelah ukuran sumber terbaca.");
       const audioFormat=make("select","field");
       audioFormat.id="aryAudioFormat";
       const audioChoices=isYouTube&&info.providerName==="Hybrid"?[...new Set((info.formats||[]).filter(item=>item.mode==="audio").map(item=>item.ext))].map(ext=>[ext,ext.toUpperCase()]):[["mp3","MP3"],["m4a","M4A"]];
@@ -709,14 +717,16 @@
       fav.type = "button";
       fav.addEventListener("click", () => favorite(url.href, info.title || url.href, fav));
       actions.append(start, fav);
-      box.append(progress, progressText, actions);
+      box.append(progress, progressText, progressMeta, actions);
       mode.addEventListener("change", () => {
         quality.disabled = mode.value === "audio"||directMedia;
         qualityLabel.style.opacity = mode.value === "audio" ? ".45" : "1";
         audioFormat.hidden=mode.value!=="audio"||directMedia||audioChoices.length===0;
         audioLabel.hidden=audioFormat.hidden;
         audioBitrate.hidden=true;
-        bitrateLabel.hidden=audioBitrate.hidden;
+        bitrateLabel.hidden=true;
+        start.textContent=mode.value==="audio"?"Unduh Audio":"Unduh MP4";
+        progressMeta.textContent=mode.value==="audio"?"Target: 1 file audio · estimasi muncul setelah ukuran sumber terbaca.":"Target: 1 file MP4 · estimasi muncul setelah ukuran sumber terbaca.";
       });
       mode.dispatchEvent(new Event("change"));
       start.addEventListener("click", async () => {
@@ -724,12 +734,24 @@
         mode.disabled = true;
         quality.disabled = true;
         start.textContent = "Memproses…";
+        progress.classList.remove("is-idle");
+        progress.classList.add("is-indeterminate");
+        bar.style.width="34%";
+        progressText.textContent="Menyiapkan unduhan…";
+        progressMeta.textContent="Target: "+(mode.value==="audio"?"1 file audio":"1 file MP4")+" · membaca ukuran sumber untuk menghitung estimasi.";
         try {
           const filename = isYouTube ? await downloadYouTube(url.href,mode.value,Number(quality.value)||480,bar,progressText,progressMeta,info,audioFormat.value) : await downloadFile(url.href, mode.value, Number(quality.value) || 480, bar, progressText, info);
-          progressText.textContent = "Permintaan unduhan dikirim ke Chrome: " + filename;
-          start.textContent = "Unduhan dimulai ✓";
+          if(!isYouTube){
+            progress.classList.remove("is-indeterminate");
+            bar.style.width="100%";progress.setAttribute("aria-valuenow","100");
+            progressText.textContent="Permintaan unduhan dikirim ke Chrome: "+filename;
+            progressMeta.textContent="Chrome mengelola proses penyimpanan dan notifikasi unduhan.";
+          }
+          start.textContent = "Unduhan dikirim ✓";
         } catch (error) {
+          progress.classList.remove("is-indeterminate");
           status(progressText, error.message || "Unduhan gagal.", true);
+          progressMeta.textContent="Belum selesai · periksa kualitas atau coba lagi setelah provider tersedia.";
           start.disabled = false;
           mode.disabled = false;
           quality.disabled = mode.value === "audio"||directMedia;
