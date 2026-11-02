@@ -294,7 +294,7 @@
       });
     } catch (error) {
       const platform=platformName(url);
-      if(platform!=="Direct Media URL"&&/backend|yt-dlp|platform_api|server ekstraksi|belum dihubungkan|tidak dapat dijangkau|belum aktif/i.test(error.message||""))showCommunityFallback(out,error,url);
+      if(platform!=="Direct Media URL")showCommunityFallback(out,error,url);
       else showError(out,error,url.href);
     } finally {
       button.disabled = false;
