@@ -238,8 +238,8 @@ async function hybridYoutubeInfo(request){
   if(!id||!/^[A-Za-z0-9_-]{6,20}$/.test(id))return json({error:"ID video YouTube tidak valid."},400);
   const [piped,inv]=await Promise.all([currentHybridPipedInstances(),currentHybridInvidiousInstances()]);
   const [pipedResults,invResults]=await Promise.all([
-    hybridProbeGroup(piped,"/streams/"+encodeURIComponent(id),hybridFromPiped),
-    hybridProbeGroup(inv,"/api/v1/videos/"+encodeURIComponent(id),hybridFromInvidious)
+    hybridProbeGroup(piped.slice(0,6),"/streams/"+encodeURIComponent(id),hybridFromPiped),
+    hybridProbeGroup(inv.slice(0,6),"/api/v1/videos/"+encodeURIComponent(id),hybridFromInvidious)
   ]);
   const available=[...pipedResults,...invResults];
   if(available.length){
