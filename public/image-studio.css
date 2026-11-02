@@ -57,3 +57,7 @@
 .image-ratio-shape{display:block;width:36px;max-height:38px;border:2px solid #80c9ff;border-radius:4px;background:linear-gradient(135deg,#4c8dcc33,#1f456c33)}
 .ratio-square{aspect-ratio:1/1}.ratio-four-three{aspect-ratio:4/3;width:40px}.ratio-three-two{aspect-ratio:3/2;width:42px}.ratio-wide{aspect-ratio:16/9;width:46px}.ratio-tall{aspect-ratio:9/16;height:38px;width:auto}.ratio-portrait{aspect-ratio:6/8;height:38px;width:auto}
 .image-ratio-gallery b{font-size:11px}.image-ratio-gallery small{font-size:9px;color:#8fa7c5}
+
+/* V81.0 platform brand marks */
+.v736-pinterest{background:transparent!important;color:#e60023!important}
+.v736-capcut{background:#fff!important;color:#050505!important;border-radius:10px}
