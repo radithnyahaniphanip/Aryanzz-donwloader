@@ -2,7 +2,7 @@
 
 Production website: https://aryanzz-donwloader.radithnyahaniphanip.workers.dev/
 
-ARYANZZ is a mobile-first creator workspace hosted on Cloudflare Workers. V69.0 uses a zero-server design: direct media links are streamed by the Worker, while social-media links are handed off to community-operated downloader frontends. No private extraction server or paid hosting is required.
+ARYANZZ is a mobile-first creator workspace hosted on Cloudflare Workers. V69.2 uses a zero-server design: direct media links are streamed by the Worker, while social-media links are handed off to community-operated downloader frontends. No private extraction server or paid hosting is required.
 
 ## V65.0 release scope
 
@@ -40,9 +40,9 @@ ARYANZZ is a mobile-first creator workspace hosted on Cloudflare Workers. V69.0 
 - TikTok short URLs remain on the community-provider handoff path in the zero-server edition. A post URL is not the same as a direct MP4 file URL.
 - The supplied test links could not be fetched by the web inspection tool in this environment, so no claim is made that either real-world download succeeded. Automated tests use mocked provider responses and validate routing only.
 
-## V69.0 — Zero-server Free Edition
+## V69.2 — Zero-server Free Edition
 
-ARYANZZ V69.0 removes the requirement for a self-hosted extraction server. Cloudflare Workers continues to host the website and handles direct media URLs only. No Render, Railway, VPS, Docker host, paid extractor, or private server is required.
+ARYANZZ V69.2 removes the requirement for a self-hosted extraction server. Cloudflare Workers continues to host the website and handles direct media URLs only. No Render, Railway, VPS, Docker host, paid extractor, or private server is required.
 
 ### Download behavior
 
