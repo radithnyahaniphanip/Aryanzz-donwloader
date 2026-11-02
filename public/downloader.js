@@ -103,14 +103,46 @@
     }
     if(!selected)throw new Error("Kualitas/format yang dipilih tidak tersedia dari sumber komunitas.");
     const filename=safeFilename((info.title||"aryanzz-youtube")+"."+selected.ext);
-    const target="/api/youtube/hybrid/file?url="+encodeURIComponent(selected.url)+"&ext="+encodeURIComponent(selected.ext)+"&title="+encodeURIComponent(info.title||"aryanzz-youtube");
-    progressText.textContent="Menyerahkan file "+selected.quality+" ke pengelola unduhan Chrome…";
-    bar.style.width="100%";
-    const a=document.createElement("a");
-    a.href=target;a.download=filename;a.target="_blank";a.rel="noopener";a.style.display="none";
-    document.body.append(a);a.click();a.remove();
-    remember(url,filename,mode,quality);
-    return filename;
+    progressText.textContent="Menghubungkan langsung ke stream "+selected.quality+"…";
+    try{
+      const response=await fetch(selected.url,{mode:"cors",credentials:"omit",cache:"no-store"});
+      if(!response.ok)throw new Error("Sumber langsung HTTP "+response.status);
+      const length=Number(response.headers.get("content-length")||0);
+      if(length>180*1024*1024)throw new Error("File lebih dari 180 MB. Coba pilih kualitas yang lebih rendah agar HP tidak kehabisan memori.");
+      let blob;
+      if(response.body&&response.body.getReader){
+        const reader=response.body.getReader(),chunks=[];let received=0;
+        while(true){
+          const part=await reader.read();if(part.done)break;
+          received+=part.value.byteLength;
+          if(received>180*1024*1024){await reader.cancel();throw new Error("File melewati batas aman 180 MB untuk unduhan langsung di browser HP.");}
+          chunks.push(part.value);
+          if(length)bar.style.width=Math.min(95,Math.round(received/length*95))+"%";
+          progressText.textContent="Mengunduh langsung dari sumber… "+(received/1048576).toFixed(1)+" MB";
+        }
+        blob=new Blob(chunks,{type:selected.mimeType||"application/octet-stream"});
+      }else{
+        blob=await response.blob();
+        if(blob.size>180*1024*1024)throw new Error("File lebih dari 180 MB. Pilih kualitas lebih rendah.");
+      }
+      if(!blob.size)throw new Error("Sumber mengembalikan file kosong.");
+      const objectUrl=URL.createObjectURL(blob),a=document.createElement("a");
+      a.href=objectUrl;a.download=filename;a.rel="noopener";a.style.display="none";
+      document.body.append(a);a.click();a.remove();
+      setTimeout(()=>URL.revokeObjectURL(objectUrl),120000);
+      bar.style.width="100%";progressText.textContent="File diteruskan ke unduhan Chrome: "+filename;
+      remember(url,filename,mode,quality);
+      return filename;
+    }catch(browserError){
+      // Fallback to the same-origin streaming endpoint for providers whose media host blocks browser CORS.
+      progressText.textContent="Mencoba jalur unduhan Chrome melalui Worker…";
+      const target="/api/youtube/hybrid/file?url="+encodeURIComponent(selected.url)+"&ext="+encodeURIComponent(selected.ext)+"&title="+encodeURIComponent(info.title||"aryanzz-youtube");
+      const a=document.createElement("a");
+      a.href=target;a.download=filename;a.target="_blank";a.rel="noopener";a.style.display="none";
+      document.body.append(a);a.click();a.remove();
+      remember(url,filename,mode,quality);
+      return filename;
+    }
   }
   async function downloadFile(url, mode, quality, bar, progressText, info={}) {
     const sourceExt=/^[a-z0-9]{2,8}$/i.test(info.extension||"")?info.extension.toLowerCase():"";
@@ -323,7 +355,7 @@
     } catch (error) {
       const platform=platformName(url);
       if(platform==="YouTube")showError(out,error,url.href);
-      else if(platform==="TikTok")showError(out,new Error("TikTok sementara tidak didukung. ARYANZZ V71.0 difokuskan ke YouTube dan tautan file langsung."),url.href);
+      else if(platform==="TikTok")showError(out,new Error("TikTok sementara tidak didukung. ARYANZZ V71.1 difokuskan ke YouTube dan tautan file langsung."),url.href);
       else showError(out,error,url.href);
     } finally {
       button.disabled = false;
