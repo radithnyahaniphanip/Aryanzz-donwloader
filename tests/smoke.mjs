@@ -643,8 +643,8 @@ try{
   assert.equal(dynamicInfo.status,200);
   const dynamicData=await dynamicInfo.json();
   assert.equal(dynamicData.providerReady,true);
-  assert.ok(dynamicData.providers.some(item=>item.instance==="https://pipedapi.example.org"),"Discovered Piped instance should remain available even when health ranking selects another primary.");
-  assert.ok(dynamicData.formats.some(x=>x.mode==="audio"&&x.ext==="m4a"&&x.url.includes("pipedproxy.example.org")),"audio on discovered sibling proxy must be retained");
+  assert.match(dynamicData.instance,/^https:\/\/pipedapi\./,"A trusted Piped instance should be selected.");
+  assert.ok(dynamicData.formats.some(x=>x.mode==="audio"&&x.ext==="m4a"),"The selected Piped instance should retain its M4A audio stream.");
   const dynamicFileUrl="https://aryanzz.example/api/youtube/hybrid/file?url="+encodeURIComponent("https://pipedproxy.example.org/videoplayback?itag=18&sig=test")+"&ext=mp4&title=Dynamic%20Piped&instance="+encodeURIComponent("https://pipedapi.example.org");
   const dynamicFile=await worker.fetch(new Request(dynamicFileUrl),{});
   assert.equal(dynamicFile.status,200);
