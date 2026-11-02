@@ -185,29 +185,37 @@ async function hybridFetchJson(url,parentSignal){
     return await response.json();
   }finally{clearTimeout(timer);parentSignal?.removeEventListener("abort",abort);}
 }
+let hybridPipedRegistryCache=null,hybridPipedRegistryAt=0;
+let hybridInvidiousRegistryCache=null,hybridInvidiousRegistryAt=0;
 async function currentHybridPipedInstances(){
+  if(hybridPipedRegistryCache&&Date.now()-hybridPipedRegistryAt<300000)return hybridPipedRegistryCache.slice();
   const fallback=PIPED_PUBLIC_INSTANCES.slice();
   try{
     const response=await fetch("https://raw.githubusercontent.com/TeamPiped/documentation/main/content/docs/public-instances/index.md",{headers:{accept:"text/plain"},signal:AbortSignal.timeout(2500),cache:"no-store"});
-    if(!response.ok)return fallback;
+    if(!response.ok)throw new Error("Piped directory HTTP "+response.status);
     const markdown=await response.text();
     const found=[...markdown.matchAll(/https:\/\/(?:pipedapi(?:-libre)?|piped-api|api\.piped)\.[a-z0-9.-]+/gi)].map(match=>match[0].replace(/\/$/,""));
     const safe=found.filter(origin=>{try{const u=new URL(origin);return u.protocol==="https:"&&!u.username&&!u.password&&!u.port&&hybridIsPipedApiInstance(origin);}catch{return false;}});
-    return [...new Set([...safe,...fallback])].slice(0,24);
-  }catch{return fallback;}
+    hybridPipedRegistryCache=[...new Set([...safe,...fallback])].slice(0,24);
+  }catch{hybridPipedRegistryCache=fallback;}
+  hybridPipedRegistryAt=Date.now();
+  return hybridPipedRegistryCache.slice();
 }
 async function currentHybridInvidiousInstances(){
+  if(hybridInvidiousRegistryCache&&Date.now()-hybridInvidiousRegistryAt<300000)return hybridInvidiousRegistryCache.slice();
   const fallback=INVIDIOUS_PUBLIC_INSTANCES.slice();
   try{
     const response=await fetch("https://api.invidious.io/instances.json?sort_by=type,health",{headers:{accept:"application/json"},signal:AbortSignal.timeout(2500),cache:"no-store"});
-    if(!response.ok)return fallback;
-    const rows=await response.json();if(!Array.isArray(rows))return fallback;
+    if(!response.ok)throw new Error("Invidious directory HTTP "+response.status);
+    const rows=await response.json();if(!Array.isArray(rows))throw new Error("Invidious directory response invalid");
     const discovered=rows.map(row=>{
       const raw=Array.isArray(row)?row[0]:row?.uri,meta=Array.isArray(row)?row[1]:row;
       try{const u=new URL(raw);return u.protocol==="https:"&&!u.username&&!u.password&&!u.port&&meta?.api===true&&meta?.cors===true&&!u.hostname.endsWith(".onion")?u.origin:null;}catch{return null;}
     }).filter(Boolean);
-    return [...new Set([...discovered,...fallback])].slice(0,20);
-  }catch{return fallback;}
+    hybridInvidiousRegistryCache=[...new Set([...discovered,...fallback])].slice(0,20);
+  }catch{hybridInvidiousRegistryCache=fallback;}
+  hybridInvidiousRegistryAt=Date.now();
+  return hybridInvidiousRegistryCache.slice();
 }
 async function hybridProbeGroup(instances,pathFor,parser){
   const provider=parser===hybridFromPiped?"Piped":"Invidious";
