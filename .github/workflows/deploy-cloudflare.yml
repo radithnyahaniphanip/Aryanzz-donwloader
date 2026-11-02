@@ -81,11 +81,11 @@ jobs:
             try {
               const healthResponse = await fetch(base + "/api/health", { cache: "no-store", signal: AbortSignal.timeout(10000) });
               if (healthResponse.ok) health = await healthResponse.json();
-              if (health?.version === "77.0" && health?.mode === "cloudflare-worker-zero-server-hybrid") break;
+              if (health?.version === "78.0" && health?.mode === "cloudflare-worker-zero-server-hybrid") break;
             } catch {}
             await new Promise(resolve => setTimeout(resolve, 2500));
           }
-          if (health?.version !== "77.0" || health?.mode !== "cloudflare-worker-zero-server-hybrid" || !health?.directMediaDownload) {
+          if (health?.version !== "78.0" || health?.mode !== "cloudflare-worker-zero-server-hybrid" || !health?.directMediaDownload) {
             throw new Error("Live Worker has not propagated the V78.0 zero-server deployment: " + JSON.stringify(health));
           }
           console.log("Live Worker health OK: V" + health.version + " in zero-server mode.");
