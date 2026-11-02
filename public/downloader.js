@@ -226,6 +226,15 @@
         mode.append(option);
       });
       if (info.type === "audio") mode.value = "audio";
+      if(isYouTube&&info.providerName==="Hybrid"){
+        const videoOption=mode.querySelector('option[value="video"]');
+        const audioOption=mode.querySelector('option[value="audio"]');
+        const hasVideo=(info.formats||[]).some(item=>item.mode==="video");
+        const hasAudio=(info.formats||[]).some(item=>item.mode==="audio");
+        if(videoOption)videoOption.disabled=!hasVideo;
+        if(audioOption)audioOption.disabled=!hasAudio;
+        if(!hasVideo&&hasAudio)mode.value="audio";
+      }
       const qualityLabel = make("label", "label", "KUALITAS VIDEO");
       qualityLabel.style.marginTop = "12px";
       const quality = make("select", "field");
@@ -250,7 +259,7 @@
           quality.append(option);
         });
       }
-      const audioHint = make("p", "muted", directMedia?(info.type==="audio"?"File audio langsung akan diunduh dalam format sumber, tanpa konversi.":"File video langsung akan diunduh dalam kualitas aslinya."): "Audio/video mengikuti format yang tersedia dari sumber. Tidak ada server ekstraksi milik ARYANZZ.");
+      const audioHint = make("p", "muted", directMedia?(info.type==="audio"?"File audio langsung akan diunduh dalam format sumber, tanpa konversi.":"File video langsung akan diunduh dalam kualitas aslinya."):isYouTube?(info.providerReady?"Pilihan kualitas dan format berasal dari stream yang tersedia pada instance komunitas. Video hanya menawarkan MP4 progresif agar audio dan video sudah menyatu.":"Tidak ada stream yang tersedia sekarang; coba lagi nanti."):"Audio/video mengikuti format yang tersedia dari sumber. Tidak ada server ekstraksi milik ARYANZZ.");
       const note = make("p", "youtube-note", "Unduh hanya media milik sendiri atau konten yang memang diizinkan. Kualitas mengikuti file sumber.");
       box.append(formatLabel, mode, qualityLabel, quality, audioHint, note);
 
