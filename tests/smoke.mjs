@@ -1010,6 +1010,19 @@ try{
   assert.equal(healthData.paidYoutubeProvider,false);
   console.log("✔ Worker health reports V81.0 with no Cobalt or paid YouTube provider");
 
+  const invalidImagePost=await worker.fetch(new Request("https://aryanzz.example/api/image/extract?url="+encodeURIComponent("http://127.0.0.1/private.png")),{}); 
+  assert.equal(invalidImagePost.status,400);
+  console.log("✔ V81.0 Image Studio extractor rejects non-HTTPS/private image sources");
+
+  const invalidImageSearch=await worker.fetch(new Request("https://aryanzz.example/api/image/search",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({platform:"unknown",query:"test image"})}),{});
+  assert.equal(invalidImageSearch.status,400);
+  console.log("✔ V81.0 Image Studio title search validates supported platforms");
+
+  const unsafeImageFile=await worker.fetch(new Request("https://aryanzz.example/api/image/file?url="+encodeURIComponent("http://127.0.0.1/private.png")),{}); 
+  assert.equal(unsafeImageFile.status,400);
+  console.log("✔ V81.0 Image Studio file proxy rejects private-network targets");
+
+
 }finally{
   globalThis.fetch=originalFetch;
 }
