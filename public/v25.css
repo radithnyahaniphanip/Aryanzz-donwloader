@@ -123,3 +123,30 @@ body[data-motion="off"] .v25-reveal,body[data-motion="off"] .v677-reveal{opacity
 body[data-motion="off"] .v677-enter{animation:none!important}
 body[data-motion="off"] .v25-profile-card,body[data-motion="off"] .v25-cover-action,body[data-motion="off"] .v25-cover-remove{transition:none!important}
 body[data-motion="off"] *{scroll-behavior:auto!important}
+
+
+/* V75.0 — banner actions sit below the artwork, never on top of the user's image */
+.v25-cover-actions{position:static;z-index:2;display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap;max-width:100%;padding:10px 20px 0}
+.v25-cover-action,.v25-cover-remove{position:static;display:inline-flex;align-items:center;justify-content:center;min-height:38px;border:1px solid rgba(115,180,220,.32);border-radius:12px;padding:9px 13px;background:linear-gradient(120deg,#142d49,#18233c);color:#eaf5ff;font-size:11px;font-weight:850;white-space:nowrap;cursor:pointer;transition:transform .18s,border-color .18s,background .18s}
+.v25-cover-action:hover,.v25-cover-remove:hover{border-color:#80ddeb;background:linear-gradient(120deg,#1b4162,#28264b)}
+.v25-profile-identity{margin-top:10px}
+.v75-motion-card{margin:0 22px 16px}
+.v75-motion-toggle{display:flex;align-items:center;gap:12px;padding:13px 14px;border:1px solid #315276;border-radius:14px;background:linear-gradient(120deg,#10243b,#111b31);cursor:pointer}
+.v75-motion-toggle input{position:absolute;opacity:0;width:1px;height:1px}
+.v75-motion-switch{position:relative;flex:0 0 43px;width:43px;height:25px;border-radius:20px;background:#34445a;transition:background .2s}
+.v75-motion-switch:after{content:"";position:absolute;left:3px;top:3px;width:19px;height:19px;border-radius:50%;background:#dce8f7;transition:transform .2s}
+.v75-motion-toggle input:checked+.v75-motion-switch{background:linear-gradient(100deg,#287cff,#35d6d0)}
+.v75-motion-toggle input:checked+.v75-motion-switch:after{transform:translateX(18px);background:#fff}
+.v75-motion-toggle input:focus-visible+.v75-motion-switch{outline:2px solid #72d9eb;outline-offset:3px}
+.v75-motion-toggle>span:last-child{display:flex;flex-direction:column;gap:2px}
+.v75-motion-toggle b{font-size:12px;color:#f2f7ff}
+.v75-motion-toggle small{font-size:10px;color:#91a9c8}
+body[data-motion="on"] .hero-v6,body[data-motion="on"] .v6-download,body[data-motion="on"] .home-shortcuts,body[data-motion="on"] .home-bottom,body[data-motion="on"] .all-tools-grid .tool,body[data-motion="on"] .shortcut,body[data-motion="on"] .v25-profile-card,body[data-motion="on"] .owner-profile-card,body[data-motion="on"] .audio-studio-panel,body[data-motion="on"] .youtube-result{animation:v75Rise .48s both}
+body[data-motion="on"] .all-tools-grid .tool,body[data-motion="on"] .shortcut,body[data-motion="on"] .v25-profile-card,body[data-motion="on"] .owner-profile-card{transition:transform .24s ease,border-color .24s ease,box-shadow .24s ease}
+body[data-motion="on"] .all-tools-grid .tool:hover,body[data-motion="on"] .shortcut:hover,body[data-motion="on"] .owner-profile-card:hover{transform:translateY(-3px);border-color:#4c8eb7;box-shadow:0 16px 38px #0005}
+body[data-motion="on"] .hero-v6 h1{background-size:220% auto;animation:gradientFlow 9s ease infinite}
+body[data-motion="on"] .v6-download:before{animation:softPulse 3.5s ease-in-out infinite}
+body[data-motion="off"] *,body[data-motion="off"] *:before,body[data-motion="off"] *:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+@keyframes v75Rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:680px){.v25-cover-actions{justify-content:flex-start;padding:9px 14px 0;gap:6px}.v25-profile-identity{margin-top:9px;padding:0 15px}.v75-motion-card{margin:0 15px 14px}}
+@media(prefers-reduced-motion:reduce){body[data-motion="on"] .hero-v6,body[data-motion="on"] .v6-download,body[data-motion="on"] .home-shortcuts,body[data-motion="on"] .home-bottom,body[data-motion="on"] .all-tools-grid .tool,body[data-motion="on"] .shortcut,body[data-motion="on"] .v25-profile-card,body[data-motion="on"] .owner-profile-card,body[data-motion="on"] .audio-studio-panel,body[data-motion="on"] .youtube-result{animation:none!important}}
