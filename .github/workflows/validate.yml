@@ -32,6 +32,7 @@ jobs:
           node --check public/v680.js
           node --check public/v674.js
           node --check public/music-recognition.js
+          node --check public/audio-studio.js
           node --check public/sw.js
           node --check tests/smoke.mjs
           python3 -m py_compile server/shazam_recognize.py

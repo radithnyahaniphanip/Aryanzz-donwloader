@@ -571,6 +571,37 @@ function musicStatus(env){
     maxEnterpriseUploadBytes:50*1024*1024,shazamMaxScanChunks:30,auddMaxScanChunks:100,
     note:"Status konfigurasi menunjukkan server backend tersedia; status ini tidak menguji kuota AudD atau menjalankan pengenalan lagu."});
 }
+async function hybridYouTubeSearch(query){
+  const [pipedInstances,invidiousInstances]=await Promise.all([currentHybridPipedInstances(),currentHybridInvidiousInstances()]);
+  const candidates=[
+    ...pipedInstances.slice(0,3).map(instance=>({instance,provider:"Piped",url:instance+"/search?q="+encodeURIComponent(query)+"&filter=videos"})),
+    ...invidiousInstances.slice(0,3).map(instance=>({instance,provider:"Invidious",url:instance+"/api/v1/search?q="+encodeURIComponent(query)+"&type=video"}))
+  ];
+  if(!candidates.length)return null;
+  const controller=new AbortController();
+  const normalize=(item,provider)=>{
+    const title=String(item?.title||item?.name||"").trim().slice(0,220);
+    const id=String(item?.videoId||item?.video_id||item?.id||"").match(/[A-Za-z0-9_-]{11}/)?.[0]||"";
+    let raw=String(item?.url||item?.webpage_url||item?.link||"");
+    if(raw.startsWith("/"))raw="https://www.youtube.com"+raw;
+    if(!isYouTubeUrl(raw)&&id)raw="https://www.youtube.com/watch?v="+id;
+    let url="";try{const parsed=new URL(raw);if(isYouTubeUrl(parsed.href))url=parsed.href;}catch{}
+    const thumbnails=Array.isArray(item?.videoThumbnails)?item.videoThumbnails:Array.isArray(item?.thumbnails)?item.thumbnails:[];
+    const thumbnail=String(item?.thumbnail||item?.thumbnail_url||thumbnails.find(x=>x?.quality==="medium"||x?.quality==="high")?.url||thumbnails[0]?.url||"");
+    const channel=String(item?.uploaderName||item?.author||item?.uploader||item?.channel||"").slice(0,120);
+    const duration=Number(item?.duration||item?.lengthSeconds||item?.length_seconds)||null;
+    return title&&url?{title,url,thumbnail,channel,duration,provider}:null;
+  };
+  const attempts=candidates.map(async candidate=>{
+    const data=await hybridFetchJson(candidate.url,controller.signal);
+    const items=Array.isArray(data)?data:Array.isArray(data?.items)?data.items:Array.isArray(data?.results)?data.results:[];
+    const results=items.map(item=>normalize(item,candidate.provider)).filter(Boolean);
+    if(!results.length)throw new Error(candidate.provider+" tidak menemukan video.");
+    controller.abort();
+    return {ok:true,results:results.slice(0,8),provider:candidate.provider+" public instances"};
+  });
+  try{return await Promise.any(attempts);}catch{return null;}
+}
 async function freeYouTubeSearch(query){
   const endpoint=FREE_MEDIA_API+"/api/download/youtube-search?query="+encodeURIComponent(query)+"&limit=8";
   try{
@@ -587,7 +618,12 @@ async function searchYouTube(request,env){
   const query=String(body?.query||"").replace(/\s+/g," ").trim();
   if(query.length<2)return json({error:"Masukkan minimal 2 karakter untuk mencari judul video."},400);
   if(query.length>160)return json({error:"Judul pencarian maksimal 160 karakter."},400);
-  if(!env.PLATFORM_API_ORIGIN||!env.PLATFORM_API_TOKEN){if(socialRateLimited(request))return json({error:"Batas pencarian gratis tercapai. Tunggu satu menit lalu coba lagi."},429);return freeYouTubeSearch(query);}
+  if(!env.PLATFORM_API_ORIGIN||!env.PLATFORM_API_TOKEN){
+    if(socialRateLimited(request))return json({error:"Batas pencarian gratis tercapai. Tunggu satu menit lalu coba lagi."},429);
+    const hybrid=await hybridYouTubeSearch(query);
+    if(hybrid?.results?.length)return json({ok:true,query,results:hybrid.results,provider:hybrid.provider});
+    return freeYouTubeSearch(query);
+  }
   let origin;
   try{
     const parsed=new URL(env.PLATFORM_API_ORIGIN);
@@ -854,7 +890,7 @@ export default {async fetch(request,env){
    if(url.pathname==="/api/youtube/hybrid/file"&&request.method==="GET")return hybridYoutubeFile(request);
    if(url.pathname==="/api/youtube/hybrid/thumbnail"&&request.method==="GET")return hybridYoutubeThumbnail(request);
   if(url.pathname==="/api/youtube/info"&&request.method==="GET")return youtubeInfo(request,env);
-    if(url.pathname==="/api/health"&&request.method==="GET")return json({ok:true,service:"ARYANZZ",version:"73.7",mode:"cloudflare-worker-zero-server-hybrid",directMediaDownload:true,selfHostedDownloader:false,youtubeDownloader:true,youtubeApiKeyConfigured:false,cobalt:false,paidYoutubeProvider:false,musicRecognitionConfigured:!!env.AUDD_API_TOKEN,musicFallbackReady:false,musicVideoRecognitionReady:false,platformExtraction:true,platformBackend:"public-free-community-api"});
+    if(url.pathname==="/api/health"&&request.method==="GET")return json({ok:true,service:"ARYANZZ",version:"74.0",mode:"cloudflare-worker-zero-server-hybrid",directMediaDownload:true,selfHostedDownloader:false,youtubeDownloader:true,youtubeApiKeyConfigured:false,cobalt:false,paidYoutubeProvider:false,musicRecognitionConfigured:!!env.AUDD_API_TOKEN,musicFallbackReady:false,musicVideoRecognitionReady:false,platformExtraction:true,platformBackend:"public-free-community-api"});
   if(url.pathname==="/api/info"&&request.method==="POST"){const proxied=await proxyPlatform(request,env,"/api/info");if(proxied)return proxied;return info(request);}
   if(url.pathname==="/api/direct-file"&&request.method==="GET")return download(request);
   if(url.pathname==="/api/download"&&request.method==="POST"){const proxied=await proxyPlatform(request,env,"/api/download");if(proxied)return proxied;return download(request);}

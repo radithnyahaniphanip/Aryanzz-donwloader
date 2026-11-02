@@ -1,0 +1,49 @@
+/* ARYANZZ V74 — local audio conversion and sound controls */
+.audio-studio-panel{position:relative;overflow:hidden;background:radial-gradient(ellipse at 95% 0%,#443b8a33,transparent 42%),linear-gradient(145deg,#111f35,#091321);border-color:#385579}
+.audio-studio-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:18px}
+.audio-studio-head h2{font-size:clamp(23px,5vw,30px);letter-spacing:-.8px;margin:5px 0}
+.audio-studio-head p{font-size:12px;line-height:1.65;color:#a7bad4;margin:0;max-width:600px}
+.audio-studio-mark{width:48px;height:48px;flex:0 0 48px;display:grid;place-items:center;border:1px solid #7b72c7;border-radius:16px;background:linear-gradient(140deg,#5c55c8,#239fc4);font-size:25px;box-shadow:0 8px 24px #493fc544}
+.audio-file-drop{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;min-height:142px;padding:20px;border:1px dashed #4a76a8;border-radius:18px;background:linear-gradient(135deg,#122b49,#111b34);text-align:center;cursor:pointer;transition:transform .2s,border-color .2s,background .2s}
+.audio-file-drop:active{transform:scale(.99)}
+.audio-file-drop:hover{border-color:#6be0ed;background:linear-gradient(135deg,#173a5b,#191d40)}
+.audio-file-icon{width:42px;height:42px;display:grid;place-items:center;border:1px solid #4779a9;border-radius:14px;background:#1b4163;color:#8be4ee;font-size:25px}
+.audio-file-drop b{font-size:14px;color:#f1f7ff}
+.audio-file-drop small{font-size:10px;color:#9eb5d2;line-height:1.5}
+.audio-file-meta{margin:10px 0;padding:11px 13px;border:1px solid #2d4869;border-radius:12px;background:#091727;color:#a9c4e5;font-size:11px;overflow-wrap:anywhere}
+#audioStudioPreview{width:100%;margin:8px 0 14px}
+.audio-studio-fields{display:grid;grid-template-columns:1.4fr 1fr;gap:10px;margin:14px 0}
+.audio-control{display:grid;gap:7px;min-width:0;color:#a9c3e1;font-size:11px;font-weight:800}
+.audio-control .field{min-width:0;padding:12px;font-size:12px}
+.audio-adjust-card{margin-top:12px;padding:15px;border:1px solid #2b4567;border-radius:16px;background:linear-gradient(145deg,#12233a,#0a1729);box-shadow:0 8px 24px #0002}
+.audio-adjust-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
+.audio-adjust-heading>div{display:grid;gap:3px;min-width:0}
+.audio-adjust-heading b{font-size:13px;color:#edf5ff}
+.audio-adjust-heading small{font-size:10px;line-height:1.5;color:#91a9c8}
+.audio-adjust-heading output{flex:0 0 auto;color:#83e2e9;font-size:12px;font-weight:900;font-variant-numeric:tabular-nums}
+.audio-adjust-card input[type=range]{width:100%;accent-color:#4bc8e7;cursor:pointer}
+.audio-range-labels{display:flex;justify-content:space-between;color:#7f96b5;font-size:9px}
+.audio-eq-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;padding:12px 4px 6px}
+.audio-eq-grid label{display:flex;flex-direction:column;align-items:center;gap:8px;min-width:0;padding:8px 3px;border:1px solid #263e5e;border-radius:12px;background:#091625}
+.audio-eq-grid label span{font-size:9px;font-weight:850;color:#c3d8f3;white-space:nowrap}
+.audio-eq-grid input{width:100%;height:90px;writing-mode:vertical-lr;direction:rtl;accent-color:#8b75ff;touch-action:pan-x}
+.audio-eq-grid output{font-size:9px;color:#7fdce7;font-variant-numeric:tabular-nums}
+.audio-preset-row{display:flex;flex-wrap:wrap;gap:7px;margin-top:9px}
+.audio-preset-row button{flex:1 1 90px}
+.audio-studio-actions{display:flex;gap:9px;margin-top:16px}
+.audio-studio-actions>*{flex:1}
+.audio-studio-actions button[hidden]{display:none}
+.audio-progress-track{height:11px;margin-top:16px;overflow:hidden;border:1px solid #2b4567;border-radius:99px;background:#091321}
+.audio-progress-track>div{width:0;height:100%;border-radius:99px;background:linear-gradient(90deg,#4287ff,#36d9d2,#a47cff);transition:width .18s ease}
+.audio-progress-track.is-running>div{background-size:200% 100%;animation:audioProgressShine 1.3s linear infinite}
+.audio-progress-track.is-failed>div{background:linear-gradient(90deg,#c45a68,#ed946d)}
+.audio-studio-status{min-height:22px;margin:10px 0 0;color:#a9c2df;font-size:11px;line-height:1.6}
+.audio-studio-result{margin-top:12px;padding:14px;border:1px solid #35785f;border-radius:14px;background:#0c2b25;color:#d8ffed}
+.audio-studio-result b{display:block;font-size:13px}
+.audio-studio-result small{display:block;margin:5px 0 11px;color:#a4d7c2;font-size:10px}
+.audio-studio-result a{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:9px 14px;border-radius:11px;background:linear-gradient(110deg,#1a9f79,#2ac7bb);color:#fff;text-decoration:none;font-size:12px;font-weight:900}
+.audio-studio-disclaimer{margin:15px 0 0;padding:12px;border-left:3px solid #c69c52;border-radius:8px;background:#211d15;color:#c9b88e;font-size:10px;line-height:1.65}
+@keyframes audioProgressShine{from{background-position:100% 0}to{background-position:-100% 0}}
+@media(max-width:520px){.audio-studio-fields{grid-template-columns:1fr}.audio-studio-head{gap:8px}.audio-studio-mark{width:42px;height:42px;flex-basis:42px}.audio-eq-grid{gap:6px;padding-inline:0}.audio-eq-grid label{padding:7px 2px}.audio-eq-grid input{height:82px}.audio-adjust-card{padding:12px}}
+@media(prefers-reduced-motion:reduce){.audio-file-drop,.audio-progress-track>div{transition:none!important;animation:none!important}}
+body[data-motion=off] .audio-file-drop,body[data-motion=off] .audio-progress-track>div{transition:none!important;animation:none!important}
