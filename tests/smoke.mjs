@@ -247,7 +247,7 @@ try{
   const socialFile=await worker.fetch(new Request(socialData.formats[0].downloadUrl),{});
   assert.equal(socialFile.status,200);
   assert.equal(socialFile.headers.get("content-type"),"video/mp4");
-  assert.match(socialFile.headers.get("content-disposition"),/Test%20TikTok\.mp4/);
+  assert.match(socialFile.headers.get("content-disposition"),/Test_TikTok\.mp4/);
   assert.deepEqual(new Uint8Array(await socialFile.arrayBuffer()),mp4Bytes);
   console.log("✔ Social video downloads are proxied, signature-checked and stream intact");
   globalThis.fetch=async()=>new Response("<html>blocked</html>",{status:200,headers:{"content-type":"text/html"}});
