@@ -22,15 +22,17 @@ const downloaderCss=file("../public/downloader.css");
 const manifest=JSON.parse(file("../public/manifest.webmanifest"));
 
 const checks=[
-  ["V70.1 page title",html.includes("ARYANZZ V70.1 — All-in-One Creative Space")],
-  ["V59.5 versioned assets",html.includes("/v15.js?v=59.5")&&html.includes("/owner.js?v=59.5")&&html.includes("/downloader.js?v=70.1")&&html.includes("/downloader.css?v=70.1")&&html.includes("/v59.css?v=59.5")&&html.includes("/editor-pro.css?v=65.0")&&html.includes("/editor.js?v=65.0")],
-  ["service worker cache and V59.5 assets",html.includes("/sw.js?v=70.1")&&sw.includes("aryanzz-v70-1")&&sw.includes("/editor.js?v=65.0")&&sw.includes("/editor-pro.css?v=65.0")&&sw.includes("/v59.css?v=59.5")],
+  ["V71.0 page title",html.includes("ARYANZZ V71.0 — All-in-One Creative Space")],
+  ["V59.5 versioned assets",html.includes("/v15.js?v=59.5")&&html.includes("/owner.js?v=59.5")&&html.includes("/downloader.js?v=71.0")&&html.includes("/downloader.css?v=71.0")&&html.includes("/v59.css?v=59.5")&&html.includes("/editor-pro.css?v=65.0")&&html.includes("/editor.js?v=65.0")],
+  ["service worker cache and V59.5 assets",html.includes("/sw.js?v=71.0")&&sw.includes("aryanzz-v71-0")&&sw.includes("/editor.js?v=65.0")&&sw.includes("/editor-pro.css?v=65.0")&&sw.includes("/v59.css?v=59.5")],
   ["downloader input, result and backend status",html.includes('id="analyze"')&&html.includes('id="downloadResult"')&&html.includes('id="backendStatus"')],
   ["unified self-hosted downloader API",downloader.includes('postJson("/api/info"')&&downloader.includes('"/api/direct-file?url="')&&downloader.includes("PLATFORM_NAMES")&&!downloader.toLowerCase().includes("savenow")],
   ["single capture-phase universal URL handler",downloader.includes('button.addEventListener("click"')&&downloader.includes("event.stopImmediatePropagation()")&&downloader.includes("}, true);")],
   ["video quality options available",downloader.includes('[360,"360p"]')&&downloader.includes('[720,"720p HD"]')&&downloader.includes('[1080,"1080p Full HD"]')&&downloader.includes('[2160,"2160p · 4K"]')],
-  ["Cobalt provider redirects selected quality to Chrome download",workerSource.includes("youtubeCobaltRedirect")&&downloader.includes("/api/youtube/cobalt-redirect")&&downloader.includes("window.location.assign(target)")],
-  ["Cobalt instance must be HTTPS and not the shared public endpoint",workerSource.includes('u.protocol!=="https:"')&&workerSource.includes('u.hostname.toLowerCase()==="api.cobalt.tools"')],
+  ["Hybrid provider endpoints are implemented without Cobalt or SaveNow",workerSource.includes("PIPED_INSTANCES")&&workerSource.includes("INVIDIOUS_INSTANCES")&&workerSource.includes("youtubeStream")&&!workerSource.includes("cobaltConfig")&&!workerSource.includes("SAVENOW_BASE")&&!downloader.includes("Cobalt")],
+  ["Piped and Invidious only expose actual progressive formats",workerSource.includes("videoOnly===false")&&workerSource.includes("formatStreams")&&workerSource.includes("adaptiveFormats")&&workerSource.includes("providerReady")],
+  ["Chrome downloads use a validated same-origin stream endpoint",downloader.includes("window.location.assign(selected.downloadUrl)")&&workerSource.includes("/api/youtube/stream")&&workerSource.includes("streamHostAllowed")],
+  ["Hybrid provider list uses official public instance domains",workerSource.includes("pipedapi.kavin.rocks")&&workerSource.includes("pipedapi.adminforge.de")&&workerSource.includes("invidious.tiekoetter.com")],
   ["TikTok is intentionally disabled while YouTube is prioritized",downloader.includes("TikTok sementara dinonaktifkan")],
   ["legacy competing downloader handler removed",!v15.includes("button.onclick=async()=>{")],
   ["owner header controls are real buttons",html.includes('class="owner-menu-mark" type="button" data-panel="allTools"')&&html.includes('aria-label="Buka riwayat unduhan"')&&html.includes('aria-label="Buka personalisasi profil"')],
@@ -53,18 +55,18 @@ const checks=[
   ["V65.0 chroma key live preview and export",html.includes('id="editorPreviewCanvas"')&&html.includes('id="editorChromaEnabled"')&&editor.includes("function applyChromaKey")&&editor.includes("drawFrame(previewCtx")],
   ["V65.0 animated captions",html.includes('id="editorTextAnimation"')&&editor.includes("function textAnimationState")&&editor.includes("overlay.dataset.animation")],
   ["Music Finder panel and tool card",html.includes('id="musicFinder"')&&html.includes('data-panel="musicFinder"')],
-  ["Music Finder assets and PWA cache",html.includes("/music-recognition.js?v=70.1")&&html.includes("/music-recognition.css?v=70.1")&&sw.includes("/music-recognition.js?v=70.1")&&sw.includes("/music-recognition.css?v=70.1")],
+  ["Music Finder assets and PWA cache",html.includes("/music-recognition.js?v=71.0")&&html.includes("/music-recognition.css?v=71.0")&&sw.includes("/music-recognition.js?v=71.0")&&sw.includes("/music-recognition.css?v=71.0")],
   ["DJ mix scan uses AudD Enterprise endpoint",html.includes('id="musicFileScanButton"')&&html.includes('id="musicScanSkip"')&&musicJs.includes('/api/music/scan-video')&&workerSource.includes("enterprise.audd.io")],
   ["Music Finder supports file, video URL and microphone",musicJs.includes("captureMediaSample")&&musicJs.includes("getUserMedia")&&musicJs.includes("/api/music/recognize")&&musicJs.includes("musicVideoUrl")],
   ["AudD errors expose provider code and actionable quota guidance",workerSource.includes("function auddFailure")&&workerSource.includes("providerErrorCode")&&workerSource.includes("kode 901")&&workerSource.includes("kode 902")],
-  ["V70.1 runs without a self-hosted extractor",workerSource.includes('version:"70.1"')&&workerSource.includes('mode:"cloudflare-worker-zero-server"')&&workerSource.includes('platformBackend:"community-handoff"')&&!workerSource.includes("DOWNLOADER_CONTAINER")],
+  ["V71.0 runs without a self-hosted extractor",workerSource.includes('version:"71.0"')&&workerSource.includes('mode:"cloudflare-worker-zero-server"')&&workerSource.includes('platformBackend:"public-api-hybrid"')&&!workerSource.includes("DOWNLOADER_CONTAINER")],
   ["Shazam fallback covers standard AudD auth/quota failures",workerSource.includes("shazamRecognize(audioBlob,env)")&&workerSource.includes("providerErrorCode")&&serverSource.includes("/api/music/recognize")&&serverSource.includes("shazam_recognize.py")],
   ["DJ mix scans fall back to Shazam when AudD Enterprise errors",workerSource.includes("shazamScan(fallbackSource")&&serverSource.includes("/api/music/scan")&&serverSource.includes("scanShazamMedia")],
   ["Docker backend includes yt-dlp, FFmpeg and ShazamIO",file("../Dockerfile").includes("yt-dlp")&&file("../Dockerfile").includes("shazamio==0.9.0")&&serverSource.includes("ffprobe")],
   ["Music Finder responsive styling",musicCss.includes(".music-grid")&&musicCss.includes("@media(max-width:620px)")],
   ["Video URL DJ scanning goes directly through AudD Enterprise",workerSource.includes('fetch("https://enterprise.audd.io/"')&&!musicJs.includes("identifyVideoUrl(url,startSeconds)")],
   ["tool hub remains available",html.includes('id="allTools"')],
-  ["PWA manifest version",manifest.name.includes("V70.1")],
+  ["PWA manifest version",manifest.name.includes("V71.0")],
   ["V67.7 visual assets are loaded",html.includes("/v677.css?v=67.7")&&html.includes("/v677.js?v=67.7")&&sw.includes("/v677.css?v=67.7")&&sw.includes("/v677.js?v=67.7")],
   ["V67.7 home remains focused on the downloader",html.includes('id="home"')&&html.includes('id="downloadLinkMode"')&&!html.slice(html.indexOf('id="home"'),html.indexOf('id="toolsArea"')).includes('id="toolGrid"')],
   ["V67.7 feature identity map covers all tools",file("../public/v677.js").includes("const ICONS=")&&["speed","checker","queue","editor","musicFinder","history","imageTools","pdfTools","qrTools","securityTools","colorStudio","profile","owner","about","help"].every(id=>file("../public/v677.js").includes(id))],
@@ -73,27 +75,27 @@ const checks=[
   ["V67.9 remaining tools have branded backgrounds",v677css.includes('data-feature="gradientStudio"')&&v677css.includes('data-feature="fileHash"')&&v677css.includes("#editor .editor-pro-head")&&v677css.includes("#profile .v25-profile-cover")],
   ["V67.9 Color Studio favorites and clipboard work after redesign",v677js.includes("palette.onclick=async event")&&v677js.includes("favorites.onclick=async event")&&v677js.includes('localStorage.setItem("aryanzz.color-favorites.v674"')&&v677js.includes("copyExpandedColor")],
 
-  ["V70.1 service worker cache and creative assets",sw.includes("aryanzz-v70-1")&&sw.includes("/v680.css?v=70.1")&&sw.includes("/v680.js?v=70.1")&&html.includes("/v680.js?v=70.1")],
+  ["V71.0 service worker cache and creative assets",sw.includes("aryanzz-v71-0")&&sw.includes("/v680.css?v=71.0")&&sw.includes("/v680.js?v=71.0")&&html.includes("/v680.js?v=71.0")],
   ["V67.9 downloader preserves direct-source details",downloader.includes("function responseFilename")&&downloader.includes("const directMedia=!!info.extension&&!info.extractor")&&downloader.includes("/api/platform/status")],
-  ["V70.1 title search has no-server YouTube handoff",file("../public/v674.js").includes("Buka hasil YouTube")&&file("../public/v674.js").includes("salin tautan video")],
+  ["V71.0 title search has no-server YouTube handoff",file("../public/v674.js").includes("Buka hasil YouTube")&&file("../public/v674.js").includes("salin tautan video")],
   ["V67.9 direct media whitelist includes common formats",workerSource.includes('"mkv"')&&workerSource.includes('"avi"')&&workerSource.includes('"aiff"')&&workerSource.includes('"opus"')],
-  ["V70.1 Gradient Studio controls are wired",html.includes('id="gradientStudio"')&&html.includes('id="gradientRandom"')&&html.includes('id="gradientPng"')&&file("../public/v680.js").includes("function renderGradient")],
-  ["V70.1 File Hash Checker uses local Web Crypto",html.includes('id="fileHash"')&&html.includes('id="hashCompute"')&&file("../public/v680.js").includes("crypto.subtle.digest")],
+  ["V71.0 Gradient Studio controls are wired",html.includes('id="gradientStudio"')&&html.includes('id="gradientRandom"')&&html.includes('id="gradientPng"')&&file("../public/v680.js").includes("function renderGradient")],
+  ["V71.0 File Hash Checker uses local Web Crypto",html.includes('id="fileHash"')&&html.includes('id="hashCompute"')&&file("../public/v680.js").includes("crypto.subtle.digest")],
 ];
 for(const [name,ok] of checks){assert.ok(ok,name+" failed");console.log("✔ "+name)}
 
 const healthResponse=await worker.fetch(new Request("https://aryanzz.example/api/health"),{});
 assert.equal(healthResponse.status,200);
 const health=await healthResponse.json();
-assert.equal(health.version,"70.1");
+assert.equal(health.version,"71.0");
 assert.equal(health.selfHostedDownloader,false);
-assert.equal(health.youtubeDownloader,false);
+assert.equal(health.youtubeDownloader,true);
 assert.equal(health.mode,"cloudflare-worker-zero-server");
-assert.equal(health.platformBackend,"community-handoff");
+assert.equal(health.platformBackend,"public-api-hybrid");
 assert.equal(health.directMediaDownload,true);
 assert.equal(health.musicRecognitionConfigured,false);
 assert.equal(health.youtubeApiKeyConfigured,false);
-console.log("✔ V70.1 Worker health and zero-server status");
+console.log("✔ V71.0 Worker health and zero-server status");
 const platformStatusResponse=await worker.fetch(new Request("https://aryanzz.example/api/platform/status"),{});
 assert.equal(platformStatusResponse.status,200);
 const platformStatus=await platformStatusResponse.json();
@@ -106,32 +108,6 @@ const disconnected=await worker.fetch(new Request("https://aryanzz.example/api/i
 }),{});
 assert.equal(disconnected.status,503);
 console.log("✔ Platform links fail clearly until backend is configured");
-
-const invalid=await worker.fetch(new Request("https://aryanzz.example/api/youtube/download",{
-  method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({url:"https://example.com/video",format:"mp3"})
-}),{});
-assert.equal(invalid.status,400);
-console.log("✔ YouTube endpoint rejects non-YouTube URLs");
-
-const noKey=await worker.fetch(new Request("https://aryanzz.example/api/youtube/download",{
-  method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({url:"https://youtu.be/demo123",format:"mp3"})
-}),{SAVENOW_API_KEY:"test-secret"});
-assert.equal(noKey.status,503);
-assert.match((await noKey.json()).error,/mode gratis Rp0/);
-console.log("✔ Paid YouTube provider is blocked unless explicitly opted in");
-
-const badFormat=await worker.fetch(new Request("https://aryanzz.example/api/youtube/download",{
-  method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({url:"https://youtu.be/demo123",format:"9999"})
-}),{SAVENOW_API_KEY:"test-secret",ALLOW_PAID_YOUTUBE_PROVIDER:"true"});
-assert.equal(badFormat.status,400);
-console.log("✔ Unsupported provider quality is rejected");
-
-const invalidProgress=await worker.fetch(new Request("https://aryanzz.example/api/youtube/progress",{
-  method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({id:"",format:"mp3"})
-}),{});
-assert.equal(invalidProgress.status,400);
-console.log("✔ YouTube progress validates process ID");
-
 
 const musicStatusResponse=await worker.fetch(new Request("https://aryanzz.example/api/music/status"),{});
 assert.equal(musicStatusResponse.status,200);
@@ -314,9 +290,9 @@ try{
   assert.equal((await externalStatus.json()).ok,true);
   const health=await worker.fetch(new Request("https://aryanzz.example/api/health"),backendEnv);
   const healthData=await health.json();
-  assert.equal(healthData.platformBackend,"community-handoff");
+  assert.equal(healthData.platformBackend,"public-api-hybrid");
   assert.equal(healthData.platformExtraction,false);
-  console.log("✔ V70.1 health keeps the no-server mode active");
+  console.log("✔ V71.0 health keeps the no-server mode active");
 }finally{globalThis.fetch=originalFallbackFetch;}
 
 const originalEnterpriseFetch=globalThis.fetch;
@@ -374,27 +350,34 @@ try{
     if(url.hostname==="cdn.instagram.com"&&url.pathname==="/sample.mp4"){
       return new Response(init.method==="HEAD"?null:new Uint8Array([1,2,3,4]),{status:200,headers:{"content-type":"video/mp4","content-length":"4"}});
     }
-    if(url.pathname==="/ajax/api.php"){
-      assert.equal(url.searchParams.get("function"),"i");
-      assert.equal(url.searchParams.get("api"),"test-secret");
-      if(url.searchParams.get("u").includes("LOWBALANCE"))
-        return new Response(JSON.stringify({error:"Not enough balance"}),{status:200,headers:{"content-type":"application/json"}});
-      assert.equal(url.searchParams.get("u"),"https://www.youtube.com/watch?v=K1Pu75yJUOE");
-      return new Response(JSON.stringify({title:"Test YouTube Video",duration:125,thumbnail:"https://img.example/thumb.jpg"}),{status:200,headers:{"content-type":"application/json"}});
+    if(url.hostname==="pipedapi.kavin.rocks"&&url.pathname==="/streams/4dpnHLPMQGs"){
+      return new Response(JSON.stringify({title:"Hybrid Test Video",thumbnailUrl:"https://img.example/hybrid.jpg",uploader:"Test Channel",duration:125,
+        videoStreams:[
+          {height:720,quality:"720p",mimeType:"video/mp4",videoOnly:false,url:"https://pipedproxy-bom.kavin.rocks/videoplayback?itag=22&sig=test"},
+          {height:360,quality:"360p",mimeType:"video/mp4",videoOnly:false,url:"https://pipedproxy-bom.kavin.rocks/videoplayback?itag=18&sig=test"},
+          {height:480,quality:"480p",mimeType:"video/webm",videoOnly:false,url:"https://pipedproxy-bom.kavin.rocks/videoplayback?itag=43&sig=webm"},
+          {height:1080,quality:"1080p",mimeType:"video/mp4",videoOnly:true,url:"https://pipedproxy-bom.kavin.rocks/videoplayback?itag=137&sig=video-only"}
+        ],
+        audioStreams:[{format:"M4A",quality:"128 kbps",mimeType:"audio/mp4",url:"https://pipedproxy-bom.kavin.rocks/videoplayback?itag=140&sig=audio"}]
+      }),{status:200,headers:{"content-type":"application/json"}});
     }
-    if(url.hostname==="cobalt.example"&&url.pathname==="/"){
-      assert.equal(init.method,"POST");
-      assert.equal(init.headers.authorization,"Api-Key cobalt-test-key");
-      const payload=JSON.parse(init.body);
-      assert.equal(payload.url,"https://www.youtube.com/watch?v=K1Pu75yJUOE");
-      assert.equal(payload.youtubeVideoCodec,"h264");
-      if(payload.downloadMode==="audio"){
-        assert.equal(payload.audioFormat,"opus");
-        assert.equal(payload.audioBitrate,"256");
-      }else{
-        assert.equal(payload.videoQuality,"1080");
-      }
-      return new Response(JSON.stringify({status:"tunnel",url:"https://cobalt.example/tunnel?id=cobalt-job",filename:"aryanzz-test.mp4"}),{status:200,headers:{"content-type":"application/json"}});
+    if(url.hostname==="pipedapi.kavin.rocks"&&url.pathname==="/streams/Fallback123")return new Response("unavailable",{status:503});
+    if(url.hostname==="pipedapi.adminforge.de"||url.hostname==="pipedapi.leptons.xyz")return new Response("unavailable",{status:503});
+    if(url.hostname==="invidious.tiekoetter.com"&&url.pathname==="/api/v1/videos/Fallback123"){
+      return new Response(JSON.stringify({title:"Invidious Fallback Video",videoId:"Fallback123",author:"Fallback Channel",lengthSeconds:88,
+        videoThumbnails:[{quality:"maxres",url:"https://img.example/fallback.jpg"}],
+        formatStreams:[{container:"mp4",qualityLabel:"1080p",resolution:"1920x1080",url:"https://redirector.googlevideo.com/videoplayback?expire=999999"}],
+        adaptiveFormats:[{type:"audio/mp4",audioQuality:"AUDIO_QUALITY_MEDIUM",url:"https://redirector.googlevideo.com/videoplayback?itag=140"}]
+      }),{status:200,headers:{"content-type":"application/json"}});
+    }
+    if(url.hostname==="invidious.tiekoetter.com"||url.hostname==="invidious.nerdvpn.de"||url.hostname==="yt.chocolatemoo53.com"||url.hostname==="inv.nadeko.net")return new Response("unavailable",{status:503});
+    if(url.hostname==="pipedproxy-bom.kavin.rocks"&&url.pathname==="/videoplayback"){
+      const range=init.headers?.get?.("range");
+      if(range==="bytes=0-2")return new Response(new Uint8Array([1,2,3]),{status:206,headers:{"content-type":"video/mp4","content-length":"3","content-range":"bytes 0-2/4","accept-ranges":"bytes"}});
+      return new Response(new Uint8Array([1,2,3,4]),{status:200,headers:{"content-type":"video/mp4","content-length":"4","accept-ranges":"bytes"}});
+    }
+    if(url.hostname==="redirector.googlevideo.com"&&url.pathname==="/videoplayback"){
+      return new Response(new Uint8Array([1,2,3,4]),{status:200,headers:{"content-type":"video/mp4","content-length":"4"}});
     }
     if(url.hostname==="www.youtube.com"&&url.pathname==="/oembed"){
       return new Response(JSON.stringify({title:"Fallback YouTube Preview",thumbnail_url:"https://img.example/fallback.jpg",author_name:"Test Channel"}),{status:200,headers:{"content-type":"application/json"}});
@@ -428,98 +411,67 @@ try{
   assert.equal((await directSocialFile.arrayBuffer()).byteLength,4);
   console.log("✔ Direct MP4 GET endpoint streams attachment directly for Chrome download manager");
 
-  const cobaltPreview=await worker.fetch(new Request("https://aryanzz.example/api/youtube/info?url="+encodeURIComponent("https://www.youtube.com/watch?v=K1Pu75yJUOE")),{COBALT_API_ORIGIN:"https://cobalt.example"});
-  assert.equal(cobaltPreview.status,200);
-  const cobaltPreviewData=await cobaltPreview.json();
-  assert.equal(cobaltPreviewData.providerReady,true);
-  assert.equal(cobaltPreviewData.providerName,"Cobalt");
-  console.log("✔ Authorized Cobalt instance makes YouTube preview download-ready without SaveNow credits");
+  const pipedInfo=await worker.fetch(new Request("https://aryanzz.example/api/youtube/info?url="+encodeURIComponent("https://youtu.be/4dpnHLPMQGs")), {});
+  assert.equal(pipedInfo.status,200);
+  const pipedData=await pipedInfo.json();
+  assert.equal(pipedData.providerReady,true);
+  assert.equal(pipedData.providerName,"Piped");
+  assert.equal(pipedData.title,"Hybrid Test Video");
+  assert.deepEqual(pipedData.formats.map(x=>x.height),[720,360,480]);
+  assert.equal(pipedData.audioFormats[0].format,"m4a");
+  assert.match(pipedData.formats[0].downloadUrl,/\/api\/youtube\/stream\?/);
+  console.log("✔ Piped primary returns only available progressive MP4 and audio stream formats");
 
-  const cobaltVideo=await worker.fetch(new Request("https://aryanzz.example/api/youtube/cobalt-redirect?url="+encodeURIComponent("https://www.youtube.com/watch?v=K1Pu75yJUOE")+"&format=1080"),{
-    COBALT_API_ORIGIN:"https://cobalt.example",COBALT_API_KEY:"cobalt-test-key",COBALT_API_AUTH_SCHEME:"Api-Key"
-  });
-  assert.equal(cobaltVideo.status,302);
-  assert.equal(cobaltVideo.headers.get("location"),"https://cobalt.example/tunnel?id=cobalt-job");
-  console.log("✔ YouTube 1080p redirects directly to the authorized Cobalt tunnel for Chrome downloads");
+  const pipedStreamUrl="https://pipedproxy-bom.kavin.rocks/videoplayback?itag=22&sig=test";
+  const pipedDownload=await worker.fetch(new Request("https://aryanzz.example/api/youtube/stream?provider=piped&instance=kavin&url="+encodeURIComponent(pipedStreamUrl)+"&filename=hybrid-test.mp4&mime=video%2Fmp4",{headers:{range:"bytes=0-2"}}),{});
+  assert.equal(pipedDownload.status,206);
+  assert.match(pipedDownload.headers.get("content-disposition"),/hybrid-test\.mp4/);
+  assert.equal(pipedDownload.headers.get("content-range"),"bytes 0-2/4");
+  assert.equal((await pipedDownload.arrayBuffer()).byteLength,3);
+  assert.ok(requests.some(x=>x.url.hostname==="pipedproxy-bom.kavin.rocks"&&x.init.headers.get("range")==="bytes=0-2"));
+  console.log("✔ Piped stream is proxied as a Chrome attachment with byte-range support");
 
-  const cobaltAudio=await worker.fetch(new Request("https://aryanzz.example/api/youtube/cobalt-redirect?url="+encodeURIComponent("https://www.youtube.com/watch?v=K1Pu75yJUOE")+"&format=opus&bitrate=256"),{
-    COBALT_API_ORIGIN:"https://cobalt.example",COBALT_API_KEY:"cobalt-test-key",COBALT_API_AUTH_SCHEME:"Api-Key"
-  });
-  assert.equal(cobaltAudio.status,302);
-  console.log("✔ Cobalt audio format and bitrate are passed through safely");
+  const blockedStream=await worker.fetch(new Request("https://aryanzz.example/api/youtube/stream?provider=piped&instance=kavin&url="+encodeURIComponent("https://evil.example/videoplayback?x=1")+"&filename=bad.mp4&mime=video%2Fmp4"),{});
+  assert.equal(blockedStream.status,400);
+  console.log("✔ Stream proxy rejects arbitrary external URLs (SSRF protection)");
 
-  const blockedPublicInstance=await worker.fetch(new Request("https://aryanzz.example/api/youtube/cobalt-redirect?url="+encodeURIComponent("https://www.youtube.com/watch?v=K1Pu75yJUOE")+"&format=720"),{
-    COBALT_API_ORIGIN:"https://api.cobalt.tools"
-  });
-  assert.equal(blockedPublicInstance.status,503);
-  console.log("✔ Unapproved shared public Cobalt endpoint is not used as an integration");
+  const fallbackInfo=await worker.fetch(new Request("https://aryanzz.example/api/youtube/info?url="+encodeURIComponent("https://youtu.be/Fallback123")), {});
+  assert.equal(fallbackInfo.status,200);
+  const fallbackData=await fallbackInfo.json();
+  assert.equal(fallbackData.providerName,"Invidious");
+  assert.equal(fallbackData.providerReady,true);
+  assert.equal(fallbackData.formats[0].height,1080);
+  console.log("✔ Invidious fallback activates when Piped instances are unavailable");
 
-  const noKeyPreview=await worker.fetch(new Request("https://aryanzz.example/api/youtube/info?url="+encodeURIComponent("https://www.youtube.com/watch?v=4dpnHLPMQGs")),{SAVENOW_API_KEY:"test-secret"});
-  assert.equal(noKeyPreview.status,200);
-  const noKeyPreviewData=await noKeyPreview.json();
-  assert.equal(noKeyPreviewData.providerReady,false);
-  assert.equal(noKeyPreviewData.title,"Fallback YouTube Preview");
-  console.log("✔ YouTube link shows public oEmbed preview without configuring or charging a downloader provider");
+  const invidiousUrl="https://redirector.googlevideo.com/videoplayback?expire=999999";
+  const invidiousDownload=await worker.fetch(new Request("https://aryanzz.example/api/youtube/stream?provider=invidious&instance=tiekoetter&url="+encodeURIComponent(invidiousUrl)+"&filename=invidious-test.mp4&mime=video%2Fmp4"),{});
+  assert.equal(invidiousDownload.status,200);
+  assert.match(invidiousDownload.headers.get("content-disposition"),/invidious-test\.mp4/);
+  assert.equal((await invidiousDownload.arrayBuffer()).byteLength,4);
+  console.log("✔ Invidious Google Video stream is delivered through the attachment proxy");
 
-  const info=await worker.fetch(new Request("https://aryanzz.example/api/youtube/info?url="+encodeURIComponent("https://www.youtube.com/watch?v=K1Pu75yJUOE")),{SAVENOW_API_KEY:"test-secret",ALLOW_PAID_YOUTUBE_PROVIDER:"true"});
-  assert.equal(info.status,200);
-  const infoData=await info.json();
-  assert.equal(infoData.title,"Test YouTube Video");
-  assert.equal(infoData.duration,125);
-  console.log("✔ Non-billable YouTube metadata lookup uses current /ajax/api.php endpoint");
+  const unavailableInfo=await worker.fetch(new Request("https://aryanzz.example/api/youtube/info?url="+encodeURIComponent("https://youtu.be/NoProvs1234")), {});
+  assert.equal(unavailableInfo.status,200);
+  const unavailableData=await unavailableInfo.json();
+  assert.equal(unavailableData.providerReady,false);
+  assert.equal(unavailableData.title,"Fallback YouTube Preview");
+  assert.ok(unavailableData.providerFailures.length>0);
+  console.log("✔ Clear no-provider state is returned when all community APIs fail");
 
-  const lowBalanceInfo=await worker.fetch(new Request("https://aryanzz.example/api/youtube/info?url="+encodeURIComponent("https://www.youtube.com/watch?v=LOWBALANCE")),{SAVENOW_API_KEY:"test-secret",ALLOW_PAID_YOUTUBE_PROVIDER:"true"});
-  assert.equal(lowBalanceInfo.status,200);
-  const lowBalanceData=await lowBalanceInfo.json();
-  assert.equal(lowBalanceData.providerReady,false);
-  assert.equal(lowBalanceData.title,"Fallback YouTube Preview");
-  console.log("✔ YouTube oEmbed preview remains visible when SaveNow wallet is low");
+  const statusResponse=await worker.fetch(new Request("https://aryanzz.example/api/youtube/status"),{});
+  const statusData=await statusResponse.json();
+  assert.equal(statusData.requiresApiKey,false);
+  assert.equal(statusData.requiresPrivateServer,false);
+  assert.ok(statusData.providers.piped.includes("kavin"));
+  assert.ok(statusData.providers.invidious.includes("tiekoetter"));
+  console.log("✔ Hybrid status confirms zero API keys and no private server requirement");
 
-  const start=await worker.fetch(new Request("https://aryanzz.example/api/youtube/download",{
-    method:"POST",headers:{"content-type":"application/json"},
-    body:JSON.stringify({url:"https://www.youtube.com/watch?v=K1Pu75yJUOE",format:"4k"})
-  }),{SAVENOW_API_KEY:"test-secret",ALLOW_PAID_YOUTUBE_PROVIDER:"true"});
-  assert.equal(start.status,200);
-  const startData=await start.json();
-  assert.equal(startData.id,"job-123");
-  assert.equal(startData.pending,true);
-  console.log("✔ YouTube job creation uses current /ajax/download.php and maps 4K to mp44k");
+  assert.equal(requests.some(x=>x.url.hostname==="p.savenow.to"||x.url.hostname==="cobalt.example"),false);
+  assert.ok(requests.some(x=>x.url.hostname==="pipedapi.kavin.rocks"));
+  assert.ok(requests.some(x=>x.url.hostname==="invidious.tiekoetter.com"));
 
-  const lowBalanceStart=await worker.fetch(new Request("https://aryanzz.example/api/youtube/download",{
-    method:"POST",headers:{"content-type":"application/json"},
-    body:JSON.stringify({url:"https://www.youtube.com/watch?v=LOWBALANCE",format:"mp3"})
-  }),{SAVENOW_API_KEY:"test-secret",ALLOW_PAID_YOUTUBE_PROVIDER:"true"});
-  assert.equal(lowBalanceStart.status,502);
-  assert.match((await lowBalanceStart.json()).error,/Not enough balance/);
-  console.log("✔ Provider low-balance response is surfaced without pretending a job was created");
-
-  const progress=await worker.fetch(new Request("https://aryanzz.example/api/youtube/progress",{
-    method:"POST",headers:{"content-type":"application/json"},
-    body:JSON.stringify({id:"job-123",format:"4k",info:{title:"Test YouTube Video",thumbnail:"https://img.example/thumb.jpg"}})
-  }),{});
-  assert.equal(progress.status,200);
-  const progressData=await progress.json();
-  assert.equal(progressData.result.format,"4k");
-  assert.equal(progressData.result.title,"Test YouTube Video");
-  console.log("✔ Progress requires completed job and success flag");
-
-  const download=await worker.fetch(new Request("https://aryanzz.example/api/youtube/file?id=job-123&format=4k"),{});
-  assert.equal(download.status,200);
-  assert.match(download.headers.get("content-disposition"),/test-video\.mp4/);
-  assert.equal((await download.arrayBuffer()).byteLength,4);
-  console.log("✔ Completed YouTube file is streamed through the Worker");
-
-  const failedProgress=await worker.fetch(new Request("https://aryanzz.example/api/youtube/progress",{
-    method:"POST",headers:{"content-type":"application/json"},
-    body:JSON.stringify({id:"job-123",format:"mp3"})
-  }),{});
-  // The mock currently returns a successful job; the completed response is valid for any supported output.
-  assert.equal(failedProgress.status,200);
-  assert.ok(requests.some(x=>x.url.pathname==="/ajax/api.php"));
-  assert.ok(requests.some(x=>x.url.pathname==="/ajax/download.php"));
-  assert.ok(requests.filter(x=>x.url.pathname==="/ajax/progress.php").length>=2);
 }finally{
   globalThis.fetch=originalFetch;
 }
 
-console.log("\nARYANZZ V70.1 YouTube flow, TikTok community handoff, zero-server downloader, Gradient Studio, file hashing and music recognition smoke tests passed.");
+console.log("\nARYANZZ V71.0 YouTube flow, TikTok community handoff, zero-server downloader, Gradient Studio, file hashing and music recognition smoke tests passed.");
