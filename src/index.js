@@ -97,7 +97,9 @@ function freeProviderMediaInfo(data,rawUrl){
     const kind=String(item?.type||item?.kind||label).toLowerCase();
     const ext=(mediaUrl.pathname.match(/\.([a-z0-9]{2,5})$/i)?.[1]||(/mp3|audio/i.test(label)?"mp3":/m4a/i.test(label)?"m4a":/webm/i.test(label)?"webm":"mp4")).toLowerCase();
     const audio=/audio|mp3|m4a|aac|opus|flac/.test(kind+" "+label)||["mp3","m4a","aac","opus","flac","wav"].includes(ext);
-    const height=Number(item?.height||item?.quality||String(label).match(/(144|240|360|480|720|1080|1440|2160)p/i)?.[1]||0);
+    const rawQuality=item?.height??item?.quality??item?.resolution??item?.qualityLabel??label;
+    const qualityMatch=String(rawQuality||"").match(/(?:^|\\D)(144|240|360|480|540|576|720|900|960|1080|1440|2160)\\s*p?/i)||String(label).match(/(144|240|360|480|540|576|720|900|960|1080|1440|2160)p/i);
+    const height=Number(rawQuality)>0?Number(rawQuality):Number(qualityMatch?.[1]||0);
     const filename=String((data?.normalized?.title||rawResult.title||"aryanzz-media")+"."+(audio?ext:"mp4")).replace(/[^a-zA-Z0-9._-]/g,"_").slice(0,100);
     const downloadUrl=FREE_MEDIA_API+"/api/fetch-media?url="+encodeURIComponent(mediaUrl.href)+"&filename="+encodeURIComponent(filename);
     return {mode:audio?"audio":"video",type:audio?"audio":"video",ext:audio?ext:(["mp4","webm","mov"].includes(ext)?ext:"mp4"),height:audio?0:height,videoOnly:false,url:mediaUrl.href,downloadUrl,label,filesize:Number(item?.sizeBytes||item?.size_bytes||0)||null};
@@ -106,7 +108,8 @@ function freeProviderMediaInfo(data,rawUrl){
   const thumbnail=safePublicMediaUrl(normalized?.thumbnail||data?.result?.thumbnail||data?.result?.cover)?.href||null;
   const duration=Number(normalized?.duration||data?.result?.duration||data?.result?.video?.duration||0)||null;
   if(!formats.length)return null;
-  return {ok:true,providerName:"Public API",providerReady:true,provider:"Free public provider",source:"Provider komunitas gratis",extractor:"Provider komunitas",title,filename:title,duration,thumbnail,type:formats.some(x=>x.mode==="video")?"video":"audio",formats};
+  formats.sort((a,b)=>a.mode===b.mode?(b.height-a.height):a.mode==="video"?-1:1);
+  return {ok:true,providerName:"Public API",providerReady:true,provider:"Free public provider",source:"Provider komunitas gratis",title,filename:title,duration,thumbnail,type:formats.some(x=>x.mode==="video")?"video":"audio",formats};
 }
 async function freePublicMediaInfo(rawUrl){
   const key=freePlatformKey(rawUrl);
@@ -137,7 +140,7 @@ function decodeSearchHtml(value){
   return String(value||"").replace(/<[^>]*>/g,"").replace(/&amp;/g,"&").replace(/&quot;/g,'"').replace(/&#39;|&#x27;/gi,"'").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&nbsp;/g," ").replace(/&#(\d+);/g,(_,n)=>String.fromCodePoint(Number(n))).replace(/&#x([0-9a-f]+);/gi,(_,n)=>String.fromCodePoint(parseInt(n,16))).replace(/\s+/g," ").trim();
 }
 function socialSearchDomains(platform){
-  return {tiktok:["tiktok.com"],instagram:["instagram.com"],snackvideo:["snackvideo.com"],pinterest:["pinterest.com"],facebook:["facebook.com","fb.watch"],x:["x.com","twitter.com"],reddit:["reddit.com"],vimeo:["vimeo.com"],threads:["threads.net"],youtube:["youtube.com","youtu.be"]}[platform]||[];
+  return {tiktok:["tiktok.com"],instagram:["instagram.com"],snackvideo:["snackvideo.com"],pinterest:["pinterest.com"],facebook:["facebook.com","fb.watch"],x:["x.com","twitter.com"],reddit:["reddit.com"],vimeo:["vimeo.com"],threads:["threads.net"],soundcloud:["soundcloud.com"],capcut:["capcut.com"],youtube:["youtube.com","youtu.be"]}[platform]||[];
 }
 function socialSearchUrl(platform,query){
   const domains=socialSearchDomains(platform);if(!domains.length)return null;
