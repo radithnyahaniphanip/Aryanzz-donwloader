@@ -30,7 +30,7 @@ const checks=[
   ["single capture-phase universal URL handler",downloader.includes('button.addEventListener("click"')&&downloader.includes("event.stopImmediatePropagation()")&&downloader.includes("}, true);")],
   ["video quality options available",downloader.includes('[360,"360p"]')&&downloader.includes('[720,"720p HD"]')&&downloader.includes('[1080,"1080p Full HD"]')&&downloader.includes('[2160,"2160p · 4K"]')],
   ["Hybrid provider endpoints are implemented without Cobalt or SaveNow",workerSource.includes("PIPED_INSTANCES")&&workerSource.includes("INVIDIOUS_INSTANCES")&&workerSource.includes("youtubeStream")&&!workerSource.includes("cobaltConfig")&&!workerSource.includes("SAVENOW_BASE")&&!downloader.includes("Cobalt")],
-  ["Piped and Invidious only expose actual progressive formats",workerSource.includes("videoOnly!==true")&&workerSource.includes("formatStreams")&&workerSource.includes("adaptiveFormats")&&workerSource.includes("providerReady")],
+  ["Piped and Invidious only expose actual progressive formats",workerSource.includes("videoOnly===false")&&workerSource.includes("formatStreams")&&workerSource.includes("adaptiveFormats")&&workerSource.includes("providerReady")],
   ["Chrome downloads use a validated same-origin stream endpoint",downloader.includes("window.location.assign(selected.downloadUrl)")&&workerSource.includes("/api/youtube/stream")&&workerSource.includes("streamHostAllowed")],
   ["Hybrid provider list uses official public instance domains",workerSource.includes("pipedapi.kavin.rocks")&&workerSource.includes("pipedapi.adminforge.de")&&workerSource.includes("invidious.tiekoetter.com")],
   ["TikTok is intentionally disabled while YouTube is prioritized",downloader.includes("TikTok sementara dinonaktifkan")],
@@ -89,9 +89,9 @@ assert.equal(healthResponse.status,200);
 const health=await healthResponse.json();
 assert.equal(health.version,"71.0");
 assert.equal(health.selfHostedDownloader,false);
-assert.equal(health.youtubeDownloader,false);
+assert.equal(health.youtubeDownloader,true);
 assert.equal(health.mode,"cloudflare-worker-zero-server");
-assert.equal(health.platformBackend,"community-handoff");
+assert.equal(health.platformBackend,"public-api-hybrid");
 assert.equal(health.directMediaDownload,true);
 assert.equal(health.musicRecognitionConfigured,false);
 assert.equal(health.youtubeApiKeyConfigured,false);
