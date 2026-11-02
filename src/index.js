@@ -445,6 +445,158 @@ async function searchSocial(request){
     return json({ok:true,platform,query,results,verifiedCount:results.length,unavailableCount:candidates.length-results.length,verification:"provider-and-media-signature"});
   }catch(error){return json({error:"Pencarian publik gagal dijangkau. Coba lagi nanti. "+String(error?.message||error).slice(0,100)},502)}
 }
+
+function imageSafeFilename(title,index,ext){
+  const base=String(title||"aryanzz-image").replace(/[\\/:*?"<>|\u0000-\u001f]/g," ").replace(/\s+/g," ").trim().slice(0,72)||"aryanzz-image";
+  return base+"-"+String(index+1)+"."+ext;
+}
+function imageProxyLinks(imageUrl,sourceUrl,requestUrl,title,index){
+  const imageParsed=new URL(imageUrl);
+  const ext=(imageParsed.pathname.match(/\.(jpe?g|png|webp|gif|avif|bmp)$/i)||[])[1]||String(imageParsed.searchParams.get("format")||"jpg").replace(/[^a-z]/gi,"").slice(0,5)||"jpg";
+  const filename=imageSafeFilename(title,index,ext.toLowerCase());
+  const make=(preview)=>{
+    const u=new URL("/api/image/file",requestUrl);
+    u.searchParams.set("url",imageUrl);
+    if(sourceUrl)u.searchParams.set("source",sourceUrl);
+    u.searchParams.set("filename",filename);
+    if(preview)u.searchParams.set("preview","1");
+    return u.href;
+  };
+  return {url:imageUrl,previewUrl:make(true),downloadUrl:make(false),filename};
+}
+function imageTagAttributes(tag){
+  const attrs={};
+  for(const match of String(tag||"").matchAll(/([a-zA-Z_:][-a-zA-Z0-9_:.]*)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/g)){
+    attrs[String(match[1]).toLowerCase()]=decodeSearchHtml(match[2]??match[3]??match[4]??"");
+  }
+  return attrs;
+}
+function extractPublicImageUrls(html,baseUrl){
+  const found=[],seen=new Set();
+  const add=(raw)=>{
+    if(!raw)return;
+    let url;try{url=new URL(decodeSearchHtml(raw).replace(/\\u0026/g,"&"),baseUrl)}catch{return}
+    const safe=safePublicMediaUrl(url.href);
+    if(!safe)return;
+    if(seen.has(safe.href))return;seen.add(safe.href);found.push(safe.href);
+  };
+  for(const tag of String(html||"").matchAll(/<meta\b[^>]*>/gi)){
+    const attrs=imageTagAttributes(tag[0]);
+    const key=String(attrs.property||attrs.name||attrs.itemprop||"").toLowerCase();
+    if(["og:image","og:image:url","og:image:secure_url","twitter:image","twitter:image:src","image"].includes(key))add(attrs.content||attrs.href);
+  }
+  for(const tag of String(html||"").matchAll(/<img\b[^>]*>/gi)){
+    if(found.length>=12)break;
+    const attrs=imageTagAttributes(tag[0]);
+    add(attrs["data-src"]||attrs["data-lazy-src"]||attrs.src);
+  }
+  return found.slice(0,12);
+}
+async function imagePostMetadata(rawUrl,requestUrl){
+  const input=safePublicMediaUrl(rawUrl);
+  if(!input)return {ok:false,error:"Tautan harus HTTPS dan berasal dari alamat publik yang aman."};
+  if(!isPlatformLink(input.href)){
+    let title=input.pathname.split("/").pop()||"Gambar";try{title=decodeURIComponent(title)}catch{}
+    return {ok:true,title,platform:"Direct image",images:[{...imageProxyLinks(input.href,"",requestUrl,title,0),title,platform:"Direct image",sourceUrl:""}]};
+  }
+  try{
+    const response=await fetch(input.href,{headers:{accept:"text/html,application/xhtml+xml","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0.0.0 Safari/537.36"},redirect:"follow",cache:"no-store",signal:AbortSignal.timeout(12000)});
+    if(!response.ok)return {ok:false,error:"Postingan tidak dapat dibuka secara publik (HTTP "+response.status+")."};
+    const finalUrl=safePublicMediaUrl(response.url||input.href);
+    if(!finalUrl||!isPlatformLink(finalUrl.href))return {ok:false,error:"Tautan dialihkan ke alamat yang tidak diizinkan."};
+    const html=(await response.text()).slice(0,2500000);
+    const titleTag=html.match(/<title\b[^>]*>([\s\S]*?)<\/title>/i);
+    const titleMatch=html.match(/<meta\b[^>]*(?:property|name)=["'](?:og:title|twitter:title)["'][^>]*>/i);
+    const titleAttrs=titleMatch?imageTagAttributes(titleMatch[0]):{};
+    const title=String(titleAttrs.content||decodeSearchHtml(titleTag?.[1]||"Postingan gambar")).slice(0,180);
+    const imageUrls=extractPublicImageUrls(html,finalUrl.href);
+    const platform=freePlatformKey(finalUrl.href)||"social";
+    const images=imageUrls.map((url,index)=>({...imageProxyLinks(url,finalUrl.href,requestUrl,title,index),title,platform,sourceUrl:finalUrl.href}));
+    return {ok:true,title,platform,sourceUrl:finalUrl.href,images};
+  }catch(error){return {ok:false,error:"Platform tidak mengizinkan pembacaan otomatis atau sedang membatasi akses. "+String(error?.message||error).slice(0,100)}}
+}
+async function imageExtract(request){
+  const raw=new URL(request.url).searchParams.get("url")||"";
+  const result=await imagePostMetadata(raw,request.url);
+  return result.ok?json(result):json(result,502);
+}
+async function imageFile(request){
+  const u=new URL(request.url),raw=u.searchParams.get("url")||"",source=u.searchParams.get("source")||"",filename=String(u.searchParams.get("filename")||"aryanzz-image.jpg").replace(/[\\/:*?"<>|\u0000-\u001f]/g,"_").slice(0,120),preview=u.searchParams.get("preview")==="1";
+  let current=safePublicMediaUrl(raw);
+  if(!current)return json({error:"URL gambar tidak valid atau bukan HTTPS publik."},400);
+  if(source&&!isPlatformLink(source))return json({error:"Tautan sumber postingan tidak valid."},400);
+  let upstream=null;
+  try{
+    for(let hop=0;hop<4;hop++){
+      upstream=await fetch(current.href,{headers:{accept:"image/avif,image/webp,image/png,image/jpeg,image/gif,*/*;q=0.7",...(source?{referer:source}: {})},redirect:"manual",cache:"no-store",signal:AbortSignal.timeout(18000)});
+      if([301,302,303,307,308].includes(upstream.status)){
+        const location=upstream.headers.get("location");await upstream.body?.cancel().catch(()=>{});
+        if(!location) return json({error:"Alamat gambar mengalihkan tanpa tujuan."},502);
+        const next=safePublicMediaUrl(new URL(location,current.href).href);
+        if(!next)return json({error:"Pengalihan gambar menuju alamat yang tidak aman."},400);
+        current=next;continue;
+      }
+      break;
+    }
+  }catch(error){return json({error:"Gagal mengambil gambar dari sumber: "+String(error?.message||error).slice(0,120)},502)}
+  if(!upstream||!upstream.ok||!upstream.body)return json({error:"File gambar tidak tersedia (HTTP "+(upstream?.status||502)+")."},502);
+  const mime=String(upstream.headers.get("content-type")||"").split(";")[0].toLowerCase();
+  if(!["image/jpeg","image/png","image/webp","image/gif","image/avif","image/bmp"].includes(mime)){await upstream.body.cancel().catch(()=>{});return json({error:"Sumber tidak mengirim file gambar yang didukung."},415)}
+  const size=Number(upstream.headers.get("content-length")||0);
+  if(size>25*1024*1024){await upstream.body.cancel().catch(()=>{});return json({error:"Gambar melebihi batas 25 MB."},413)}
+  const extension=({"image/jpeg":"jpg","image/png":"png","image/webp":"webp","image/gif":"gif","image/avif":"avif","image/bmp":"bmp"})[mime]||"jpg";
+  const cleanBase=filename.replace(/\.[^.]+$/,"");
+  const finalFilename=cleanBase+"."+extension;
+  const headers=new Headers({"content-type":mime,"content-disposition":(preview?"inline":"attachment")+"; filename*=UTF-8''"+encodeURIComponent(finalFilename),"cache-control":"no-store","x-content-type-options":"nosniff","accept-ranges":"none"});
+  if(size)headers.set("content-length",String(size));
+  const maxImageBytes=25*1024*1024;
+  let streamedBytes=0;
+  const limitedBody=upstream.body.pipeThrough(new TransformStream({
+    transform(chunk,controller){
+      streamedBytes+=chunk.byteLength;
+      if(streamedBytes>maxImageBytes){controller.error(new Error("Gambar melebihi batas 25 MB."));return;}
+      controller.enqueue(chunk);
+    }
+  }));
+  return new Response(limitedBody,{status:200,headers});
+}
+async function searchSocialImages(request){
+  let body;try{body=await request.json()}catch{return json({error:"Body JSON tidak valid."},400)}
+  const platform=String(body?.platform||"").toLowerCase(),query=String(body?.query||"").replace(/\s+/g," ").trim();
+  if(!socialSearchDomains(platform).length||platform==="youtube"||platform==="soundcloud"||platform==="capcut")return json({error:"Platform pencarian gambar belum didukung."},400);
+  if(query.length<2||query.length>120)return json({error:"Masukkan judul antara 2 sampai 120 karakter."},400);
+  if(socialRateLimited(request))return json({error:"Batas pencarian gratis tercapai. Tunggu satu menit lalu coba lagi."},429);
+  const searchUrl=socialSearchUrl(platform,query);
+  try{
+    const response=await fetch(searchUrl.href,{headers:{accept:"text/html","user-agent":"Mozilla/5.0 (compatible; ARYANZZ/80.1)"},signal:AbortSignal.timeout(12000),cache:"no-store"});
+    if(!response.ok)return json({error:"Pencarian publik sedang tidak tersedia (HTTP "+response.status+")."},502);
+    const html=await response.text(),candidates=[],seen=new Set(),domains=socialSearchDomains(platform);
+    for(const match of html.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/gi)){
+      const attrs=match[1]||"";
+      if(!/\bclass=["'][^"']*\bresult__a\b[^"']*["']/i.test(attrs))continue;
+      const hrefMatch=attrs.match(/\bhref=["']([^"']+)["']/i);if(!hrefMatch)continue;
+      let link;try{link=new URL(decodeSearchHtml(hrefMatch[1]),"https://html.duckduckgo.com")}catch{continue}
+      if(link.hostname.endsWith("duckduckgo.com")){const target=link.searchParams.get("uddg");if(target){try{link=new URL(target)}catch{continue}}}
+      if(link.protocol!=="https:"||!domains.some(domain=>link.hostname===domain||link.hostname.endsWith("."+domain)))continue;
+      if(platform==="instagram"&&!/(?:\/p\/|\/reel\/|\/tv\/|\/share\/)/i.test(link.pathname))continue;
+      if(platform==="tiktok"&&!/(?:\/video\/|\/photo\/)/i.test(link.pathname))continue;
+      if(platform==="pinterest"&&!/\/pin\//i.test(link.pathname))continue;
+      const href=link.href.split("#")[0];if(seen.has(href))continue;seen.add(href);
+      const title=decodeSearchHtml(match[2]);if(!title)continue;
+      const snippetMatch=html.slice(match.index,match.index+1800).match(/class=["']result__snippet["'][^>]*>([\s\S]*?)<\/[^>]+>/i);
+      candidates.push({title,url:href,snippet:decodeSearchHtml(snippetMatch?.[1]||"")});
+      if(candidates.length>=8)break;
+    }
+    const checked=await Promise.all(candidates.map(async item=>{
+      const data=await imagePostMetadata(item.url,request.url);
+      if(!data.ok||!data.images.length)return null;
+      return {...item,title:data.title||item.title,images:data.images,sourceUrl:data.sourceUrl||item.url,platform};
+    }));
+    const results=checked.filter(Boolean);
+    return json({ok:true,platform,query,results,verifiedCount:results.length,unavailableCount:candidates.length-results.length,verification:"public-image-metadata"});
+  }catch(error){return json({error:"Pencarian gambar publik gagal dijangkau. "+String(error?.message||error).slice(0,100)},502)}
+}
+
 async function info(request){
   let body;try{body=await request.json()}catch{return json({error:"Body JSON tidak valid."},400)}
   let parsed;try{parsed=parseMediaUrl(body?.url)}catch(e){return json({error:e.message},400)}
@@ -1153,6 +1305,9 @@ export default {async fetch(request,env){
   if(url.pathname==="/api/music/status"&&request.method==="GET")return musicStatus(env);
   if(url.pathname==="/api/search"&&request.method==="POST")return searchYouTube(request,env);
   if(url.pathname==="/api/social/search"&&request.method==="POST")return searchSocial(request);
+  if(url.pathname==="/api/image/search"&&request.method==="POST")return searchSocialImages(request);
+  if(url.pathname==="/api/image/extract"&&request.method==="GET")return imageExtract(request);
+  if(url.pathname==="/api/image/file"&&request.method==="GET")return imageFile(request);
   if(url.pathname==="/api/music/recognize"&&request.method==="POST")return recognizeMusic(request,env);
   if(url.pathname==="/api/platform/status"&&request.method==="GET")return platformStatus(env);
   if(url.pathname==="/api/youtube/status"&&request.method==="GET")return json({ok:true,service:"ARYANZZ YouTube Backend",youtubeDownloader:true,provider:"Dynamic Piped + Invidious hybrid",paidProvider:false,cobalt:false,supportedAudio:["M4A","MP3","WEBM","OPUS"],supportedVideo:["360","480","720","1080","1440","2160"]});
