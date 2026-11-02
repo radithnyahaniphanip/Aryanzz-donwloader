@@ -117,3 +117,9 @@ body[data-custom-background="true"]{background-image:linear-gradient(180deg,rgba
 body[data-motion="on"] .v25-profile-card{transition:transform .28s ease,border-color .28s ease,box-shadow .28s ease}
 body[data-motion="on"] .v25-profile-card:hover{border-color:#5c86b8;box-shadow:0 16px 38px #0004}
 @media(max-width:420px){.v25-cover-actions{top:9px;right:9px;gap:5px}.v25-cover-action,.v25-cover-remove{min-height:31px;padding:6px 8px;font-size:9px}.v25-cover-actions{max-width:calc(100% - 18px)}}
+
+body[data-motion="off"] .v25-profile-cover:before,body[data-motion="off"] .v25-profile-cover:after,body[data-motion="off"] .v25-cover-glow{animation:none!important}
+body[data-motion="off"] .v25-reveal,body[data-motion="off"] .v677-reveal{opacity:1!important;transform:none!important;transition:none!important}
+body[data-motion="off"] .v677-enter{animation:none!important}
+body[data-motion="off"] .v25-profile-card,body[data-motion="off"] .v25-cover-action,body[data-motion="off"] .v25-cover-remove{transition:none!important}
+body[data-motion="off"] *{scroll-behavior:auto!important}
