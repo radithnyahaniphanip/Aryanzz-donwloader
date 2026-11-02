@@ -33,7 +33,7 @@ const checks=[
   ["Hybrid YouTube API uses Piped and Invidious public instance failover",workerSource.includes("/streams/")&&workerSource.includes("/api/v1/videos/")&&workerSource.includes("PIPED_PUBLIC_INSTANCES")&&workerSource.includes("INVIDIOUS_PUBLIC_INSTANCES")],
   ["V72 format deduplication keeps muxed and video-only variants separate",workerSource.includes('(f.videoOnly?"video-only":"muxed")')&&downloader.includes('(f.videoOnly?"video-only":"muxed")')],
   ["V72 Piped parser retains adaptive video-only MP4 with audio",workerSource.includes("videoOnly=adaptiveSource")&&workerSource.includes('formats.some(audio=>audio.mode===\"audio\"&&audio.ext===\"m4a\")')],
-  ["V72.2 worker aggregates multiple healthy provider instances and attaches each origin to its formats",workerSource.includes("const available=[...pipedResults,...invResults]")&&workerSource.includes("instance:result.instance,provider:result.provider")],
+  ["V72.2 worker aggregates multiple healthy provider instances and attaches each origin to its formats",workerSource.includes("const available=[...pipedResults,...invResults]")&&workerSource.includes("instance:result.instance,provider:result.provider")&&workerSource.includes("const settled=await Promise.allSettled")],
   ["V72.2 browser aggregates provider instances and retries same-quality streams",downloader.includes("const available=[]")&&downloader.includes("for(const selected of candidates)")&&downloader.includes("selected.instance||info.instance")],
   ["V72 FFmpeg merge uses stream copy into MP4",downloader.includes("muxYoutubeMp4")&&downloader.includes('"copy"')&&downloader.includes('"+faststart"')],
   ["V72 local FFmpeg worker bootstrap is included",file("../public/ffmpeg-worker-bootstrap.js").includes("@ffmpeg/ffmpeg@0.12.10")&&file("../public/sw.js").includes("/ffmpeg-worker-bootstrap.js?v=72.2")],
@@ -478,7 +478,9 @@ try{
   assert.equal(hybridData.providerReady,true);
   assert.equal(hybridData.provider,"Piped");
   assert.equal(hybridData.title,"Hybrid Piped Test Video");
-  assert.deepEqual(hybridData.formats.filter(x=>x.mode==="video").map(x=>x.height),[360,720,1080]);
+  assert.deepEqual([...new Set(hybridData.formats.filter(x=>x.mode==="video").map(x=>x.height))].sort((a,b)=>a-b),[360,720,1080]);
+  assert.ok(hybridData.providers.length>=2,"All healthy providers should be returned for download failover");
+  assert.ok(hybridData.formats.some(x=>x.instance&&x.provider),"Each stream should retain its provider origin");
   assert.ok(hybridData.formats.some(x=>x.mode==="video"&&x.videoOnly===true&&x.height===1080),"Piped adaptive 1080p stream should be kept for browser muxing");
   assert.equal(hybridData.formats.find(x=>x.mode==="audio").ext,"m4a");
   console.log("✔ Hybrid primary Piped API returns progressive and adaptive MP4 plus audio formats");
