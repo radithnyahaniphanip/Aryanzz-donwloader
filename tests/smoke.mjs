@@ -217,6 +217,14 @@ const checks=[
  ];
  for(const [name,ok] of checks){assert.ok(ok,name+" failed");console.log("✔ "+name)}
 
+
+const invalidImageSearch=await worker.fetch(new Request("https://aryanzz.example/api/image/search",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({platform:"pinterest",query:"x"})}),{});
+assert.equal(invalidImageSearch.status,400);
+const blockedImageProxy=await worker.fetch(new Request("https://aryanzz.example/api/image/file?url="+encodeURIComponent("https://localhost/private.jpg")),{});
+assert.equal(blockedImageProxy.status,400);
+console.log("✔ Image search validates short queries and image proxy blocks localhost targets");
+
+
 const healthResponse=await worker.fetch(new Request("https://aryanzz.example/api/health"),{});
 assert.equal(healthResponse.status,200);
 const health=await healthResponse.json();
