@@ -212,7 +212,7 @@ const checks=[
   ["V80.1 Image Downloader has platform search and public-post extraction controls",html.includes('id="imageSearchPlatform"')&&html.includes('id="imageSearchQuery"')&&html.includes('id="imageExtractButton"')&&workerSource.includes('async function searchSocialImages')&&workerSource.includes('async function imagePostMetadata')],
   ["V80.1 image downloads use a validated same-origin image proxy and reject non-image content",workerSource.includes('url.pathname==="/api/image/file"')&&workerSource.includes('safePublicMediaUrl(raw)')&&workerSource.includes('image/jpeg')&&workerSource.includes('Sumber tidak mengirim file gambar yang didukung')],
   ["V80.1 Image Studio CSS and JavaScript are loaded and cached by the service worker",html.includes('/image-studio.css?v=80.1')&&html.includes('/image-studio.js?v=80.1')&&sw.includes('/image-studio.css?v=80.1')&&sw.includes('/image-studio.js?v=80.1')&&imageStudioCss.includes('.image-download-results')],
-  ["V80.1 CapCut and Pinterest marks use updated reference-style SVG paths",html.includes('viewBox="0 0 32 32"')&&html.includes('class="v736-pinterest"')&&html.includes('fill="#fff"')]
+  ["V80.1 CapCut and Pinterest marks use updated reference-style SVG paths",html.includes('viewBox="0 0 32 32"')&&html.includes('class="v736-logo v736-pinterest"')&&html.includes('fill="#fff"')]
 
  ];
  for(const [name,ok] of checks){assert.ok(ok,name+" failed");console.log("✔ "+name)}
