@@ -119,6 +119,7 @@
       if($("profileAvatar")&&!next.photo)$("profileAvatar").textContent=(next.name.charAt(0)||"A").toUpperCase();
       if($("ownerName"))$("ownerName").textContent=next.name;
       if($("ownerBio"))$("ownerBio").textContent=next.bio||"Pengelola dan pengembang ARYANZZ.";
+      if($("ownerAvatar")&&!next.photo)$("ownerAvatar").textContent=(next.name.charAt(0)||"A").toUpperCase();
       scheduleBackup();
     } catch {
       backupStatus("Profil belum dapat disimpan. Penyimpanan browser mungkin penuh.","warn");
@@ -181,19 +182,18 @@
   function init() {
     if(!$("profile"))return;
     updateAssetButtons();
-    initMotion();
     const save=()=>saveProfileFields();
     $("profileName")?.addEventListener("input",save);
     $("profileBio")?.addEventListener("input",save);
     $("profileName")?.addEventListener("blur",save);
     $("profileBio")?.addEventListener("blur",save);
-    $("profileReset")?.addEventListener("click",()=>setTimeout(()=>{saveProfileFields();},80));
+    $("profileReset")?.addEventListener("click",()=>setTimeout(save,100));
     $("profilePhoto")?.addEventListener("change",()=>setTimeout(()=>{updateAssetButtons();scheduleBackup();},450));
     $("profileBanner")?.addEventListener("change",()=>setTimeout(()=>{updateAssetButtons();scheduleBackup();},650));
     $("profileBackground")?.addEventListener("change",()=>setTimeout(scheduleBackup,650));
-    $("clearProfileBanner")?.addEventListener("click",()=>setTimeout(()=>{updateAssetButtons();scheduleBackup();},100));
-    $("clearProfilePhoto")?.addEventListener("click",()=>setTimeout(()=>{updateAssetButtons();scheduleBackup();},100));
-    $("ownerLinksSave")?.addEventListener("click",()=>setTimeout(scheduleBackup,100));
+    $("clearProfileBanner")?.addEventListener("click",()=>setTimeout(()=>{updateAssetButtons();scheduleBackup();},120));
+    $("clearProfilePhoto")?.addEventListener("click",()=>setTimeout(()=>{updateAssetButtons();scheduleBackup();},120));
+    $("ownerLinksSave")?.addEventListener("click",()=>setTimeout(scheduleBackup,120));
     window.addEventListener("aryanzz:profile-assets-updated",()=>{updateAssetButtons();scheduleBackup();});
     window.addEventListener("aryanzz:backup-change",scheduleBackup);
     window.addEventListener("storage",scheduleBackup);
@@ -203,11 +203,11 @@
     restoreMissingSnapshot().then(()=>{
       updateAssetButtons();
       window.dispatchEvent(new Event("aryanzz:profile-assets-updated"));
+      initMotion();
       scheduleBackup();
     });
     setInterval(scheduleBackup,45000);
     window.addEventListener("pagehide",()=>{writeSnapshot();});
-    scheduleBackup();
   }
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init,{once:true});
   else init();
