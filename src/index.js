@@ -150,13 +150,20 @@ function freeProviderMediaInfo(data,rawUrl,requestUrl){
 async function freePublicMediaInfo(rawUrl,requestUrl){
   const key=freePlatformKey(rawUrl);
   if(!key)return json({error:"Platform belum didukung oleh provider gratis."},400);
-  const labels={tiktok:"TikTok",instagram:"Instagram",snackvideo:"SnackVideo",capcut:"CapCut"};
+  const labels={tiktok:"TikTok",instagram:"Instagram",snackvideo:"SnackVideo",capcut:"CapCut",pinterest:"Pinterest",facebook:"Facebook",twitter:"X",reddit:"Reddit",vimeo:"Vimeo",threads:"Threads",soundcloud:"SoundCloud"};
   const label=labels[key]||key;
   const guidance={
     tiktok:"Gunakan tautan video publik, bukan halaman profil atau LIVE.",
     instagram:"Pastikan Reels/postingan berupa video dan dapat dilihat publik. Akun privat, Story yang dibatasi, atau konten yang memerlukan login tidak dapat diekstrak.",
     snackvideo:"Gunakan tautan share video publik, bukan halaman profil atau halaman aplikasi.",
-    capcut:"Gunakan tautan share hasil video yang dapat diputar publik. Draft pribadi dan template/proyek yang belum diekspor bukan file MP4 yang bisa diunduh."
+    capcut:"Gunakan tautan share hasil video yang dapat diputar publik. Draft pribadi dan template/proyek yang belum diekspor bukan file MP4 yang bisa diunduh.",
+    pinterest:"Gunakan tautan Pin publik yang berisi video; Pin gambar tidak dapat diunduh sebagai MP4.",
+    facebook:"Gunakan tautan video/Reels publik yang bisa diputar tanpa login.",
+    twitter:"Gunakan tautan post X yang memuat video publik; post teks atau gambar tidak menghasilkan MP4.",
+    reddit:"Gunakan post Reddit atau v.redd.it yang memuat video publik; beberapa video memakai audio terpisah.",
+    vimeo:"Gunakan video Vimeo publik yang tidak dibatasi password atau pengaturan privasi.",
+    threads:"Gunakan post Threads publik yang benar-benar memuat video.",
+    soundcloud:"SoundCloud diproses sebagai audio (MP3/M4A jika tersedia), bukan video MP4."
   };
   const endpoint=FREE_MEDIA_API+"/api/download/"+key+"?url="+encodeURIComponent(rawUrl);
   try{
@@ -354,12 +361,20 @@ async function proxyPlatform(request,env,path){
 }
 async function platformStatus(env){
   const platforms=[
-    {id:"tiktok",domains:["tiktok.com"],pasteLink:true,titleSearch:true,preview:"range-proxy",mp4:"provider-dependent"},
-    {id:"instagram",domains:["instagram.com","instagr.am"],pasteLink:true,titleSearch:true,preview:"range-proxy",mp4:"provider-dependent"},
-    {id:"snackvideo",domains:["snackvideo.com"],pasteLink:true,titleSearch:true,preview:"range-proxy",mp4:"provider-dependent"},
-    {id:"capcut",domains:["capcut.com"],pasteLink:true,titleSearch:true,preview:"range-proxy",mp4:"provider-dependent"}
+    {id:"youtube",domains:["youtube.com","youtu.be"],pasteLink:true,titleSearch:true,preview:"hybrid",mediaModes:["video","audio"],mp4:"hybrid-provider-dependent"},
+    {id:"tiktok",domains:["tiktok.com","vm.tiktok.com","vt.tiktok.com"],pasteLink:true,titleSearch:true,preview:"range-proxy",mediaModes:["video"],mp4:"provider-dependent"},
+    {id:"instagram",domains:["instagram.com","instagr.am"],pasteLink:true,titleSearch:true,preview:"range-proxy",mediaModes:["video"],mp4:"provider-dependent"},
+    {id:"snackvideo",domains:["snackvideo.com"],pasteLink:true,titleSearch:true,preview:"range-proxy",mediaModes:["video"],mp4:"provider-dependent"},
+    {id:"capcut",domains:["capcut.com"],pasteLink:true,titleSearch:true,preview:"range-proxy",mediaModes:["video"],mp4:"provider-dependent"},
+    {id:"pinterest",domains:["pinterest.com","pin.it"],pasteLink:true,titleSearch:true,preview:"range-proxy",mediaModes:["video"],mp4:"provider-dependent"},
+    {id:"facebook",domains:["facebook.com","fb.watch"],pasteLink:true,titleSearch:true,preview:"range-proxy",mediaModes:["video"],mp4:"provider-dependent"},
+    {id:"x",domains:["x.com","twitter.com"],pasteLink:true,titleSearch:true,preview:"range-proxy",mediaModes:["video"],mp4:"provider-dependent"},
+    {id:"reddit",domains:["reddit.com","redd.it","v.redd.it"],pasteLink:true,titleSearch:true,preview:"range-proxy",mediaModes:["video","audio"],mp4:"provider-dependent"},
+    {id:"vimeo",domains:["vimeo.com"],pasteLink:true,titleSearch:true,preview:"range-proxy",mediaModes:["video"],mp4:"provider-dependent"},
+    {id:"threads",domains:["threads.net"],pasteLink:true,titleSearch:true,preview:"range-proxy",mediaModes:["video"],mp4:"provider-dependent"},
+    {id:"soundcloud",domains:["soundcloud.com"],pasteLink:true,titleSearch:true,preview:"range-proxy",mediaModes:["audio"],mp4:"not-applicable"}
   ];
-  return json({ok:true,configured:false,backend:"public-community-api",mode:"zero-server",engine:"Cloudflare Worker + public free community extractor",platforms,liveAvailability:"Perlu diuji memakai tautan publik asli; dukungan provider dapat berubah.",message:"Keempat platform memiliki jalur input dan pencarian. MP4, preview, dan unduhan bergantung pada apakah provider mengembalikan stream video publik yang valid. Tautan privat, draft, atau template yang tidak mengekspos video tidak dapat diekspor."});
+  return json({ok:true,configured:false,backend:"public-community-api",mode:"zero-server",engine:"Cloudflare Worker + public free community extractor",platforms,liveAvailability:"Jalur tiap platform tersedia; hasil nyata tetap bergantung pada provider, visibilitas konten, dan format yang disediakan.",message:"12 platform dikenali untuk tempel tautan atau pencarian judul. Video hanya ditawarkan sebagai MP4 jika provider benar-benar menyediakan MP4 yang valid; SoundCloud diperlakukan sebagai audio, bukan MP4. Konten privat, tautan kedaluwarsa, dan file yang tidak diekspos oleh sumber tidak dapat diekstrak."});
 }
 function decodeSearchHtml(value){
   return String(value||"").replace(/<[^>]*>/g,"").replace(/&amp;/g,"&").replace(/&quot;/g,'"').replace(/&#39;|&#x27;/gi,"'").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&nbsp;/g," ").replace(/&#(\d+);/g,(_,n)=>String.fromCodePoint(Number(n))).replace(/&#x([0-9a-f]+);/gi,(_,n)=>String.fromCodePoint(parseInt(n,16))).replace(/\s+/g," ").trim();
@@ -384,13 +399,16 @@ async function verifySocialSearchResult(result,requestUrl){
     const data=await response.json().catch(()=>({}));
     if(data?.success===false)return null;
     const info=freeProviderMediaInfo(data,result.url,requestUrl);
-    const playable=info?.formats?.find(item=>item.mode==="video"&&!item.videoOnly&&item.previewUrl&&item.downloadUrl);
+    const playableFormats=(info?.formats||[]).filter(item=>item.previewUrl&&item.downloadUrl&&!item.videoOnly);
+    const playable=key==="soundcloud"
+      ?playableFormats.find(item=>item.mode==="audio")
+      :playableFormats.find(item=>item.mode==="video")||playableFormats.find(item=>item.mode==="audio");
     if(!playable)return null;
     const probeUrl=new URL(playable.downloadUrl);probeUrl.searchParams.set("probe","1");
     const mediaCheck=await socialMediaFile(new Request(probeUrl.href));
     const mediaData=await mediaCheck.json().catch(()=>({}));
     if(!mediaCheck.ok||!mediaData.valid)return null;
-    return {...result,title:info.title||result.title,thumbnail:info.thumbnail||null,duration:info.duration||null,verified:true,downloadable:true,mediaType:mediaData.mimeType};
+    return {...result,title:info.title||result.title,thumbnail:info.thumbnail||null,duration:info.duration||null,verified:true,downloadable:true,mediaMode:playable.mode,extension:mediaData.extension,mediaType:mediaData.mimeType};
   }catch{return null}
 }
 async function searchSocial(request){
@@ -1143,7 +1161,7 @@ export default {async fetch(request,env){
    if(url.pathname==="/api/youtube/hybrid/file"&&request.method==="GET")return hybridYoutubeFile(request);
    if(url.pathname==="/api/youtube/hybrid/thumbnail"&&request.method==="GET")return hybridYoutubeThumbnail(request);
   if(url.pathname==="/api/youtube/info"&&request.method==="GET")return youtubeInfo(request,env);
-    if(url.pathname==="/api/health"&&request.method==="GET")return json({ok:true,service:"ARYANZZ",version:"78.0",mode:"cloudflare-worker-zero-server-hybrid",directMediaDownload:true,selfHostedDownloader:false,youtubeDownloader:true,youtubeApiKeyConfigured:false,cobalt:false,paidYoutubeProvider:false,musicRecognitionConfigured:!!env.AUDD_API_TOKEN,musicFallbackReady:false,musicVideoRecognitionReady:false,platformExtraction:true,platformBackend:"public-free-community-api"});
+    if(url.pathname==="/api/health"&&request.method==="GET")return json({ok:true,service:"ARYANZZ",version:"79.0",mode:"cloudflare-worker-zero-server-hybrid",directMediaDownload:true,selfHostedDownloader:false,youtubeDownloader:true,youtubeApiKeyConfigured:false,cobalt:false,paidYoutubeProvider:false,musicRecognitionConfigured:!!env.AUDD_API_TOKEN,musicFallbackReady:false,musicVideoRecognitionReady:false,platformExtraction:true,platformBackend:"public-free-community-api"});
   if(url.pathname==="/api/social-file"&&request.method==="GET")return socialMediaFile(request);
   if(url.pathname==="/api/info"&&request.method==="POST"){const proxied=await proxyPlatform(request,env,"/api/info");if(proxied)return proxied;return info(request);}
   if(url.pathname==="/api/direct-file"&&request.method==="GET")return download(request);
