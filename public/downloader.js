@@ -343,10 +343,10 @@
       if(videoTotal>maxTrack)throw new Error("Komponen video berukuran "+formatDownloadSize(videoTotal)+" dan melewati batas aman memori perangkat. Pilih kualitas MP4 lebih rendah.");
       if(audioTotal>maxTrack)throw new Error("Komponen suara berukuran "+formatDownloadSize(audioTotal)+" dan melewati batas aman memori perangkat. Pilih kualitas MP4 lebih rendah.");
       if(videoTotal&&audioTotal&&videoTotal+audioTotal>maxCombined)throw new Error("Gabungan media "+formatDownloadSize(videoTotal+audioTotal)+" melewati batas aman memori HP. ARYANZZ mencoba kualitas lebih rendah.");
-      ffmpeg=await loadBrowserFfmpeg(progressText,progressMeta,bar);
       progressText.textContent="Mengambil komponen video…";
       videoBytes=await fetchYoutubeTrack(videoItem,info,maxTrack,bar,progressText,progressMeta,"Komponen video",0,38,speed,videoProbe);
       const videoSize=videoBytes.byteLength;
+      ffmpeg=await loadBrowserFfmpeg(progressText,progressMeta,bar);
       await ffmpeg.writeFile(inputVideo,videoBytes);videoBytes=null;
       progressText.textContent="Mengambil komponen suara…";
       audioBytes=await fetchYoutubeTrack(audioItem,info,maxTrack,bar,progressText,progressMeta,"Komponen suara",38,38,speed,audioProbe);
