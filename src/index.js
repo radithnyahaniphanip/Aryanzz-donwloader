@@ -615,7 +615,7 @@ export default {async fetch(request,env){
   if(url.pathname==="/api/youtube/download"&&request.method==="POST")return youtubeStart(request,env);
   if(url.pathname==="/api/youtube/progress"&&request.method==="POST")return youtubeProgress(request,env);
   if(url.pathname==="/api/youtube/file"&&request.method==="GET")return youtubeFile(request,env);
-  if(url.pathname==="/api/health"&&request.method==="GET")return json({ok:true,service:"ARYANZZ",version:"69.0",mode:"cloudflare-worker-zero-server",directMediaDownload:true,selfHostedDownloader:false,youtubeDownloader:false,youtubeApiKeyConfigured:false,musicRecognitionConfigured:!!env.AUDD_API_TOKEN,musicFallbackReady:false,musicVideoRecognitionReady:false,platformExtraction:false,platformBackend:"community-handoff"});
+  if(url.pathname==="/api/health"&&request.method==="GET")return json({ok:true,service:"ARYANZZ",version:"69.2",mode:"cloudflare-worker-zero-server",directMediaDownload:true,selfHostedDownloader:false,youtubeDownloader:false,youtubeApiKeyConfigured:false,musicRecognitionConfigured:!!env.AUDD_API_TOKEN,musicFallbackReady:false,musicVideoRecognitionReady:false,platformExtraction:false,platformBackend:"community-handoff"});
   if(url.pathname==="/api/info"&&request.method==="POST"){const proxied=await proxyPlatform(request,env,"/api/info");if(proxied)return proxied;return info(request);}
   if(url.pathname==="/api/download"&&request.method==="POST"){const proxied=await proxyPlatform(request,env,"/api/download");if(proxied)return proxied;return download(request);}
   if(url.pathname.startsWith("/api/"))return json({error:"Endpoint tidak ditemukan."},404);
