@@ -110,6 +110,7 @@ jobs:
             if (!["Piped", "Invidious"].includes(hybridData.provider) || !hybridData.formats.length) throw new Error("Hybrid provider response is incomplete.");
             console.log("Live public instance returned " + hybridData.formats.length + " actual formats from " + hybridData.provider + ".");
           } else {
-            console.warn("No public instance currently returned a compatible stream. The zero-cost failover path is deployed, but real download availability is not confirmed.");
+            console.warn("No public instance currently returned a compatible stream. Diagnostics: " + JSON.stringify(hybridData.diagnostics || []));
+            console.warn("The zero-cost failover path is deployed, but real download availability is not confirmed.");
           }
           NODE
