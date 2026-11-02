@@ -244,7 +244,7 @@
     }catch{return fallback;}
   }
   const BROWSER_INVIDIOUS_INSTANCES=[
-    "https://inv.nadeko.net","https://invidious.nerdvpn.de","https://yt.chocolatemoo53.com","https://invidious.tiekoetter.com"
+    "https://yt.chocolatemoo53.com","https://inv.nadeko.net","https://invidious.nerdvpn.de","https://invidious.tiekoetter.com"
   ];
   const BROWSER_MEDIA_ROOTS=["kavin.rocks","leptons.xyz","nosebs.ru","privacy.com.de","adminforge.de","piped.yt","drgns.space","owo.si","ducks.party","codespace.cz","reallyaweso.me","private.coffee","darkness.services","orangenet.cc"];
   function browserHybridMediaUrl(raw,trustedOrigin){
@@ -317,9 +317,10 @@
     const match=(()=>{try{const u=new URL(raw);if(["youtu.be","www.youtu.be"].includes(u.hostname))return u.pathname.split("/").filter(Boolean)[0]||null;return u.searchParams.get("v")||u.pathname.match(/^\/(?:shorts|embed|live|v)\/([A-Za-z0-9_-]{6,20})/)?.[1]||null;}catch{return null;}})();
     if(!match||! /^[A-Za-z0-9_-]{6,20}$/.test(match))throw new Error("ID video YouTube tidak valid.");
     const tryGroup=async(instances,fn)=>{
-      const controllers=instances.map(()=>browserProviderTimeout(4500));
+      const timeoutMs=fn===browserInvidiousInfo?12000:8000;
+      const controllers=instances.map(()=>browserProviderTimeout(timeoutMs));
       try{return await Promise.any(instances.map((instance,i)=>fn(instance,match,controllers[i].signal).finally(()=>controllers[i].clear())));}
-      catch{throw new Error("Semua instance pada kelompok ini gagal atau tidak mengizinkan akses browser.");}
+      catch(error){const reasons=Array.isArray(error?.errors)?error.errors.map((item,i)=>instances[i]+": "+String(item?.message||"gagal")).join(" | "):String(error?.message||"gagal");throw new Error("Semua instance pada kelompok ini gagal: "+reasons.slice(0,900));}
       finally{controllers.forEach(t=>t.abort());}
     };
     let pipedError;
