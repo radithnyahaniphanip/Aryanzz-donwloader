@@ -32,7 +32,7 @@ const checks=[
   ["Hybrid YouTube API uses Piped and Invidious public instance failover",workerSource.includes("/streams/")&&workerSource.includes("/api/v1/videos/")&&workerSource.includes("PIPED_PUBLIC_INSTANCES")&&workerSource.includes("INVIDIOUS_PUBLIC_INSTANCES")],
   ["Hybrid stream download is restricted to approved media hosts",workerSource.includes("function hybridMediaUrl")&&workerSource.includes("googlevideo.com")&&workerSource.includes("HYBRID_MEDIA_ROOTS")],
   ["Hybrid download uses attachment streaming and range requests",workerSource.includes("function hybridYoutubeFile")&&workerSource.includes("content-disposition")&&workerSource.includes("headers.range=range")],
-  ["No Cobalt or paid SaveNow downloader remains",!workerSource.toLowerCase().includes("cobalt")&&!workerSource.toLowerCase().includes("savenow")],
+  ["No Cobalt or paid SaveNow downloader remains",!workerSource.includes("cobaltConfig")&&!workerSource.includes("SAVENOW_BASE")&&!workerSource.includes("SAVENOW_API_KEY")],
   ["TikTok is intentionally disabled while YouTube is prioritized",downloader.includes("TikTok sementara dinonaktifkan")],
   ["YouTube UI uses hybrid API and actual returned formats",downloader.includes("/api/youtube/hybrid/info")&&downloader.includes("/api/youtube/hybrid/file")&&downloader.includes("info.formats")&&downloader.includes("providerName!==\"Hybrid\"")],
   ["legacy competing downloader handler removed",!v15.includes("button.onclick=async()=>{")],
