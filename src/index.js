@@ -172,12 +172,17 @@ function socialFileName(value,ext){
   const base=String(value||"aryanzz-media").replace(/[\\/:*?"<>|\u0000-\u001f]/g,"_").replace(/\s+/g," ").trim().slice(0,110).replace(/\.[a-z0-9]{2,5}$/i,"")||"aryanzz-media";
   return base+"."+ext;
 }
+async function fetchSocialHeaders(url,init,timeoutMs=25000){
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),timeoutMs);
+  try{return await fetch(url,{...init,signal:controller.signal});}
+  finally{clearTimeout(timer);}
+}
 async function fetchSocialUpstream(mediaUrl,sourceUrl){
   const sourceOrigin=new URL(sourceUrl).origin;
   const headers={"user-agent":"Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36","accept":"video/*,audio/*,application/octet-stream;q=0.9,*/*;q=0.8","referer":sourceOrigin+"/","origin":sourceOrigin};
   let current=mediaUrl;
   for(let i=0;i<6;i++){
-    const response=await fetch(current.href,{method:"GET",headers,redirect:"manual",cache:"no-store",signal:AbortSignal.timeout(25000)});
+    const response=await fetchSocialHeaders(current.href,{method:"GET",headers,redirect:"manual",cache:"no-store"});
     if(![301,302,303,307,308].includes(response.status))return response;
     const location=response.headers.get("location");
     if(!location)throw new Error("CDN media mengirim pengalihan tanpa alamat tujuan.");
@@ -201,7 +206,7 @@ async function socialMediaFile(request){
     fallback.searchParams.set("url",mediaUrl.href);
     fallback.searchParams.set("filename",socialFileName(filename,requestedExt));
     try{
-      upstream=await fetch(fallback.href,{headers:{accept:"*/*","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0.0.0 Safari/537.36"},cache:"no-store",signal:AbortSignal.timeout(25000)});
+      upstream=await fetchSocialHeaders(fallback.href,{headers:{accept:"*/*","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0.0.0 Safari/537.36"},cache:"no-store"});
     }catch(error){return json({error:"CDN media dan jalur cadangan provider gagal. "+(lastError||String(error?.message||error).slice(0,120))},502)}
   }
   if(!upstream.ok||!upstream.body)return json({error:"Provider tidak mengirim file media utuh (HTTP "+upstream.status+")."},502);
