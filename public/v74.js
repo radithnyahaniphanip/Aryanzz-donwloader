@@ -10,7 +10,7 @@
   const SNAPSHOT_KEYS = [
     PROFILE_KEY,DESIGN_KEY,"aryanzz.surface.v25","aryanzz.theme.v674",
     "aryanzz.history.v2","aryanzz-download-history-v1","aryanzz.favorites.v2",
-    "aryanzz.color-favorites.v674","aryanzz.audio.studio.v74","aryanzz.audio.history.v74",
+    "aryanzz.color-favorites.v674","aryanzz.audio.studio.v74","aryanzz.audio.history.v74","aryanzz.motion.v74",
     "aryanzz.owner.links.v28","aryanzz.member.since.v25"
   ];
   let dbPromise = null;
