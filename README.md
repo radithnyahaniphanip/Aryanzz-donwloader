@@ -1,15 +1,3 @@
-
-## V70.1 — Authorized Cobalt YouTube handoff and native Chrome download
-
-- YouTube extraction can use a Cobalt instance only when the operator configures an HTTPS instance they own or have explicit permission to integrate.
-- Configure Cloudflare Worker variables/secrets: `COBALT_API_ORIGIN` (HTTPS origin only), optional `COBALT_API_KEY`, and optional `COBALT_API_AUTH_SCHEME` (`Api-Key` or `Bearer`). Never use the shared public `api.cobalt.tools` endpoint without explicit permission.
-- When configured, the YouTube preview identifies Cobalt as the active provider. The Download via Chrome action sends the selected video quality or audio format/bitrate to the Worker, which redirects the browser to the Cobalt tunnel/file URL so Chrome can handle the download.
-- Supported UI video targets: 360p, 480p, 720p, 1080p, 1440p and 2160p (4K). These are requested target qualities, not a promise that every source offers each quality. Cobalt determines actual availability.
-- Supported Cobalt audio formats: MP3, OGG, WAV and OPUS, with 128/256/320 kbps targets.
-- TikTok is intentionally disabled in this release. Direct media-file URLs remain supported.
-- SaveNow remains opt-in only via `ALLOW_PAID_YOUTUBE_PROVIDER=true`; no paid provider is activated by default. A configured Cobalt instance is preferred over SaveNow.
-- The integration does not bypass platform access controls or make protected/unavailable videos downloadable. Users must have the right to download the content.
-
 # ARYANZZ V70.1 — Native Chrome Download Studio
 
 Production website: https://aryanzz-donwloader.radithnyahaniphanip.workers.dev/
@@ -44,7 +32,19 @@ ARYANZZ is a mobile-first creator workspace hosted on Cloudflare Workers. V70.1 
 - Shazam DJ fallback samples now honor the consecutive-sample setting and remain capped at 30 segments per scan to limit server load. AudD Enterprise can process up to 100 segments where the account permits it.
 - Removed the duplicate Express health route so the backend reports one current version and a consistent feature list.
 
-## V70.1 — YouTube flow and TikTok diagnostics
+## V70.1 — Authorized Cobalt YouTube handoff and native Chrome download
+
+- YouTube extraction can use a Cobalt instance only when the operator configures an HTTPS instance they own or have explicit permission to integrate.
+- Configure Cloudflare Worker variables/secrets: `COBALT_API_ORIGIN` (HTTPS origin only), optional `COBALT_API_KEY`, and optional `COBALT_API_AUTH_SCHEME` (`Api-Key` or `Bearer`). Never use the shared public `api.cobalt.tools` endpoint without explicit permission.
+- When configured, the YouTube preview identifies Cobalt as the active provider. The Download via Chrome action sends the selected video quality or audio format/bitrate to the Worker, which redirects the browser to the Cobalt tunnel/file URL so Chrome can handle the download.
+- Supported UI video targets: 360p, 480p, 720p, 1080p, 1440p and 2160p (4K). These are requested target qualities, not a promise that every source offers each quality. Cobalt determines actual availability.
+- Supported Cobalt audio formats: MP3, OGG, WAV and OPUS, with 128/256/320 kbps targets.
+- TikTok is intentionally disabled in this release. Direct media-file URLs remain supported.
+- SaveNow remains opt-in only via `ALLOW_PAID_YOUTUBE_PROVIDER=true`; no paid provider is activated by default. A configured Cobalt instance is preferred over SaveNow.
+- The integration does not bypass platform access controls or make protected/unavailable videos downloadable. Users must have the right to download the content.
+
+
+## V70.0 — YouTube flow and TikTok diagnostics
 
 - YouTube URLs now use the dedicated `/api/youtube/info`, `/api/youtube/download`, `/api/youtube/progress`, and `/api/youtube/file` endpoints rather than the generic direct-file endpoint.
 - If no downloader provider key is configured, the Worker attempts a public YouTube oEmbed preview and clearly marks downloading as unavailable. It does not silently configure or charge a third-party provider.
