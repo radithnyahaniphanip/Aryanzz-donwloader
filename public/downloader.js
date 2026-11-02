@@ -1,4 +1,4 @@
-/* ARYANZZ V72.9 — zero-server direct downloader and community handoff */
+/* ARYANZZ V73.0 — zero-server direct downloader and community handoff */
 (() => {
   "use strict";
   const $ = id => document.getElementById(id);
@@ -157,7 +157,7 @@
         const mod=await import(moduleUrl);
         const ffmpeg=new mod.FFmpeg();
         [coreURL,wasmURL]=await Promise.all([loadBlob(coreBase+"/ffmpeg-core.js","text/javascript"),loadBlob(coreBase+"/ffmpeg-core.wasm","application/wasm")]);
-        await ffmpeg.load({coreURL,wasmURL,classWorkerURL:new URL("/ffmpeg-worker-bootstrap.js?v=72.9",location.origin).href});
+        await ffmpeg.load({coreURL,wasmURL,classWorkerURL:new URL("/ffmpeg-worker-bootstrap.js?v=73.0",location.origin).href});
         return ffmpeg;
       }finally{
         if(coreURL)URL.revokeObjectURL(coreURL);
@@ -223,9 +223,9 @@
     finally{clearTimeout(timer);}
   }
   async function fetchYoutubeTrackRanges(target,total,info,item,bar,progressText,progressMeta,label,base,span,speed){
-    const chunkSize=4*1024*1024,count=Math.ceil(total/chunkSize),output=new Uint8Array(total);
+    const chunkSize=1024*1024,count=Math.ceil(total/chunkSize),output=(()=>{try{return new Uint8Array(total)}catch{throw new Error("Ukuran komponen terlalu besar untuk memori HP. Pilih kualitas MP4 lebih rendah.")}})();
     const prefix=downloadResumePrefix(info.url||"",item),concurrency=Math.max(1,Math.min(5,Number(speed)||3));
-    let next=0,received=0,resumed=0,failure=null;
+    let next=0,received=0,resumed=0,inFlight=0,failure=null;
     const startedAt=Date.now();
     const worker=async()=>{
       while(!failure){
@@ -242,12 +242,23 @@
             }
             const contentRange=response.headers.get("content-range")||"";
             if(contentRange!=="bytes "+start+"-"+end+"/"+total)throw new Error("Rentang byte dari provider tidak cocok; unduhan dihentikan agar file tidak rusak.");
-            part=new Uint8Array(await response.arrayBuffer());
-            if(part.byteLength!==expected)throw new Error("Ukuran potongan unduhan tidak lengkap.");
-            await writeDownloadChunk(key,part);
+            const reader=response.body?.getReader();
+            if(!reader)throw new Error("Browser tidak dapat membaca potongan unduhan.");
+            part=new Uint8Array(expected);
+            let offset=0;
+            while(true){
+              const result=await reader.read();if(result.done)break;
+              if(offset+result.value.byteLength>expected){await reader.cancel().catch(()=>{});throw new Error("Provider mengirim potongan lebih besar dari rentang yang diminta.");}
+              part.set(result.value,offset);offset+=result.value.byteLength;inFlight+=result.value.byteLength;
+              updateDownloadProgress(bar,progressText,progressMeta,{stage:resumed?label+" · melanjutkan data tersimpan":label,received:received+inFlight,total,startedAt,base,span,target:"1 file MP4"});
+            }
+            if(offset!==expected)throw new Error("Ukuran potongan unduhan tidak lengkap.");
+            inFlight-=expected;
+            const saved=await writeDownloadChunk(key,part);
+            if(!saved)progressMeta.textContent="Penyimpanan sementara HP tidak tersedia. Biarkan tab tetap terbuka sampai selesai.";
           }else resumed+=expected;
           output.set(part,start);received+=expected;
-          updateDownloadProgress(bar,progressText,progressMeta,{stage:resumed?label+" · melanjutkan data tersimpan":label,received,total,startedAt,base,span,target:"1 file MP4"});
+          updateDownloadProgress(bar,progressText,progressMeta,{stage:resumed?label+" · melanjutkan data tersimpan":label,received:received+inFlight,total,startedAt,base,span,target:"1 file MP4"});
         }catch(error){failure=error;throw error;}
       }
     };
@@ -773,13 +784,13 @@
           quality.append(option);
         });
       }
-      const speedLabel=make("label","label","MODE KECEPATAN UNDUHAN");
+      const speedLabel=make("label","label","MODE KECEPATAN TRANSFER");
       speedLabel.style.marginTop="12px";
       const speedSelect=make("select","field");
       speedSelect.id="aryDownloadSpeed";
       [[1,"Speed · 1 jalur"],[3,"Max Speed · 3 jalur"],[5,"Mega Speed · 5 jalur"]].forEach(([value,label])=>{const option=make("option","",label);option.value=String(value);if(value===3)option.selected=true;speedSelect.append(option)});
       speedLabel.hidden=!isYouTube;speedSelect.hidden=!isYouTube;
-      const audioHint = make("p", "muted", directMedia?(info.type==="audio"?"File audio langsung akan diunduh dalam format sumber, tanpa konversi.":"File video langsung akan diunduh dalam kualitas aslinya."):isYouTube?(info.providerReady?(progressiveHeights.length?"MP4 langsung diprioritaskan. Untuk stream terpisah, Max Speed dan Mega Speed mengambil beberapa potongan sekaligus jika server mendukung Range. Jika kualitas tinggi tidak muat di memori, ARYANZZ mencoba MP4 langsung pada kualitas lebih rendah.":"Sumber menyediakan komponen video dan suara terpisah. ARYANZZ merakit satu MP4; tidak ada file audio terpisah yang disimpan. Mode kecepatan memakai beberapa jalur jika server mendukung Range. Potongan yang selesai disimpan agar bisa dilanjutkan setelah terputus."):"Tidak ada stream yang tersedia sekarang; coba lagi nanti."):"Audio/video mengikuti format yang tersedia dari sumber. Tidak ada server ekstraksi milik ARYANZZ.");
+      const audioHint = make("p", "muted", directMedia?(info.type==="audio"?"File audio langsung diunduh melalui Chrome; pengelola unduhan browser menangani kecepatan dan percobaan ulang.":"File video langsung diunduh melalui Chrome; sumber yang mendukung Range dapat dilanjutkan oleh pengelola unduhan."):isYouTube?(info.providerReady?(progressiveHeights.length?"MP4 langsung diprioritaskan. Chrome mengelola unduhan di latar belakang; mode kecepatan berlaku pada stream terpisah yang mendukung Range.":"Sumber memisahkan video dan suara; ARYANZZ merakitnya menjadi satu MP4. Potongan 1 MB disimpan lokal. Jika halaman tertutup, buka link yang sama, periksa lagi, lalu tekan Unduh untuk melanjutkan. Tab harus tetap terbuka saat tahap perakitan MP4. Mode kecepatan memakai 1, 3, atau 5 jalur bila server mendukung Range."):"Provider belum menyediakan stream saat ini; coba lagi nanti."):"Tautan platform perlu provider yang mendukung ekstraksi. Tautan file langsung memakai pengelola unduhan Chrome.");
       const note = make("p", "youtube-note", "Unduh hanya media milik sendiri atau konten yang memang diizinkan. Kualitas mengikuti file sumber.");
       box.append(formatLabel, mode, qualityLabel, quality, speedLabel, speedSelect, audioHint, note);
 
@@ -793,7 +804,7 @@
       bar.style.width = "0%";
       progress.append(bar);
       const progressText = make("p", "muted", "Siap. Tekan Unduh untuk memulai satu file hasil.");
-      const progressMeta = make("small","download-progress-meta","Target: 1 file MP4 · estimasi waktu muncul setelah ukuran sumber terbaca.");
+      const progressMeta = make("small","download-progress-meta","Target: 1 file MP4 · potongan yang selesai disimpan lokal untuk melanjutkan saat dicoba lagi.");
       const audioFormat=make("select","field");
       audioFormat.id="aryAudioFormat";
       const audioChoices=isYouTube&&info.providerName==="Hybrid"?[...new Set((info.formats||[]).filter(item=>item.mode==="audio").map(item=>item.ext))].map(ext=>[ext,ext.toUpperCase()]):[["mp3","MP3"],["m4a","M4A"]];
