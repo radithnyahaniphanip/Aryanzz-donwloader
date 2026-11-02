@@ -25,7 +25,7 @@ const deployWorkflow=file("../.github/workflows/deploy-cloudflare.yml");
 const checks=[
   ["V73.5 refreshes provider metadata once after HTTP 403/429/5xx and skips already attempted streams",downloader.includes("async function refreshYoutubeProviderInfo")&&downloader.includes("retryState={refreshed:false,attempted:[]}")&&downloader.includes("if(!retryState.refreshed&&retryable)")&&downloader.includes("attempted.has(candidateKey(item))")],
   ["V73.5 bounds provider retries while retaining multiple same-quality instances",downloader.includes("selectProviderCandidates(progressive")&&downloader.includes("selectProviderCandidates(adaptive")&&downloader.includes("selectProviderCandidates(all.filter(item=>item.ext===audioFormat),2,8)")],
-  ["V73.5 explains automatic provider switching and refreshes expiring stream URLs",downloader.includes("otomatis beralih ke provider lain")&&downloader.includes("memperbarui alamat stream")],
+  ["V73.5 explains automatic provider switching and refreshes expiring stream URLs",downloader.includes("otomatis beralih ke provider lain")&&downloader.includes("memperbarui daftar sumber")],
 
   ["V73.5 quality menu displays estimated or provider-reported sizes",downloader.includes("function youtubeQualityEstimate")&&downloader.includes("estimate.exact?\"\":\"±\"")&&downloader.includes("formatDownloadSize(estimate.bytes)")],
   ["V73.5 format metadata retains byte sizes and bitrate estimates",downloader.includes("sizeBytes:browserFormatSizeBytes(item)")&&workerSource.includes("sizeBytes:hybridFormatSizeBytes(item)")&&downloader.includes("function estimateFormatBytes")],
