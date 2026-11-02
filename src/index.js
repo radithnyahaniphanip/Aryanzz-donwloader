@@ -505,7 +505,7 @@ function extractSocialImageCandidates(html,pageUrl,platform){
   for(const tag of imageTags){
     const attrs={};for(const m of tag.matchAll(/([a-zA-Z_:][-a-zA-Z0-9_:]*)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/g))attrs[m[1].toLowerCase()]=m[2]??m[3]??m[4]??"";
     const w=Number(attrs.width||0),h=Number(attrs.height||0),src=attrs.src||attrs["data-src"]||attrs["data-original"]||"";
-    if(src&&(w>=180&&h>=180||imageExtensionFromUrl(src)))add(new URL(src,pageUrl).href,"html-image");
+    if(src&&(w>=180&&h>=180||imageExtensionFromUrl(src)))try{add(new URL(src,pageUrl).href,"html-image")}catch{}
     const srcset=attrs.srcset||"";for(const part of srcset.split(",")){const url=part.trim().split(/\s+/)[0];if(url)try{add(new URL(url,pageUrl).href,"html-image")}catch{}}
   }
   if(hasVideoMeta&&platform!=="pinterest"&&platform!=="reddit"){
