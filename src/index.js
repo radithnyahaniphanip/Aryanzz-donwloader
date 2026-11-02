@@ -85,7 +85,9 @@ async function info(request){
   }catch(e){return json({error:e.message||"Gagal memeriksa file."},502)}
 }
 async function download(request){
-  let body;try{body=await request.json()}catch{return json({error:"Body JSON tidak valid."},400)}
+  let body;
+  if(request.method==="GET")body={url:new URL(request.url).searchParams.get("url")||""};
+  else{try{body=await request.json()}catch{return json({error:"Body JSON tidak valid."},400)}}
   let parsed;try{parsed=parseMediaUrl(body?.url)}catch(e){return json({error:e.message},400)}
   let upstream;
   try{const result=await getUpstream(parsed,"GET");upstream=result.response;parsed=result.parsed}
@@ -149,7 +151,7 @@ function youtubeInfoUrl(raw){return isYouTubeUrl(raw)?raw:null;}
 async function youtubeInfo(request,env){
   const url=new URL(request.url).searchParams.get("url")||"";
   if(!youtubeInfoUrl(url))return json({error:"URL YouTube tidak valid."},400);
-  if(!env.SAVENOW_API_KEY){
+  if(!env.SAVENOW_API_KEY||env.ALLOW_PAID_YOUTUBE_PROVIDER!=="true"){
     try{
       const oembedUrl=new URL("https://www.youtube.com/oembed");
       oembedUrl.searchParams.set("url",url);
@@ -159,7 +161,7 @@ async function youtubeInfo(request,env){
         const preview=await oembed.json();
         if(preview.title)return json({
           ok:true,providerReady:false,
-          providerMessage:"Informasi video berhasil ditemukan. Mesin unduhan YouTube belum dikonfigurasi. ARYANZZ tidak akan mengaktifkan layanan berbayar atau memotong saldo otomatis.",
+          providerMessage:"Preview video berhasil ditemukan. Unduhan YouTube belum tersedia dalam mode gratis Rp0 karena belum ada extractor gratis yang stabil. ARYANZZ tidak akan memakai saldo API atau mengaktifkan provider berbayar.",
           title:String(preview.title).slice(0,300),
           thumbnail:typeof preview.thumbnail_url==="string"?preview.thumbnail_url:null,
           duration:null,source:"YouTube"
@@ -183,7 +185,7 @@ async function youtubeInfo(request,env){
           const preview=await oembed.json();
           if(preview.title)return json({
             ok:true,providerReady:false,
-            providerMessage:"Saldo API SaveNow tidak mencukupi. Informasi video berhasil ditemukan, tetapi unduhan baru bisa dimulai setelah saldo provider diisi.",
+            providerMessage:"Preview video berhasil ditemukan. Provider ekstraksi yang sebelumnya terhubung tidak memiliki kuota. Mode berbayar dinonaktifkan; tidak ada saldo yang akan dipotong. Unduhan menunggu provider gratis yang stabil.",
             title:String(preview.title).slice(0,300),
             thumbnail:typeof preview.thumbnail_url==="string"?preview.thumbnail_url:null,
             duration:null,source:"YouTube"
@@ -242,7 +244,7 @@ async function youtubeStart(request,env){
   const url=String(body?.url||"").trim();
   if(!isYouTubeUrl(url))return json({error:"URL YouTube tidak valid."},400);
   let format;try{format=normalizeYoutubeFormat(body?.format)}catch(e){return json({error:e.message},400)}
-  if(!env.SAVENOW_API_KEY)return json({error:"API key downloader YouTube belum dipasang di Cloudflare Worker."},503);
+  if(!env.SAVENOW_API_KEY||env.ALLOW_PAID_YOUTUBE_PROVIDER!=="true")return json({error:"Unduhan YouTube belum tersedia dalam mode gratis Rp0. Tidak ada provider berbayar yang akan dipanggil."},503);
   const values={
     format:format.apiFormat,url,apikey:env.SAVENOW_API_KEY,
     add_info:"1",allow_extended_duration:"0",no_merge:"0"
@@ -615,8 +617,9 @@ export default {async fetch(request,env){
   if(url.pathname==="/api/youtube/download"&&request.method==="POST")return youtubeStart(request,env);
   if(url.pathname==="/api/youtube/progress"&&request.method==="POST")return youtubeProgress(request,env);
   if(url.pathname==="/api/youtube/file"&&request.method==="GET")return youtubeFile(request,env);
-  if(url.pathname==="/api/health"&&request.method==="GET")return json({ok:true,service:"ARYANZZ",version:"69.2",mode:"cloudflare-worker-zero-server",directMediaDownload:true,selfHostedDownloader:false,youtubeDownloader:false,youtubeApiKeyConfigured:false,musicRecognitionConfigured:!!env.AUDD_API_TOKEN,musicFallbackReady:false,musicVideoRecognitionReady:false,platformExtraction:false,platformBackend:"community-handoff"});
+  if(url.pathname==="/api/health"&&request.method==="GET")return json({ok:true,service:"ARYANZZ",version:"70.0",mode:"cloudflare-worker-zero-server",directMediaDownload:true,selfHostedDownloader:false,youtubeDownloader:env.ALLOW_PAID_YOUTUBE_PROVIDER==="true"&&!!env.SAVENOW_API_KEY,youtubeApiKeyConfigured:false,musicRecognitionConfigured:!!env.AUDD_API_TOKEN,musicFallbackReady:false,musicVideoRecognitionReady:false,platformExtraction:false,platformBackend:"community-handoff"});
   if(url.pathname==="/api/info"&&request.method==="POST"){const proxied=await proxyPlatform(request,env,"/api/info");if(proxied)return proxied;return info(request);}
+  if(url.pathname==="/api/direct-file"&&request.method==="GET")return download(request);
   if(url.pathname==="/api/download"&&request.method==="POST"){const proxied=await proxyPlatform(request,env,"/api/download");if(proxied)return proxied;return download(request);}
   if(url.pathname.startsWith("/api/"))return json({error:"Endpoint tidak ditemukan."},404);
   return env.ASSETS.fetch(request);
