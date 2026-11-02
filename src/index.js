@@ -261,7 +261,7 @@ async function socialMediaFile(request){
   let detected=null;
   if(preview){
     detected=socialMimeForExtension(requestedExt,mode);
-    if(rangeStart===0&&prefixLength>=8){const signature=detectSocialMediaSignature(prefix,mode);if(!signature||signature.ext!==detected?.ext)detected=null;}
+    if(rangeStart===0&&prefixLength>=8){const signature=detectSocialMediaSignature(prefix,mode);if(!signature||signature.mime!==detected?.mime)detected=null;}
   }else if(rangeStart===0||!responseIsPartial)detected=detectSocialMediaSignature(prefix,mode);
   else if(responseIsPartial)detected=socialMimeForExtension(requestedExt,mode);
   if(!detected||detected.mode!==mode){
