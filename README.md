@@ -28,7 +28,7 @@ ARYANZZ is a mobile-first creator workspace hosted on Cloudflare Workers. V72.7 
 
 - Keeps per-instance Piped and Invidious errors instead of silently discarding failed providers.
 - Shows concise provider host and failure reason in the UI when no usable MP4 is returned.
-- Extends public-provider request timeout to eight seconds to avoid rejecting slower healthy community instances too early.
+- Extends the Cloudflare Worker provider request timeout to eight seconds to avoid rejecting slower healthy community instances too early.
 - This improves diagnosis and retry behavior; it does not guarantee public instances will provide a stream when YouTube blocks them.
 
 ## V72.6 — Invidious proxy and direct Chrome streaming
