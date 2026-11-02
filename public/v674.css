@@ -35,3 +35,13 @@ body[data-theme="light"] .v674-search-result h3{color:#1b2440}
 .v737-media-result .primary{display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:8px 13px;border:0;border-radius:10px;background:linear-gradient(110deg,#815cf6,#328fe8);color:#fff;text-decoration:none;font-size:11px;font-weight:850}
 .v737-media-result img{width:112px;max-height:100px;object-fit:cover}
 @media(max-width:390px){.v737-media-result img{width:90px}}
+
+
+/* V75.0 universal media picker additions */
+.v75-platform-note{margin:10px 0 14px;color:#93a8c8;font-size:10px;line-height:1.65}
+.v736-threads{background:linear-gradient(135deg,#171a25,#384055)!important;color:#fff!important}
+.v736-soundcloud{background:linear-gradient(135deg,#ff6b22,#ffb52e)!important;color:#fff!important}
+.v736-capcut{background:linear-gradient(135deg,#171d29,#45536b)!important;color:#fff!important}
+.v736-platform{min-width:0}
+.v736-platform span:last-child{white-space:nowrap}
+@media(max-width:430px){.v75-platform-note{font-size:9px}.v736-platform{min-width:74px}}
