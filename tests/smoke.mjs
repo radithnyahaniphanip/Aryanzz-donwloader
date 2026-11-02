@@ -50,7 +50,7 @@ const checks=[
   ["V65.0 chroma key live preview and export",html.includes('id="editorPreviewCanvas"')&&html.includes('id="editorChromaEnabled"')&&editor.includes("function applyChromaKey")&&editor.includes("drawFrame(previewCtx")],
   ["V65.0 animated captions",html.includes('id="editorTextAnimation"')&&editor.includes("function textAnimationState")&&editor.includes("overlay.dataset.animation")],
   ["Music Finder panel and tool card",html.includes('id="musicFinder"')&&html.includes('data-panel="musicFinder"')],
-  ["Music Finder assets and PWA cache",html.includes("/music-recognition.js?v=68.0")&&html.includes("/music-recognition.css?v=68.0")&&sw.includes("/music-recognition.js?v=68.0")&&sw.includes("/music-recognition.css?v=68.0")],
+  ["Music Finder assets and PWA cache",html.includes("/music-recognition.js?v=69.0")&&html.includes("/music-recognition.css?v=69.0")&&sw.includes("/music-recognition.js?v=69.0")&&sw.includes("/music-recognition.css?v=69.0")],
   ["DJ mix scan uses AudD Enterprise endpoint",html.includes('id="musicFileScanButton"')&&html.includes('id="musicScanSkip"')&&musicJs.includes('/api/music/scan-video')&&workerSource.includes("enterprise.audd.io")],
   ["Music Finder supports file, video URL and microphone",musicJs.includes("captureMediaSample")&&musicJs.includes("getUserMedia")&&musicJs.includes("/api/music/recognize")&&musicJs.includes("musicVideoUrl")],
   ["AudD errors expose provider code and actionable quota guidance",workerSource.includes("function auddFailure")&&workerSource.includes("providerErrorCode")&&workerSource.includes("kode 901")&&workerSource.includes("kode 902")],
@@ -74,8 +74,8 @@ const checks=[
   ["V67.9 downloader preserves direct-source details",downloader.includes("function responseFilename")&&downloader.includes("const directMedia=!!info.extension&&!info.extractor")&&downloader.includes("/api/platform/status")],
   ["V69.0 title search has no-server YouTube handoff",file("../public/v674.js").includes("Buka hasil YouTube")&&file("../public/v674.js").includes("salin URL video")],
   ["V67.9 direct media whitelist includes common formats",workerSource.includes('"mkv"')&&workerSource.includes('"avi"')&&workerSource.includes('"aiff"')&&workerSource.includes('"opus"')],
-  ["V68.0 Gradient Studio controls are wired",html.includes('id="gradientStudio"')&&html.includes('id="gradientRandom"')&&html.includes('id="gradientPng"')&&file("../public/v680.js").includes("function renderGradient")],
-  ["V68.0 File Hash Checker uses local Web Crypto",html.includes('id="fileHash"')&&html.includes('id="hashCompute"')&&file("../public/v680.js").includes("crypto.subtle.digest")],
+  ["V69.0 Gradient Studio controls are wired",html.includes('id="gradientStudio"')&&html.includes('id="gradientRandom"')&&html.includes('id="gradientPng"')&&file("../public/v680.js").includes("function renderGradient")],
+  ["V69.0 File Hash Checker uses local Web Crypto",html.includes('id="fileHash"')&&html.includes('id="hashCompute"')&&file("../public/v680.js").includes("crypto.subtle.digest")],
 ];
 for(const [name,ok] of checks){assert.ok(ok,name+" failed");console.log("✔ "+name)}
 
@@ -226,7 +226,7 @@ try{
   const externalData=await externalSearch.json();
   assert.equal(externalData.results.length,1);
   assert.equal(externalData.results[0].id,"EXT123");
-  console.log("✔ V67.9 title search works through a configured HTTPS backend and filters non-YouTube URLs");
+  console.log("✔ Legacy title-search endpoint remains backward compatible");
 }finally{globalThis.fetch=originalSearchFetch;}
 
 const insecureSearch=await worker.fetch(new Request("https://aryanzz.example/api/search",{
@@ -313,7 +313,7 @@ try{
   const healthData=await health.json();
   assert.equal(healthData.platformBackend,"community-handoff");
   assert.equal(healthData.platformExtraction,false);
-  console.log("✔ External yt-dlp backend health and platform routing are reported correctly");
+  console.log("✔ V69.0 health keeps the no-server mode active");
 }finally{globalThis.fetch=originalFallbackFetch;}
 
 const originalEnterpriseFetch=globalThis.fetch;
