@@ -274,8 +274,8 @@
   function browserVideoFormat(item,providerInstance,progressiveSource=false){
     const mime=String(item?.mimeType||item?.type||item?.mime_type||item?.mime||"").toLowerCase();
     const container=String(item?.format||item?.container||item?.ext||"").toLowerCase();
-    const height=browserVideoHeight(item,url);
     const url=browserHybridMediaUrl(item?.url||item?.urlTemplate||"",providerInstance);
+    const height=browserVideoHeight(item,url);
     const mp4=mime.includes("video/mp4")||mime.includes("video/x-m4v")||container.includes("mpeg_4")||container==="mp4"||container==="m4v"||(progressiveSource&&/\.mp4(?:$|[?#])/i.test(url?.pathname||""));
     if(!url||![144,240,360,480,720,1080,1440,2160].includes(height)||item?.videoOnly===true||!mp4)return null;
     return {mode:"video",height,quality:height+"p",ext:"mp4",mimeType:"video/mp4",url:url.href,bitrate:Number(item.bitrate)||0,progressive:true};
