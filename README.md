@@ -1,4 +1,4 @@
-# ARYANZZ V73.1 — Mobile-resilient media downloader
+# ARYANZZ V73.2 — Mobile-resilient media downloader
 
 Production website: https://aryanzz-donwloader.radithnyahaniphanip.workers.dev/
 
@@ -23,6 +23,13 @@ ARYANZZ is a mobile-first creator workspace hosted on Cloudflare Workers. V73.0 
 | V67.4 | Premium mobile UI refresh, simplified downloader home, searchable Tools Center and Color Studio |
 | V67.6 | Backend health cleanup, title-based YouTube search routed through yt-dlp, clearer AudD/Shazam status, and DJ scan fallback fixes |
 
+
+## V73.2 — Provider 403 retries and failover
+
+- Retries a denied or rate-limited community stream with browser-like YouTube, Invidious-instance, or Piped proxy request headers before reporting failure.
+- Keeps the Invidious local-proxy stream formats ahead of direct Piped stream formats at the same quality, while retaining Piped formats as fallback.
+- Tries all available MP4 candidates in the deployment smoke check instead of checking only the first four low-quality entries.
+- Treats a live public-provider 403 as an external availability warning rather than a failed Cloudflare deployment. The check reports whether any provider passed a real one-byte stream probe; it does not claim a download succeeded when none did.
 
 ## V73.1 — Safer high-quality MP4 assembly
 
