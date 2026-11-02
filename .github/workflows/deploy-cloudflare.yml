@@ -70,7 +70,7 @@ jobs:
           }
           console.log("Live Worker health OK: V" + health.version + " in zero-server mode.");
 
-          for (const path of ["/editor.js?v=65.0", "/editor-pro.css?v=65.0", "/music-recognition.js?v=71.1", "/music-recognition.css?v=71.1", "/v674.js?v=67.6", "/v674.css?v=67.6", "/v677.js?v=67.7", "/v677.css?v=67.7", "/v680.js?v=71.1", "/v680.css?v=71.1", "/v690.css?v=71.1", "/downloader.js?v=71.1", "/v59.js?v=59.5", "/v59.css?v=59.5"]) {
+          for (const path of ["/editor.js?v=65.0", "/editor-pro.css?v=65.0", "/music-recognition.js?v=71.0", "/music-recognition.css?v=71.0", "/v674.js?v=67.6", "/v674.css?v=67.6", "/v677.js?v=67.7", "/v677.css?v=67.7", "/v680.js?v=71.0", "/v680.css?v=71.0", "/v690.css?v=71.0", "/downloader.js?v=71.1", "/v59.js?v=59.5", "/v59.css?v=59.5"]) {
             const response = await fetch(base + path, { cache: "no-store" });
             if (!response.ok) throw new Error("Static asset unavailable: " + path + " HTTP " + response.status);
           }
