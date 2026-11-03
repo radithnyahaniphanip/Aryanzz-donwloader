@@ -431,7 +431,10 @@ async function searchTikTokPublicPage(query){
         items.push({title:snippet||"Video TikTok publik",url,snippet,platform:"tiktok",searchProvider:"TikTok public page"});
       }
     }
-    return {items,status:response.status,bytes:html.length};
+    const scriptIds=[...html.matchAll(/<script[^>]*id=["']([^"']+)["']/gi)].map(match=>match[1]).slice(0,20);
+    const videoLinks=[...html.matchAll(/https?:\\/\\/www\\.tiktok\\.com\\/@[A-Za-z0-9._-]+\\/video\\/\\d{8,}/g)].map(match=>match[0]).slice(0,5);
+    const pageTitle=decodeSearchHtml(html.match(/<title[^>]*>([\\s\\S]*?)<\\/title>/i)?.[1]||"");
+    return {items,status:response.status,bytes:html.length,pageTitle,scriptIds,videoLinks,hasUniversalData:html.includes("__UNIVERSAL_DATA_FOR_REHYDRATION__"),hasSigiState:html.includes("SIGI_STATE")};
   }catch(error){return {items:[],status:0,bytes:0,error:String(error?.message||error).slice(0,100)}}
 }
 function parseBingSocialVideoResults(html,platform,query,seen){
