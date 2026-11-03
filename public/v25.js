@@ -102,6 +102,7 @@
         try{localStorage.setItem(MOTION_KEY,next?"on":"off");}catch{}
         if(statusEl)statusEl.textContent=next?"Animasi aktif sesuai pilihanmu.":"Animasi dinonaktifkan.";
         window.dispatchEvent(new Event("aryanzz:motion-changed"));
+        if(next){setupReveal();setupPremiumEffects();document.body.classList.remove("v25-motion-pulse");void document.body.offsetWidth;document.body.classList.add("v25-motion-pulse");}else{document.querySelectorAll(".v25-profile-card,.v25-profile-stats>div").forEach(el=>{el.classList.remove("v25-reveal","v25-visible");el.style.transform="";});}
         queueAutoSnapshot();
       });
     }
