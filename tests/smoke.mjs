@@ -717,12 +717,37 @@ try{
   assert.equal(socialSearch.status,200);
   const socialSearchData=await socialSearch.json();
   assert.equal(socialSearchData.results.length,1,"unreachable social links must be filtered before display");
-  assert.match(socialSearchData.results[0].title,/Verified DJ Tabola Bale/);
+  assert.match(socialSearchData.results[0].title,/DJ Tabola Bale/);
+  assert.match(socialSearchData.results[0].mediaTitle,/Verified DJ Tabola Bale/);
   assert.equal(socialSearchData.results[0].duration,28);
   assert.equal(socialSearchData.results[0].verified,true);
-  assert.equal(socialSearchData.unavailableCount,1);
+  assert.equal(socialSearchData.verifiedCount,1);
+  assert.equal(socialSearchData.searchOnlyCount,0);
   console.log("✔ Social title search shows only provider-verified videos and skips dead links");
 }finally{globalThis.fetch=originalSocialSearch;}
+const originalSearchOnlyFallback=globalThis.fetch;
+try{
+  globalThis.fetch=async(input,init={})=>{
+    const url=new URL(typeof input==="string"?input:input.url);
+    if(url.hostname==="html.duckduckgo.com")return new Response("<html></html>",{status:200,headers:{"content-type":"text/html"}});
+    if(url.hostname==="www.bing.com")return new Response('<ol><li class="b_algo"><h2><a href="https://www.tiktok.com/@greenscreen/video/1234567890">Green Screen Meme TikTok</a></h2><p>Greenscreen meme video</p></li></ol>',{status:200,headers:{"content-type":"text/html"}});
+    assert.equal(url.hostname,"btch-downloader-api-green.vercel.app");
+    return new Response(JSON.stringify({success:false,error:"Provider temporarily unavailable"}),{status:503,headers:{"content-type":"application/json"}});
+  };
+  const response=await worker.fetch(new Request("https://aryanzz.example/api/social/search",{
+    method:"POST",headers:{"content-type":"application/json"},
+    body:JSON.stringify({platform:"tiktok",query:"Greenscreen"})
+  }),{});
+  assert.equal(response.status,200);
+  const data=await response.json();
+  assert.equal(data.results.length,1,"Relevant public results must remain visible when download provider is unavailable");
+  assert.equal(data.results[0].searchOnly,true);
+  assert.equal(data.results[0].verified,false);
+  assert.match(data.results[0].title,/Green Screen Meme/i);
+  assert.equal(data.searchOnlyCount,1);
+  assert.ok(data.providers.includes("Bing"));
+  console.log("✔ V85.3 regression: Bing fallback keeps relevant TikTok search results visible without a working downloader provider");
+}finally{globalThis.fetch=originalSearchOnlyFallback;}
 const originalYoutubeSearch=globalThis.fetch;
 try{
   globalThis.fetch=async(input,init={})=>{
