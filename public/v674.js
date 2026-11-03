@@ -59,7 +59,10 @@ const info=document.createElement("div"),title=document.createElement("h3"),meta
 title.textContent=item.title||"Media tanpa judul";
 meta.textContent=[item.channel,item.platform||target.name,item.mediaMode==="audio"?"Audio":"Video",duration(item.duration),item.width&&item.height?item.width+" × "+item.height+" px":"",item.searchOnly?"Buka sumber asli":item.verified?"✓ Tautan terverifikasi":""].filter(Boolean).join(" · ");
 snippet.textContent=item.snippet||"Pilih hasil ini untuk memeriksa pratinjau dan format unduhan.";
-pick.type="button";pick.className="primary";pick.textContent=item.searchOnly?"Buka di "+(platforms[item.platform]?.name||target.name):"Lihat & unduh";
+if(kind==="audio"&&item.mediaMode==="audio"&&item.verified&&item.previewUrl){
+try{const audioUrl=new URL(item.previewUrl,location.origin);if(audioUrl.origin===location.origin&&audioUrl.pathname==="/api/social-file"){const player=document.createElement("audio");player.controls=true;player.preload="none";player.src=audioUrl.href;player.setAttribute("aria-label","Pratinjau audio "+(item.title||"hasil pencarian"));player.style.cssText="display:block;width:100%;margin:10px 0";card.append(player);}}catch{}
+}
+pick.type="button";pick.className="primary";pick.textContent=item.searchOnly?"Buka di "+(platforms[item.platform]?.name||target.name):kind==="audio"?"Buka unduhan audio":"Lihat & unduh";
 pick.addEventListener("click",()=>{if(item.searchOnly){window.open(item.url,"_blank","noopener,noreferrer");return}const input=$("url");if(!input)return;input.value=item.url;setMode("link");$("analyze")?.click();$("downloadResult")?.scrollIntoView({behavior:"smooth",block:"nearest"})});
 info.append(title,meta,snippet,pick);card.append(info);
 if(selected==="all"){
