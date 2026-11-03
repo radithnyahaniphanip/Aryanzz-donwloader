@@ -1,5 +1,9 @@
 name: Deploy ARYANZZ V81.4 to Cloudflare Workers
 
+concurrency:
+  group: aryanzz-cloudflare-deploy
+  cancel-in-progress: true
+
 on:
   push:
     branches: [main]
