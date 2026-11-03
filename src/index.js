@@ -380,7 +380,7 @@ function decodeSearchHtml(value){
   return String(value||"").replace(/<[^>]*>/g,"").replace(/&amp;/g,"&").replace(/&quot;/g,'"').replace(/&#39;|&#x27;/gi,"'").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&nbsp;/g," ").replace(/&#(\d+);/g,(_,n)=>String.fromCodePoint(Number(n))).replace(/&#x([0-9a-f]+);/gi,(_,n)=>String.fromCodePoint(parseInt(n,16))).replace(/\s+/g," ").trim();
 }
 function socialSearchDomains(platform){
-  const map={tiktok:["tiktok.com"],instagram:["instagram.com","instagr.am"],snackvideo:["snackvideo.com"],pinterest:["pinterest.com"],facebook:["facebook.com","fb.watch"],x:["x.com","twitter.com"],reddit:["reddit.com"],vimeo:["vimeo.com"],threads:["threads.net"],soundcloud:["soundcloud.com"],capcut:["capcut.com"],youtube:["youtube.com","youtu.be"]};
+  const map={tiktok:["tiktok.com"],tiktoklite:["tiktok.com"],instagram:["instagram.com","instagr.am"],instagramlite:["instagram.com","instagr.am"],snackvideo:["snackvideo.com"],pinterest:["pinterest.com"],facebook:["facebook.com","fb.watch"],facebooklite:["facebook.com","fb.watch"],x:["x.com","twitter.com"],reddit:["reddit.com"],vimeo:["vimeo.com"],threads:["threads.net"],soundcloud:["soundcloud.com"],capcut:["capcut.com"],snapchat:["snapchat.com"],idnapp:["idntimes.com"],linkedin:["linkedin.com"],wechat:["wechat.com","weixin.qq.com"],kakaotalk:["kakao.com"],youtube:["youtube.com","youtu.be"]};
   if(platform==="all")return [...new Set(Object.values(map).flat())];
   return map[platform]||[];
 }
@@ -393,7 +393,7 @@ function socialSearchUrl(platform,query){
 }
 async function verifySocialSearchResult(result,requestUrl){
   const key=freePlatformKey(result.url);
-  if(!key)return null;
+  if(!key)return {...result,verified:false,downloadable:false,searchOnly:true,channel:"Hasil publik"};
   const endpoint=FREE_MEDIA_API+"/api/download/"+key+"?url="+encodeURIComponent(result.url);
   try{
     const response=await fetch(endpoint,{headers:{accept:"application/json"},signal:AbortSignal.timeout(9000),cache:"no-store"});
