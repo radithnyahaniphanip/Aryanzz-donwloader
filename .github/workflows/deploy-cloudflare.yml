@@ -225,6 +225,37 @@ jobs:
             console.warn("Live universal social image search endpoint is healthy but public search providers returned zero image results for 'meme kucing'.");
           }
 
+          // Live title-search regression: TikTok-only Green Screen must never leak results from Pinterest/YouTube.
+          const tiktokSearchResponse = await fetch(base + "/api/social/search", {
+            method: "POST", headers: { "content-type": "application/json" },
+            body: JSON.stringify({ platform: "tiktok", query: "greenscreen", mediaType: "greenscreen" }),
+            cache: "no-store", signal: AbortSignal.timeout(45000)
+          });
+          const tiktokSearchData = await tiktokSearchResponse.json().catch(() => ({}));
+          if (!tiktokSearchResponse.ok || !tiktokSearchData.ok || !Array.isArray(tiktokSearchData.results)) {
+            throw new Error("Live TikTok Green Screen title search failed: HTTP " + tiktokSearchResponse.status + " / " + JSON.stringify(tiktokSearchData));
+          }
+          const badTikTokSources = tiktokSearchData.results.filter(item => {
+            try { const host = new URL(item.url).hostname.toLowerCase(); return !(host === "tiktok.com" || host.endsWith(".tiktok.com")); } catch { return true; }
+          });
+          if (badTikTokSources.length) throw new Error("TikTok-only search leaked results from another source: " + JSON.stringify(badTikTokSources.slice(0, 3)));
+          if (tiktokSearchData.results.some(item => item.mediaMode !== "video")) throw new Error("TikTok Green Screen search returned non-video media.");
+          console.log("Live TikTok Green Screen search passed source isolation; verified results: " + tiktokSearchData.results.length + ".");
+          if (!tiktokSearchData.results.length) console.warn("TikTok Green Screen endpoint is healthy, but public indexing/provider verification returned zero results in this run.");
+
+          // Global title search may return multiple services, but every result must retain its own canonical source.
+          const globalSearchResponse = await fetch(base + "/api/social/search", {
+            method: "POST", headers: { "content-type": "application/json" },
+            body: JSON.stringify({ platform: "all", query: "meme kucing", mediaType: "video" }),
+            cache: "no-store", signal: AbortSignal.timeout(45000)
+          });
+          const globalSearchData = await globalSearchResponse.json().catch(() => ({}));
+          if (!globalSearchResponse.ok || !globalSearchData.ok || !Array.isArray(globalSearchData.results)) {
+            throw new Error("Live global video title search failed: HTTP " + globalSearchResponse.status + " / " + JSON.stringify(globalSearchData));
+          }
+          if (globalSearchData.results.some(item => !item.platform || item.mediaMode !== "video")) throw new Error("Global title search returned a result without source identity or video media type.");
+          console.log("Live global video title search passed source/type validation; verified results: " + globalSearchData.results.length + ".");
+
           const musicResponse = await fetch(base + "/api/music/status", { cache: "no-store" });
           if (!musicResponse.ok) throw new Error("Music Finder status endpoint failed.");
           const music = await musicResponse.json();
