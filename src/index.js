@@ -405,18 +405,18 @@ function socialSearchUrl(platform,query){
 }
 function parseBingSocialVideoResults(html,platform,query,seen){
   const domains=socialSearchDomains(platform),out=[];
-  for(const match of String(html||"").matchAll(/<li\\b[^>]*class=["'][^"']*\\bb_algo\\b[^"']*["'][^>]*>([\\s\\S]*?)<\\/li>/gi)){
-    const block=match[1]||"",anchor=block.match(/<h2[^>]*>\\s*<a\\b([^>]*)>([\\s\\S]*?)<\\/a>/i);if(!anchor)continue;
-    const href=anchor[1].match(/\\bhref=["']([^"']+)["']/i)?.[1];if(!href)continue;
+  for(const match of String(html||"").matchAll(/<li\b[^>]*class=["'][^"']*\bb_algo\b[^"']*["'][^>]*>([\s\S]*?)<\/li>/gi)){
+    const block=match[1]||"",anchor=block.match(/<h2[^>]*>\s*<a\b([^>]*)>([\s\S]*?)<\/a>/i);if(!anchor)continue;
+    const href=anchor[1].match(/\bhref=["']([^"']+)["']/i)?.[1];if(!href)continue;
     let link;try{link=new URL(decodeSearchHtml(href))}catch{continue}
     if(link.protocol!=="https:"||!domains.some(domain=>link.hostname===domain||link.hostname.endsWith("."+domain)))continue;
     const key=freePlatformKey(link.href);if(!key)continue;
-    if(key==="tiktok"&&!/\\/video\\//i.test(link.pathname))continue;
-    if(key==="instagram"&&!/\\/(?:p|reel|tv|share)\\//i.test(link.pathname))continue;
-    if(key==="pinterest"&&!/\\/pin\\//i.test(link.pathname))continue;
+    if(key==="tiktok"&&!/\/video\//i.test(link.pathname))continue;
+    if(key==="instagram"&&!/\/(?:p|reel|tv|share)\//i.test(link.pathname))continue;
+    if(key==="pinterest"&&!/\/pin\//i.test(link.pathname))continue;
     const url=link.href.split("#")[0];if(seen.has(url))continue;
     const title=decodeSearchHtml(anchor[2]);if(!title)continue;
-    const snippet=decodeSearchHtml(block.match(/<p[^>]*>([\\s\\S]*?)<\\/p>/i)?.[1]||"");
+    const snippet=decodeSearchHtml(block.match(/<p[^>]*>([\s\S]*?)<\/p>/i)?.[1]||"");
     if(publicSearchRelevance(query,title+" "+snippet)<0.65)continue;
     seen.add(url);out.push({title,url,snippet,platform:key,searchProvider:"Bing Web"});
   }
