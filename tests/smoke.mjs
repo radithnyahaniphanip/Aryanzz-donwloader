@@ -1023,7 +1023,7 @@ try{
     globalThis.fetch=async(input)=>{
       const url=new URL(typeof input==="string"?input:input.url);
       if(url.hostname==="html.duckduckgo.com"){
-        assert.match(url.searchParams.get("q")||"",/site:capcut\\.com/);
+        assert.match(url.searchParams.get("q")||"",/site:capcut\.com/);
         return new Response('<a class="result__a" href="https://www.capcut.com/template-detail/123456">CapCut photo template</a>',{status:200,headers:{"content-type":"text/html"}});
       }
       if(url.hostname==="btch-downloader-api-green.vercel.app"){
