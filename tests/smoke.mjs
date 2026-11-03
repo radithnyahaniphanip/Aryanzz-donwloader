@@ -34,7 +34,7 @@ const favicon=file("../public/favicon.svg");
 const deployWorkflow=file("../.github/workflows/deploy-cloudflare.yml");
 
 const checks=[
-  ["V88.11 Green Screen cat meme search includes English TikTok discovery variants",workerSource.includes('variants.push("green screen cat meme","green screen cat meme template","chroma key cat meme")')&&workerSource.includes('slice(0,platform==="all"?3:7)')],
+  ["Green Screen and cat-meme discovery variants are generated from ordinary search keywords",workerSource.includes("function socialSearchQueryVariants(query)")&&workerSource.includes('add("green screen meme","green screen meme template","chroma key meme"')&&workerSource.includes('add("green screen cat meme","green screen meme kucing","cat green screen meme")')&&workerSource.includes("return variants.map(value=>") ],
   ["V88.11 Bing parser accepts social video permalinks outside legacy result list markup",workerSource.includes("Fallback parser for Bing layouts")&&workerSource.includes('matchAll(/<a')&&workerSource.includes('searchProvider:"Bing Web"')&&workerSource.includes('searchProvider:"Bing Web"')],
 
   ["V88.11 preview uses intrinsic aspect ratio and suppresses native browser download menu",downloader.includes('preview.controlsList="nodownload noplaybackrate"')&&downloader.includes('preview.videoWidth')&&downloader.includes('preview.style.aspectRatio=width+" / "+height')],
@@ -43,7 +43,7 @@ const checks=[
   ["V88.11 compact result grid and matched All icon styling are present",downloaderCss.includes('.v674-search-results{display:grid')&&downloaderCss.includes('.v736-platform .v736-all-logo')&&html.includes('v736-logo v736-all-logo')],
   ["V88.11 cache and frontend assets use refreshed version keys",sw.includes('aryanzz-v88-14')&&html.includes('v674.js?v=88.14')&&html.includes('downloader.js?v=88.8')],
 
-  ["V88.11 Green Screen search expands localized and cat-meme variants",workerSource.includes('normalized+" meme template"')&&workerSource.includes('normalized+" background"')&&workerSource.includes('chroma key "+normalized')&&workerSource.includes('slice(0,platform==="all"?3:7)')],
+  ["Green Screen search expands localized, meme, cat and video variants",workerSource.includes('normalized.replace(/greenscreen/ig,"green screen")')&&workerSource.includes('add("green screen video","green screen template","chroma key video"')&&workerSource.includes('add("cat meme","funny cat meme","meme kucing lucu","kucing meme video")')&&workerSource.includes("slice(0,12)") ],
   ["V88.1 Bing video search decodes Bing redirect links before validating social domains",workerSource.includes("function decodeBingSocialResultUrl")&&workerSource.includes("const link=decodeBingSocialResultUrl(href)")&&workerSource.includes("atob(value)")],
   ["V88.0 title search has no dedicated Green Screen option; keywords remain ordinary text",!html.includes('<option value="greenscreen">')&&!html.includes("Green Screen")&&!v674.includes("video Green Screen")&&workerSource.includes("function socialSearchQueryVariants")],
   ["V88.0 global search explains cross-platform grouping and round-robins sources",html.includes('data-platform="all"')&&v674.includes("Pencarian lintas platform aktif")&&workerSource.includes("const orderedCandidates=platform===\"all\"")],
