@@ -103,10 +103,24 @@ jobs:
           const robotsResponse = await fetch(base + "/robots.txt", { cache: "no-store" });
           const robotsText = await robotsResponse.text();
           const robotsType = robotsResponse.headers.get("content-type") || "";
-          if (!robotsResponse.ok || !robotsType.includes("text/plain") || !robotsText.includes("User-agent: *") || !robotsText.includes(base + "/sitemap.xml")) {
-            throw new Error("robots.txt must return HTTP 200, text/plain and declare the sitemap. HTTP " + robotsResponse.status + ", content-type " + robotsType);
+          if (!robotsResponse.ok || !robotsType.includes("text/plain") || !robotsText.includes("User-agent: *") || !robotsText.includes(base + "/sitemap.txt")) {
+            throw new Error("robots.txt must return HTTP 200, text/plain and declare the plain-text sitemap. HTTP " + robotsResponse.status + ", content-type " + robotsType);
           }
-          console.log("V82.3 SEO verified: sitemap XML MIME, robots plain-text MIME and canonical URL are live.");
+          const plainMapResponse = await fetch(base + "/sitemap.txt", { cache: "no-store" });
+          const plainMapText = await plainMapResponse.text();
+          const plainMapType = plainMapResponse.headers.get("content-type") || "";
+          if (!plainMapResponse.ok || !plainMapType.includes("text/plain") || !plainMapText.trim().split(/\\r?\\n/).includes(base + "/")) {
+            throw new Error("Plain-text sitemap must return HTTP 200, text/plain and exactly one canonical URL. HTTP " + plainMapResponse.status + ", content-type " + plainMapType + ", body " + plainMapText.slice(0,200));
+          }
+          const googlebotHeaders = { "user-agent": "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)", "accept": "*/*" };
+          for (const path of ["/", "/sitemap.xml", "/sitemap.txt", "/robots.txt"]) {
+            const response = await fetch(base + path, { headers: googlebotHeaders, cache: "no-store", redirect: "manual" });
+            const body = await response.text();
+            if (response.status !== 200 || (path === "/" && !body.includes("<html")) || (path === "/sitemap.txt" && !body.trim().includes(base + "/")) || (path === "/sitemap.xml" && !body.includes("<urlset")) || (path === "/robots.txt" && !body.includes("Allow: /"))) {
+              throw new Error("Googlebot-UA smoke test failed for " + path + ": HTTP " + response.status + ", body " + body.slice(0,180));
+            }
+          }
+          console.log("V82.4 SEO verified: XML + plain-text sitemap, robots and homepage all return HTTP 200 to Googlebot user-agent.");
 
           for (const path of ["/editor.js?v=65.0", "/editor-pro.css?v=65.0", "/music-recognition.js?v=71.0", "/music-recognition.css?v=71.0", "/v674.js?v=81.4", "/v674.css?v=81.4", "/v677.js?v=67.7", "/v677.css?v=67.7", "/v680.js?v=71.0", "/v680.css?v=71.0", "/v690.css?v=71.0", "/downloader.js?v=81.4", "/downloader.css?v=81.4", "/v59.js?v=59.5", "/v59.css?v=59.5", "/audio-studio.js?v=80.0", "/audio-studio.css?v=80.0", "/image-studio.js?v=81.4", "/image-studio.css?v=81.4", "/robots.txt", "/sitemap.xml", "/favicon.svg", "/og-cover.svg"]) {
             const response = await fetch(base + path, { cache: "no-store" });
