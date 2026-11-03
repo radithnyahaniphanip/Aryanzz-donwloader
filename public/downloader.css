@@ -225,3 +225,14 @@ body[data-motion="off"] .youtube-result .progress-fill{animation:none!important;
 .aryanzz-inline-image-actions a{flex:1;display:flex;justify-content:center;align-items:center;min-height:35px;padding:6px;border-radius:8px;text-decoration:none;font-size:11px;font-weight:800}
 .aryanzz-inline-image-actions .primary{background:#2b69ba;color:#fff}.aryanzz-inline-image-actions .tag{border:1px solid #395574;color:#c4d7ef;background:#14243a}
 @media(min-width:700px){.aryanzz-inline-image-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+
+/* V81.3: prevent source/download controls from collapsing into vertical text */
+.aryanzz-inline-image-grid{grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}
+.aryanzz-inline-image-card{min-width:0;width:100%;box-sizing:border-box}
+.aryanzz-inline-image-caption{display:flex;flex-direction:column;gap:4px;min-width:0;padding:9px 10px 2px}
+.aryanzz-inline-image-caption b{font-size:12px;line-height:1.4;overflow-wrap:anywhere}
+.aryanzz-inline-image-caption small{font-size:10px;color:#91a7c5;line-height:1.4}
+.aryanzz-inline-image-actions{display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:7px!important;padding:9px!important;min-width:0}
+.aryanzz-inline-image-actions a{display:flex!important;width:100%!important;min-width:0!important;max-width:100%!important;box-sizing:border-box!important;flex:none!important;white-space:nowrap!important;word-break:normal!important;overflow-wrap:normal!important;writing-mode:horizontal-tb!important;overflow:hidden;text-overflow:ellipsis}
+.aryanzz-inline-image-actions .primary{min-height:40px}
+@media(min-width:700px){.aryanzz-inline-image-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}

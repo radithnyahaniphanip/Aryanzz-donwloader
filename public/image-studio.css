@@ -67,3 +67,12 @@
 .image-result-card>img{height:auto;aspect-ratio:1/1;object-fit:cover;cursor:zoom-in}
 .image-result-actions a{min-height:38px}
 @media(min-width:700px){.image-download-results{grid-template-columns:repeat(3,minmax(0,1fr))}}
+
+/* V81.3: readable full-width image actions and clickable previews */
+.image-result-preview{display:block;line-height:0}
+.image-result-card{min-width:0;width:100%;box-sizing:border-box}
+.image-result-actions{display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:7px!important;min-width:0}
+.image-result-actions a{display:flex!important;align-items:center;justify-content:center;width:100%!important;min-width:0!important;max-width:100%!important;box-sizing:border-box!important;flex:none!important;white-space:nowrap!important;word-break:normal!important;overflow-wrap:normal!important;writing-mode:horizontal-tb!important;overflow:hidden;text-overflow:ellipsis}
+.image-result-actions .primary{min-height:40px}
+.image-result-body{min-width:0}
+.image-result-body>b{overflow-wrap:anywhere}
