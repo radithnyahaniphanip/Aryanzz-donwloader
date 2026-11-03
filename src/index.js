@@ -380,7 +380,9 @@ function decodeSearchHtml(value){
   return String(value||"").replace(/<[^>]*>/g,"").replace(/&amp;/g,"&").replace(/&quot;/g,'"').replace(/&#39;|&#x27;/gi,"'").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&nbsp;/g," ").replace(/&#(\d+);/g,(_,n)=>String.fromCodePoint(Number(n))).replace(/&#x([0-9a-f]+);/gi,(_,n)=>String.fromCodePoint(parseInt(n,16))).replace(/\s+/g," ").trim();
 }
 function socialSearchDomains(platform){
-  return {tiktok:["tiktok.com"],instagram:["instagram.com","instagr.am"],snackvideo:["snackvideo.com"],pinterest:["pinterest.com"],facebook:["facebook.com","fb.watch"],x:["x.com","twitter.com"],reddit:["reddit.com"],vimeo:["vimeo.com"],threads:["threads.net"],soundcloud:["soundcloud.com"],capcut:["capcut.com"],youtube:["youtube.com","youtu.be"]}[platform]||[];
+  const map={tiktok:["tiktok.com"],instagram:["instagram.com","instagr.am"],snackvideo:["snackvideo.com"],pinterest:["pinterest.com"],facebook:["facebook.com","fb.watch"],x:["x.com","twitter.com"],reddit:["reddit.com"],vimeo:["vimeo.com"],threads:["threads.net"],soundcloud:["soundcloud.com"],capcut:["capcut.com"],youtube:["youtube.com","youtu.be"]};
+  if(platform==="all")return [...new Set(Object.values(map).flat())];
+  return map[platform]||[];
 }
 function socialSearchUrl(platform,query){
   const domains=socialSearchDomains(platform);if(!domains.length)return null;
@@ -791,7 +793,7 @@ function parseBingSocialImageResults(html,platform,requestUrl,query){
     const index=results.length,ext=imageExtensionFromUrl(image.href)||"jpg";
     const filename=imageSafeFilename(title,index,ext);
     results.push({
-      title,platform,sourceUrl:source.href,url:image.href,
+      title,platform:freePlatformKey(source.href)||platform,sourceUrl:source.href,url:image.href,
       previewUrl:socialImageProxyUrl(image.href,requestUrl,filename,false,source.href),
       downloadUrl:socialImageProxyUrl(image.href,requestUrl,filename,true,source.href),
       filename,width:Number(meta.w||meta.width)||null,height:Number(meta.h||meta.height)||null,
@@ -814,20 +816,22 @@ function parseSocialImageSearchLinks(html,platform,seen,limit=18){
     if(platform==="instagram"&&!/(?:\/p\/|\/reel\/|\/tv\/|\/share\/)/i.test(link.pathname))continue;
     const href=link.href.split("#")[0];if(seen.has(href))continue;seen.add(href);
     const title=decodeSearchHtml(match[2]);if(!title)continue;
-    out.push({title,url:href});if(out.length>=limit)break;
+    out.push({title,url:href,platform:freePlatformKey(href)||platform});if(out.length>=limit)break;
   }
   return out;
 }
 async function socialImageSearch(request){
   let body;try{body=await request.json()}catch{return json({error:"Body JSON tidak valid."},400)}
   const platform=String(body?.platform||"").toLowerCase(),query=String(body?.query||"").replace(/\s+/g," ").trim();
-  if(!socialSearchDomains(platform).length||!freePlatformKey("https://"+socialSearchDomains(platform)[0]))return json({error:"Pencarian gambar untuk platform ini belum tersedia."},400);
+  const domains=socialSearchDomains(platform);
+  if(!domains.length||!freePlatformKey("https://"+domains[0]))return json({error:"Pencarian gambar untuk platform ini belum tersedia."},400);
   if(query.length<2||query.length>120)return json({error:"Masukkan kata kunci antara 2 sampai 120 karakter."},400);
   if(socialRateLimited(request))return json({error:"Batas pencarian gambar gratis tercapai. Tunggu satu menit lalu coba lagi."},429);
   try{
-    const domains=socialSearchDomains(platform),site=domains.map(domain=>"site:"+domain).join(" OR ");
+    const site=domains.map(domain=>"site:"+domain).join(" OR ");
+    const searchTerm=platform==="all"?"("+site+") "+query:site+" "+query;
     const bingUrl=new URL("https://www.bing.com/images/search");
-    bingUrl.searchParams.set("q",site+" "+query);
+    bingUrl.searchParams.set("q",searchTerm);
     bingUrl.searchParams.set("form","HDRSC3");
     let results=[];
     try{
@@ -836,10 +840,10 @@ async function socialImageSearch(request){
     }catch{}
     let candidates=[];
     if(results.length<19){
-      const ddgQueries=[site+" "+query,site+" "+query+" (image OR photo OR meme OR gambar OR foto OR pin)"];
+      const ddgQueries=[searchTerm,searchTerm+" (image OR photo OR meme OR gambar OR foto OR pin)"];
       const pages=await Promise.all(ddgQueries.map(async term=>{
         const url=new URL("https://html.duckduckgo.com/html/");url.searchParams.set("q",term);
-        try{const response=await fetch(url.href,{headers:{accept:"text/html","user-agent":"Mozilla/5.0 (compatible; ARYANZZ/81.2)"},signal:AbortSignal.timeout(11000),cache:"no-store"});return response.ok?await response.text():""}catch{return ""}
+        try{const response=await fetch(url.href,{headers:{accept:"text/html","user-agent":"Mozilla/5.0 (compatible; ARYANZZ/81.3)"},signal:AbortSignal.timeout(11000),cache:"no-store"});return response.ok?await response.text():""}catch{return ""}
       }));
       const seenPosts=new Set();
       for(const page of pages)candidates.push(...parseSocialImageSearchLinks(page,platform,seenPosts,18-candidates.length));
@@ -849,13 +853,14 @@ async function socialImageSearch(request){
         for(const image of entry.post.images||[]){
           if(results.length>=19)break;
           const imageUrl=String(image.url||"");if(existing.has(imageUrl))continue;existing.add(imageUrl);
-          results.push({...image,title:entry.post.title==="Postingan gambar"?entry.item.title:entry.post.title,platform:entry.post.platform||platform,sourceUrl:entry.item.url,verified:true,searchProvider:"Public post metadata"});
+          results.push({...image,title:entry.post.title==="Postingan gambar"?entry.item.title:entry.post.title,platform:entry.post.platform||entry.item.platform||platform,sourceUrl:entry.post.url||entry.item.url,verified:true,searchProvider:"Public post metadata"});
         }
         if(results.length>=19)break;
       }
     }
     const grouped=results.slice(0,19).map(item=>({title:item.title||query,sourceUrl:item.sourceUrl,platform:item.platform||platform,verified:!!item.verified,images:[item]}));
-    return json({ok:true,platform,query,results:grouped,imageCount:grouped.length,verifiedCount:grouped.length,unavailableCount:Math.max(0,candidates.length-grouped.length),searchProvider:results.some(item=>item.searchProvider==="Bing Images")?"Bing Images + public posts":"Public social posts"});
+    const platformCounts=grouped.reduce((counts,item)=>{const key=item.platform||"other";counts[key]=(counts[key]||0)+1;return counts}, {});
+    return json({ok:true,platform,query,results:grouped,imageCount:grouped.length,verifiedCount:grouped.length,platformCounts,unavailableCount:Math.max(0,candidates.length-grouped.length),searchProvider:results.some(item=>item.searchProvider==="Bing Images")?"Bing Images + public posts":"Public social posts"});
   }catch(error){return json({error:"Pencarian gambar gagal dijangkau. "+String(error?.message||error).slice(0,120)},502)}
 }
 async function socialImageFile(request){
