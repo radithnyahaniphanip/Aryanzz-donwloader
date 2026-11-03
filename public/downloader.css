@@ -272,3 +272,11 @@ body[data-motion="off"] .youtube-result .progress-fill{animation:none!important;
 #downloadResult .youtube-result .youtube-note{padding:8px 10px;border-left:2px solid #3d769e;background:#0b1a2b;border-radius:0 9px 9px 0}
 @media(max-width:420px){#downloadResult .youtube-result .youtube-actions{grid-template-columns:1fr}#downloadResult .youtube-result .youtube-actions .youtube-start{grid-column:auto}#downloadResult .youtube-result .youtube-thumbnail{width:100%;max-width:none}}
 @media(prefers-reduced-motion:reduce){#downloadResult .youtube-result .youtube-ready-link:active{transform:none}}
+
+/* V85.1 — completed download summary */
+#downloadResult .v851-complete-panel{display:grid;grid-template-columns:42px minmax(0,1fr);gap:2px 11px;align-items:center;margin:14px 0;padding:13px 14px;border:1px solid #1e8f78aa;border-radius:15px;background:linear-gradient(120deg,#0d302e,#102337 78%);box-shadow:0 10px 25px #0003}
+#downloadResult .v851-complete-icon{grid-row:span 2;display:grid;place-items:center;width:38px;height:38px;border-radius:50%;background:#16a085;color:#fff;font-size:23px;font-weight:950;box-shadow:0 0 20px #16a08555}
+#downloadResult .v851-complete-copy{font-weight:900;color:#d8fff4;font-size:14px}
+#downloadResult .v851-complete-panel small{min-width:0;overflow-wrap:anywhere;color:#9fc9c3;font-size:11px}
+#downloadResult .v851-download-complete .progress-track:not([hidden]){--done-color:#18b99b}
+#downloadResult .v851-download-complete .progress-fill{background:linear-gradient(90deg,#0e9f82,#37dfb9)!important;box-shadow:0 0 15px #19c9a655}
