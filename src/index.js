@@ -1562,16 +1562,23 @@ async function hybridYouTubeSearch(query){
   });
   try{return await Promise.any(attempts);}catch{return null;}
 }
-async function freeYouTubeSearch(query){
-  const endpoint=FREE_MEDIA_API+"/api/download/youtube-search?query="+encodeURIComponent(query)+"&limit=8";
-  try{
-    const response=await fetch(endpoint,{headers:{accept:"application/json"},signal:AbortSignal.timeout(18000),cache:"no-store"});
-    const data=await response.json().catch(()=>({}));
-    if(!response.ok||data?.success===false)return json({error:data?.error?.message||data?.error||"Provider pencarian gratis menjawab HTTP "+response.status+"."},502);
-    const items=Array.isArray(data?.normalized?.items)?data.normalized.items:Array.isArray(data?.result)?data.result:[];
-    const results=items.map(item=>({title:String(item?.title||item?.name||"Video tanpa judul").slice(0,220),url:String(item?.url||item?.webpage_url||item?.link||""),thumbnail:String(item?.thumbnail||item?.thumbnail_url||""),channel:String(item?.author||item?.channel||item?.uploader||""),duration:Number(item?.duration)||null})).filter(item=>item.title&&isYouTubeUrl(item.url)).slice(0,8);
-    return json({ok:true,query,results,provider:"Public API"});
-  }catch(error){return json({error:"Pencarian YouTube gratis sedang tidak tersedia. "+String(error?.message||error).slice(0,100)},502)}
+async function freeYouTubeSearch(query,queryVariants=null){
+  const variants=Array.isArray(queryVariants)&&queryVariants.length?queryVariants:[query];
+  const responses=await Promise.all(variants.slice(0,5).map(async term=>{
+    const endpoint=FREE_MEDIA_API+"/api/download/youtube-search?query="+encodeURIComponent(term)+"&limit=8";
+    try{
+      const response=await fetch(endpoint,{headers:{accept:"application/json"},signal:AbortSignal.timeout(18000),cache:"no-store"});
+      if(!response.ok)return [];
+      const data=await response.json().catch(()=>({}));
+      if(data?.success===false)return [];
+      const items=Array.isArray(data?.normalized?.items)?data.normalized.items:Array.isArray(data?.result)?data.result:[];
+      return items.map(item=>({title:String(item?.title||item?.name||"Video tanpa judul").slice(0,220),url:String(item?.url||item?.webpage_url||item?.link||""),thumbnail:String(item?.thumbnail||item?.thumbnail_url||""),channel:String(item?.author||item?.channel||item?.uploader||""),duration:Number(item?.duration)||null})).filter(item=>item.title&&isYouTubeUrl(item.url));
+    }catch{return []}
+  }));
+  const seen=new Set(),results=[];
+  for(const list of responses)for(const item of list)if(!seen.has(item.url)){seen.add(item.url);results.push(item)}
+  if(!results.length)return json({error:"Pencarian YouTube gratis belum menemukan hasil yang dapat diakses. Coba kata kunci lain atau buka pencarian YouTube langsung."},502);
+  return json({ok:true,query,results:results.slice(0,20),provider:"Public API · pencarian kata kunci terkait"});
 }
 async function searchYouTube(request,env){
   let body;try{body=await request.json()}catch{return json({error:"Body JSON tidak valid."},400)}
@@ -1580,9 +1587,12 @@ async function searchYouTube(request,env){
   if(query.length>160)return json({error:"Judul pencarian maksimal 160 karakter."},400);
   if(!env.PLATFORM_API_ORIGIN||!env.PLATFORM_API_TOKEN){
     if(socialRateLimited(request))return json({error:"Batas pencarian gratis tercapai. Tunggu satu menit lalu coba lagi."},429);
-    const hybrid=await hybridYouTubeSearch(query);
-    if(hybrid?.results?.length)return json({ok:true,query,results:hybrid.results,provider:hybrid.provider});
-    return freeYouTubeSearch(query);
+    const variants=socialSearchQueryVariants(query).slice(0,5);
+    const hybridLists=await Promise.all(variants.map(term=>hybridYouTubeSearch(term)));
+    const seen=new Set(),hybridResults=[];
+    for(const result of hybridLists)for(const item of result?.results||[])if(!seen.has(item.url)){seen.add(item.url);hybridResults.push(item)}
+    if(hybridResults.length)return json({ok:true,query,results:hybridResults.slice(0,20),provider:"Piped + Invidious · pencarian kata kunci terkait"});
+    return freeYouTubeSearch(query,variants);
   }
   let origin;
   try{
