@@ -61,9 +61,10 @@ if(item.thumbnail){try{const u=new URL(item.thumbnail);if(u.protocol==="https:")
 const info=document.createElement("div"),title=document.createElement("h3"),meta=document.createElement("p"),snippet=document.createElement("p"),pick=document.createElement("button");
 title.textContent=item.title||"Media tanpa judul";
 meta.textContent=[item.channel,target.name,item.mediaMode==="audio"?"Audio":"Video",duration(item.duration),item.verified?"✓ Tautan terverifikasi":""].filter(Boolean).join(" · ");
-snippet.textContent=item.snippet||"Pilih hasil ini untuk memeriksa pratinjau dan format unduhan.";
-pick.type="button";pick.className="primary";pick.textContent=item.searchOnly?"Buka sumber asli ↗":"Lihat & unduh";
-if(item.searchOnly){pick.addEventListener("click",()=>window.open(item.url,"_blank","noopener,noreferrer"));snippet.textContent="Hasil pencarian publik. Buka sumber aslinya; unduhan otomatis belum didukung untuk platform ini.";}else{pick.addEventListener("click",()=>{const input=$("url");if(!input)return;input.value=item.url;setMode("link");$("analyze")?.click();$("downloadResult")?.scrollIntoView({behavior:"smooth",block:"nearest"})});}
+snippet.textContent=item.searchOnly?"Hasil publik yang relevan. Provider unduhan belum memverifikasi media ini; buka sumber atau coba analisis tautannya.":(item.snippet||item.mediaTitle||"Pilih hasil ini untuk memeriksa pratinjau dan format unduhan.");
+pick.type="button";pick.className="primary";pick.textContent=item.searchOnly?"Coba analisis & unduh":"Lihat & unduh";
+pick.addEventListener("click",()=>{const input=$("url");if(!input)return;input.value=item.url;setMode("link");$("analyze")?.click();$("downloadResult")?.scrollIntoView({behavior:"smooth",block:"nearest"})});
+if(item.searchOnly){const source=document.createElement("a");source.href=item.url;source.target="_blank";source.rel="noopener noreferrer";source.textContent="Buka sumber asli ↗";source.className="v674-source-link";info.append(source);}
 info.append(title,meta,snippet,pick);card.append(info);results.append(card);
 });
 if(images.length){
@@ -112,7 +113,7 @@ fetch("/api/image/search",{...options,body:JSON.stringify({query:canonicalSearch
 let mediaItems=[],imageItems=[],unavailable=0,mediaError=null,imageError=null;
 if(mediaOutcome.status==="fulfilled"){
 const response=mediaOutcome.value,data=await response.json().catch(()=>({}));
-if(response.ok){mediaItems=rankRelevant(Array.isArray(data.results)?data.results:[],q,item=>[item.title,item.snippet,item.channel].filter(Boolean).join(" "),.43);unavailable=Number(data.unavailableCount)||0}
+if(response.ok){mediaItems=rankRelevant(Array.isArray(data.results)?data.results:[],q,item=>[item.sourceTitle,item.title,item.mediaTitle,item.snippet,item.channel,item.url].filter(Boolean).join(" "),.20);unavailable=Number(data.unavailableCount)||0}
 else mediaError=data.error||"Pencarian video/audio belum tersedia.";
 }else mediaError=String(mediaOutcome.reason?.message||"Pencarian video/audio gagal.");
 if(imageOutcome.status==="fulfilled"){

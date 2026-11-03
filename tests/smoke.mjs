@@ -63,7 +63,7 @@ const checks=[
   ["V73.7 adaptive progress updates while each 1 MiB chunk is streamed",downloader.includes("reader=response.body?.getReader()")&&downloader.includes("received:received+inFlight")&&downloader.includes("Potongan 1 MB disimpan lokal")],
   ["V77.0 adds Threads, SoundCloud and CapCut to the unified platform picker",html.includes('data-platform="threads"')&&html.includes('data-platform="soundcloud"')&&html.includes('data-platform="capcut"')&&workerSource.includes('soundcloud:["soundcloud.com"],capcut:["capcut.com"]')],
   ["V77.0 TikTok quality selector is populated from real provider resolutions",workerSource.includes("const rawQuality=item?.height??item?.quality??item?.resolution??item?.qualityLabel??label;")&&downloader.includes("available.map(value=>[value,value+\"p · tersedia\"])")&&downloader.includes("n>=100&&n<=4320")],
-  ["V77.0 title search routes YouTube through hybrid public search and displays in-page result cards",workerSource.includes("async function hybridYouTubeSearch(query)")&&workerSource.includes('if(url.pathname==="/api/search"&&request.method==="POST")return searchYouTube(request,env)')&&file("../public/v674.js").includes('selected==="youtube"?"/api/search":"/api/social/search"')&&file("../public/v674.js").includes('item.searchOnly?"Buka sumber asli ↗":"Lihat & unduh"')],
+  ["V77.0 title search routes YouTube through hybrid public search and displays in-page result cards",workerSource.includes("async function hybridYouTubeSearch(query)")&&workerSource.includes('if(url.pathname==="/api/search"&&request.method==="POST")return searchYouTube(request,env)')&&file("../public/v674.js").includes('selected==="youtube"?"/api/search":"/api/social/search"')&&file("../public/v674.js").includes('item.searchOnly?"Coba analisis & unduh":"Lihat & unduh"')],
   ["V77.0 social downloads use a same-origin Worker proxy and validate MP4/WebM signatures",workerSource.includes('url.pathname==="/api/social-file"')&&workerSource.includes("detectSocialMediaSignature")&&downloader.includes('probeUrl.searchParams.set("probe","1")')&&downloader.includes('ready.pathname!=="/api/social-file"')],
   ["V77.0 social stream header timeout does not abort the media body after headers arrive",workerSource.includes("async function fetchSocialHeaders")&&workerSource.includes("finally{clearTimeout(timer);}")&&workerSource.includes("fetchSocialHeaders(current.href")],
   ["V77.0 social downloads reject image assets, HTML error pages and partial streams",workerSource.includes("if(image)return null")&&workerSource.includes("File ditolak: isi file tidak cocok")&&workerSource.includes("upstream.status===206")&&workerSource.includes("File media terpotong")],
@@ -73,7 +73,7 @@ const checks=[
   ["V77.0 custom output filename is honored by the public social provider",downloader.includes("info.outputName||info.title")&&downloader.includes("info.outputName||info.filename")],
   ["V82.2 SEO page title",html.includes("ARYANZZ Downloader - Pengunduh Video, Audio &amp; Gambar")],
   ["V85.0 versioned assets",html.includes("/v15.js?v=59.5")&&html.includes("/owner.js?v=59.5")&&html.includes("/downloader.js?v=85.2")&&html.includes("/downloader.css?v=85.1")&&html.includes("/v25.js?v=85.1")&&html.includes("/v25.css?v=85.1")&&html.includes("/v59.css?v=59.5")&&html.includes("/editor-pro.css?v=65.0")&&html.includes("/editor.js?v=65.0")],
-  ["service worker cache and V59.5 assets",html.includes("navigator.serviceWorker.register")&&sw.includes("aryanzz-v85-3")&&sw.includes("/editor.js?v=65.0")],
+  ["service worker cache and V59.5 assets",html.includes("navigator.serviceWorker.register")&&sw.includes("aryanzz-v85-3-1")&&sw.includes("/editor.js?v=65.0")],
   ["downloader input and result; remove backend status badge",html.includes('id="analyze"')&&html.includes('id="downloadResult"')&&!html.includes('id="backendStatus"')],
   ["unified self-hosted downloader API",downloader.includes('postJson("/api/info"')&&downloader.includes('"/api/direct-file?url="')&&downloader.includes("PLATFORM_NAMES")&&!downloader.toLowerCase().includes("savenow")],
   ["single capture-phase universal URL handler",downloader.includes('button.addEventListener("click"')&&downloader.includes("event.stopImmediatePropagation()")&&downloader.includes("}, true);")],
@@ -173,7 +173,7 @@ const checks=[
   ["V67.9 remaining tools have branded backgrounds",v677css.includes('data-feature="gradientStudio"')&&v677css.includes('data-feature="fileHash"')&&v677css.includes("#editor .editor-pro-head")&&v677css.includes("#profile .v25-profile-cover")],
   ["V67.9 Color Studio favorites and clipboard work after redesign",v677js.includes("palette.onclick=async event")&&v677js.includes("favorites.onclick=async event")&&v677js.includes('localStorage.setItem("aryanzz.color-favorites.v674"')&&v677js.includes("copyExpandedColor")],
 
-  ["V74.0 service worker cache and creative assets",sw.includes("aryanzz-v85-3")&&sw.includes("/v680.css?v=71.0")&&sw.includes("/v680.js?v=71.0")&&html.includes("/v680.js?v=71.0")],
+  ["V74.0 service worker cache and creative assets",sw.includes("aryanzz-v85-3-1")&&sw.includes("/v680.css?v=71.0")&&sw.includes("/v680.js?v=71.0")&&html.includes("/v680.js?v=71.0")],
   ["V67.9 downloader preserves direct-source details",downloader.includes("function responseFilename")&&downloader.includes("const directMedia=!!info.extension&&!info.extractor")&&downloader.includes("/api/platform/status")],
   ["V73.7 unified title search renders social results in-page",file("../public/v674.js").includes('youtube:{name:"YouTube"')&&file("../public/v674.js").includes("/api/social/search")&&file("../public/v674.js").includes("Lihat & unduh")&&html.includes('data-platform="snackvideo"')],
   ["V67.9 direct media whitelist includes common formats",workerSource.includes('"mkv"')&&workerSource.includes('"avi"')&&workerSource.includes('"aiff"')&&workerSource.includes('"opus"')],
@@ -195,7 +195,7 @@ const checks=[
   ["V80.0 CapCut and Instagram short domains are identified in the frontend and Worker",downloader.includes('["capcut.com","CapCut"]')&&downloader.includes('["instagr.am","Instagram"]')&&workerSource.includes('"instagr.am":"instagram"')],
   ["V80.0 social video download and quality controls expose only genuine MP4/M4V files",downloader.includes('!["mp4","m4v"].includes(String(item.ext||"").toLowerCase())')&&downloader.includes("const qualityFormats=")&&downloader.includes("tidak akan mengganti ekstensi")],
   ["V80.0 provider status exposes separate TikTok, Instagram, SnackVideo and CapCut capabilities",workerSource.includes('id:"tiktok"')&&workerSource.includes('id:"instagram"')&&workerSource.includes('id:"snackvideo"')&&workerSource.includes('id:"capcut"')&&workerSource.includes("liveAvailability")],
-  ["V80.0 social search parser accepts HTML result anchors with href and class in either order",workerSource.includes("const anchors=")&&workerSource.includes("attrs.match")],
+  ["V80.0 social search parser accepts HTML result anchors with href and class in either order",workerSource.includes("const attrs=match[1]||\"\"")&&workerSource.includes("attrs.match")&&workerSource.includes("parseBingSocialCandidates")],
   ["V80.0 provider parser accepts alternate video_url and audio_url response shapes",workerSource.includes("normalized?.video_url")&&workerSource.includes("rawResult.video?.url")&&workerSource.includes("normalized?.audio_url")],
   ["V77.0 social video previews use a same-origin range-enabled inline proxy",workerSource.includes("async function fetchSocialUpstream(mediaUrl,sourceUrl,rangeHeader)")&&workerSource.includes('headers.range=rangeHeader')&&downloader.includes("preview.src=previewSource.href")&&downloader.includes("previewFormat.previewUrl")],
   ["V77.0 social preview and Chrome resume preserve Content-Range and Accept-Ranges",workerSource.includes('headers.set("content-range",rangeHeader)')&&workerSource.includes('headers.set("accept-ranges","bytes")')&&workerSource.includes("socialMimeForExtension(requestedExt,mode)")],
@@ -203,7 +203,7 @@ const checks=[
   ["V77.0 social downloads show real transfer progress and save only after complete Blob",downloader.includes("async function readBrowserChunk")&&downloader.includes("new Blob(chunks")&&downloader.includes("transfer baru dimulai, belum selesai.")&&downloader.includes('bar.style.width="100%"')],
   ["V77.0 downloaded MP4 must contain ftyp, moov and mdat and match the source duration before saving",downloader.includes("async function inspectMp4Blob")&&downloader.includes("File MP4 belum utuh")&&downloader.includes("berbeda jauh dari durasi sumber")&&downloader.indexOf('const blob=new Blob(chunks,{type:check.mimeType')<downloader.indexOf("await inspectMp4Blob(blob")&&downloader.indexOf("await inspectMp4Blob(blob")<downloader.lastIndexOf("await saveBrowserBlob(blob")],
 
-  ["V77.0 social title search verifies metadata and actual CDN media bytes before filtering dead links",workerSource.includes("async function verifySocialSearchResult")&&workerSource.includes("socialMediaFile(new Request(probeUrl.href))")&&workerSource.includes("const results=checked.filter(Boolean)")&&file("../public/v674.js").includes("Tautan terverifikasi")&&file("../public/v674.js").includes("tautan media dilewati")],
+  ["V85.3.1 social title search preserves public results when media verification is unavailable",workerSource.includes("async function verifySocialSearchResult")&&workerSource.includes("socialMediaFile(new Request(probeUrl.href))")&&workerSource.includes("const results=checked.map")&&workerSource.includes("searchOnly:true")&&workerSource.includes("parseBingSocialCandidates")&&file("../public/v674.js").includes("Coba analisis & unduh")],
 
 
   ["V84.7 platform picker renders all 20 services including Lite, Snapchat, IDN App, LinkedIn, WeChat and KakaoTalk",["youtube","tiktok","instagram","snackvideo","capcut","pinterest","facebook","x","reddit","vimeo","threads","soundcloud","tiktoklite","facebooklite","snapchat","idnapp","instagramlite","linkedin","wechat","kakaotalk"].every(id=>html.includes('data-platform="'+id+'"'))],
@@ -220,7 +220,7 @@ const checks=[
   ["V85.3 title search ranks media by relevance and scopes image results to the selected platform",v674.includes("function relevanceScore")&&v674.includes("rankRelevant")&&v674.includes('platform:selected')&&!v674.includes('platform:"all"')&&v674.includes("canonicalSearchQuery(q)")],
   ["V85.3 public image search canonicalizes compound and Indonesian search terms and rejects unrelated titles",workerSource.includes("function canonicalPublicSearchQuery")&&workerSource.includes("function publicSearchRelevance")&&workerSource.includes("publicSearchRelevance(query,title)<0.40")&&workerSource.includes("canonicalPublicSearchQuery(searchTerm)")],
   ["V85.3 Tools Center uses compact mobile cards and horizontal category filters",v677css.includes("#allTools .v674-tool-filters{position:sticky")&&v677css.includes("grid-template-columns:repeat(2,minmax(0,1fr))")&&v677css.includes("#allTools .tool{min-height:119px")],
-  ["V85.3 assets and PWA cache are versioned consistently",html.includes("V85.3 · GRATIS")&&html.includes("/v674.js?v=85.3")&&html.includes("/v677.css?v=85.3")&&sw.includes("aryanzz-v85-3")&&sw.includes("/v674.js?v=85.3")&&sw.includes("/v677.css?v=85.3")],
+  ["V85.3 assets and PWA cache are versioned consistently",html.includes("V85.3.1 · GRATIS")&&html.includes("/v674.js?v=85.3.1")&&html.includes("/v677.css?v=85.3")&&sw.includes("aryanzz-v85-3-1")&&sw.includes("/v674.js?v=85.3.1")&&sw.includes("/v677.css?v=85.3")],
 
   ["V85.3 main title search requests video and images from the selected platform only",file("../public/v674.js").includes('fetch("/api/image/search"')&&file("../public/v674.js").includes("platform:selected")&&file("../public/v674.js").includes("Gambar dari media sosial & web publik")],
   ["V81.4 universal image search accepts all public platform domains and detects each result source",workerSource.includes('if(platform==="all")return [...new Set(Object.values(map).flat())]')&&workerSource.includes('const resultPlatform=socialImagePlatformKey(source.href,allowWeb?"web":platform)')&&workerSource.includes('platformCounts')],
@@ -231,14 +231,14 @@ const checks=[
   ["V81.4 universal image search can include public-web images and preserve their source-page referrer",workerSource.includes("allowWeb=false")&&workerSource.includes("allowWeb?safePublicMediaUrl")&&workerSource.includes('referer:sourcePage?sourcePage.href:current.origin+"/"')&&workerSource.includes('if(source)out.searchParams.set("source",source.href)')],
 
   ["V81.2 removes the slogan punctuation and redundant helper copy",html.includes("dari satu tautan</span>")&&!html.includes("dari satu tautan.</span>")&&!html.includes("v75-platform-note")&&!html.includes("Tempel tautan media atau cari judul untuk memulai.")],
-  ["V81.2 removes continuously animated blurred background and refreshes service worker cache",!v674Css.includes("body::before{content")&&!v674Css.includes("v674-aurora")&&sw.includes("aryanzz-v85-3")&&html.includes("V85.3 · GRATIS")],
+  ["V81.2 removes continuously animated blurred background and refreshes service worker cache",!v674Css.includes("body::before{content")&&!v674Css.includes("v674-aurora")&&sw.includes("aryanzz-v85-3-1")&&html.includes("V85.3.1 · GRATIS")],
   ["V80.1 image downloads use a validated same-origin image proxy and reject non-image content",workerSource.includes('url.pathname==="/api/image/file"')&&workerSource.includes('safePublicMediaUrl(raw)')&&workerSource.includes('image/jpeg')&&workerSource.includes('Sumber tidak mengirim file gambar yang didukung')],
   ["V80.1 Image Studio CSS and JavaScript are loaded and cached by the service worker",html.includes('/image-studio.css?v=81.4')&&html.includes('/image-studio.js?v=81.4')&&sw.includes('/image-studio.css?v=81.4')&&sw.includes('/image-studio.js?v=81.4')&&imageStudioCss.includes('.image-download-results')],
   ["V82.1 CapCut and SnackVideo marks use correct full-size SVG geometry",html.includes('aria-label="CapCut"')&&html.includes('M24.189 6.442')&&html.includes('aria-label="SnackVideo"')&&html.includes('viewBox="0 0 48 48"')&&html.includes('brand-refresh.css?v=82.1')],
   ["V82.2 homepage exposes indexable SEO metadata, canonical URL and structured data",html.includes('name="robots" content="index,follow')&&html.includes('rel="canonical"')&&html.includes('application/ld+json')&&html.includes('ARYANZZ Downloader — Unduh Video, Audio & Gambar Online')],
   ["V82.2 crawler discovery files expose an open robots policy, sitemap and branded favicon",robots.includes("User-agent: *")&&robots.includes("Allow: /")&&robots.includes("/sitemap.xml")&&sitemap.includes("<urlset")&&sitemap.includes("https://aryanzz-donwloader.radithnyahaniphanip.workers.dev/")&&favicon.includes("<svg")],
   ["V82.2 web app manifest uses the ARYANZZ Downloader brand",manifest.name==="ARYANZZ Downloader — Pengunduh Video, Audio & Gambar"&&manifest.short_name==="ARYANZZ"],
-  ["V84.6 compact Pustaka tabs and local favorites",html.includes("aryLibraryHistoryTab")&&html.includes("aryLibraryFavoriteTab")&&html.includes("function renderLibrary")&&html.includes("aryanzz-library-favorites-v1")&&sw.includes("aryanzz-v85-3")],
+  ["V84.6 compact Pustaka tabs and local favorites",html.includes("aryLibraryHistoryTab")&&html.includes("aryLibraryFavoriteTab")&&html.includes("function renderLibrary")&&html.includes("aryanzz-library-favorites-v1")&&sw.includes("aryanzz-v85-3-1")],
 
   ["V85.0 explicit profile motion toggle overrides OS reduced-motion only after user opt-in",profileJs.includes('saved==="on"||(!reduceMotion&&saved!=="off")')&&profileJs.includes('input.disabled=false;')&&profileJs.includes('const next=input.checked;')],
   ["V85.0 profile cover and stats visibly animate when motion is enabled",profileJs.includes('saved==="on"')&&file("../public/v25.css").includes('body[data-motion="on"] .v25-profile-cover:after')&&file("../public/v25.css").includes('body[data-motion="on"] .v25-avatar')],
@@ -640,16 +640,16 @@ try{
 const originalAdditionalSearchFetch=globalThis.fetch;
 try{
   const cases=[
-    {id:"instagram",key:"instagram",url:"https://www.instagram.com/reel/TestInstagram123/",anchor:'<a href="https://www.instagram.com/reel/TestInstagram123/" class="result__a">Instagram Reels result</a>',mode:"video"},
-    {id:"snackvideo",key:"snackvideo",url:"https://www.snackvideo.com/@demo/video/TestSnack123",anchor:'<a class="result__a" href="https://www.snackvideo.com/@demo/video/TestSnack123">SnackVideo result</a>',mode:"video"},
-    {id:"capcut",key:"capcut",url:"https://www.capcut.com/t/TestCapCut123",anchor:'<a class="result__a" href="https://duckduckgo.com/l/?uddg='+encodeURIComponent("https://www.capcut.com/t/TestCapCut123")+'">CapCut shared video result</a>',mode:"video"},
-    {id:"pinterest",key:"pinterest",url:"https://www.pinterest.com/pin/TestPin123/",anchor:'<a class="result__a" href="https://www.pinterest.com/pin/TestPin123/">Pinterest video pin result</a>',mode:"video"},
-    {id:"facebook",key:"facebook",url:"https://www.facebook.com/watch/?v=123456789",anchor:'<a class="result__a" href="https://www.facebook.com/watch/?v=123456789">Facebook video result</a>',mode:"video"},
-    {id:"x",key:"twitter",url:"https://x.com/demo/status/123456789",anchor:'<a class="result__a" href="https://x.com/demo/status/123456789">X video post result</a>',mode:"video"},
-    {id:"reddit",key:"reddit",url:"https://www.reddit.com/r/videos/comments/TestReddit123/demo/",anchor:'<a class="result__a" href="https://www.reddit.com/r/videos/comments/TestReddit123/demo/">Reddit video result</a>',mode:"video"},
-    {id:"vimeo",key:"vimeo",url:"https://vimeo.com/123456789",anchor:'<a class="result__a" href="https://vimeo.com/123456789">Vimeo video result</a>',mode:"video"},
-    {id:"threads",key:"threads",url:"https://www.threads.net/@demo/post/TestThreads123",anchor:'<a class="result__a" href="https://www.threads.net/@demo/post/TestThreads123">Threads video result</a>',mode:"video"},
-    {id:"soundcloud",key:"soundcloud",url:"https://soundcloud.com/demo/test-track",anchor:'<a class="result__a" href="https://soundcloud.com/demo/test-track">SoundCloud audio track result</a>',mode:"audio"}
+    {id:"instagram",key:"instagram",url:"https://www.instagram.com/reel/TestInstagram123/",anchor:'<a href="https://www.instagram.com/reel/TestInstagram123/" class="result__a">Tabola Bale Instagram Reels result</a>',mode:"video"},
+    {id:"snackvideo",key:"snackvideo",url:"https://www.snackvideo.com/@demo/video/TestSnack123",anchor:'<a class="result__a" href="https://www.snackvideo.com/@demo/video/TestSnack123">Tabola Bale SnackVideo result</a>',mode:"video"},
+    {id:"capcut",key:"capcut",url:"https://www.capcut.com/t/TestCapCut123",anchor:'<a class="result__a" href="https://duckduckgo.com/l/?uddg='+encodeURIComponent("https://www.capcut.com/t/TestCapCut123")+'">Tabola Bale CapCut shared video result</a>',mode:"video"},
+    {id:"pinterest",key:"pinterest",url:"https://www.pinterest.com/pin/TestPin123/",anchor:'<a class="result__a" href="https://www.pinterest.com/pin/TestPin123/">Tabola Bale Pinterest video pin result</a>',mode:"video"},
+    {id:"facebook",key:"facebook",url:"https://www.facebook.com/watch/?v=123456789",anchor:'<a class="result__a" href="https://www.facebook.com/watch/?v=123456789">Tabola Bale Facebook video result</a>',mode:"video"},
+    {id:"x",key:"twitter",url:"https://x.com/demo/status/123456789",anchor:'<a class="result__a" href="https://x.com/demo/status/123456789">Tabola Bale X video post result</a>',mode:"video"},
+    {id:"reddit",key:"reddit",url:"https://www.reddit.com/r/videos/comments/TestReddit123/demo/",anchor:'<a class="result__a" href="https://www.reddit.com/r/videos/comments/TestReddit123/demo/">Tabola Bale Reddit video result</a>',mode:"video"},
+    {id:"vimeo",key:"vimeo",url:"https://vimeo.com/123456789",anchor:'<a class="result__a" href="https://vimeo.com/123456789">Tabola Bale Vimeo video result</a>',mode:"video"},
+    {id:"threads",key:"threads",url:"https://www.threads.net/@demo/post/TestThreads123",anchor:'<a class="result__a" href="https://www.threads.net/@demo/post/TestThreads123">Tabola Bale Threads video result</a>',mode:"video"},
+    {id:"soundcloud",key:"soundcloud",url:"https://soundcloud.com/demo/test-track",anchor:'<a class="result__a" href="https://soundcloud.com/demo/test-track">Tabola Bale SoundCloud audio track result</a>',mode:"audio"}
   ];
   const videoBytes=Uint8Array.from([0,0,0,24,102,116,121,112,105,115,111,109,0,0,2,0,105,115,111,109,105,115,111,50]);
   const audioBytes=Uint8Array.from([73,68,51,4,0,0,0,0,0,10,84,73,84,50,0,0,0,4,0,0,84,101,115,116]);
@@ -717,12 +717,37 @@ try{
   assert.equal(socialSearch.status,200);
   const socialSearchData=await socialSearch.json();
   assert.equal(socialSearchData.results.length,1,"unreachable social links must be filtered before display");
-  assert.match(socialSearchData.results[0].title,/Verified DJ Tabola Bale/);
+  assert.match(socialSearchData.results[0].title,/DJ Tabola Bale/);
+  assert.match(socialSearchData.results[0].mediaTitle,/Verified DJ Tabola Bale/);
   assert.equal(socialSearchData.results[0].duration,28);
   assert.equal(socialSearchData.results[0].verified,true);
-  assert.equal(socialSearchData.unavailableCount,1);
+  assert.equal(socialSearchData.verifiedCount,1);
+  assert.equal(socialSearchData.searchOnlyCount,0);
   console.log("✔ Social title search shows only provider-verified videos and skips dead links");
 }finally{globalThis.fetch=originalSocialSearch;}
+const originalSearchOnlyFallback=globalThis.fetch;
+try{
+  globalThis.fetch=async(input,init={})=>{
+    const url=new URL(typeof input==="string"?input:input.url);
+    if(url.hostname==="html.duckduckgo.com")return new Response("<html></html>",{status:200,headers:{"content-type":"text/html"}});
+    if(url.hostname==="www.bing.com")return new Response('<ol><li class="b_algo"><h2><a href="https://www.tiktok.com/@greenscreen/video/1234567890">Green Screen Meme TikTok</a></h2><p>Greenscreen meme video</p></li></ol>',{status:200,headers:{"content-type":"text/html"}});
+    assert.equal(url.hostname,"btch-downloader-api-green.vercel.app");
+    return new Response(JSON.stringify({success:false,error:"Provider temporarily unavailable"}),{status:503,headers:{"content-type":"application/json"}});
+  };
+  const response=await worker.fetch(new Request("https://aryanzz.example/api/social/search",{
+    method:"POST",headers:{"content-type":"application/json"},
+    body:JSON.stringify({platform:"tiktok",query:"Greenscreen"})
+  }),{});
+  assert.equal(response.status,200);
+  const data=await response.json();
+  assert.equal(data.results.length,1,"Relevant public results must remain visible when download provider is unavailable");
+  assert.equal(data.results[0].searchOnly,true);
+  assert.equal(data.results[0].verified,false);
+  assert.match(data.results[0].title,/Green Screen Meme/i);
+  assert.equal(data.searchOnlyCount,1);
+  assert.ok(data.providers.includes("Bing"));
+  console.log("✔ V85.3 regression: Bing fallback keeps relevant TikTok search results visible without a working downloader provider");
+}finally{globalThis.fetch=originalSearchOnlyFallback;}
 const originalYoutubeSearch=globalThis.fetch;
 try{
   globalThis.fetch=async(input,init={})=>{

@@ -410,8 +410,31 @@ async function verifySocialSearchResult(result,requestUrl){
     const mediaCheck=await socialMediaFile(new Request(probeUrl.href));
     const mediaData=await mediaCheck.json().catch(()=>({}));
     if(!mediaCheck.ok||!mediaData.valid)return null;
-    return {...result,title:info.title||result.title,thumbnail:info.thumbnail||null,duration:info.duration||null,verified:true,downloadable:true,mediaMode:playable.mode,extension:mediaData.extension,mediaType:mediaData.mimeType};
+    return {...result,title:result.title||info.title,mediaTitle:info.title||"",thumbnail:info.thumbnail||null,duration:info.duration||null,verified:true,downloadable:true,mediaMode:playable.mode,extension:mediaData.extension,mediaType:mediaData.mimeType};
   }catch{return null}
+}
+function socialSearchCandidateAllowed(platform,rawUrl){
+  const link=safePublicMediaUrl(rawUrl);if(!link)return null;
+  if(!socialSearchDomains(platform).some(domain=>link.hostname===domain||link.hostname.endsWith("."+domain)))return null;
+  if(platform==="instagram"&&!/(?:^|\/)(?:p|reel|tv|share)\//i.test(link.pathname))return null;
+  if(platform==="tiktok"&&!/\/video\//i.test(link.pathname))return null;
+  if(platform==="pinterest"&&!/\/pin\//i.test(link.pathname))return null;
+  return link;
+}
+function parseBingSocialCandidates(html,platform){
+  const out=[],seen=new Set();
+  for(const block of String(html||"").matchAll(/<li\b[^>]*class=["'][^"']*b_algo[^"']*["'][^>]*>[\s\S]*?<\/li>/gi)){
+    const anchor=block[0].match(/<h2\b[^>]*>[\s\S]*?<a\b([^>]*)>([\s\S]*?)<\/a>/i);
+    if(!anchor)continue;
+    const href=anchor[1].match(/\bhref=["']([^"']+)["']/i)?.[1];if(!href)continue;
+    let url;try{url=new URL(decodeSearchHtml(href))}catch{continue}
+    const safe=socialSearchCandidateAllowed(platform,url.href);if(!safe||seen.has(safe.href))continue;
+    const title=decodeSearchHtml(anchor[2].replace(/<[^>]+>/g," ")).trim();if(!title)continue;
+    const snippet=decodeSearchHtml((block[0].match(/<p\b[^>]*>([\s\S]*?)<\/p>/i)?.[1]||"").replace(/<[^>]+>/g," ")).trim();
+    seen.add(safe.href);out.push({title,url:safe.href,snippet,searchEngine:"Bing"});
+    if(out.length>=12)break;
+  }
+  return out;
 }
 async function searchSocial(request){
   let body;try{body=await request.json()}catch{return json({error:"Body JSON tidak valid."},400)}
@@ -419,32 +442,48 @@ async function searchSocial(request){
   if(!socialSearchDomains(platform).length||platform==="youtube")return json({error:"Platform pencarian belum didukung."},400);
   if(query.length<2||query.length>120)return json({error:"Masukkan judul antara 2 sampai 120 karakter."},400);
   if(socialRateLimited(request))return json({error:"Batas pencarian gratis tercapai. Tunggu satu menit lalu coba lagi."},429);
-  const searchUrl=socialSearchUrl(platform,canonicalPublicSearchQuery(query));
+  const normalized=canonicalPublicSearchQuery(query),ddgUrl=socialSearchUrl(platform,normalized);
+  const bingUrl=new URL("https://www.bing.com/search");bingUrl.searchParams.set("q",socialSearchDomains(platform).map(domain=>"site:"+domain).join(" OR ")+" "+normalized);
+  const headers={accept:"text/html,application/xhtml+xml","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0.0.0 Safari/537.36"};
+  const candidates=[],seen=new Set();let providerErrors=[];
+  const add=(items)=>{for(const item of items){const safe=socialSearchCandidateAllowed(platform,item.url);if(!safe||seen.has(safe.href))continue;seen.add(safe.href);const score=publicSearchRelevance(query,[item.title,item.snippet].filter(Boolean).join(" "));if(score>=0.16)candidates.push({...item,url:safe.href,__score:score})}};
   try{
-    const response=await fetch(searchUrl.href,{headers:{accept:"text/html","user-agent":"Mozilla/5.0 (compatible; ARYANZZ/78.0; +https://aryanzz-donwloader.radithnyahaniphanip.workers.dev)"},signal:AbortSignal.timeout(12000),cache:"no-store"});
-    if(!response.ok)return json({error:"Pencarian publik sedang tidak tersedia (HTTP "+response.status+")."},502);
-    const html=await response.text(),candidates=[],seen=new Set();
-    const anchors=/<a\b([^>]*)>([\s\S]*?)<\/a>/gi;
-    for(const match of html.matchAll(anchors)){
-      const attrs=match[1]||"";
-      if(!/\bclass=["'][^"']*\bresult__a\b[^"']*["']/i.test(attrs))continue;
-      const hrefMatch=attrs.match(/\bhref=["']([^"']+)["']/i);
-      if(!hrefMatch)continue;
-      let link;try{link=new URL(decodeSearchHtml(hrefMatch[1]),"https://html.duckduckgo.com")}catch{continue}
-      if(link.hostname.endsWith("duckduckgo.com")){const target=link.searchParams.get("uddg");if(target){try{link=new URL(target)}catch{continue}}}
-      if(link.protocol!=="https:"||!socialSearchDomains(platform).some(domain=>link.hostname===domain||link.hostname.endsWith("."+domain)))continue;
-      const href=link.href.split("#")[0];if(seen.has(href))continue;seen.add(href);
-      const title=decodeSearchHtml(match[2]);if(!title)continue;
-      if(platform==="instagram"&&!/\/(?:p|reel|tv|share)\//i.test(link.pathname))continue;
-      if(platform==="tiktok"&&!/\/video\//i.test(link.pathname))continue;
-      if(platform==="pinterest"&&!/\/pin\//i.test(link.pathname))continue;
-      const snippetMatch=html.slice(match.index,match.index+1800).match(/class=["']result__snippet["'][^>]*>([\s\S]*?)<\/[^>]+>/i);
-      candidates.push({title,url:href,snippet:decodeSearchHtml(snippetMatch?.[1]||"")});
-      if(candidates.length>=8)break;
+    try{
+      const response=await fetch(ddgUrl.href,{headers,signal:AbortSignal.timeout(10000),cache:"no-store"});
+      if(response.ok){
+        const html=await response.text();
+        for(const match of html.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/gi)){
+          const attrs=match[1]||"";if(!/\bclass=["'][^"']*\bresult__a\b[^"']*["']/i.test(attrs))continue;
+          const href=attrs.match(/\bhref=["']([^"']+)["']/i)?.[1];if(!href)continue;
+          let link;try{link=new URL(decodeSearchHtml(href),"https://html.duckduckgo.com")}catch{continue}
+          if(link.hostname.endsWith("duckduckgo.com")){const target=link.searchParams.get("uddg");if(target){try{link=new URL(target)}catch{continue}}}
+          const safe=socialSearchCandidateAllowed(platform,link.href);if(!safe)continue;
+          const title=decodeSearchHtml(match[2].replace(/<[^>]+>/g," ")).trim();
+          const snippet=decodeSearchHtml(html.slice(match.index,match.index+1800).match(/class=["']result__snippet["'][^>]*>([\s\S]*?)<\/[^>]+>/i)?.[1]||"");
+          add([{title,url:safe.href,snippet,searchEngine:"DuckDuckGo"}]);
+          if(candidates.length>=12)break;
+        }
+      }else providerErrors.push("DuckDuckGo HTTP "+response.status);
+    }catch(error){providerErrors.push("DuckDuckGo: "+String(error?.message||error).slice(0,80))}
+    if(candidates.length===0){
+      try{
+        const response=await fetch(bingUrl.href,{headers,signal:AbortSignal.timeout(10000),cache:"no-store"});
+        if(response.ok)add(parseBingSocialCandidates(await response.text(),platform));
+        else providerErrors.push("Bing HTTP "+response.status);
+      }catch(error){providerErrors.push("Bing: "+String(error?.message||error).slice(0,80))}
     }
-    const checked=await Promise.all(candidates.map(item=>verifySocialSearchResult(item,request.url)));
-    const results=checked.filter(Boolean).filter(item=>publicSearchRelevance(query,[item.title,item.snippet].filter(Boolean).join(" "))>=0.40);
-    return json({ok:true,platform,query,results,verifiedCount:results.length,unavailableCount:candidates.length-results.length,verification:"provider-and-media-signature"});
+    candidates.sort((a,b)=>b.__score-a.__score);
+    const selected=candidates.slice(0,12);
+    const checked=await Promise.all(selected.map(async item=>{
+      const {__score,...candidate}=item;
+      const verified=await verifySocialSearchResult(candidate,request.url);
+      if(verified)return {...verified,sourceTitle:candidate.title,searchOnly:false,searchEngine:candidate.searchEngine};
+      return {...candidate,sourceTitle:candidate.title,channel:platform==="tiktok"?"TikTok":platform,verified:false,downloadable:false,searchOnly:true,searchEngine:candidate.searchEngine};
+    }));
+    const results=checked.map(item=>({...item,searchScore:publicSearchRelevance(query,[item.sourceTitle,item.title,item.snippet,item.mediaTitle].filter(Boolean).join(" "))}))
+      .filter(item=>item.searchScore>=0.16)
+      .sort((a,b)=>b.searchScore-a.searchScore);
+    return json({ok:true,platform,query,normalizedQuery:normalized,results,verifiedCount:results.filter(item=>item.verified).length,searchOnlyCount:results.filter(item=>item.searchOnly).length,unavailableCount:Math.max(0,selected.length-results.length),providers:["DuckDuckGo","Bing"],providerErrors:results.length?[]:providerErrors,verification:"provider-optional; public-source-results-retained"});
   }catch(error){return json({error:"Pencarian publik gagal dijangkau. Coba lagi nanti. "+String(error?.message||error).slice(0,100)},502)}
 }
 
