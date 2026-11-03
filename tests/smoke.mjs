@@ -381,7 +381,7 @@ try{
     const url=new URL(typeof input==="string"?input:input.url);
     assert.equal(url.hostname,"www.bing.com");
     assert.equal(url.pathname,"/images/search");
-    assert.match(url.searchParams.get("q")||"",/meme kucing/i);
+    assert.match(url.searchParams.get("q")||"",/meme cat/i);
     assert.match(url.searchParams.get("q")||"",/site:pinterest\.com/);
     const html=Array.from({length:23},(_,i)=>{
       const meta={murl:"https://cdn.example/cat-meme-"+i+".jpg",purl:"https://www.pinterest.com/pin/"+(1000+i)+"/",desc:"Meme kucing lucu "+i,w:1200,h:1600};
