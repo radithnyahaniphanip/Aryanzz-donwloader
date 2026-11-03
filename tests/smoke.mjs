@@ -35,6 +35,7 @@ const deployWorkflow=file("../.github/workflows/deploy-cloudflare.yml");
 
 const checks=[
   ["V88.3 preview uses intrinsic aspect ratio and suppresses native browser download menu",downloaderSource.includes('preview.controlsList="nodownload noplaybackrate"')&&downloaderSource.includes('preview.videoWidth')&&downloaderSource.includes('preview.style.aspectRatio=width+" / "+height')],
+  ["V88.3 direct-file preview also detects native dimensions and hides browser download menu",html.includes("preview.videoWidth")&&html.includes("preview.controlsList='nodownload noplaybackrate'")&&html.includes("Pratinjau mengikuti rasio asli media.")],
   ["V88.3 media metadata no longer displays community-provider wording",downloaderSource.includes('info.extractor || platformName(url)')&&!downloaderSource.includes('info.extractor || info.source || platformName(url)')],
   ["V88.3 compact result grid and matched All icon styling are present",downloaderCss.includes('.v674-search-results{display:grid')&&downloaderCss.includes('.v736-platform .v736-all-logo')&&html.includes('v736-logo v736-all-logo')],
   ["V88.3 cache and frontend assets use refreshed version keys",sw.includes('aryanzz-v88-3')&&html.includes('v674.js?v=88.3')&&html.includes('downloader.js?v=88.3')],
