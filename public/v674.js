@@ -69,7 +69,7 @@ const heading=document.createElement("h3");heading.textContent="Gambar dari medi
 const note=document.createElement("p");note.textContent="Setiap gambar punya tautan sumber asli dan tombol unduh.";
 head.append(heading,note);
 const grid=document.createElement("div");grid.className="aryanzz-inline-image-grid";
-images.slice(0,19).forEach((item,index)=>{
+images.slice(0,50).forEach((item,index)=>{
 const preview=safeImageProxy(item.previewUrl||item.downloadUrl),download=safeImageProxy(item.downloadUrl||item.previewUrl);
 if(!preview||!download)return;
 const card=document.createElement("article");card.className="aryanzz-inline-image-card";
@@ -94,10 +94,10 @@ const go=async()=>{
 const q=(searchInput?.value||"").trim();if(!q){if(help)help.textContent="Masukkan judul atau kata kunci gambar.";return}if(q.length<2){if(help)help.textContent="Masukkan minimal 2 karakter.";return}
 searchController?.abort();searchController=new AbortController();
 results.hidden=false;results.replaceChildren();
-const target=platforms[selected],kind=["image","audio","greenscreen"].includes(searchType?.value)?searchType.value:"video";
+const target=platforms[selected],kind=["image","audio"].includes(searchType?.value)?searchType.value:"video";
 const loading=document.createElement("div");loading.className="v674-search-loading";loading.textContent=kind==="image"?"Mencari gambar dari "+target.name+" saja…":"Mencari video/audio dari "+target.name+" saja…";results.append(loading);
 const btn=$("titleSearchBtn");if(btn){btn.disabled=true;btn.textContent="Mencari…"}
-if(help)help.textContent=kind==="image"?"Mode gambar: sumber "+target.name+".":kind==="audio"?"Mode audio: hanya file audio yang diverifikasi dari "+target.name+".":kind==="greenscreen"?"Mode Green Screen: mencari video dengan variasi kata kunci di "+target.name+".":"Mode video: sumber "+target.name+". Pilih Semua platform untuk pencarian lintas sumber.";
+if(help)help.textContent=kind==="image"?"Mode gambar: sumber "+target.name+".":kind==="audio"?"Mode audio: hanya file audio yang diverifikasi dari "+target.name+".":"Mode video: sumber "+target.name+". Pilih Semua platform untuk pencarian lintas sumber.";
 try{
 const endpoint=kind==="image"?"/api/image/search":(selected==="youtube"&&kind==="video"?"/api/search":"/api/social/search");
 const options={method:"POST",headers:{"content-type":"application/json"},cache:"no-store"};
@@ -132,7 +132,7 @@ render(mediaItems,target,q,unavailable,imageItems);
 if(error?.name==="AbortError")return;
 results.replaceChildren();
 const note=document.createElement("p");note.className="v674-title-help";note.textContent=String(error?.message||"Pencarian belum tersedia.").slice(0,220);results.append(note);
-if(help)help.textContent=kind==="image"?"Pencarian gambar hanya menampilkan sumber "+target.name+".":kind==="audio"?"Pencarian audio hanya menampilkan file audio terverifikasi dari "+target.name+".":kind==="greenscreen"?"Mencari video Green Screen dari "+target.name+".":"Pencarian video hanya menampilkan sumber "+target.name+".";
+if(help)help.textContent=kind==="image"?"Pencarian gambar hanya menampilkan sumber "+target.name+".":kind==="audio"?"Pencarian audio hanya menampilkan file audio terverifikasi dari "+target.name+".":"Pencarian video hanya menampilkan sumber "+target.name+".";
 }finally{if(btn){btn.disabled=false;btn.textContent="Cari ⌕"}}
 };
 $("titleSearchBtn")?.addEventListener("click",go);searchInput?.addEventListener("keydown",e=>{if(e.key==="Enter")go()});
