@@ -1,0 +1,6 @@
+/* V88.7: isolate platform sessions and visually separate ALL search results */
+.v674-platform-result-group{margin:14px 0;padding:12px;border:1px solid rgba(112,157,220,.34);border-radius:16px;background:rgba(7,17,36,.55)}
+.v674-platform-result-group>h3{margin:0 0 10px;font-size:14px;letter-spacing:.04em;color:#dceaff}
+.v674-platform-result-list{display:grid;grid-template-columns:minmax(0,1fr);gap:10px}
+.v674-platform-result-group .v674-search-result{margin:0}
+@media(min-width:700px){.v674-platform-result-list{grid-template-columns:repeat(2,minmax(0,1fr))}}
