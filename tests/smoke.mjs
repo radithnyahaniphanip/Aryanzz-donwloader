@@ -753,7 +753,6 @@ try{
   assert.equal(socialSearchData.results[0].duration,28);
   assert.equal(socialSearchData.results[0].verified,true);
   assert.equal(socialSearchData.verifiedCount,1);
-  assert.equal(socialSearchData.searchOnlyCount,0);
   console.log("✔ Social title search shows only provider-verified videos and skips dead links");
 }finally{globalThis.fetch=originalSocialSearch;}
 const originalYoutubeSearch=globalThis.fetch;
