@@ -403,6 +403,37 @@ function socialSearchUrl(platform,query){
   url.searchParams.set("q",site+" "+query);
   return url;
 }
+function collectTikTokSearchItems(value,out,seen,depth=0){
+  if(depth>14||!value||typeof value!=="object")return;
+  if(Array.isArray(value)){for(const item of value)collectTikTokSearchItems(item,out,seen,depth+1);return}
+  const id=String(value.id||value.video?.id||"");
+  const desc=String(value.desc||value.video?.desc||"").trim();
+  const author=value.author||value.authorInfo||value.video?.author||{};
+  const username=String(author.uniqueId||author.unique_id||author.username||"").trim();
+  if(/^\\d{8,}$/.test(id)&&username&&desc){
+    const url="https://www.tiktok.com/@"+encodeURIComponent(username)+"/video/"+id;
+    if(!seen.has(url)){seen.add(url);out.push({title:desc,url,snippet:desc,platform:"tiktok",searchProvider:"TikTok public search"});}
+  }
+  for(const [key,item] of Object.entries(value))if(item&&typeof item==="object"&&key!=="author"&&key!=="authorInfo")collectTikTokSearchItems(item,out,seen,depth+1);
+}
+async function searchTikTokPublicPage(query){
+  const url=new URL("https://www.tiktok.com/search/video");url.searchParams.set("q",query);
+  try{
+    const response=await fetch(url.href,{headers:{accept:"text/html,application/xhtml+xml","accept-language":"en-US,en;q=0.9,id;q=0.8","user-agent":"Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 Chrome/130.0.0.0 Mobile Safari/537.36","referer":"https://www.tiktok.com/"},signal:AbortSignal.timeout(9000),cache:"no-store"});
+    const html=response.ok?await response.text():"";const items=[],seen=new Set();
+    for(const match of html.matchAll(/<script[^>]*id=["'](?:__UNIVERSAL_DATA_FOR_REHYDRATION__|SIGI_STATE)["'][^>]*>([\\s\\S]*?)<\\/script>/gi)){
+      try{collectTikTokSearchItems(JSON.parse(match[1]),items,seen)}catch{}
+    }
+    if(!items.length){
+      for(const match of html.matchAll(/https?:\\/\\/www\\.tiktok\\.com\\/@([A-Za-z0-9._-]+)\\/video\\/(\\d{8,})/g)){
+        const url="https://www.tiktok.com/@"+match[1]+"/video/"+match[2];if(seen.has(url))continue;seen.add(url);
+        const at=Math.max(0,match.index-700),snippet=decodeSearchHtml(html.slice(at,match.index+500).replace(/<[^>]+>/g," ")).slice(0,260);
+        items.push({title:snippet||"Video TikTok publik",url,snippet,platform:"tiktok",searchProvider:"TikTok public page"});
+      }
+    }
+    return {items,status:response.status,bytes:html.length};
+  }catch(error){return {items:[],status:0,bytes:0,error:String(error?.message||error).slice(0,100)}}
+}
 function parseBingSocialVideoResults(html,platform,query,seen){
   const domains=socialSearchDomains(platform),out=[];
   for(const match of String(html||"").matchAll(/<li\b[^>]*class=["'][^"']*\bb_algo\b[^"']*["'][^>]*>([\s\S]*?)<\/li>/gi)){
@@ -500,10 +531,16 @@ async function searchSocial(request){
     })));
     let bingCandidateCount=0;
     for(const page of bingPages){const parsed=parseBingSocialVideoResults(page,platform,query,seen);bingCandidateCount+=parsed.length;candidates.push(...parsed)}
+    let tiktokPageDiagnostics={status:null,bytes:0,count:0};
+    if(platform==="tiktok"||platform==="tiktoklite"||platform==="all"){
+      const direct=await searchTikTokPublicPage(query);
+      tiktokPageDiagnostics={status:direct.status,bytes:direct.bytes,count:direct.items.length};
+      for(const item of direct.items){if(!seen.has(item.url)){seen.add(item.url);candidates.push(item)}}
+    }
     const relevantCandidates=candidates.filter(item=>publicSearchRelevance(query,item.title+" "+item.snippet)>=0.65);
     const checked=await Promise.all(relevantCandidates.slice(0,16).map(item=>verifySocialSearchResult(item,request.url,desiredMode)));
     const results=checked.filter(Boolean);
-    return json({ok:true,platform,query,mediaType:desiredMode,results,candidateCount:candidates.length,ddgCandidateCount,bingCandidateCount,relevantCount:relevantCandidates.length,verifiedCount:results.filter(item=>item.verified).length,searchOnlyCount:results.filter(item=>item.searchOnly).length,unavailableCount:relevantCandidates.length-results.length,candidateSamples:candidates.slice(0,5).map(item=>({title:item.title,url:item.url,score:publicSearchRelevance(query,item.title+" "+item.snippet)})),providerDiagnostics:{ddgPages:pages.length,ddgNonEmpty:pages.filter(Boolean).length,bingPages:bingPages.length,bingNonEmpty:bingPages.filter(Boolean).length,bingSample:(bingPages.find(Boolean)||"").slice(0,2200)},searchVariants:variants,verification:"provider-and-media-signature"});
+    return json({ok:true,platform,query,mediaType:desiredMode,results,candidateCount:candidates.length,ddgCandidateCount,bingCandidateCount,relevantCount:relevantCandidates.length,verifiedCount:results.filter(item=>item.verified).length,searchOnlyCount:results.filter(item=>item.searchOnly).length,unavailableCount:relevantCandidates.length-results.length,candidateSamples:candidates.slice(0,5).map(item=>({title:item.title,url:item.url,score:publicSearchRelevance(query,item.title+" "+item.snippet)})),providerDiagnostics:{ddgPages:pages.length,ddgNonEmpty:pages.filter(Boolean).length,bingPages:bingPages.length,bingNonEmpty:bingPages.filter(Boolean).length,bingSample:(bingPages.find(Boolean)||"").slice(0,2200),tiktokPublicPage:tiktokPageDiagnostics},searchVariants:variants,verification:"provider-and-media-signature"});
   }catch(error){return json({error:"Pencarian publik gagal dijangkau. Coba lagi nanti. "+String(error?.message||error).slice(0,100)},502)}
 }
 
