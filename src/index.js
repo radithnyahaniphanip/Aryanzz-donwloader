@@ -575,7 +575,7 @@ async function imageFile(request){
 }
 async function searchSocialImages(request){
   let body;try{body=await request.json()}catch{return json({error:"Body JSON tidak valid."},400)}
-  const platform=String(body?.platform||"").toLowerCase(),query=String(body?.query||"").replace(/\\s+/g," ").trim();
+  const platform=String(body?.platform||"").toLowerCase(),query=String(body?.query||"").replace(/\s+/g," ").trim();
   // Image search is available for public social platforms. Video/audio-only search
   // remains in the unified media search instead of being presented as image results.
   if(!socialSearchDomains(platform).length||platform==="youtube"||platform==="soundcloud")return json({error:"Platform pencarian gambar belum didukung."},400);
@@ -586,19 +586,19 @@ async function searchSocialImages(request){
     const response=await fetch(searchUrl.href,{headers:{accept:"text/html","user-agent":"Mozilla/5.0 (compatible; ARYANZZ/81.1)"},signal:AbortSignal.timeout(14000),cache:"no-store"});
     if(!response.ok)return json({error:"Pencarian publik sedang tidak tersedia (HTTP "+response.status+")."},502);
     const html=await response.text(),candidates=[],seen=new Set(),domains=socialSearchDomains(platform);
-    for(const match of html.matchAll(/<a\\b([^>]*)>([\\s\\S]*?)<\\/a>/gi)){
+    for(const match of html.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/gi)){
       const attrs=match[1]||"";
-      if(!/\\bclass=["'][^"']*\\bresult__a\\b[^"']*["']/i.test(attrs))continue;
-      const hrefMatch=attrs.match(/\\bhref=["']([^"']+)["']/i);if(!hrefMatch)continue;
+      if(!/\bclass=["'][^"']*\bresult__a\b[^"']*["']/i.test(attrs))continue;
+      const hrefMatch=attrs.match(/\bhref=["']([^"']+)["']/i);if(!hrefMatch)continue;
       let link;try{link=new URL(decodeSearchHtml(hrefMatch[1]),"https://html.duckduckgo.com")}catch{continue}
       if(link.hostname.endsWith("duckduckgo.com")){const target=link.searchParams.get("uddg");if(target){try{link=new URL(target)}catch{continue}}}
       if(link.protocol!=="https:"||!domains.some(domain=>link.hostname===domain||link.hostname.endsWith("."+domain)))continue;
-      if(platform==="instagram"&&!/(?:\\/p\\/|\\/reel\\/|\\/tv\\/|\\/share\\/)/i.test(link.pathname))continue;
-      if(platform==="tiktok"&&!/(?:\\/video\\/|\\/photo\\/)/i.test(link.pathname))continue;
-      if(platform==="pinterest"&&!/\\/pin\\//i.test(link.pathname))continue;
+      if(platform==="instagram"&&!/(?:\/p\/|\/reel\/|\/tv\/|\/share\/)/i.test(link.pathname))continue;
+      if(platform==="tiktok"&&!/(?:\/video\/|\/photo\/)/i.test(link.pathname))continue;
+      if(platform==="pinterest"&&!/\/pin\//i.test(link.pathname))continue;
       const href=link.href.split("#")[0];if(seen.has(href))continue;seen.add(href);
       const title=decodeSearchHtml(match[2]);if(!title)continue;
-      const snippetMatch=html.slice(match.index,match.index+1800).match(/class=["']result__snippet["'][^>]*>([\\s\\S]*?)<\\/[^>]+>/i);
+      const snippetMatch=html.slice(match.index,match.index+1800).match(/class=["']result__snippet["'][^>]*>([\s\S]*?)<\/[^>]+>/i);
       candidates.push({title,url:href,snippet:decodeSearchHtml(snippetMatch?.[1]||"")});
       if(candidates.length>=8)break;
     }
