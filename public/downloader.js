@@ -1238,12 +1238,26 @@
            });
            preview.addEventListener("durationchange",applyIntrinsicRatio);
            preview.addEventListener("loadeddata",()=>{if(preview.videoWidth&&preview.videoHeight)applyIntrinsicRatio()});
-           preview.addEventListener("error",()=>{
+           let directFallbackTried=false;
+          preview.addEventListener("error",()=>{
+             if(!directFallbackTried){
+               const directSource=safeUrl(previewFormat.url);
+               if(directSource&&directSource.protocol==="https:"&&directSource.href!==preview.src){
+                 directFallbackTried=true;
+                 previewStatus.textContent="Stream melalui proxy tidak dapat diputar · mencoba jalur CDN sumber…";
+                 previewStatus.className="muted";
+                 preview.src=directSource.href;
+                 preview.load();
+                 return;
+               }
+             }
              const mediaError=preview.error;
              const codes={1:"pemutaran dibatalkan",2:"jaringan atau stream terputus",3:"codec atau data video tidak dapat didekode",4:"format sumber tidak didukung"};
              previewStatus.textContent="Pratinjau gagal: "+(codes[mediaError?.code]||"sumber tidak mengirim metadata video")+" (kode "+(mediaError?.code||"tidak diketahui")+")";
              previewStatus.className="warning";
            });
+           preview.addEventListener("canplay",()=>{previewStatus.textContent="Video siap diputar · kontrol dan durasi aktif.";previewStatus.className="muted"});
+           preview.addEventListener("playing",()=>{previewStatus.textContent="Video sedang diputar.";previewStatus.className="muted"});
            window.addEventListener("resize",applyIntrinsicRatio,{passive:true});
            previewWrap.append(preview);
            box.append(previewWrap,previewStatus);
