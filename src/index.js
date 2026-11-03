@@ -417,7 +417,7 @@ function socialSearchCandidateAllowed(platform,rawUrl){
   const link=safePublicMediaUrl(rawUrl);if(!link)return null;
   if(!socialSearchDomains(platform).some(domain=>link.hostname===domain||link.hostname.endsWith("."+domain)))return null;
   if(platform==="instagram"&&!/(?:^|\/)(?:p|reel|tv|share)\//i.test(link.pathname))return null;
-  if(platform==="tiktok"&&!/\/video\//i.test(link.pathname))return null;
+  if(platform==="tiktok"&&!(/\/(?:video|photo)\//i.test(link.pathname)||((link.hostname==="vm.tiktok.com"||link.hostname==="vt.tiktok.com")&&link.pathname.length>1)||/\/(?:t|v)\//i.test(link.pathname)))return null;
   if(platform==="pinterest"&&!/\/pin\//i.test(link.pathname))return null;
   return link;
 }
