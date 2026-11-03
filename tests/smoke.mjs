@@ -395,7 +395,7 @@ try{
   assert.equal(response.status,200);
   const data=await response.json();
   assert.equal(data.ok,true);
-  assert.equal(data.imageCount,1,"TikTok image results must be read from the selected TikTok bucket, not the first Pinterest bucket");
+  assert.equal(data.imageCount,1,"TikTok image results must be read from the selected TikTok bucket: "+JSON.stringify(data));
   assert.equal(data.results[0].platform,"tiktok");
   assert.match(data.results[0].sourceUrl,/tiktok\\.com/);
   assert.equal(data.results[0].title,"Green Screen Meme Template");
