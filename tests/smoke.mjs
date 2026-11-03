@@ -385,12 +385,12 @@ try{
     requestedQuery=url.searchParams.get("q")||"";
     assert.match(requestedQuery,/site:tiktok\\.com/i);
     assert.match(requestedQuery,/green screen/i);
-    const meta={murl:"https://cdn.example/tiktok-green-screen.jpg",purl:"https://www.tiktok.com/@demo/video/123456789",desc:"Green Screen Meme Template",w:1080,h:1920};
+    const meta={murl:"https://cdn.example/tiktok-green-screen.jpg",purl:"https://www.tiktok.com/video/123456789",desc:"Green Screen Meme Template",w:1080,h:1920};
     return new Response('<a class="iusc" m="'+JSON.stringify(meta).replace(/"/g,"&quot;")+'"></a>',{status:200,headers:{"content-type":"text/html"}});
   };
   const response=await worker.fetch(new Request("https://aryanzz.example/api/image/search",{
     method:"POST",headers:{"content-type":"application/json","cf-connecting-ip":"198.51.100.89"},
-    body:JSON.stringify({platform:"tiktok",query:"Greenscreen"})
+    body:JSON.stringify({platform:"tiktok",query:"Green Screen"})
   }),{});
   assert.equal(response.status,200);
   const data=await response.json();
