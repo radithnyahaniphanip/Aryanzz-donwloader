@@ -227,24 +227,34 @@ const checks=[
 
 const originalUniversalImageFetch=globalThis.fetch;
 try{
+  const platforms=[
+    ["pinterest","site:pinterest.com","https://www.pinterest.com/pin/3001/"],
+    ["tiktok","site:tiktok.com","https://www.tiktok.com/@cat/video/3002"],
+    ["instagram","site:instagram.com","https://www.instagram.com/p/3003/"],
+    ["facebook","site:facebook.com","https://www.facebook.com/photo/?fbid=3004"],
+    ["x","site:x.com","https://x.com/cats/status/3005"],
+    ["reddit","site:reddit.com","https://www.reddit.com/r/cats/comments/3006/meme/"],
+    ["threads","site:threads.net","https://www.threads.net/@cats/post/3007"],
+    ["snackvideo","site:snackvideo.com","https://www.snackvideo.com/@cat/video/3008"],
+    ["capcut","site:capcut.com","https://www.capcut.com/t/abc3009"],
+    ["youtube","site:youtube.com","https://www.youtube.com/watch?v=3010"],
+    ["vimeo","site:vimeo.com","https://vimeo.com/3011"],
+    ["soundcloud","site:soundcloud.com","https://soundcloud.com/cats/track3012"]
+  ];
+  const calls=[];
   globalThis.fetch=async(input)=>{
     const url=new URL(typeof input==="string"?input:input.url);
     assert.equal(url.hostname,"www.bing.com");
     assert.equal(url.pathname,"/images/search");
     const query=url.searchParams.get("q")||"";
     assert.match(query,/meme kucing/i);
-    assert.match(query,/site:pinterest\.com/);
-    assert.match(query,/site:tiktok\.com/);
-    assert.match(query,/site:reddit\.com/);
-    const sources=[
-      ["pinterest","https://www.pinterest.com/pin/3001/"],
-      ["tiktok","https://www.tiktok.com/@cat/video/3002"],
-      ["instagram","https://www.instagram.com/p/3003/"],
-      ["reddit","https://www.reddit.com/r/cats/comments/3004/meme/"],
-      ["x","https://x.com/cats/status/3005"]
-    ];
-    const html=sources.map(([platform,purl],i)=>{
-      const meta={murl:"https://cdn.example/universal-cat-"+i+".jpg",purl,desc:"Meme kucing dari "+platform,w:900,h:900};
+    const entry=platforms.find(item=>query.includes(item[1]));
+    assert.ok(entry,"Universal search must issue a separate scoped query for every platform: "+query);
+    calls.push(entry[0]);
+    const html=Array.from({length:2},(_,i)=>{
+      let purl=entry[2];
+      if(i===1)purl=purl.replace(/(\d+)(\/?$)/,(_,id,slash)=>String(Number(id)+100)+slash);
+      const meta={murl:"https://cdn.example/universal-cat-"+entry[0]+"-"+i+".jpg",purl,desc:"Meme kucing dari "+entry[0],w:900,h:900};
       return '<a class="iusc" m="'+JSON.stringify(meta).replace(/"/g,"&quot;")+'"></a>';
     }).join("");
     return new Response(html,{status:200,headers:{"content-type":"text/html"}});
@@ -256,10 +266,11 @@ try{
   assert.equal(response.status,200);
   const data=await response.json();
   assert.equal(data.ok,true);
-  assert.equal(data.imageCount,5);
-  assert.deepEqual(new Set(data.results.map(item=>item.platform)),new Set(["pinterest","tiktok","instagram","reddit","twitter"]));
+  assert.equal(calls.length,12);
+  assert.equal(data.imageCount,19);
+  assert.ok(Object.keys(data.platformCounts).length>=10);
   assert.ok(data.results.every(item=>item.sourceUrl&&item.images[0].downloadUrl&&item.images[0].previewUrl));
-  console.log("✔ V81.3 universal image search returns mixed social platforms with source and download links");
+  console.log("✔ V81.3 universal image search fans out to 12 platforms and returns 19 mixed results with source/download links");
 }finally{globalThis.fetch=originalUniversalImageFetch;}
 
 const originalBingImageFetch=globalThis.fetch;

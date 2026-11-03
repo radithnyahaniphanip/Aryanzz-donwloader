@@ -181,8 +181,10 @@ jobs:
           }
           const liveImageCount = imageSearchData.results.reduce((total, item) => total + (Array.isArray(item.images) ? item.images.length : 0), 0);
           if (liveImageCount > 19) throw new Error("Live universal social image search exceeded its 19-result limit.");
+          const livePlatformCount = Object.keys(imageSearchData.platformCounts || {}).length;
           if (liveImageCount) {
-            console.log("Live universal social image search returned " + liveImageCount + " image results for 'meme kucing'.");
+            console.log("Live universal social image search returned " + liveImageCount + " image results across " + livePlatformCount + " platforms for 'meme kucing'.");
+            if (livePlatformCount < 2) console.warn("Public search indexing returned results from fewer than two social platforms for this keyword.");
           } else {
             console.warn("Live universal social image search endpoint is healthy but public search providers returned zero image results for 'meme kucing'.");
           }
