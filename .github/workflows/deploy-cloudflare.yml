@@ -1,4 +1,4 @@
-name: Test and deploy ARYANZZ V88.12 security release
+name: Test and deploy ARYANZZ V88.13 security release
 
 concurrency:
   group: aryanzz-cloudflare-deploy
@@ -74,7 +74,7 @@ jobs:
           wrangler secret delete PLATFORM_API_ORIGIN || true
           wrangler secret delete PLATFORM_API_TOKEN || true
 
-      - name: Smoke test live Worker security and V88.12 assets
+      - name: Smoke test live Worker security and V88.13 assets
         env:
           WORKER_URL: https://aryanzz-donwloader.radithnyahaniphanip.workers.dev
         run: |
@@ -85,12 +85,12 @@ jobs:
             try {
               const healthResponse = await fetch(base + "/api/health", { cache: "no-store", signal: AbortSignal.timeout(10000) });
               if (healthResponse.ok) health = await healthResponse.json();
-              if (health?.version === "88.12" && health?.mode === "cloudflare-worker-zero-server-hybrid") break;
+              if (health?.version === "88.13" && health?.mode === "cloudflare-worker-zero-server-hybrid") break;
             } catch {}
             await new Promise(resolve => setTimeout(resolve, 2500));
           }
-          if (health?.version !== "88.12" || health?.mode !== "cloudflare-worker-zero-server-hybrid" || !health?.directMediaDownload) {
-            throw new Error("Live Worker has not propagated the V88.12 secure zero-server deployment: " + JSON.stringify(health));
+          if (health?.version !== "88.13" || health?.mode !== "cloudflare-worker-zero-server-hybrid" || !health?.directMediaDownload) {
+            throw new Error("Live Worker has not propagated the V88.13 secure zero-server deployment: " + JSON.stringify(health));
           }
           console.log("Live Worker health OK: V" + health.version + " in zero-server mode.");
           if (!health.securityActive) throw new Error("Worker security middleware is not active.");
