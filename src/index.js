@@ -935,7 +935,7 @@ async function socialImageSearch(request){
         if(!added)break;
       }
     }else{
-      for(const item of buckets[0]?.results||[]){
+      for(const item of (buckets.find(entry=>entry.platform===platform)?.results||[])){
         if(seenImages.has(item.url))continue;
         seenImages.add(item.url);results.push(item);platformCounts[item.platform||platform]=(platformCounts[item.platform||platform]||0)+1;
         if(results.length>=19)break;
