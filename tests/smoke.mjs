@@ -515,7 +515,8 @@ console.log("✔ Image search validates short queries and image proxy blocks loc
 const healthResponse=await worker.fetch(new Request("https://aryanzz.example/api/health"),{});
 assert.equal(healthResponse.status,200);
 const health=await healthResponse.json();
-assert.equal(health.version,"88.2");
+assert.equal(health.version,"88.12");
+assert.equal(health.securityActive,true);
 assert.equal(health.selfHostedDownloader,false);
 assert.equal(health.youtubeDownloader,true);
 assert.equal(health.mode,"cloudflare-worker-zero-server-hybrid");
@@ -524,6 +525,27 @@ assert.equal(health.directMediaDownload,true);
 assert.equal(health.musicRecognitionConfigured,false);
 assert.equal(health.youtubeApiKeyConfigured,false);
 console.log("✔ V74.0 Worker health and zero-server status");
+
+const securityHeadersResponse=await worker.fetch(new Request("https://aryanzz.example/api/health"),{});
+assert.equal(securityHeadersResponse.headers.get("x-content-type-options"),"nosniff");
+assert.equal(securityHeadersResponse.headers.get("x-frame-options"),"DENY");
+assert.ok(securityHeadersResponse.headers.get("content-security-policy")?.includes("frame-ancestors 'none'"));
+assert.ok(securityHeadersResponse.headers.get("strict-transport-security")?.includes("max-age="));
+assert.ok(securityHeadersResponse.headers.get("x-request-id"));
+const crossOriginBlocked=await worker.fetch(new Request("https://aryanzz.example/api/security/status",{headers:{origin:"https://evil.example"}}),{});
+assert.equal(crossOriginBlocked.status,403);
+const blockedMethod=await worker.fetch(new Request("https://aryanzz.example/api/security/status",{method:"DELETE"}),{});
+assert.equal(blockedMethod.status,405);
+const blockedContentType=await worker.fetch(new Request("https://aryanzz.example/api/search",{method:"POST",headers:{"content-type":"text/plain"},body:"x"}),{});
+assert.equal(blockedContentType.status,415);
+const securityStatusResponse=await worker.fetch(new Request("https://aryanzz.example/api/security/status"),{});
+assert.equal(securityStatusResponse.status,200);
+const securityStatus=await securityStatusResponse.json();
+assert.equal(securityStatus.security.active,true);
+assert.ok(securityStatus.security.controls.includes("origin-validation"));
+assert.ok(securityStatus.security.controls.includes("per-ip-endpoint-rate-limits"));
+console.log("✔ V88.12 active security middleware blocks cross-origin, unsupported methods and content types and adds hardened response headers");
+
 const platformStatusResponse=await worker.fetch(new Request("https://aryanzz.example/api/platform/status"),{});
 assert.equal(platformStatusResponse.status,200);
 const platformStatus=await platformStatusResponse.json();
