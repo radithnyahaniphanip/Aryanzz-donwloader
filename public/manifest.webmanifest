@@ -7,7 +7,7 @@
   "background_color": "#070b16",
   "theme_color": "#070b16",
   "description": "Alat online untuk mengunduh dan mengelola video, audio, serta gambar dari tautan media yang didukung.",
-  "version": "83.0.0",
+  "version": "89.0.0",
   "icons": [
     {
       "src": "/favicon.svg?v=83.0",
