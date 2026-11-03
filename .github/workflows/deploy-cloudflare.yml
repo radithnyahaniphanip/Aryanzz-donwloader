@@ -168,6 +168,25 @@ jobs:
           if (socialSearchProbe.status !== 400) throw new Error("Social title-search endpoint validation failed: HTTP " + socialSearchProbe.status);
           console.log("Social title-search endpoint is mounted and validates platform/query input.");
 
+          const imageSearchResponse = await fetch(base + "/api/image/search", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ platform: "pinterest", query: "meme kucing" }),
+            cache: "no-store",
+            signal: AbortSignal.timeout(50000)
+          });
+          const imageSearchData = await imageSearchResponse.json().catch(() => ({}));
+          if (!imageSearchResponse.ok || !imageSearchData.ok || !Array.isArray(imageSearchData.results)) {
+            throw new Error("Live Pinterest image search endpoint failed: HTTP " + imageSearchResponse.status + " / " + JSON.stringify(imageSearchData));
+          }
+          const liveImageCount = imageSearchData.results.reduce((total, item) => total + (Array.isArray(item.images) ? item.images.length : 0), 0);
+          if (liveImageCount > 19) throw new Error("Live Pinterest image search exceeded its 19-result limit.");
+          if (liveImageCount) {
+            console.log("Live Pinterest image search returned " + liveImageCount + " image results for 'meme kucing'.");
+          } else {
+            console.warn("Live Pinterest image search endpoint is healthy but public search providers returned zero image results for 'meme kucing'.");
+          }
+
           const musicResponse = await fetch(base + "/api/music/status", { cache: "no-store" });
           if (!musicResponse.ok) throw new Error("Music Finder status endpoint failed.");
           const music = await musicResponse.json();
