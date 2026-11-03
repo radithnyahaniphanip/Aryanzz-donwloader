@@ -5,5 +5,4 @@
 .ary-video-controls button{flex:0 0 auto;min-width:78px;padding:9px 12px;border-radius:10px}
 .ary-video-controls .ary-video-seek{flex:1 1 auto;min-width:0;width:100%;accent-color:#43cde2}
 .ary-video-controls small{flex:0 0 auto;min-width:78px;text-align:right;font-variant-numeric:tabular-nums}
-.v737-media-preview::-webkit-media-controls-enclosure{display:none!important}
 @media(max-width:420px){.ary-video-preview-wrap{padding:8px}.ary-video-controls{gap:7px}.ary-video-controls button{min-width:68px;padding:8px 9px}.ary-video-controls small{min-width:68px;font-size:10px}}
