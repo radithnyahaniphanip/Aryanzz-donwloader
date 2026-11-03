@@ -661,7 +661,7 @@ async function fetchSocialPostHtml(pageUrl,timeoutMs=18000){
     const response=await fetchSocialHeaders(current.href,{headers:{
       accept:"text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
       "user-agent":"Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 Chrome/130.0.0.0 Mobile Safari/537.36"
-    },redirect:"manual",cache:"no-store"},18000);
+    },redirect:"manual",cache:"no-store"},timeoutMs);
     if([301,302,303,307,308].includes(response.status)){
       const location=response.headers.get("location");if(!location)throw new Error("Pengalihan postingan tidak memiliki alamat tujuan.");
       const next=safePublicMediaUrl(new URL(location,current.href).href);
@@ -807,6 +807,7 @@ function parseBingSocialImageResults(html,platform,requestUrl,query){
   return results;
 }
 function parseSocialImageSearchLinks(html,platform,seen,limit=18){
+  if(limit<=0)return [];
   const domains=socialSearchDomains(platform),out=[];
   for(const match of String(html||"").matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/gi)){
     const attrs=match[1]||"";if(!/\bclass=["'][^"']*\bresult__a\b[^"']*["']/i.test(attrs))continue;
