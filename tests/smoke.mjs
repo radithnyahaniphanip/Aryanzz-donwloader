@@ -223,7 +223,7 @@ const checks=[
   ["V81.2 removes continuously animated blurred background and refreshes service worker cache",!v674Css.includes("body::before{content")&&!v674Css.includes("v674-aurora")&&sw.includes("aryanzz-v81-4")&&html.includes("V81.4 · GRATIS")],
   ["V80.1 image downloads use a validated same-origin image proxy and reject non-image content",workerSource.includes('url.pathname==="/api/image/file"')&&workerSource.includes('safePublicMediaUrl(raw)')&&workerSource.includes('image/jpeg')&&workerSource.includes('Sumber tidak mengirim file gambar yang didukung')],
   ["V80.1 Image Studio CSS and JavaScript are loaded and cached by the service worker",html.includes('/image-studio.css?v=81.4')&&html.includes('/image-studio.js?v=81.4')&&sw.includes('/image-studio.css?v=81.4')&&sw.includes('/image-studio.js?v=81.4')&&imageStudioCss.includes('.image-download-results')],
-  ["V82.1 CapCut and SnackVideo marks use correct full-size SVG geometry",html.includes('aria-label="CapCut"')&&html.includes('M24.189 6.442')&&html.includes('aria-label="SnackVideo"')&&html.includes('viewBox="0 0 48 48"')&&html.includes('brand-refresh.css?v=82.0')]
+  ["V82.1 CapCut and SnackVideo marks use correct full-size SVG geometry",html.includes('aria-label="CapCut"')&&html.includes('M24.189 6.442')&&html.includes('aria-label="SnackVideo"')&&html.includes('viewBox="0 0 48 48"')&&html.includes('brand-refresh.css?v=82.1')]
 
  ];
  for(const [name,ok] of checks){assert.ok(ok,name+" failed");console.log("✔ "+name)}
