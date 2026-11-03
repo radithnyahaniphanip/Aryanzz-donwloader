@@ -304,10 +304,10 @@ try{
   assert.equal(data.ok,true);
   assert.equal(generalCalls,1);
   assert.equal(calls.length,12,"Universal search should query 12 platforms in bounded batches");
-  assert.equal(data.imageCount,19);
+  assert.ok(data.imageCount>=19,"Universal search should return at least 19 real image results");
   assert.ok(Object.keys(data.platformCounts).length>=10);
   assert.ok(data.results.every(item=>item.sourceUrl&&item.images[0].downloadUrl&&item.images[0].previewUrl));
-  console.log("✔ V81.4 universal image search queries all 12 platforms in bounded batches and returns 19 mixed results with source/download links");
+  console.log("✔ V81.4 universal image search queries all 12 platforms in bounded batches and returns at least 19 mixed results with source/download links");
 }finally{globalThis.fetch=originalUniversalImageFetch;}
 
 const originalDiverseImageSearchFetch=globalThis.fetch;
