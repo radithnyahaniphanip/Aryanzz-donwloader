@@ -57,3 +57,13 @@ body[data-theme="light"] .v674-search-result h3{color:#1b2440}
 .v736-pinterest{background:transparent!important;color:#e60023!important}
 .v736-capcut{background:#fff!important;color:#050505!important;border-radius:10px}
 @media(max-width:420px){.v736-platforms,.v736-platform-grid{grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:6px!important}.v736-platform{font-size:10px}.v736-logo{width:34px;height:34px;flex-basis:34px}}
+
+/* V81.0 platform marks and visual ratio guide */
+.v736-capcut{background:#fff!important;color:#080808!important;border-radius:11px!important}
+.v736-capcut svg{width:78%;height:78%;display:block}
+.v736-pinterest{background:transparent!important;color:#fff!important}
+.v736-pinterest svg{display:block;width:100%;height:100%}
+.is-ratio-picks button{display:flex;min-height:62px;flex-direction:column;align-items:center;justify-content:center;gap:5px}
+.is-ratio-icon{display:block;border:1.6px solid #93baff;border-radius:3px;background:linear-gradient(135deg,#28568b44,#5fd7ef22);height:19px;width:19px}
+.ratio-landscape{width:23px;height:17px}.ratio-photo{width:24px;height:16px}.ratio-wide{width:28px;height:15px}.ratio-story{width:12px;height:23px}.ratio-portrait{width:16px;height:22px}.ratio-original{width:20px;height:20px;border-style:dashed}.ratio-custom{width:21px;height:21px;border-style:dotted;transform:rotate(45deg);border-radius:2px}
+.is-ratio-picks button.active .is-ratio-icon{border-color:#fff;background:#4f8cff55}
