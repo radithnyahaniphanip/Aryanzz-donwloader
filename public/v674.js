@@ -73,7 +73,7 @@ const preview=safeImageProxy(item.previewUrl||item.downloadUrl),download=safeIma
 if(!preview||!download)return;
 const card=document.createElement("article");card.className="aryanzz-inline-image-card";
 const open=document.createElement("a");open.className="aryanzz-inline-image-open";open.href=preview;open.target="_blank";open.rel="noopener noreferrer";open.setAttribute("aria-label","Lihat gambar "+(index+1));
-const img=document.createElement("img");img.loading="lazy";img.decoding="async";img.src=preview;img.alt=item.title||"Gambar "+(index+1);open.append(img);
+const img=document.createElement("img");img.loading="lazy";img.decoding="async";img.src=preview;img.alt=item.title||"Gambar "+(index+1);img.onerror=()=>{card.remove();if(!grid.childElementCount){section.remove();if(help)help.textContent="Gambar dari "+target.name+" tidak dapat dimuat. Hasil kosong tidak akan ditampilkan."}};open.append(img);
 const caption=document.createElement("div");caption.className="aryanzz-inline-image-caption";
 const title=document.createElement("b");title.textContent=item.title||"Gambar "+(index+1);
 const meta=document.createElement("small");meta.textContent=(item.platform||"Media sosial").toUpperCase()+(item.width&&item.height?" · "+item.width+" × "+item.height+" px":"");
