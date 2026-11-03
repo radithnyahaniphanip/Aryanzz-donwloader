@@ -892,7 +892,7 @@ async function socialImageSearch(request){
       }));
       const seenPosts=new Set();
       for(const page of pages)candidates.push(...parseSocialImageSearchLinks(page,platform,seenPosts,18-candidates.length));
-      const posts=await Promise.all(candidates.slice(0,12).map(item=>resolveSocialImagePost(item.url,request.url,{includeProvider:false,timeoutMs:10000}).then(post=>post?{item,post}:null).catch(()=>null)));
+      const posts=await Promise.all(candidates.slice(0,12).map(item=>resolveSocialImagePost(item.url,request.url,{timeoutMs:10000}).then(post=>post?{item,post}:null).catch(()=>null)));
       for(const entry of posts.filter(Boolean)){
         for(const image of entry.post.images||[]){
           if(results.length>=19)break;
