@@ -239,15 +239,16 @@ const checks=[
   ["V87.0 title search offers video, audio and image without a separate Green Screen mode",v674.includes('["image","audio"].includes(searchType?.value)')&&v674.includes('["image","audio"].includes(searchType?.value)')&&v674.includes('platform:selected')],
   ["V85.4.0 title search does not hide results behind V85 relevance thresholds",!v674.includes("rankRelevant")&&!v674.includes("SEARCH_EQUIVALENTS")],
 
-  ["V88.13 audio discovery renders compact MP3 actions and caps audio results at 50",v674.includes("v674-audio-inline-result")&&v674.includes("♫ Buat MP3")&&workerSource.includes('desiredMode==="audio"?50:80')&&html.includes("V88.13 · GRATIS")],
-  ["V88.13 Security Center is read-only and polls sanitized counters",html.includes("id=\"securityCenter\"")&&v674.includes("initSecurityCenter")&&v674.includes("/api/security/status")],
-  ["V88.13 header shows security state and polls the sanitized security endpoint",html.includes("id=\"securityStatusIndicator\"")&&v674.includes("async function initSecurityIndicator")&&v674.includes("fetch(\"/api/security/status\"")&&v674Css.includes(".v674-security-indicator.is-active")],
+  ["V88.14 unified app navigation hides home while opening a tool and keeps one active panel",html.includes("id=\"appViewHeader\"")&&html.includes("home.hidden=!!id")&&html.includes("p.id===id")&&html.includes("v8814-unified-app-shell")],
+  ["V88.14 audio discovery renders compact MP3 actions and caps audio results at 50",v674.includes("v674-audio-inline-result")&&v674.includes("♫ Buat MP3")&&workerSource.includes('desiredMode==="audio"?50:80')&&html.includes("V88.14 · GRATIS")],
+  ["V88.14 Security Center is read-only and polls sanitized counters",html.includes("id=\"securityCenter\"")&&v674.includes("initSecurityCenter")&&v674.includes("/api/security/status")],
+  ["V88.14 header shows security state and polls the sanitized security endpoint",html.includes("id=\"securityStatusIndicator\"")&&v674.includes("async function initSecurityIndicator")&&v674.includes("fetch(\"/api/security/status\"")&&v674Css.includes(".v674-security-indicator.is-active")],
   ["V88.11 universal ALL search stays within Worker subrequest budget and prioritizes media intent",workerSource.includes("const verificationLimit=12")&&workerSource.includes('searchOnlyRemainder=orderedCandidates.slice(verificationLimit,desiredMode==="audio"?50:80)')&&workerSource.includes("[query,query+\" audio\",query+\" song\"")&&workerSource.includes("previewUrl:playable.mode===\"audio\"?playable.previewUrl:null")],
   ["V88.11 audio search provides an inline safe preview player and mode guidance",v674.includes("player.controls=true")&&v674.includes("audioUrl.pathname===\"/api/social-file\"")&&v674.includes("Audio: cari lagu, backsound, remix, soundtrack")],
   ["V87.0 title search exposes image, video and audio modes only",html.includes('id="titleSearchType"')&&html.includes('option value="image">Gambar</option>')&&html.includes('option value="video">Video</option>')&&html.includes('option value="audio">Audio</option>')&&!html.includes('option value="greenscreen">Green Screen</option>')],
   ["V87.0 image search expands candidate coverage while excluding TikTok video thumbnails",workerSource.includes("publicSearchRelevance(query,title)<0.12")&&workerSource.includes('resultPlatform==="tiktok"&&!/\\/photo\\//i.test(source.pathname)')&&workerSource.includes('resultPlatform==="tiktok"&&!/\\/photo\\//i.test(link.pathname)')],
   ["V85.3 Tools Center uses compact mobile cards and horizontal category filters",v677css.includes("#allTools .v674-tool-filters{position:sticky")&&v677css.includes("grid-template-columns:repeat(2,minmax(0,1fr))")&&v677css.includes("#allTools .tool{min-height:119px")],
-  ["V88.13 assets and PWA cache are versioned consistently",html.includes("V88.13 · GRATIS")&&html.includes("/v674.js?v=88.13")&&html.includes("/v677.css?v=85.3")&&html.includes("/v674.css?v=85.5.0")&&sw.includes("aryanzz-v88-12")&&sw.includes("/v674.js?v=88.13")&&sw.includes("/v677.css?v=85.3")&&sw.includes("/v674.css?v=85.5.0")],
+  ["V88.14 assets and PWA cache are versioned consistently",html.includes("V88.14 · GRATIS")&&html.includes("/v674.js?v=88.14")&&html.includes("/v677.css?v=85.3")&&html.includes("/v674.css?v=85.5.0")&&sw.includes("aryanzz-v88-12")&&sw.includes("/v674.js?v=88.14")&&sw.includes("/v677.css?v=85.3")&&sw.includes("/v674.css?v=85.5.0")],
 
   ["V85.5.0 image results are filtered to the selected platform source host",v674.includes("const expected=aliases[selected]||selected")&&v674.includes("host===domain||host.endsWith")&&v674.includes('gambar dari "+target.name')],
   ["V81.4 universal image search accepts all public platform domains and detects each result source",workerSource.includes('if(platform==="all")return [...new Set(Object.values(map).flat())]')&&workerSource.includes('const resultPlatform=socialImagePlatformKey(source.href,allowWeb?"web":platform)')&&workerSource.includes('platformCounts')],
@@ -258,7 +259,7 @@ const checks=[
   ["V81.4 universal image search can include public-web images and preserve their source-page referrer",workerSource.includes("allowWeb=false")&&workerSource.includes("allowWeb?safePublicMediaUrl")&&workerSource.includes('referer:sourcePage?sourcePage.href:current.origin+"/"')&&workerSource.includes('if(source)out.searchParams.set("source",source.href)')],
 
   ["V81.2 removes the slogan punctuation and redundant helper copy",html.includes("dari satu tautan</span>")&&!html.includes("dari satu tautan.</span>")&&!html.includes("v75-platform-note")&&!html.includes("Tempel tautan media atau cari judul untuk memulai.")],
-  ["V81.2 removes continuously animated blurred background and refreshes service worker cache",!v674Css.includes("body::before{content")&&!v674Css.includes("v674-aurora")&&sw.includes("aryanzz-v88-12")&&html.includes("V88.13 · GRATIS")],
+  ["V81.2 removes continuously animated blurred background and refreshes service worker cache",!v674Css.includes("body::before{content")&&!v674Css.includes("v674-aurora")&&sw.includes("aryanzz-v88-12")&&html.includes("V88.14 · GRATIS")],
   ["V80.1 image downloads use a validated same-origin image proxy and reject non-image content",workerSource.includes('url.pathname==="/api/image/file"')&&workerSource.includes('safePublicMediaUrl(raw)')&&workerSource.includes('image/jpeg')&&workerSource.includes('Sumber tidak mengirim file gambar yang didukung')],
   ["V80.1 Image Studio CSS and JavaScript are loaded and cached by the service worker",html.includes('/image-studio.css?v=81.4')&&html.includes('/image-studio.js?v=81.4')&&sw.includes('/image-studio.css?v=81.4')&&sw.includes('/image-studio.js?v=81.4')&&imageStudioCss.includes('.image-download-results')],
   ["V82.1 CapCut and SnackVideo marks use correct full-size SVG geometry",html.includes('aria-label="CapCut"')&&html.includes('M24.189 6.442')&&html.includes('aria-label="SnackVideo"')&&html.includes('viewBox="0 0 48 48"')&&html.includes('brand-refresh.css?v=82.1')],
@@ -518,7 +519,7 @@ console.log("✔ Image search validates short queries and image proxy blocks loc
 const healthResponse=await worker.fetch(new Request("https://aryanzz.example/api/health"),{});
 assert.equal(healthResponse.status,200);
 const health=await healthResponse.json();
-assert.equal(health.version,"88.13");
+assert.equal(health.version,"88.14");
 assert.equal(health.securityActive,true);
 assert.equal(health.selfHostedDownloader,false);
 assert.equal(health.youtubeDownloader,true);
@@ -547,7 +548,7 @@ const securityStatus=await securityStatusResponse.json();
 assert.equal(securityStatus.security.active,true);
 assert.ok(securityStatus.security.controls.includes("origin-validation"));
 assert.ok(securityStatus.security.controls.includes("per-ip-endpoint-rate-limits"));
-console.log("✔ V88.13 active security middleware blocks cross-origin, unsupported methods and content types and adds hardened response headers");
+console.log("✔ V88.14 active security middleware blocks cross-origin, unsupported methods and content types and adds hardened response headers");
 
 const platformStatusResponse=await worker.fetch(new Request("https://aryanzz.example/api/platform/status"),{});
 assert.equal(platformStatusResponse.status,200);
