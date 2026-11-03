@@ -240,7 +240,7 @@ jobs:
           });
           if (badTikTokSources.length) throw new Error("TikTok-only search leaked results from another source: " + JSON.stringify(badTikTokSources.slice(0, 3)));
           if (tiktokSearchData.results.some(item => item.mediaMode !== "video")) throw new Error("TikTok Green Screen search returned non-video media.");
-          console.log("Live TikTok Green Screen search passed source isolation; verified results: " + tiktokSearchData.results.length + ".");
+          console.log("Live TikTok Green Screen search passed source isolation; results: " + tiktokSearchData.results.length + ", candidates: " + tiktokSearchData.candidateCount + ", DDG: " + tiktokSearchData.ddgCandidateCount + ", Bing: " + tiktokSearchData.bingCandidateCount + ", relevant: " + tiktokSearchData.relevantCount + ", downloadable: " + tiktokSearchData.verifiedCount + ", open-source-only: " + tiktokSearchData.searchOnlyCount + ".");
           if (!tiktokSearchData.results.length) console.warn("TikTok Green Screen endpoint is healthy, but public indexing/provider verification returned zero results in this run.");
 
           // Global title search may return multiple services, but every result must retain its own canonical source.
@@ -254,7 +254,7 @@ jobs:
             throw new Error("Live global video title search failed: HTTP " + globalSearchResponse.status + " / " + JSON.stringify(globalSearchData));
           }
           if (globalSearchData.results.some(item => !item.platform || item.mediaMode !== "video")) throw new Error("Global title search returned a result without source identity or video media type.");
-          console.log("Live global video title search passed source/type validation; verified results: " + globalSearchData.results.length + ".");
+          console.log("Live global video title search passed source/type validation; results: " + globalSearchData.results.length + ", candidates: " + globalSearchData.candidateCount + ", DDG: " + globalSearchData.ddgCandidateCount + ", Bing: " + globalSearchData.bingCandidateCount + ", relevant: " + globalSearchData.relevantCount + ", downloadable: " + globalSearchData.verifiedCount + ", open-source-only: " + globalSearchData.searchOnlyCount + ".");
 
           const musicResponse = await fetch(base + "/api/music/status", { cache: "no-store" });
           if (!musicResponse.ok) throw new Error("Music Finder status endpoint failed.");
