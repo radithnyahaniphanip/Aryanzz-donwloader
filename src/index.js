@@ -410,7 +410,7 @@ function collectTikTokSearchItems(value,out,seen,depth=0){
   const desc=String(value.desc||value.video?.desc||"").trim();
   const author=value.author||value.authorInfo||value.video?.author||{};
   const username=String(author.uniqueId||author.unique_id||author.username||"").trim();
-  if(/^\\d{8,}$/.test(id)&&username&&desc){
+  if(/^\d{8,}$/.test(id)&&username&&desc){
     const url="https://www.tiktok.com/@"+encodeURIComponent(username)+"/video/"+id;
     if(!seen.has(url)){seen.add(url);out.push({title:desc,url,snippet:desc,platform:"tiktok",searchProvider:"TikTok public search"});}
   }
@@ -421,11 +421,11 @@ async function searchTikTokPublicPage(query){
   try{
     const response=await fetch(url.href,{headers:{accept:"text/html,application/xhtml+xml","accept-language":"en-US,en;q=0.9,id;q=0.8","user-agent":"Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 Chrome/130.0.0.0 Mobile Safari/537.36","referer":"https://www.tiktok.com/"},signal:AbortSignal.timeout(9000),cache:"no-store"});
     const html=response.ok?await response.text():"";const items=[],seen=new Set();
-    for(const match of html.matchAll(/<script[^>]*id=["'](?:__UNIVERSAL_DATA_FOR_REHYDRATION__|SIGI_STATE)["'][^>]*>([\\s\\S]*?)<\\/script>/gi)){
+    for(const match of html.matchAll(/<script[^>]*id=["'](?:__UNIVERSAL_DATA_FOR_REHYDRATION__|SIGI_STATE)["'][^>]*>([\s\S]*?)<\/script>/gi)){
       try{collectTikTokSearchItems(JSON.parse(match[1]),items,seen)}catch{}
     }
     if(!items.length){
-      for(const match of html.matchAll(/https?:\\/\\/www\\.tiktok\\.com\\/@([A-Za-z0-9._-]+)\\/video\\/(\\d{8,})/g)){
+      for(const match of html.matchAll(/https?:\/\/www\.tiktok\.com\/@([A-Za-z0-9._-]+)\/video\/(\d{8,})/g)){
         const url="https://www.tiktok.com/@"+match[1]+"/video/"+match[2];if(seen.has(url))continue;seen.add(url);
         const at=Math.max(0,match.index-700),snippet=decodeSearchHtml(html.slice(at,match.index+500).replace(/<[^>]+>/g," ")).slice(0,260);
         items.push({title:snippet||"Video TikTok publik",url,snippet,platform:"tiktok",searchProvider:"TikTok public page"});
