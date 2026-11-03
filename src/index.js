@@ -390,11 +390,12 @@ function socialSearchQueryVariants(query){
   const original=String(query||"").replace(/\s+/g," ").trim(),variants=[original];
   if(/green\s*screen|greenscreen|layar\s*hijau/i.test(original)){
     const normalized=original.replace(/greenscreen/ig,"green screen").replace(/layar\s*hijau/ig,"green screen");
-    variants.push(normalized,original.replace(/green\s*screen/ig,"greenscreen"),original+" template",original+" meme");
+    const base=normalized.replace(/\s+/g," ").trim();
+    variants.push(base,base+" template",base+" meme template",base+" background",base+" overlay","chroma key "+original.replace(/greenscreen/ig,"green screen"));
   }
-  if(/meme\s+kucing/i.test(original))variants.push("cat meme");
+  if(/meme\s+kucing/i.test(original))variants.push("cat meme","funny cat meme");
   if(/meme\s+cat/i.test(original))variants.push("meme kucing");
-  return [...new Set(variants.map(value=>value.replace(/\s+/g," ").trim()).filter(Boolean))].slice(0,3);
+  return [...new Set(variants.map(value=>value.replace(/\s+/g," ").trim()).filter(Boolean))].slice(0,6);
 }
 function socialSearchUrl(platform,query){
   const domains=socialSearchDomains(platform);if(!domains.length)return null;
@@ -514,7 +515,7 @@ async function searchSocial(request){
     const searchSites=platform==="all"?Object.values(platformDomains).map(domain=>"site:"+domain):domains.map(domain=>"site:"+domain);
   const canonicalPlatform=({tiktoklite:"tiktok",instagramlite:"instagram",facebooklite:"facebook"})[platform]||platform;
   try{
-    const variants=socialSearchQueryVariants(query).slice(0,4);
+    const variants=socialSearchQueryVariants(query).slice(0,platform==="all"?3:6);
     const pages=await Promise.all(variants.flatMap(term=>searchSites.map(async searchSite=>{
       const url=new URL("https://html.duckduckgo.com/html/");url.searchParams.set("q",searchSite+" "+term);
       try{
@@ -920,7 +921,7 @@ function parseBingSocialImageResults(html,platform,requestUrl,query,allowWeb=fal
     if(/\.(?:svg|ico)(?:[?#]|$)/i.test(image.href)||/(?:avatar|profile|favicon|logo|emoji|sprite|icon)(?:[._/-]|$)/i.test(image.href))continue;
     if(seen.has(image.href))continue;seen.add(image.href);
     const title=decodeSearchHtml(meta.desc||meta.t||meta.title||query)||query;
-    if(publicSearchRelevance(query,title)<0.30)continue;
+    if(publicSearchRelevance(query,title)<0.12)continue;
     const index=results.length,ext=imageExtensionFromUrl(image.href)||"jpg";
     const filename=imageSafeFilename(title,index,ext);
     results.push({
@@ -996,7 +997,8 @@ async function socialImageSearch(request){
       const site=domains.map(domain=>"site:"+domain).join(" OR ");
       const selectedBucket=buckets.find(entry=>entry.platform===platform);
       if(selectedBucket){
-        const terms=[query,query+" image",query+" photo",query+" meme",query+" wallpaper",query+" picture",query+" template",query+" png",query+" hd",query+" funny"];
+        const normalizedQuery=query.replace(/greenscreen/ig,"green screen");
+        const terms=[query,normalizedQuery,query+" image",query+" photo",query+" meme",query+" wallpaper",normalizedQuery+" background",normalizedQuery+" template",normalizedQuery+" overlay","chroma key "+normalizedQuery,"meme template "+normalizedQuery,normalizedQuery+" png"];
         const batches=await Promise.all(terms.flatMap((term,index)=>[fetchBing(site+" "+term,platform,false,1),...(index<5?[fetchBing(site+" "+term,platform,false,51)]:[])]));
         const seenItems=new Set();for(const batch of batches)for(const item of batch){if(!seenItems.has(item.url)){seenItems.add(item.url);selectedBucket.results.push(item)}if(selectedBucket.results.length>=100)break;}
       }
@@ -1035,7 +1037,7 @@ async function socialImageSearch(request){
         try{const response=await fetch(url.href,{headers:{accept:"text/html","user-agent":"Mozilla/5.0 (compatible; ARYANZZ/81.4)"},signal:AbortSignal.timeout(11000),cache:"no-store"});return response.ok?await response.text():""}catch{return ""}
       }));
       const seenPosts=new Set();
-      for(const page of pages)candidates.push(...parseSocialImageSearchLinks(page,platform,seenPosts,50-candidates.length).filter(item=>publicSearchRelevance(query,item.title)>=0.30));
+      for(const page of pages)candidates.push(...parseSocialImageSearchLinks(page,platform,seenPosts,50-candidates.length).filter(item=>publicSearchRelevance(query,item.title)>=0.12));
       const posts=await Promise.all(candidates.slice(0,30).map(item=>resolveSocialImagePost(item.url,request.url,{timeoutMs:8000,providerTimeoutMs:9000}).then(post=>post?{item,post}:null).catch(()=>null)));
       for(const entry of posts.filter(Boolean)){
         for(const image of entry.post.images||[]){
@@ -1842,7 +1844,7 @@ export default {async fetch(request,env){
    if(url.pathname==="/api/youtube/hybrid/file"&&request.method==="GET")return hybridYoutubeFile(request);
    if(url.pathname==="/api/youtube/hybrid/thumbnail"&&request.method==="GET")return hybridYoutubeThumbnail(request);
   if(url.pathname==="/api/youtube/info"&&request.method==="GET")return youtubeInfo(request,env);
-    if(url.pathname==="/api/health"&&request.method==="GET")return json({ok:true,service:"ARYANZZ",version:"88.1",mode:"cloudflare-worker-zero-server-hybrid",directMediaDownload:true,selfHostedDownloader:false,youtubeDownloader:true,youtubeApiKeyConfigured:false,cobalt:false,paidYoutubeProvider:false,musicRecognitionConfigured:!!env.AUDD_API_TOKEN,musicFallbackReady:false,musicVideoRecognitionReady:false,platformExtraction:true,platformBackend:"public-free-community-api"});
+    if(url.pathname==="/api/health"&&request.method==="GET")return json({ok:true,service:"ARYANZZ",version:"88.2",mode:"cloudflare-worker-zero-server-hybrid",directMediaDownload:true,selfHostedDownloader:false,youtubeDownloader:true,youtubeApiKeyConfigured:false,cobalt:false,paidYoutubeProvider:false,musicRecognitionConfigured:!!env.AUDD_API_TOKEN,musicFallbackReady:false,musicVideoRecognitionReady:false,platformExtraction:true,platformBackend:"public-free-community-api"});
   if(url.pathname==="/api/social-file"&&request.method==="GET")return socialMediaFile(request);
   if(url.pathname==="/api/info"&&request.method==="POST"){const proxied=await proxyPlatform(request,env,"/api/info");if(proxied)return proxied;return info(request);}
   if(url.pathname==="/api/direct-file"&&request.method==="GET")return download(request);
