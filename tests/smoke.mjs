@@ -662,7 +662,7 @@ try{
       const media=item.mode==="audio"
         ?[{label:"Audio MP3",type:"audio",mimeType:"audio/mpeg",url:"https://cdn.example/"+item.id+".mp3"}]
         :[{label:"Video MP4",type:"video",mimeType:"video/mp4",url:"https://cdn.example/"+item.id+"-search.mp4",height:720}];
-      return new Response(JSON.stringify({success:true,normalized:{kind:"media",title:"Verified "+item.id+" result",duration:28,media}}),{status:200,headers:{"content-type":"application/json"}});
+      return new Response(JSON.stringify({success:true,normalized:{kind:"media",title:"Tabola Bale Verified "+item.id+" result",duration:28,media}}),{status:200,headers:{"content-type":"application/json"}});
     }
     assert.equal(url.hostname,"cdn.example");
     const range=new Headers(init.headers).get("range");assert.equal(range,"bytes=0-65535");
