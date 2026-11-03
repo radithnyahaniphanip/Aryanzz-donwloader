@@ -18,9 +18,3 @@ new_sqlite_classes = ["DownloaderContainer"]
 [[migrations]]
 tag = "v2"
 deleted_classes = ["DownloaderContainer"]
-
-[[d1_databases]]
-binding = "DB"
-database_name = "aryanzz-auth"
-database_id = "AUTO_CREATE_D1_DATABASE_ID"
-migrations_dir = "migrations"
