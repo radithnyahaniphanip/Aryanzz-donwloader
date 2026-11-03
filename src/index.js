@@ -1674,6 +1674,102 @@ async function recognizeMusicVideo(request,env){
     message:unique.length?"Pemindaian selesai.":"Belum ada lagu yang cocok pada segmen yang dipindai."});
 }
 
+
+const AUTH_ITERATIONS = 210000;
+const AUTH_SESSION_SECONDS = 60 * 60 * 24 * 30;
+const AUTH_ATTEMPTS = new Map();
+function authJson(data,status=200,headers={}){
+  return new Response(JSON.stringify(data),{status,headers:{"content-type":"application/json; charset=utf-8","cache-control":"no-store","x-content-type-options":"nosniff",...headers}});
+}
+function authCookie(request,name){
+  const raw=request.headers.get("cookie")||"";
+  for(const part of raw.split(";")){
+    const i=part.indexOf("=");
+    if(i<0)continue;
+    if(part.slice(0,i).trim()===name)return decodeURIComponent(part.slice(i+1).trim());
+  }
+  return "";
+}
+function authB64(bytes){let s="";for(const b of new Uint8Array(bytes))s+=String.fromCharCode(b);return btoa(s).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/g,"");}
+async function authDigest(value,algorithm="SHA-256"){
+  return authB64(await crypto.subtle.digest(algorithm,new TextEncoder().encode(value)));
+}
+async function authPasswordHash(password,salt,iterations=AUTH_ITERATIONS){
+  const key=await crypto.subtle.importKey("raw",new TextEncoder().encode(password),"PBKDF2",false,["deriveBits"]);
+  const bits=await crypto.subtle.deriveBits({name:"PBKDF2",hash:"SHA-256",salt:new TextEncoder().encode(salt),iterations},key,256);
+  return authB64(bits);
+}
+function authRandom(bytes=32){const data=new Uint8Array(bytes);crypto.getRandomValues(data);return authB64(data);}
+function authRateLimit(request,action){
+  const ip=request.headers.get("cf-connecting-ip")||"unknown";
+  const key=action+":"+ip,now=Date.now(),old=AUTH_ATTEMPTS.get(key);
+  if(!old||now-old.start>600000){AUTH_ATTEMPTS.set(key,{start:now,count:1});return false;}
+  old.count++;return old.count>12;
+}
+function authDatabaseReady(env){return !!env.DB&&typeof env.DB.prepare==="function";}
+async function authBody(request){
+  const length=Number(request.headers.get("content-length")||0);
+  if(length>12000)throw new Error("Permintaan terlalu besar.");
+  const body=await request.json();
+  if(!body||typeof body!=="object"||Array.isArray(body))throw new Error("Format permintaan tidak valid.");
+  return body;
+}
+async function authCreateSession(request,env,user){
+  const token=authRandom(32),tokenHash=await authDigest(token),now=Math.floor(Date.now()/1000),expires=now+AUTH_SESSION_SECONDS;
+  await env.DB.prepare("INSERT INTO sessions (token_hash,user_id,created_at,expires_at) VALUES (?1,?2,?3,?4)").bind(tokenHash,user.id,now,expires).run();
+  const cookie="aryanzz_session="+encodeURIComponent(token)+"; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age="+AUTH_SESSION_SECONDS;
+  return authJson({ok:true,user:{id:user.id,name:user.display_name,email:user.email} ,message:"Berhasil masuk."},200,{"set-cookie":cookie});
+}
+async function authRegister(request,env){
+  if(!authDatabaseReady(env))return authJson({ok:false,code:"AUTH_DATABASE_NOT_READY",error:"Database akun belum aktif. Silakan coba lagi setelah deployment selesai."},503);
+  if(authRateLimit(request,"register"))return authJson({ok:false,error:"Terlalu banyak percobaan. Tunggu 10 menit lalu coba lagi."},429);
+  let body;try{body=await authBody(request)}catch(e){return authJson({ok:false,error:e.message},400)}
+  const name=String(body.name||"").trim(),email=String(body.email||"").trim().toLowerCase(),password=String(body.password||"");
+  if(name.length<2||name.length>60)return authJson({ok:false,error:"Nama harus terdiri dari 2–60 karakter."},400);
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||email.length>254)return authJson({ok:false,error:"Alamat email tidak valid."},400);
+  if(password.length<8||password.length>128||!/[0-9]/.test(password)||!/[*\-_#@]/.test(password))return authJson({ok:false,error:"Password minimal 8 karakter dan harus berisi angka serta salah satu simbol * - _ # @."},400);
+  const existing=await env.DB.prepare("SELECT id FROM users WHERE email=?1").bind(email).first();
+  if(existing)return authJson({ok:false,error:"Email sudah terdaftar. Silakan masuk atau gunakan email lain."},409);
+  const salt=authRandom(16),hash=await authPasswordHash(password,salt),id=crypto.randomUUID(),now=Math.floor(Date.now()/1000);
+  try{
+    await env.DB.prepare("INSERT INTO users (id,display_name,email,password_salt,password_hash,password_iterations,created_at,updated_at) VALUES (?1,?2,?3,?4,?5,?6,?7,?7)").bind(id,name,email,salt,hash,AUTH_ITERATIONS,now).run();
+  }catch(error){
+    const duplicate=await env.DB.prepare("SELECT id FROM users WHERE email=?1").bind(email).first();
+    if(duplicate)return authJson({ok:false,error:"Email sudah terdaftar. Silakan masuk."},409);
+    throw error;
+  }
+  return authCreateSession(request,env,{id,display_name:name,email});
+}
+async function authLogin(request,env){
+  if(!authDatabaseReady(env))return authJson({ok:false,code:"AUTH_DATABASE_NOT_READY",error:"Database akun belum aktif. Silakan coba lagi setelah deployment selesai."},503);
+  if(authRateLimit(request,"login"))return authJson({ok:false,error:"Terlalu banyak percobaan masuk. Tunggu 10 menit lalu coba lagi."},429);
+  let body;try{body=await authBody(request)}catch(e){return authJson({ok:false,error:e.message},400)}
+  const email=String(body.email||"").trim().toLowerCase(),password=String(body.password||"");
+  if(!email||!password||email.length>254||password.length>128)return authJson({ok:false,error:"Email atau password salah."},401);
+  const user=await env.DB.prepare("SELECT id,display_name,email,password_salt,password_hash,password_iterations FROM users WHERE email=?1").bind(email).first();
+  if(!user)return authJson({ok:false,error:"Email atau password salah."},401);
+  const check=await authPasswordHash(password,user.password_salt,Number(user.password_iterations)||AUTH_ITERATIONS);
+  if(check!==user.password_hash)return authJson({ok:false,error:"Email atau password salah."},401);
+  return authCreateSession(request,env,user);
+}
+async function authMe(request,env){
+  if(!authDatabaseReady(env))return authJson({ok:false,code:"AUTH_DATABASE_NOT_READY",error:"Database akun belum aktif."},503);
+  const token=authCookie(request,"aryanzz_session");
+  if(!token)return authJson({ok:false,error:"Belum masuk."},401);
+  const tokenHash=await authDigest(token),now=Math.floor(Date.now()/1000);
+  const row=await env.DB.prepare("SELECT u.id,u.display_name,u.email FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=?1 AND s.expires_at>?2").bind(tokenHash,now).first();
+  if(!row)return authJson({ok:false,error:"Sesi berakhir. Silakan masuk kembali."},401,{"set-cookie":"aryanzz_session=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0"});
+  return authJson({ok:true,user:{id:row.id,name:row.display_name,email:row.email}});
+}
+async function authLogout(request,env){
+  const token=authCookie(request,"aryanzz_session");
+  if(token&&authDatabaseReady(env)){
+    const hash=await authDigest(token);
+    await env.DB.prepare("DELETE FROM sessions WHERE token_hash=?1").bind(hash).run();
+  }
+  return authJson({ok:true},200,{"set-cookie":"aryanzz_session=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0"});
+}
+
 export default {async fetch(request,env){
   const url=new URL(request.url);
   // Serve crawler files explicitly so Google receives deterministic XML/plain-text MIME types.
@@ -1689,6 +1785,10 @@ export default {async fetch(request,env){
     const robots='User-agent: *\nAllow: /\n\nSitemap: https://aryanzz-donwloader.radithnyahaniphanip.workers.dev/sitemap.txt\n';
     return new Response(robots,{status:200,headers:{"content-type":"text/plain; charset=utf-8","cache-control":"public, max-age=3600","x-content-type-options":"nosniff"}});
   }
+  if(url.pathname==="/api/auth/register"&&request.method==="POST")return authRegister(request,env);
+  if(url.pathname==="/api/auth/login"&&request.method==="POST")return authLogin(request,env);
+  if(url.pathname==="/api/auth/me"&&request.method==="GET")return authMe(request,env);
+  if(url.pathname==="/api/auth/logout"&&request.method==="POST")return authLogout(request,env);
   if(request.method==="OPTIONS"&&url.pathname.startsWith("/api/"))return new Response(null,{status:204,headers:{"access-control-allow-origin":url.origin,"access-control-allow-methods":"GET,POST,OPTIONS","access-control-allow-headers":"Content-Type"}});
   if(url.pathname==="/api/music/scan-video"&&request.method==="POST")return recognizeMusicVideo(request,env);
   if(url.pathname==="/api/music/status"&&request.method==="GET")return musicStatus(env);
