@@ -119,7 +119,8 @@ idnapp:["idntimes.com"],linkedin:["linkedin.com"],wechat:["wechat.com","weixin.q
 imageItems=(data.results||[]).flatMap(item=>item.images||[]).filter(item=>{
 const host=(()=>{try{return new URL(item.sourceUrl).hostname.toLowerCase()}catch{return ""}})();
 const sourceKey=aliases[String(item.platform||"").toLowerCase()]||String(item.platform||"").toLowerCase();
-return sourceKey===expected&&(domains[expected]||[]).some(domain=>host===domain||host.endsWith("."+domain));
+const allowedDomains=expected==="all"?Object.values(domains).flat():domains[expected]||[];
+    return (expected==="all"?!!domains[sourceKey]:sourceKey===expected)&&allowedDomains.some(domain=>host===domain||host.endsWith("."+domain));
 });
 if(!imageItems.length)throw new Error("Belum ada gambar yang cocok dari "+target.name+". Tidak ada hasil dari platform lain yang akan ditampilkan.");
 }else{
