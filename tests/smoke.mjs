@@ -27,7 +27,6 @@ const audioStudioJs=file("../public/audio-studio.js");
 const audioStudioCss=file("../public/audio-studio.css");
 const imageStudioJs=file("../public/image-studio.js");
 const imageStudioCss=file("../public/image-studio.css");
-const profileJs=file("../public/v25.js");
 const manifest=JSON.parse(file("../public/manifest.webmanifest"));
 const robots=file("../public/robots.txt");
 const sitemap=file("../public/sitemap.xml");
@@ -35,6 +34,8 @@ const favicon=file("../public/favicon.svg");
 const deployWorkflow=file("../.github/workflows/deploy-cloudflare.yml");
 
 const checks=[
+  ["V85.1 profile motion toggle reapplies visible mobile animations",profileJs.includes("if(next){setupReveal();setupPremiumEffects();")&&file("../public/v25.css").includes('body[data-motion="on"] .v736-platform:active')&&file("../public/v25.css").includes('body[data-motion="off"] *:before')],
+  ["V85.1 completed downloads show a clear success panel and saved filename",file("../public/downloader.js").includes("v851-complete-panel")&&file("../public/downloader.js").includes("Unduhan berhasil disiapkan")&&file("../public/downloader.css").includes("#downloadResult .v851-complete-panel")],
 
   ["V73.7 presents a visible tap-to-download link for completed browser files",downloader.includes("function addReadyDownloadLink")&&downloader.includes("youtube-ready-link")&&downloader.includes("Unduh MP4 sekarang")&&!downloader.includes("document.body.append(anchor);anchor.click();anchor.remove();")],
   ["V73.7 adaptive MP4 shows three clear stages and only reaches 100% after the file is ready",downloader.includes("Tahap 1/3 · Video")&&downloader.includes("Tahap 2/3 · Audio")&&downloader.includes("Tahap 3/3 · Menyatukan MP4")&&downloader.includes('bar.style.width="100%"')],
@@ -235,7 +236,7 @@ const checks=[
   ["V84.6 compact Pustaka tabs and local favorites",html.includes("aryLibraryHistoryTab")&&html.includes("aryLibraryFavoriteTab")&&html.includes("function renderLibrary")&&html.includes("aryanzz-library-favorites-v1")&&sw.includes("aryanzz-v85-0")],
 
   ["V85.0 explicit profile motion toggle overrides OS reduced-motion only after user opt-in",profileJs.includes('saved==="on"||(!reduceMotion&&saved!=="off")')&&profileJs.includes('input.disabled=false;')&&profileJs.includes('const next=input.checked;')],
-  ["V85.0 profile cover and stats visibly animate when motion is enabled",profileJs.includes('saved==="on"')&&file("../public/v25.css").includes('body[data-motion="on"] .v25-profile-cover:before{animation:v25Orbit')&&file("../public/v25.css").includes('body[data-motion="on"] .v25-profile-stats>div:nth-child(4)')],
+  ["V85.0 profile cover and stats visibly animate when motion is enabled",profileJs.includes('saved==="on"')&&file("../public/v25.css").includes('body[data-motion="on"] .v25-profile-cover:after')&&file("../public/v25.css").includes('body[data-motion="on"] .v25-avatar')],
   ["V85.0 download result has a refined responsive completion panel",downloaderCss.includes('#downloadResult .youtube-result{')&&downloaderCss.includes('#downloadResult .youtube-ready-link{')&&downloaderCss.includes('grid-template-columns:1fr')],
 
 
