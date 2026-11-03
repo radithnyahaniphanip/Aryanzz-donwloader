@@ -6,6 +6,14 @@
   "display": "standalone",
   "background_color": "#070b16",
   "theme_color": "#070b16",
-  "description": "Pengunduh video, audio, dan gambar online dari berbagai platform.",
-  "version": "82.2.0"
+  "description": "Alat online untuk mengunduh dan mengelola video, audio, serta gambar dari tautan media yang didukung.",
+  "version": "83.0.0",
+  "icons": [
+    {
+      "src": "/favicon.svg?v=83.0",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
 }
