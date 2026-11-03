@@ -34,6 +34,11 @@ const favicon=file("../public/favicon.svg");
 const deployWorkflow=file("../.github/workflows/deploy-cloudflare.yml");
 
 const checks=[
+  ["V88.3 preview uses intrinsic aspect ratio and suppresses native browser download menu",downloaderSource.includes('preview.controlsList="nodownload noplaybackrate"')&&downloaderSource.includes('preview.videoWidth')&&downloaderSource.includes('preview.style.aspectRatio=width+" / "+height')],
+  ["V88.3 media metadata no longer displays community-provider wording",downloaderSource.includes('info.extractor || platformName(url)')&&!downloaderSource.includes('info.extractor || info.source || platformName(url)')],
+  ["V88.3 compact result grid and matched All icon styling are present",downloaderCss.includes('.v674-search-results{display:grid')&&downloaderCss.includes('.v736-platform .v736-all-logo')&&html.includes('v736-logo v736-all-logo')],
+  ["V88.3 cache and frontend assets use refreshed version keys",sw.includes('aryanzz-v88-3')&&html.includes('v674.js?v=88.3')&&html.includes('downloader.js?v=88.3')],
+
   ["V88.2 Green Screen terms expand into template, background and overlay query variants",workerSource.includes('base+" meme template"')&&workerSource.includes('base+" background"')&&workerSource.includes('chroma key "+original')&&workerSource.includes('slice(0,platform==="all"?3:6)')],
   ["V88.1 Bing video search decodes Bing redirect links before validating social domains",workerSource.includes("function decodeBingSocialResultUrl")&&workerSource.includes("const link=decodeBingSocialResultUrl(href)")&&workerSource.includes("atob(value)")],
   ["V88.0 title search has no dedicated Green Screen option; keywords remain ordinary text",!html.includes('<option value="greenscreen">')&&!html.includes("Green Screen")&&!v674.includes("video Green Screen")&&workerSource.includes("function socialSearchQueryVariants")],
