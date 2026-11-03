@@ -142,16 +142,22 @@
     const node=$("imageDownloadStatus"); if(node){node.textContent=message;node.classList.toggle("is-error",!!bad);}
   }
   function makeImageCard(item, index) {
-    const card=document.createElement("article"); card.className="image-result-card";
-    const img=document.createElement("img"); img.loading="lazy"; img.alt=item.title||"Gambar "+(index+1); img.src=item.previewUrl||item.downloadUrl;
-    const body=document.createElement("div"); body.className="image-result-body";
-    const title=document.createElement("b"); title.textContent=item.title||"Gambar "+(index+1);
-    const meta=document.createElement("small"); meta.textContent=[item.platform||"",item.width&&item.height?item.width+" × "+item.height+" px":""].filter(Boolean).join(" · ");
-    const actions=document.createElement("div"); actions.className="image-result-actions";
-    const dl=document.createElement("a"); dl.href=item.downloadUrl; dl.textContent="↓ Unduh gambar"; dl.setAttribute("download",item.filename||"aryanzz-image.jpg"); dl.className="primary";
-    actions.appendChild(dl);
-    if(item.sourceUrl){const source=document.createElement("a");source.href=item.sourceUrl;source.target="_blank";source.rel="noopener noreferrer";source.textContent="Buka postingan ↗";source.className="tag";actions.appendChild(source);}
-    body.append(title,meta,actions);card.append(img,body);return card;
+    const card=document.createElement("article");card.className="image-result-card";
+    const preview=document.createElement("a");preview.className="image-result-preview";
+    const previewUrl=new URL(item.previewUrl||item.downloadUrl,location.origin);
+    if(previewUrl.origin!==location.origin||!["/api/social-image-file","/api/image/file"].includes(previewUrl.pathname))return card;
+    preview.href=previewUrl.href;preview.target="_blank";preview.rel="noopener noreferrer";preview.setAttribute("aria-label","Lihat gambar "+(index+1));
+    const img=document.createElement("img");img.loading="lazy";img.decoding="async";img.alt=item.title||"Gambar "+(index+1);img.src=previewUrl.href;preview.appendChild(img);
+    const body=document.createElement("div");body.className="image-result-body";
+    const title=document.createElement("b");title.textContent=item.title||"Gambar "+(index+1);
+    const meta=document.createElement("small");meta.textContent=[item.platform||"Media sosial",item.width&&item.height?item.width+" × "+item.height+" px":""].filter(Boolean).join(" · ");
+    const actions=document.createElement("div");actions.className="image-result-actions";
+    const downloadUrl=new URL(item.downloadUrl||item.previewUrl,location.origin);
+    if(downloadUrl.origin===location.origin&&["/api/social-image-file","/api/image/file"].includes(downloadUrl.pathname)){
+      const dl=document.createElement("a");dl.href=downloadUrl.href;dl.textContent="↓ Unduh gambar";dl.setAttribute("download",item.filename||"aryanzz-image.jpg");dl.className="primary";actions.appendChild(dl);
+    }
+    if(item.sourceUrl){try{const sourceUrl=new URL(item.sourceUrl);if(sourceUrl.protocol==="https:"){const source=document.createElement("a");source.href=sourceUrl.href;source.target="_blank";source.rel="noopener noreferrer";source.textContent="Buka sumber asli ↗";source.className="tag";actions.appendChild(source)}}catch{}}
+    body.append(title,meta,actions);card.append(preview,body);return card;
   }
   function renderImages(images) {
     const root=$("imageDownloadResults"); root.replaceChildren();
@@ -172,14 +178,14 @@
   async function searchImages() {
     const query=$("imageSearchQuery").value.trim(),platform=$("imageSearchPlatform").value;
     if(query.length<2){setDownloadStatus("Masukkan judul minimal 2 karakter.",true);return;}
-    setDownloadStatus("Mencari postingan gambar publik di "+platform+"…");
+    setDownloadStatus(platform==="all"?"Mencari gambar publik di semua media sosial…":"Mencari gambar publik di "+platform+"…");
     $("imageDownloadResults").replaceChildren();
     try {
       const response=await fetch("/api/image/search",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({platform,query})});
       const data=await response.json(); if(!response.ok||!data.ok)throw new Error(data.error||"Pencarian gagal.");
       const images=(data.results||[]).flatMap(item=>item.images||[]);
       renderImages(images);
-      setDownloadStatus(images.length+" gambar ditemukan dari "+(data.results||[]).length+" postingan. "+(data.unavailableCount?data.unavailableCount+" postingan tidak dapat diakses.":""));
+      setDownloadStatus(images.length+" gambar ditemukan dari "+(data.results||[]).length+" postingan"+(data.platformCounts?" · "+Object.entries(data.platformCounts).map(([name,count])=>name+": "+count).join(", "):"")+". "+(data.unavailableCount?data.unavailableCount+" postingan tidak dapat diakses.":""));
     } catch(error) { setDownloadStatus(safeText(error.message),true); }
   }
   function bind() {
