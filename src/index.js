@@ -1676,6 +1676,15 @@ async function recognizeMusicVideo(request,env){
 
 export default {async fetch(request,env){
   const url=new URL(request.url);
+  // Serve crawler files explicitly so Google receives deterministic XML/plain-text MIME types.
+  if(url.pathname==="/sitemap.xml"&&request.method==="GET"){
+    const xml='<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n  <url>\n    <loc>https://aryanzz-donwloader.radithnyahaniphanip.workers.dev/</loc>\n    <lastmod>2026-11-03</lastmod>\n  </url>\n</urlset>\n';
+    return new Response(xml,{status:200,headers:{"content-type":"application/xml; charset=utf-8","cache-control":"public, max-age=3600","x-content-type-options":"nosniff"}});
+  }
+  if(url.pathname==="/robots.txt"&&request.method==="GET"){
+    const robots='User-agent: *\nAllow: /\n\nSitemap: https://aryanzz-donwloader.radithnyahaniphanip.workers.dev/sitemap.xml\n';
+    return new Response(robots,{status:200,headers:{"content-type":"text/plain; charset=utf-8","cache-control":"public, max-age=3600","x-content-type-options":"nosniff"}});
+  }
   if(request.method==="OPTIONS"&&url.pathname.startsWith("/api/"))return new Response(null,{status:204,headers:{"access-control-allow-origin":url.origin,"access-control-allow-methods":"GET,POST,OPTIONS","access-control-allow-headers":"Content-Type"}});
   if(url.pathname==="/api/music/scan-video"&&request.method==="POST")return recognizeMusicVideo(request,env);
   if(url.pathname==="/api/music/status"&&request.method==="GET")return musicStatus(env);
