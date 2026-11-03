@@ -91,21 +91,21 @@
     const input=$("profileMotionToggle"),statusEl=$("profileMotionStatus");
     const reduceMotion=!!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
     const saved=localStorage.getItem(MOTION_KEY);
-    const enabled=!reduceMotion&&saved!=="off";
+    const enabled=saved==="on"||(!reduceMotion&&saved!=="off");
     document.body.dataset.motion=enabled?"on":"off";
     if(input){
       input.checked=enabled;
-      input.disabled=reduceMotion;
+      input.disabled=false;
       input.addEventListener("change",()=>{
-        const next=input.checked&&!reduceMotion;
+        const next=input.checked;
         document.body.dataset.motion=next?"on":"off";
         try{localStorage.setItem(MOTION_KEY,next?"on":"off");}catch{}
-        if(statusEl)statusEl.textContent=reduceMotion?"Animasi dibatasi oleh pengaturan aksesibilitas perangkat.":next?"Animasi aktif di beranda, profil, dan halaman alat.":"Animasi dinonaktifkan.";
+        if(statusEl)statusEl.textContent=next?"Animasi aktif sesuai pilihanmu.":"Animasi dinonaktifkan.";
         window.dispatchEvent(new Event("aryanzz:motion-changed"));
         queueAutoSnapshot();
       });
     }
-    if(statusEl)statusEl.textContent=reduceMotion?"Animasi dibatasi oleh pengaturan aksesibilitas perangkat.":enabled?"Animasi aktif di beranda, profil, dan halaman alat.":"Animasi dinonaktifkan.";
+    if(statusEl)statusEl.textContent=enabled?"Animasi aktif sesuai pilihanmu.":"Animasi dinonaktifkan.";
   }
 
   function setupReveal(){
