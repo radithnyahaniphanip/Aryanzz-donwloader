@@ -640,16 +640,16 @@ try{
 const originalAdditionalSearchFetch=globalThis.fetch;
 try{
   const cases=[
-    {id:"instagram",key:"instagram",url:"https://www.instagram.com/reel/TestInstagram123/",anchor:'<a href="https://www.instagram.com/reel/TestInstagram123/" class="result__a">Instagram Reels result</a>',mode:"video"},
-    {id:"snackvideo",key:"snackvideo",url:"https://www.snackvideo.com/@demo/video/TestSnack123",anchor:'<a class="result__a" href="https://www.snackvideo.com/@demo/video/TestSnack123">SnackVideo result</a>',mode:"video"},
-    {id:"capcut",key:"capcut",url:"https://www.capcut.com/t/TestCapCut123",anchor:'<a class="result__a" href="https://duckduckgo.com/l/?uddg='+encodeURIComponent("https://www.capcut.com/t/TestCapCut123")+'">CapCut shared video result</a>',mode:"video"},
-    {id:"pinterest",key:"pinterest",url:"https://www.pinterest.com/pin/TestPin123/",anchor:'<a class="result__a" href="https://www.pinterest.com/pin/TestPin123/">Pinterest video pin result</a>',mode:"video"},
-    {id:"facebook",key:"facebook",url:"https://www.facebook.com/watch/?v=123456789",anchor:'<a class="result__a" href="https://www.facebook.com/watch/?v=123456789">Facebook video result</a>',mode:"video"},
-    {id:"x",key:"twitter",url:"https://x.com/demo/status/123456789",anchor:'<a class="result__a" href="https://x.com/demo/status/123456789">X video post result</a>',mode:"video"},
-    {id:"reddit",key:"reddit",url:"https://www.reddit.com/r/videos/comments/TestReddit123/demo/",anchor:'<a class="result__a" href="https://www.reddit.com/r/videos/comments/TestReddit123/demo/">Reddit video result</a>',mode:"video"},
-    {id:"vimeo",key:"vimeo",url:"https://vimeo.com/123456789",anchor:'<a class="result__a" href="https://vimeo.com/123456789">Vimeo video result</a>',mode:"video"},
-    {id:"threads",key:"threads",url:"https://www.threads.net/@demo/post/TestThreads123",anchor:'<a class="result__a" href="https://www.threads.net/@demo/post/TestThreads123">Threads video result</a>',mode:"video"},
-    {id:"soundcloud",key:"soundcloud",url:"https://soundcloud.com/demo/test-track",anchor:'<a class="result__a" href="https://soundcloud.com/demo/test-track">SoundCloud audio track result</a>',mode:"audio"}
+    {id:"instagram",key:"instagram",url:"https://www.instagram.com/reel/TestInstagram123/",anchor:'<a href="https://www.instagram.com/reel/TestInstagram123/" class="result__a">Tabola Bale Instagram Reels result</a>',mode:"video"},
+    {id:"snackvideo",key:"snackvideo",url:"https://www.snackvideo.com/@demo/video/TestSnack123",anchor:'<a class="result__a" href="https://www.snackvideo.com/@demo/video/TestSnack123">Tabola Bale SnackVideo result</a>',mode:"video"},
+    {id:"capcut",key:"capcut",url:"https://www.capcut.com/t/TestCapCut123",anchor:'<a class="result__a" href="https://duckduckgo.com/l/?uddg='+encodeURIComponent("https://www.capcut.com/t/TestCapCut123")+'">Tabola Bale CapCut shared video result</a>',mode:"video"},
+    {id:"pinterest",key:"pinterest",url:"https://www.pinterest.com/pin/TestPin123/",anchor:'<a class="result__a" href="https://www.pinterest.com/pin/TestPin123/">Tabola Bale Pinterest video pin result</a>',mode:"video"},
+    {id:"facebook",key:"facebook",url:"https://www.facebook.com/watch/?v=123456789",anchor:'<a class="result__a" href="https://www.facebook.com/watch/?v=123456789">Tabola Bale Facebook video result</a>',mode:"video"},
+    {id:"x",key:"twitter",url:"https://x.com/demo/status/123456789",anchor:'<a class="result__a" href="https://x.com/demo/status/123456789">Tabola Bale X video post result</a>',mode:"video"},
+    {id:"reddit",key:"reddit",url:"https://www.reddit.com/r/videos/comments/TestReddit123/demo/",anchor:'<a class="result__a" href="https://www.reddit.com/r/videos/comments/TestReddit123/demo/">Tabola Bale Reddit video result</a>',mode:"video"},
+    {id:"vimeo",key:"vimeo",url:"https://vimeo.com/123456789",anchor:'<a class="result__a" href="https://vimeo.com/123456789">Tabola Bale Vimeo video result</a>',mode:"video"},
+    {id:"threads",key:"threads",url:"https://www.threads.net/@demo/post/TestThreads123",anchor:'<a class="result__a" href="https://www.threads.net/@demo/post/TestThreads123">Tabola Bale Threads video result</a>',mode:"video"},
+    {id:"soundcloud",key:"soundcloud",url:"https://soundcloud.com/demo/test-track",anchor:'<a class="result__a" href="https://soundcloud.com/demo/test-track">Tabola Bale SoundCloud audio track result</a>',mode:"audio"}
   ];
   const videoBytes=Uint8Array.from([0,0,0,24,102,116,121,112,105,115,111,109,0,0,2,0,105,115,111,109,105,115,111,50]);
   const audioBytes=Uint8Array.from([73,68,51,4,0,0,0,0,0,10,84,73,84,50,0,0,0,4,0,0,84,101,115,116]);
