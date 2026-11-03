@@ -25,7 +25,7 @@ const homeResponse = await fetch(base + "/", { cache: "no-store", signal: AbortS
 assert.equal(homeResponse.status, 200);
 const html = await homeResponse.text();
 assert.ok(html.includes("V89.0 · GRATIS"));
-assert.ok(html.includes("/v674.js?v=89.0"));
+assert.ok(html.includes("/v674.js?v=88.14.1"));
 assert.ok(html.includes("/v89.css?v=89.0"));
 assert.ok(html.includes('id="v89Welcome"'));
 assert.ok(html.includes("Semua berawal"));
