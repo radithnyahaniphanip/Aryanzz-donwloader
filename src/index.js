@@ -1878,7 +1878,7 @@ async function recognizeMusicVideo(request,env){
 }
 
 
-export default {async fetch(request,env){
+const workerHandler = {async fetch(request,env){
   const url=new URL(request.url);
   // Serve crawler files explicitly so Google receives deterministic XML/plain-text MIME types.
   if(url.pathname==="/sitemap.xml"&&request.method==="GET"){
@@ -1918,5 +1918,103 @@ export default {async fetch(request,env){
   if(url.pathname==="/api/direct-file"&&request.method==="GET")return download(request);
   if(url.pathname==="/api/download"&&request.method==="POST"){const proxied=await proxyPlatform(request,env,"/api/download");if(proxied)return proxied;return download(request);}
   if(url.pathname.startsWith("/api/"))return json({error:"Endpoint tidak ditemukan."},404);
+
   return env.ASSETS.fetch(request);
 }};
+
+const SECURITY_BUCKETS=new Map();
+const SECURITY_EVENTS={blockedOrigin:0,rateLimited:0,oversizedRequest:0,blockedMethod:0};
+const SECURITY_LIMITS=[
+  {match:/^\\/api\\/(?:social\\/search|social\\/image-search|image\\/search|search)$/,limit:18},
+  {match:/^\\/api\\/(?:social-file|image\\/file|social-image-file|direct-file)$/,limit:90},
+  {match:/^\\/api\\//,limit:90}
+];
+function securityClientKey(request){
+  const ip=request.headers.get("cf-connecting-ip")||"unknown";
+  return ip.length<=80?ip:"unknown";
+}
+function securityRateLimit(request,url){
+  const now=Date.now(),path=url.pathname,rule=SECURITY_LIMITS.find(item=>item.match.test(path));
+  if(!rule)return false;
+  const key=securityClientKey(request)+"|"+path;
+  let bucket=SECURITY_BUCKETS.get(key);
+  if(!bucket||now-bucket.started>=60000)bucket={started:now,count:0};
+  bucket.count++;SECURITY_BUCKETS.set(key,bucket);
+  if(SECURITY_BUCKETS.size>5000){
+    for(const [entry,value] of SECURITY_BUCKETS)if(now-value.started>=120000)SECURITY_BUCKETS.delete(entry);
+  }
+  return bucket.count>rule.limit;
+}
+function securityHeaders(response,requestId){
+  const headers=new Headers(response.headers);
+  headers.set("x-content-type-options","nosniff");
+  headers.set("x-frame-options","DENY");
+  headers.set("referrer-policy","strict-origin-when-cross-origin");
+  headers.set("permissions-policy","camera=(self), microphone=(self), geolocation=()");
+  headers.set("strict-transport-security","max-age=15552000; includeSubDomains");
+  headers.set("cross-origin-opener-policy","same-origin");
+  headers.set("content-security-policy","default-src 'self' https: data: blob:; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' https: data: blob:; media-src 'self' https: blob:; connect-src 'self' https: wss:; worker-src 'self' blob:; frame-src 'self' https:; object-src 'none'; base-uri 'self'; form-action 'self' https:; frame-ancestors 'none'; upgrade-insecure-requests");
+  headers.set("x-robots-tag",headers.get("x-robots-tag")||"index, follow");
+  headers.set("x-request-id",requestId);
+  headers.delete("server");
+  headers.delete("x-powered-by");
+  return new Response(response.body,{status:response.status,statusText:response.statusText,headers});
+}
+function securityError(message,status,requestId){
+  return securityHeaders(json({ok:false,error:message,requestId},status),requestId);
+}
+async function securityFetch(request,env){
+  const url=new URL(request.url);
+  const requestId=crypto.randomUUID();
+  if(!["GET","HEAD","POST","OPTIONS"].includes(request.method)){
+    SECURITY_EVENTS.blockedMethod++;
+    return securityError("Metode permintaan tidak diizinkan.",405,requestId);
+  }
+  if(url.pathname.startsWith("/api/")){
+    if(url.search.length>8192)return securityError("Parameter permintaan terlalu panjang.",414,requestId);
+    const origin=request.headers.get("origin");
+    if(origin){
+      let parsedOrigin;
+      try{parsedOrigin=new URL(origin)}catch{SECURITY_EVENTS.blockedOrigin++;return securityError("Origin permintaan tidak valid.",403,requestId)}
+      if(parsedOrigin.origin!==url.origin){
+        SECURITY_EVENTS.blockedOrigin++;
+        return securityError("Permintaan lintas situs diblokir oleh perlindungan ARYANZZ.",403,requestId);
+      }
+    }
+    if(request.method==="OPTIONS"){
+      const headers=new Headers({
+        "access-control-allow-origin":url.origin,
+        "access-control-allow-methods":"GET,POST,OPTIONS",
+        "access-control-allow-headers":"Content-Type",
+        "access-control-max-age":"600",
+        "vary":"Origin"
+      });
+      return securityHeaders(new Response(null,{status:204,headers}),requestId);
+    }
+    if(request.method==="POST"){
+      const contentType=(request.headers.get("content-type")||"").toLowerCase();
+      if(contentType&&!(/^(application\\/json|application\\/octet-stream|multipart\\/form-data)(?:;|$)/.test(contentType))){
+        return securityError("Jenis konten permintaan tidak diizinkan.",415,requestId);
+      }
+      const length=Number(request.headers.get("content-length")||0);
+      const maxBytes=contentType.startsWith("application/json")?2*1024*1024:105*1024*1024;
+      if(Number.isFinite(length)&&length>maxBytes){
+        SECURITY_EVENTS.oversizedRequest++;
+        return securityError("Ukuran permintaan melebihi batas keamanan.",413,requestId);
+      }
+    }
+    if(securityRateLimit(request,url)){
+      SECURITY_EVENTS.rateLimited++;
+      return securityError("Terlalu banyak permintaan. Tunggu sebentar lalu coba lagi.",429,requestId);
+    }
+  }
+  try{
+    const response=await workerHandler.fetch(request,env);
+    return securityHeaders(response,requestId);
+  }catch(error){
+    console.error("[ARYANZZ_SECURITY] worker_exception",requestId,String(error?.message||"unknown").slice(0,160));
+    return securityError("Layanan sementara tidak tersedia. Coba lagi nanti.",500,requestId);
+  }
+}
+export default {fetch:securityFetch};
+
