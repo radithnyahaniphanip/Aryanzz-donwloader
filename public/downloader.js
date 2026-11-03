@@ -1204,13 +1204,12 @@
           const preview=make("video","v737-media-preview");
           const previewSource=safeUrl(previewFormat.previewUrl);
           if(!previewSource||previewSource.origin!==location.origin||previewSource.pathname!=="/api/social-file")throw new Error("Pratinjau media tidak melewati proxy ARYANZZ.");
-          preview.src=previewSource.href;
           preview.controls=true;
           preview.controlsList="nodownload noplaybackrate";
           preview.disablePictureInPicture=true;
           preview.disableRemotePlayback=true;
           preview.playsInline=true;
-          preview.preload="auto";
+          preview.preload="metadata";
           preview.setAttribute("webkit-playsinline","");
           preview.style.cssText="display:block;height:auto;max-width:100%;max-height:70svh;margin:0 auto;object-fit:contain;object-position:center;background:#000;border-radius:12px";
           if(info.thumbnail)preview.poster=info.thumbnail;
@@ -1258,6 +1257,10 @@
            });
            preview.addEventListener("canplay",()=>{previewStatus.textContent="Video siap diputar · kontrol dan durasi aktif.";previewStatus.className="muted"});
            preview.addEventListener("playing",()=>{previewStatus.textContent="Video sedang diputar.";previewStatus.className="muted"});
+           preview.addEventListener("waiting",()=>{previewStatus.textContent="Memuat bagian video berikutnya…";previewStatus.className="muted"});
+           preview.addEventListener("stalled",()=>{previewStatus.textContent="Koneksi stream tertahan · menunggu data berikutnya…";previewStatus.className="warning"});
+           preview.src=previewSource.href;
+           preview.load();
            window.addEventListener("resize",applyIntrinsicRatio,{passive:true});
            previewWrap.append(preview);
            box.append(previewWrap,previewStatus);
