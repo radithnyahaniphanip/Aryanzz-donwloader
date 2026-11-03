@@ -1053,7 +1053,7 @@ async function socialImageSearch(request){
     const results=[],seenImages=new Set(),platformCounts={};
     const maxPerPlatform=platform==="all"?20:100;
     if(platform==="all"){
-      for(let round=0;results.length<19;round++){
+      for(let round=0;results.length<100;round++){
         let added=false;
         for(const bucket of buckets){
           const item=bucket.results[round];if(!item)continue;
