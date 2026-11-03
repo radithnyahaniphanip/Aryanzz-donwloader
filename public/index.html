@@ -142,7 +142,7 @@ body:before{content:"";position:fixed;z-index:-1;inset:-30%;pointer-events:none;
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.01ms!important}}
 </style><link rel="stylesheet" href="/v15.css?v=59.5"><link rel="stylesheet" href="/v25.css?v=78.0"><link rel="stylesheet" href="/owner.css?v=59.5"><link rel="stylesheet" href="/downloader.css?v=81.4"><link rel="stylesheet" href="/v59.css?v=59.5"><link rel="stylesheet" href="/editor-pro.css?v=65.0"><link rel="stylesheet" href="/music-recognition.css?v=71.0"><link rel="stylesheet" href="/brand-refresh.css?v=82.1"></head><body>
 <div class="wrap">
-<header class="top v674-top"><a class="brand v674-brand" href="/" aria-label="ARYANZZ Home"><span class="logo v674-logo">A<span>✦</span></span><span>ARYANZZ<small>RUANG KREATIF</small></span></a><div class="v674-top-actions"><span class="pill v674-version"><i></i> V84.1 · GRATIS</span><button class="v674-theme-toggle" id="themeToggle" type="button" aria-label="Ganti tema">☼</button></div></header>
+<header class="top v674-top"><a class="brand v674-brand" href="/" aria-label="ARYANZZ Home"><span class="logo v674-logo">A<span>✦</span></span><span>ARYANZZ<small>RUANG KREATIF</small></span></a><div class="v674-top-actions"><span class="pill v674-version"><i></i> V84.2 · GRATIS</span><button class="v674-theme-toggle" id="themeToggle" type="button" aria-label="Ganti tema">☼</button></div></header>
 <section id="home" class="v674-home">
 <div class="v674-hero"><h1>Semua berawal<br><span>dari satu tautan</span></h1></div>
 <div class="card download v6-download v674-download">
@@ -167,7 +167,22 @@ body:before{content:"";position:fixed;z-index:-1;inset:-30%;pointer-events:none;
 <div id="linkModePanel"><label class="label" for="url">TEMPEL TAUTAN MEDIA</label><div class="inputrow v674-input-row"><input class="field" id="url" type="text" inputmode="url" placeholder="Tempel tautan video atau audio…" autocomplete="url"><button class="primary" id="analyze">Periksa ↗</button></div><div class="format-strip v674-format-strip"><span>MP4</span><span>MP3</span><span>M4A</span><span>WAV</span></div></div>
 <div id="titleModePanel" hidden><label class="label" for="titleSearch">CARI VIDEO & GAMBAR</label><div class="inputrow v674-input-row"><input class="field" id="titleSearch" type="search" placeholder="Contoh: DJ tabola bale" autocomplete="off"><button class="primary" id="titleSearchBtn" type="button">Cari ⌕</button></div><p class="v674-title-help" id="titleSearchHelp">Pilih platform, lalu cari judul.</p><div class="v674-search-results" id="titleSearchResults" hidden aria-live="polite"></div></div>
 <div id="downloadResult" class="result v674-result" hidden></div><div id="historyBox" class="result" hidden></div><div id="backendStatus" class="backend-status" data-state="warn" role="status">Gratis · file langsung lewat Chrome.</div>
-</div><p class="v674-home-foot">Unduh konten milikmu atau yang diizinkan.</p></section><section id="toolsArea"><div class="panel card all-tools-panel v674-tools-panel" id="allTools">
+</div><section class="seo-copy" aria-labelledby="seo-heading">
+<h2 id="seo-heading">ARYANZZ Downloader – Pengunduh Video, Audio, dan Gambar Online</h2>
+<p>ARYANZZ Downloader membantu kamu mengakses alat unduh media melalui satu halaman. Tempel tautan media atau gunakan pencarian judul untuk menemukan konten yang tersedia dari platform yang didukung.</p>
+<h3>Unduh media dari berbagai platform</h3>
+<p>Gunakan ARYANZZ untuk memproses tautan dari YouTube, TikTok, Instagram, SnackVideo, Pinterest, Facebook, X, Reddit, Vimeo, Threads, SoundCloud, dan CapCut. Ketersediaan hasil unduhan bergantung pada akses publik, format sumber, serta ketentuan masing-masing platform.</p>
+<h3>Alat media dalam satu tempat</h3>
+<p>Selain pengunduh video dan audio, ARYANZZ menyediakan fitur pengelolaan gambar dan alat kreatif untuk membantu menyiapkan media sesuai kebutuhan. Website dirancang responsif agar nyaman digunakan melalui ponsel maupun komputer.</p>
+<p>Gunakan media yang kamu miliki atau yang penggunaannya telah diizinkan. Hormati hak cipta, privasi, dan ketentuan layanan setiap platform.</p>
+</section>
+<style>
+.seo-copy{max-width:790px;margin:30px auto 24px;padding:20px 4px;color:#aebed4;font-size:14px;line-height:1.75}
+.seo-copy h2{font-size:20px;line-height:1.35;color:#edf4ff;margin:0 0 10px}
+.seo-copy h3{font-size:16px;color:#dce8fa;margin:18px 0 5px}
+.seo-copy p{margin:7px 0}
+</style>
+<p class="v674-home-foot">Unduh konten milikmu atau yang diizinkan.</p></section><section id="toolsArea"><div class="panel card all-tools-panel v674-tools-panel" id="allTools">
 <div class="v674-tools-head"><div><span class="section-kicker">RUANG KREATIF · V81.4</span><h2>Pusat Alat</h2><p>Setiap alat punya ruang dan fungsi tersendiri. Cari fitur yang kamu butuhkan.</p></div><div class="v674-tools-orb">✦</div></div>
 <label class="v674-search-label" for="toolSearch">CARI TOOLS</label><input class="field v674-tool-search" id="toolSearch" type="search" placeholder="Cari: editor, warna, QR, PDF, speed test..." autocomplete="off">
 <div class="v674-tool-filters" id="toolFilters"><button class="active" type="button" data-tool-filter="all">Semua</button><button type="button" data-tool-filter="media">Media</button><button type="button" data-tool-filter="creative">Kreatif</button><button type="button" data-tool-filter="utility">Utilitas</button><button type="button" data-tool-filter="personal">Personal</button></div>
@@ -670,21 +685,7 @@ body:before{content:"";position:fixed;z-index:-1;inset:-30%;pointer-events:none;
   </div>
 </div>
 <div id="advancedNotice" class="result" hidden></div>
-</section><section class="seo-copy" aria-labelledby="seo-heading">
-<h2 id="seo-heading">ARYANZZ Downloader – Pengunduh Video, Audio, dan Gambar Online</h2>
-<p>ARYANZZ Downloader membantu kamu mengakses alat unduh media melalui satu halaman. Tempel tautan media atau gunakan pencarian judul untuk menemukan konten yang tersedia dari platform yang didukung.</p>
-<h3>Unduh media dari berbagai platform</h3>
-<p>Gunakan ARYANZZ untuk memproses tautan dari YouTube, TikTok, Instagram, SnackVideo, Pinterest, Facebook, X, Reddit, Vimeo, Threads, SoundCloud, dan CapCut. Ketersediaan hasil unduhan bergantung pada akses publik, format sumber, serta ketentuan masing-masing platform.</p>
-<h3>Alat media dalam satu tempat</h3>
-<p>Selain pengunduh video dan audio, ARYANZZ menyediakan fitur pengelolaan gambar dan alat kreatif untuk membantu menyiapkan media sesuai kebutuhan. Website dirancang responsif agar nyaman digunakan melalui ponsel maupun komputer.</p>
-<p>Gunakan media yang kamu miliki atau yang penggunaannya telah diizinkan. Hormati hak cipta, privasi, dan ketentuan layanan setiap platform.</p>
 </section>
-<style>
-.seo-copy{max-width:790px;margin:30px auto 24px;padding:20px 4px;color:#aebed4;font-size:14px;line-height:1.75}
-.seo-copy h2{font-size:20px;line-height:1.35;color:#edf4ff;margin:0 0 10px}
-.seo-copy h3{font-size:16px;color:#dce8fa;margin:18px 0 5px}
-.seo-copy p{margin:7px 0}
-</style>
 <footer>© <span id="year"></span> ARYANZZ</footer></div>
 <nav class="nav" aria-label="Navigasi utama"><button class="active" data-nav="home"><span class="nav-icon">⌂</span><span>Beranda</span></button><button data-nav="allTools"><span class="nav-icon">✦</span><span>Alat</span></button><button data-nav="history"><span class="nav-icon">◷</span><span>Pustaka</span></button><button data-nav="owner"><span class="nav-icon">♛</span><span>Pemilik</span></button><button data-nav="profile"><span class="nav-icon">◉</span><span>Profil</span></button></nav>
 <script>
