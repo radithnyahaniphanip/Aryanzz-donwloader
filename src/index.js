@@ -476,18 +476,18 @@ function parseBingSocialVideoResults(html,platform,query,seen){
     seen.add(url);out.push({title,url,snippet,platform:key,searchProvider:"Bing Web"});
   }
   // Fallback parser for Bing layouts that expose social permalinks outside legacy b_algo list markup.
-  for(const match of String(html||"").matchAll(/<a\\b([^>]*)>([\\s\\S]*?)<\\/a>/gi)){
-    const attrs=match[1]||"",href=attrs.match(/\\bhref=["']([^"']+)["']/i)?.[1];if(!href)continue;
+  for(const match of String(html||"").matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/gi)){
+    const attrs=match[1]||"",href=attrs.match(/\bhref=["']([^"']+)["']/i)?.[1];if(!href)continue;
     const link=decodeBingSocialResultUrl(href);if(!link||link.protocol!=="https:"||!domains.some(domain=>link.hostname===domain||link.hostname.endsWith("."+domain)))continue;
     const key=freePlatformKey(link.href);if(!key)continue;
-    if(key==="tiktok"&&!/\\/video\\//i.test(link.pathname))continue;
-    if(key==="instagram"&&!/\\/(?:p|reel|tv|share)\\//i.test(link.pathname))continue;
-    if(key==="pinterest"&&!/\\/pin\\//i.test(link.pathname))continue;
+    if(key==="tiktok"&&!/\/video\//i.test(link.pathname))continue;
+    if(key==="instagram"&&!/\/(?:p|reel|tv|share)\//i.test(link.pathname))continue;
+    if(key==="pinterest"&&!/\/pin\//i.test(link.pathname))continue;
     const url=link.href.split("#")[0];if(seen.has(url))continue;
-    const rawTitle=decodeSearchHtml((match[2]||"").replace(/<[^>]+>/g," ")).replace(/\\s+/g," ").trim();
-    const title=rawTitle||decodeSearchHtml(attrs.match(/\\btitle=["']([^"']+)["']/i)?.[1]||"")||((key==="tiktok"?"Video TikTok ":"Konten ")+query);
+    const rawTitle=decodeSearchHtml((match[2]||"").replace(/<[^>]+>/g," ")).replace(/\s+/g," ").trim();
+    const title=rawTitle||decodeSearchHtml(attrs.match(/\btitle=["']([^"']+)["']/i)?.[1]||"")||((key==="tiktok"?"Video TikTok ":"Konten ")+query);
     const context=String(html||"").slice(Math.max(0,match.index-350),Math.min(String(html||"").length,match.index+1300));
-    const snippet=decodeSearchHtml(context.replace(/<[^>]+>/g," ").replace(/\\s+/g," ")).slice(0,500);
+    const snippet=decodeSearchHtml(context.replace(/<[^>]+>/g," ").replace(/\s+/g," ")).slice(0,500);
     if(publicSearchRelevance(query,title+" "+snippet)<0.18)continue;
     seen.add(url);out.push({title,url,snippet,platform:key,searchProvider:"Bing Web"});
   }
