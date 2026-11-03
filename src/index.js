@@ -970,7 +970,7 @@ async function socialImageSearch(request){
     }
     const grouped=results.slice(0,19).map(item=>({title:item.title||query,sourceUrl:item.sourceUrl,platform:item.platform||platform,verified:!!item.verified,images:[item]}));
     const counts=grouped.reduce((out,item)=>{const key=socialImagePlatformKey(item.sourceUrl,item.platform||"other");out[key]=(out[key]||0)+1;return out},{});
-    return json({ok:true,platform,query,results:grouped,imageCount:grouped.length,verifiedCount:grouped.length,platformCounts:counts,unavailableCount:Math.max(0,candidates.length-grouped.length),searchProvider:"Bing Images + public social posts"});
+    return json({ok:true,platform,query,results:grouped,imageCount:grouped.length,verifiedCount:grouped.length,platformCounts:counts,unavailableCount:Math.max(0,candidates.length-grouped.length),searchProvider:"Bing Images + public social posts",searchDiagnostics:{selectedBucket:platform==="all"?"all":platform,selectedBucketCount:buckets.find(entry=>entry.platform===platform)?.results.length||0,selectedBucketNames:buckets.filter(entry=>entry.results.length).map(entry=>({platform:entry.platform,count:entry.results.length})),resultCount:results.length}});
   }catch(error){return json({error:"Pencarian gambar gagal dijangkau. "+String(error?.message||error).slice(0,120)},502)}
 }
 async function socialImageFile(request){
