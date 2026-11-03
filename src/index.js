@@ -718,7 +718,7 @@ async function resolveSocialImagePost(rawUrl,requestUrl,options={}){
   const providerUrl=FREE_MEDIA_API+"/api/download/"+key+"?url="+encodeURIComponent(rawUrl);
   const includeProvider=options.includeProvider!==false;
   const tasks=[
-    includeProvider?fetch(providerUrl,{headers:{accept:"application/json"},signal:AbortSignal.timeout(14000),cache:"no-store"}).then(async response=>{
+    includeProvider?fetch(providerUrl,{headers:{accept:"application/json"},signal:AbortSignal.timeout(Number(options.providerTimeoutMs)||14000),cache:"no-store"}).then(async response=>{
       if(!response.ok)throw new Error("Provider gambar HTTP "+response.status);
       const data=await response.json().catch(()=>({}));
       if(data?.success===false)throw new Error("Provider tidak mendukung konten gambar ini.");
@@ -838,26 +838,38 @@ async function socialImageSearch(request){
       const url=new URL("https://www.bing.com/images/search");
       url.searchParams.set("q",searchTerm);url.searchParams.set("form","HDRSC3");
       try{
-        const response=await fetch(url.href,{headers:{accept:"text/html,application/xhtml+xml","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/130.0.0.0 Safari/537.36"},signal:AbortSignal.timeout(9000),cache:"no-store"});
+        const response=await fetch(url.href,{headers:{accept:"text/html,application/xhtml+xml","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/130.0.0.0 Safari/537.36"},signal:AbortSignal.timeout(5000),cache:"no-store"});
         return response.ok?parseBingSocialImageResults(await response.text(),scope,request.url,query):[];
       }catch{return []}
     };
-    let buckets=[],broadResults=[];
+    const buckets=searchPlatforms.map(key=>({platform:key,results:[]}));
     if(platform==="all"){
-      buckets=searchPlatforms.map(key=>({platform:key,results:[]}));
-      const allSiteQuery="("+domains.map(domain=>"site:"+domain).join(" OR ")+") "+query;
-      broadResults=(await Promise.all([fetchBing(allSiteQuery,"all"),fetchBing(query,"all")])).flat();
-      for(const item of broadResults){
-        const key=item.platform||"";
-        const bucket=buckets.find(entry=>entry.platform===key);
+      const general=await fetchBing(query,"all");
+      for(const item of general){
+        const bucket=buckets.find(entry=>entry.platform===(item.platform||""));
         if(bucket&&!bucket.results.some(existing=>existing.url===item.url))bucket.results.push(item);
+      }
+      for(let offset=0;offset<searchPlatforms.length;offset+=3){
+        const batch=searchPlatforms.slice(offset,offset+3).filter(key=>(buckets.find(entry=>entry.platform===key)?.results.length||0)<6);
+        const batchResults=await Promise.all(batch.map(async key=>{
+          const site=socialSearchDomains(key).map(domain=>"site:"+domain).join(" OR ");
+          return {platform:key,results:await fetchBing(site+" "+query,key)};
+        }));
+        for(const entry of batchResults){
+          const bucket=buckets.find(item=>item.platform===entry.platform);
+          for(const item of entry.results||[])if(bucket&&!bucket.results.some(existing=>existing.url===item.url))bucket.results.push(item);
+        }
+        const currentCounts=buckets.map(item=>Math.min(item.results.length,6)).filter(Boolean);
+        const currentTotal=currentCounts.reduce((sum,count)=>sum+count,0);
+        const currentPlatforms=currentCounts.length;
+        if(currentTotal>=19&&currentPlatforms>=4)break;
       }
     }else{
       const site=domains.map(domain=>"site:"+domain).join(" OR ");
-      buckets=[{platform,results:await fetchBing(site+" "+query,platform)}];
+      buckets[0].results=await fetchBing(site+" "+query,platform);
     }
     const results=[],seenImages=new Set(),platformCounts={};
-    const maxPerPlatform=platform==="all"?4:19;
+    const maxPerPlatform=platform==="all"?6:19;
     if(platform==="all"){
       for(let round=0;results.length<19;round++){
         let added=false;
@@ -879,7 +891,7 @@ async function socialImageSearch(request){
     }
     let candidates=[];
     const distinctPlatforms=Object.keys(platformCounts).length;
-    const needsFallback=results.length<19||(platform==="all"&&distinctPlatforms<5);
+    const needsFallback=results.length<19||(platform==="all"&&distinctPlatforms<4);
     if(needsFallback){
       const allDomains=socialSearchDomains(platform),site=allDomains.map(domain=>"site:"+domain).join(" OR ");
       const searchTerm=platform==="all"?"("+site+") "+query:site+" "+query;
@@ -890,7 +902,7 @@ async function socialImageSearch(request){
       }));
       const seenPosts=new Set();
       for(const page of pages)candidates.push(...parseSocialImageSearchLinks(page,platform,seenPosts,18-candidates.length));
-      const posts=await Promise.all(candidates.slice(0,12).map(item=>resolveSocialImagePost(item.url,request.url,{timeoutMs:10000}).then(post=>post?{item,post}:null).catch(()=>null)));
+      const posts=await Promise.all(candidates.slice(0,12).map(item=>resolveSocialImagePost(item.url,request.url,{timeoutMs:8000,providerTimeoutMs:9000}).then(post=>post?{item,post}:null).catch(()=>null)));
       for(const entry of posts.filter(Boolean)){
         for(const image of entry.post.images||[]){
           if(results.length>=19)break;
