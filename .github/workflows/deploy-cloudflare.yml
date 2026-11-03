@@ -89,8 +89,19 @@ jobs:
             throw new Error("Live Worker has not propagated the V81.4 zero-server deployment: " + JSON.stringify(health));
           }
           console.log("Live Worker health OK: V" + health.version + " in zero-server mode.");
+          const homeResponse = await fetch(base + "/", { cache: "no-store" });
+          const homeHtml = await homeResponse.text();
+          if (!homeResponse.ok || !homeHtml.includes('name="robots" content="index,follow') || !homeHtml.includes('rel="canonical"') || !homeHtml.includes('application/ld+json')) {
+            throw new Error("V82.2 SEO metadata is missing from the live homepage.");
+          }
+          const sitemapResponse = await fetch(base + "/sitemap.xml", { cache: "no-store" });
+          const sitemapText = await sitemapResponse.text();
+          if (!sitemapResponse.ok || !sitemapText.includes("<urlset") || !sitemapText.includes(base + "/")) {
+            throw new Error("V82.2 sitemap is unavailable or does not list the canonical homepage.");
+          }
+          console.log("V82.2 SEO metadata, robots.txt, sitemap and favicon are live.");
 
-          for (const path of ["/editor.js?v=65.0", "/editor-pro.css?v=65.0", "/music-recognition.js?v=71.0", "/music-recognition.css?v=71.0", "/v674.js?v=81.4", "/v674.css?v=81.4", "/v677.js?v=67.7", "/v677.css?v=67.7", "/v680.js?v=71.0", "/v680.css?v=71.0", "/v690.css?v=71.0", "/downloader.js?v=81.4", "/downloader.css?v=81.4", "/v59.js?v=59.5", "/v59.css?v=59.5", "/audio-studio.js?v=80.0", "/audio-studio.css?v=80.0", "/image-studio.js?v=81.4", "/image-studio.css?v=81.4"]) {
+          for (const path of ["/editor.js?v=65.0", "/editor-pro.css?v=65.0", "/music-recognition.js?v=71.0", "/music-recognition.css?v=71.0", "/v674.js?v=81.4", "/v674.css?v=81.4", "/v677.js?v=67.7", "/v677.css?v=67.7", "/v680.js?v=71.0", "/v680.css?v=71.0", "/v690.css?v=71.0", "/downloader.js?v=81.4", "/downloader.css?v=81.4", "/v59.js?v=59.5", "/v59.css?v=59.5", "/audio-studio.js?v=80.0", "/audio-studio.css?v=80.0", "/image-studio.js?v=81.4", "/image-studio.css?v=81.4", "/robots.txt", "/sitemap.xml", "/favicon.svg", "/og-cover.svg"]) {
             const response = await fetch(base + path, { cache: "no-store" });
             if (!response.ok) throw new Error("Static asset unavailable: " + path + " HTTP " + response.status);
           }
