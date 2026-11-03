@@ -1046,7 +1046,7 @@ try{
     assert.equal(capcutImageData.platform,"capcut");
     assert.equal(capcutImageData.verifiedCount,1);
     assert.equal(capcutImageData.results[0].images.length,1);
-    assert.match(capcutImageData.results[0].images[0].downloadUrl,/api\\/social-image-file/);
+    assert.ok(capcutImageData.results[0].images[0].downloadUrl.includes("/api/social-image-file"));
     assert.equal(capcutImageData.results[0].images[0].sourceUrl,"https://www.capcut.com/template-detail/123456");
     console.log("✔ V81.1 CapCut image title search resolves a verified image and same-origin download link");
   }finally{globalThis.fetch=originalCapcutImageSearchFetch;}
