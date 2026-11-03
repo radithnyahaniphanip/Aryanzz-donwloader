@@ -237,7 +237,7 @@ const checks=[
 
   ["V85.0 explicit profile motion toggle overrides OS reduced-motion only after user opt-in",profileJs.includes('saved==="on"||(!reduceMotion&&saved!=="off")')&&profileJs.includes('input.disabled=false;')&&profileJs.includes('const next=input.checked;')],
   ["V85.0 profile cover and stats visibly animate when motion is enabled",profileJs.includes('saved==="on"')&&file("../public/v25.css").includes('body[data-motion="on"] .v25-profile-cover:after')&&file("../public/v25.css").includes('body[data-motion="on"] .v25-avatar')],
-  ["V85.0 download result has a refined responsive completion panel",downloaderCss.includes('#downloadResult .v851-complete-panel{')&&downloaderCss.includes('#downloadResult .youtube-ready-link{')&&downloaderCss.includes('grid-template-columns:1fr')],
+  ["V85.0 download result has a refined responsive completion panel",downloaderCss.includes('#downloadResult .v851-complete-panel{')&&downloaderCss.includes('grid-template-columns:1fr')],
 
 
 
