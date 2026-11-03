@@ -2013,7 +2013,7 @@ async function securityFetch(request,env){
     const response=await workerHandler.fetch(request,env);
     return securityHeaders(response,requestId);
   }catch(error){
-    console.error("[ARYANZZ_SECURITY] worker_exception",requestId,String(error?.message||"unknown").slice(0,160));
+    console.error("[ARYANZZ_SECURITY] worker_exception",requestId,error instanceof Error?error.name:"unknown");
     return securityError("Layanan sementara tidak tersedia. Coba lagi nanti.",500,requestId);
   }
 }
