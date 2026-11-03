@@ -551,10 +551,10 @@ async function searchSocial(request){
   try{
     const baseVariants=socialSearchQueryVariants(query);
     const variants=(desiredMode==="audio"
-      ? [...baseVariants,query+" audio",query+" song",query+" soundtrack",query+" instrumental"]
+      ? [query,query+" audio",query+" song",query+" soundtrack",query+" instrumental",...baseVariants]
       : desiredMode==="video"
-        ? [...baseVariants,query+" video",query+" clip",query+" shorts"]
-        : baseVariants).filter((value,index,array)=>array.indexOf(value)===index).slice(0,platform==="all"?5:12);
+        ? [query,query+" video",query+" clip",query+" shorts",...baseVariants]
+        : baseVariants).filter((value,index,array)=>array.indexOf(value)===index).slice(0,platform==="all"?4:9);
     const pages=await Promise.all(variants.flatMap(term=>searchSites.map(async searchSite=>{
       const url=new URL("https://html.duckduckgo.com/html/");url.searchParams.set("q",searchSite+" "+term);
       try{
