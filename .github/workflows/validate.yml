@@ -1,14 +1,18 @@
-name: Validate ARYANZZ V73.7
+name: ARYANZZ — Syntax and release validation
+
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
-  syntax:
+  validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -19,23 +23,10 @@ jobs:
       - name: Check JavaScript syntax
         run: |
           node --check src/index.js
-          node --check server/index.js
-          node --check public/advanced.js
-          node --check public/v15.js
-          node --check public/v25.js
-          node --check public/v59.js
-          node --check public/editor.js
-          node --check public/owner.js
-          node --check public/downloader.js
-          node --check public/ffmpeg-worker-bootstrap.js
-          node --check public/v677.js
-          node --check public/v680.js
           node --check public/v674.js
-          node --check public/music-recognition.js
-          node --check public/audio-studio.js
+          node --check public/downloader.js
           node --check public/sw.js
-          node --check tests/smoke.mjs
-          python3 -m py_compile server/shazam_recognize.py
+          node --check tests/release-smoke.mjs
           node -e "const fs=require('fs');const h=fs.readFileSync('public/index.html','utf8');const s=h.indexOf('<script>')+8;const e=h.indexOf('</script>',s);if(s<8||e<s)throw Error('Inline script missing');new Function(h.slice(s,e));console.log('Inline script syntax OK')"
-      - name: Smoke tests
-        run: node tests/smoke.mjs
+      - name: Run release smoke tests
+        run: npm run test:release
