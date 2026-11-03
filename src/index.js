@@ -472,9 +472,10 @@ async function searchSocial(request){
       }
       if(candidates.length>=20)break;
     }
-    const checked=await Promise.all(candidates.slice(0,16).map(item=>verifySocialSearchResult(item,request.url,desiredMode)));
+    const relevantCandidates=candidates.filter(item=>publicSearchRelevance(query,item.title+" "+item.snippet)>=0.65);
+    const checked=await Promise.all(relevantCandidates.slice(0,16).map(item=>verifySocialSearchResult(item,request.url,desiredMode)));
     const results=checked.filter(Boolean);
-    return json({ok:true,platform,query,mediaType:desiredMode,results,verifiedCount:results.length,unavailableCount:candidates.length-results.length,searchVariants:variants,verification:"provider-and-media-signature"});
+    return json({ok:true,platform,query,mediaType:desiredMode,results,verifiedCount:results.length,unavailableCount:relevantCandidates.length-results.length,searchVariants:variants,verification:"provider-and-media-signature"});
   }catch(error){return json({error:"Pencarian publik gagal dijangkau. Coba lagi nanti. "+String(error?.message||error).slice(0,100)},502)}
 }
 
@@ -834,7 +835,7 @@ function parseBingSocialImageResults(html,platform,requestUrl,query,allowWeb=fal
     if(/\.(?:svg|ico)(?:[?#]|$)/i.test(image.href)||/(?:avatar|profile|favicon|logo|emoji|sprite|icon)(?:[._/-]|$)/i.test(image.href))continue;
     if(seen.has(image.href))continue;seen.add(image.href);
     const title=decodeSearchHtml(meta.desc||meta.t||meta.title||query)||query;
-    if(publicSearchRelevance(query,title)<0.40)continue;
+    if(publicSearchRelevance(query,title)<0.65)continue;
     const index=results.length,ext=imageExtensionFromUrl(image.href)||"jpg";
     const filename=imageSafeFilename(title,index,ext);
     results.push({
@@ -945,7 +946,7 @@ async function socialImageSearch(request){
         try{const response=await fetch(url.href,{headers:{accept:"text/html","user-agent":"Mozilla/5.0 (compatible; ARYANZZ/81.4)"},signal:AbortSignal.timeout(11000),cache:"no-store"});return response.ok?await response.text():""}catch{return ""}
       }));
       const seenPosts=new Set();
-      for(const page of pages)candidates.push(...parseSocialImageSearchLinks(page,platform,seenPosts,18-candidates.length).filter(item=>publicSearchRelevance(query,item.title)>=0.40));
+      for(const page of pages)candidates.push(...parseSocialImageSearchLinks(page,platform,seenPosts,18-candidates.length).filter(item=>publicSearchRelevance(query,item.title)>=0.65));
       const posts=await Promise.all(candidates.slice(0,12).map(item=>resolveSocialImagePost(item.url,request.url,{timeoutMs:8000,providerTimeoutMs:9000}).then(post=>post?{item,post}:null).catch(()=>null)));
       for(const entry of posts.filter(Boolean)){
         for(const image of entry.post.images||[]){
