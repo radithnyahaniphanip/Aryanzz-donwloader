@@ -784,9 +784,10 @@ function parseBingSocialImageResults(html,platform,requestUrl,query){
     const source=socialImageSearchDomainsMatch(meta.purl||meta.surl||meta.url||"",platform);
     const image=safePublicMediaUrl(String(meta.murl||meta.mediaUrl||meta.turl||"").replace(/&amp;/g,"&"));
     if(!source||!image)continue;
-    if(platform==="pinterest"&&!/\/pin\//i.test(source.pathname))continue;
-    if(platform==="tiktok"&&!/(?:\/photo\/|\/video\/)/i.test(source.pathname))continue;
-    if(platform==="instagram"&&!/(?:\/p\/|\/reel\/|\/tv\/|\/share\/)/i.test(source.pathname))continue;
+    const resultPlatform=freePlatformKey(source.href)||platform;
+    if(resultPlatform==="pinterest"&&!/\/pin\//i.test(source.pathname))continue;
+    if(resultPlatform==="tiktok"&&!/(?:\/photo\/|\/video\/)/i.test(source.pathname))continue;
+    if(resultPlatform==="instagram"&&!/(?:\/p\/|\/reel\/|\/tv\/|\/share\/)/i.test(source.pathname))continue;
     if(/\.(?:svg|ico)(?:[?#]|$)/i.test(image.href)||/(?:avatar|profile|favicon|logo|emoji|sprite|icon)(?:[._/-]|$)/i.test(image.href))continue;
     if(seen.has(image.href))continue;seen.add(image.href);
     const title=decodeSearchHtml(meta.desc||meta.t||meta.title||query)||query;
@@ -811,9 +812,10 @@ function parseSocialImageSearchLinks(html,platform,seen,limit=18){
     let link;try{link=new URL(decodeSearchHtml(hrefMatch[1]),"https://html.duckduckgo.com")}catch{continue}
     if(link.hostname.endsWith("duckduckgo.com")){const target=link.searchParams.get("uddg");if(target){try{link=new URL(target)}catch{continue}}}
     if(link.protocol!=="https:"||!domains.some(domain=>link.hostname===domain||link.hostname.endsWith("."+domain)))continue;
-    if(platform==="pinterest"&&!/\/pin\//i.test(link.pathname))continue;
-    if(platform==="tiktok"&&!/(?:\/photo\/|\/video\/)/i.test(link.pathname))continue;
-    if(platform==="instagram"&&!/(?:\/p\/|\/reel\/|\/tv\/|\/share\/)/i.test(link.pathname))continue;
+    const resultPlatform=freePlatformKey(link.href)||platform;
+    if(resultPlatform==="pinterest"&&!/\/pin\//i.test(link.pathname))continue;
+    if(resultPlatform==="tiktok"&&!/(?:\/photo\/|\/video\/)/i.test(link.pathname))continue;
+    if(resultPlatform==="instagram"&&!/(?:\/p\/|\/reel\/|\/tv\/|\/share\/)/i.test(link.pathname))continue;
     const href=link.href.split("#")[0];if(seen.has(href))continue;seen.add(href);
     const title=decodeSearchHtml(match[2]);if(!title)continue;
     out.push({title,url:href,platform:freePlatformKey(href)||platform});if(out.length>=limit)break;
