@@ -384,6 +384,16 @@ function socialSearchDomains(platform){
   if(platform==="all")return [...new Set(Object.values(map).flat())];
   return map[platform]||[];
 }
+function socialSearchQueryVariants(query){
+  const original=String(query||"").replace(/\\s+/g," ").trim(),variants=[original];
+  if(/green\\s*screen|greenscreen|layar\\s*hijau/i.test(original)){
+    variants.push(original.replace(/greenscreen/ig,"green screen").replace(/layar\\s*hijau/ig,"green screen"));
+    variants.push("greenscreen template chroma key");
+  }
+  if(/meme\\s+kucing/i.test(original))variants.push("cat meme");
+  if(/meme\\s+cat/i.test(original))variants.push("meme kucing");
+  return [...new Set(variants.map(value=>value.replace(/\\s+/g," ").trim()).filter(Boolean))].slice(0,3);
+}
 function socialSearchUrl(platform,query){
   const domains=socialSearchDomains(platform);if(!domains.length)return null;
   const site=domains.map(domain=>"site:"+domain).join(" OR ");
@@ -415,36 +425,45 @@ async function verifySocialSearchResult(result,requestUrl){
 }
 async function searchSocial(request){
   let body;try{body=await request.json()}catch{return json({error:"Body JSON tidak valid."},400)}
-  const platform=String(body?.platform||"").toLowerCase(),query=String(body?.query||"").replace(/\s+/g," ").trim();
+  const platform=String(body?.platform||"").toLowerCase(),query=String(body?.query||"").replace(/\\s+/g," ").trim();
   if(!socialSearchDomains(platform).length||platform==="youtube")return json({error:"Platform pencarian belum didukung."},400);
   if(query.length<2||query.length>120)return json({error:"Masukkan judul antara 2 sampai 120 karakter."},400);
   if(socialRateLimited(request))return json({error:"Batas pencarian gratis tercapai. Tunggu satu menit lalu coba lagi."},429);
-  const searchUrl=socialSearchUrl(platform,query);
+  const domains=socialSearchDomains(platform),site=domains.map(domain=>"site:"+domain).join(" OR ");
+  const canonicalPlatform=({tiktoklite:"tiktok",instagramlite:"instagram",facebooklite:"facebook"})[platform]||platform;
   try{
-    const response=await fetch(searchUrl.href,{headers:{accept:"text/html","user-agent":"Mozilla/5.0 (compatible; ARYANZZ/78.0; +https://aryanzz-donwloader.radithnyahaniphanip.workers.dev)"},signal:AbortSignal.timeout(12000),cache:"no-store"});
-    if(!response.ok)return json({error:"Pencarian publik sedang tidak tersedia (HTTP "+response.status+")."},502);
-    const html=await response.text(),candidates=[],seen=new Set();
-    const anchors=/<a\b([^>]*)>([\s\S]*?)<\/a>/gi;
-    for(const match of html.matchAll(anchors)){
-      const attrs=match[1]||"";
-      if(!/\bclass=["'][^"']*\bresult__a\b[^"']*["']/i.test(attrs))continue;
-      const hrefMatch=attrs.match(/\bhref=["']([^"']+)["']/i);
-      if(!hrefMatch)continue;
-      let link;try{link=new URL(decodeSearchHtml(hrefMatch[1]),"https://html.duckduckgo.com")}catch{continue}
-      if(link.hostname.endsWith("duckduckgo.com")){const target=link.searchParams.get("uddg");if(target){try{link=new URL(target)}catch{continue}}}
-      if(link.protocol!=="https:"||!socialSearchDomains(platform).some(domain=>link.hostname===domain||link.hostname.endsWith("."+domain)))continue;
-      const href=link.href.split("#")[0];if(seen.has(href))continue;seen.add(href);
-      const title=decodeSearchHtml(match[2]);if(!title)continue;
-      if(platform==="instagram"&&!/\/(?:p|reel|tv|share)\//i.test(link.pathname))continue;
-      if(platform==="tiktok"&&!/\/video\//i.test(link.pathname))continue;
-      if(platform==="pinterest"&&!/\/pin\//i.test(link.pathname))continue;
-      const snippetMatch=html.slice(match.index,match.index+1800).match(/class=["']result__snippet["'][^>]*>([\s\S]*?)<\/[^>]+>/i);
-      candidates.push({title,url:href,snippet:decodeSearchHtml(snippetMatch?.[1]||"")});
-      if(candidates.length>=8)break;
+    const variants=socialSearchQueryVariants(query);
+    const pages=await Promise.all(variants.map(async term=>{
+      const url=new URL("https://html.duckduckgo.com/html/");url.searchParams.set("q",site+" "+term);
+      try{
+        const response=await fetch(url.href,{headers:{accept:"text/html","user-agent":"Mozilla/5.0 (compatible; ARYANZZ/85.5; +https://aryanzz-donwloader.radithnyahaniphanip.workers.dev)"},signal:AbortSignal.timeout(12000),cache:"no-store"});
+        return response.ok?await response.text():"";
+      }catch{return ""}
+    }));
+    const candidates=[],seen=new Set();
+    for(const html of pages){
+      const anchors=/<a\\b([^>]*)>([\\s\\S]*?)<\\/a>/gi;
+      for(const match of html.matchAll(anchors)){
+        const attrs=match[1]||"";
+        if(!/\\bclass=["'][^"']*\\bresult__a\\b[^"']*["']/i.test(attrs))continue;
+        const hrefMatch=attrs.match(/\\bhref=["']([^"']+)["']/i);if(!hrefMatch)continue;
+        let link;try{link=new URL(decodeSearchHtml(hrefMatch[1]),"https://html.duckduckgo.com")}catch{continue}
+        if(link.hostname.endsWith("duckduckgo.com")){const target=link.searchParams.get("uddg");if(target){try{link=new URL(target)}catch{continue}}}
+        if(link.protocol!=="https:"||!domains.some(domain=>link.hostname===domain||link.hostname.endsWith("."+domain)))continue;
+        if(canonicalPlatform==="instagram"&&!/\\/(?:p|reel|tv|share)\\//i.test(link.pathname))continue;
+        if(canonicalPlatform==="tiktok"&&!/\\/video\\//i.test(link.pathname))continue;
+        if(canonicalPlatform==="pinterest"&&!/\\/pin\\//i.test(link.pathname))continue;
+        const href=link.href.split("#")[0];if(seen.has(href))continue;seen.add(href);
+        const title=decodeSearchHtml(match[2].replace(/<[^>]+>/g," "));if(!title)continue;
+        const snippetMatch=html.slice(match.index,match.index+1800).match(/class=["']result__snippet["'][^>]*>([\\s\\S]*?)<\\/[^>]+>/i);
+        candidates.push({title,url:href,snippet:decodeSearchHtml((snippetMatch?.[1]||"").replace(/<[^>]+>/g," "))});
+        if(candidates.length>=20)break;
+      }
+      if(candidates.length>=20)break;
     }
-    const checked=await Promise.all(candidates.map(item=>verifySocialSearchResult(item,request.url)));
+    const checked=await Promise.all(candidates.slice(0,12).map(item=>verifySocialSearchResult(item,request.url)));
     const results=checked.filter(Boolean);
-    return json({ok:true,platform,query,results,verifiedCount:results.length,unavailableCount:candidates.length-results.length,verification:"provider-and-media-signature"});
+    return json({ok:true,platform,query,results,verifiedCount:results.length,unavailableCount:candidates.length-results.length,searchVariants:variants,verification:"provider-and-media-signature"});
   }catch(error){return json({error:"Pencarian publik gagal dijangkau. Coba lagi nanti. "+String(error?.message||error).slice(0,100)},502)}
 }
 
@@ -804,7 +823,7 @@ function parseBingSocialImageResults(html,platform,requestUrl,query,allowWeb=fal
     if(/\.(?:svg|ico)(?:[?#]|$)/i.test(image.href)||/(?:avatar|profile|favicon|logo|emoji|sprite|icon)(?:[._/-]|$)/i.test(image.href))continue;
     if(seen.has(image.href))continue;seen.add(image.href);
     const title=decodeSearchHtml(meta.desc||meta.t||meta.title||query)||query;
-    if(publicSearchRelevance(query,title)<0.40)continue;
+    if(publicSearchRelevance(query,title)<0.65)continue;
     const index=results.length,ext=imageExtensionFromUrl(image.href)||"jpg";
     const filename=imageSafeFilename(title,index,ext);
     results.push({
@@ -915,7 +934,7 @@ async function socialImageSearch(request){
         try{const response=await fetch(url.href,{headers:{accept:"text/html","user-agent":"Mozilla/5.0 (compatible; ARYANZZ/81.4)"},signal:AbortSignal.timeout(11000),cache:"no-store"});return response.ok?await response.text():""}catch{return ""}
       }));
       const seenPosts=new Set();
-      for(const page of pages)candidates.push(...parseSocialImageSearchLinks(page,platform,seenPosts,18-candidates.length).filter(item=>publicSearchRelevance(query,item.title)>=0.40));
+      for(const page of pages)candidates.push(...parseSocialImageSearchLinks(page,platform,seenPosts,18-candidates.length).filter(item=>publicSearchRelevance(query,item.title)>=0.65));
       const posts=await Promise.all(candidates.slice(0,12).map(item=>resolveSocialImagePost(item.url,request.url,{timeoutMs:8000,providerTimeoutMs:9000}).then(post=>post?{item,post}:null).catch(()=>null)));
       for(const entry of posts.filter(Boolean)){
         for(const image of entry.post.images||[]){
