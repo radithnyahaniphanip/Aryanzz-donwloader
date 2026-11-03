@@ -1124,6 +1124,39 @@
       const detectedPlatform=platformName(url);
       const host=url.hostname.toLowerCase();
       const isYouTube=["youtube.com","www.youtube.com","m.youtube.com","music.youtube.com","youtu.be","www.youtu.be"].includes(host);
+      const imageFirstPlatforms=new Set(["Pinterest","Instagram","Facebook","X","Reddit","Threads","TikTok","SnackVideo","CapCut"]);
+      if(!isYouTube&&imageFirstPlatforms.has(detectedPlatform)){
+        try{
+          const imageResponse=await fetch("/api/image/extract?url="+encodeURIComponent(url.href),{cache:"no-store"});
+          const imageData=await imageResponse.json().catch(()=>({}));
+          const imageItems=Array.isArray(imageData.images)?imageData.images.slice(0,19):[];
+          if(imageResponse.ok&&imageData.ok&&imageItems.length){
+            box.replaceChildren();
+            box.append(make("b","youtube-title",imageData.title||("Gambar dari "+detectedPlatform)));
+            const grid=make("div","aryanzz-inline-image-grid");
+            imageItems.forEach((item,index)=>{
+              const previewUrl=safeUrl(item.previewUrl||item.downloadUrl);
+              const downloadUrl=safeUrl(item.downloadUrl||item.previewUrl);
+              if(!previewUrl||!downloadUrl||previewUrl.origin!==location.origin||downloadUrl.origin!==location.origin||!["/api/social-image-file","/api/image/file"].includes(previewUrl.pathname)||!["/api/social-image-file","/api/image/file"].includes(downloadUrl.pathname))return;
+              const card=make("article","aryanzz-inline-image-card");
+              const preview=make("a","aryanzz-inline-image-open");
+              preview.href=previewUrl.href;preview.target="_blank";preview.rel="noopener noreferrer";preview.setAttribute("aria-label","Lihat gambar "+(index+1));
+              const image=make("img","");image.loading="lazy";image.decoding="async";image.src=previewUrl.href;image.alt=item.title||"Gambar "+(index+1);
+              preview.append(image);
+              const actions=make("div","aryanzz-inline-image-actions");
+              const download=make("a","primary","↓ Unduh");
+              download.href=downloadUrl.href;download.download=item.filename||"aryanzz-image.jpg";download.rel="noopener";
+              actions.append(download);
+              if(item.sourceUrl){const source=make("a","tag","Sumber ↗");source.href=item.sourceUrl;source.target="_blank";source.rel="noopener noreferrer";actions.append(source);}
+              card.append(preview,actions);grid.append(card);
+            });
+            if(grid.childElementCount){
+              box.append(grid,make("small","muted",grid.childElementCount+" gambar ditemukan · pilih gambar untuk melihat atau unduh."));
+              return;
+            }
+          }
+        }catch{}
+      }
       const info=isYouTube
         ? await browserHybridYoutubeInfo(url.href)
         : await postJson("/api/info", {url:url.href});
