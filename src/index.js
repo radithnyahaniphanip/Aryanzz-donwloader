@@ -1682,11 +1682,11 @@ export default {async fetch(request,env){
     return new Response(xml,{status:200,headers:{"content-type":"application/xml; charset=utf-8","cache-control":"public, max-age=3600","x-content-type-options":"nosniff"}});
   }
   if(url.pathname==="/sitemap.txt"&&request.method==="GET"){
-    const sitemap="https://aryanzz-donwloader.radithnyahaniphanip.workers.dev/\\n";
+    const sitemap="https://aryanzz-donwloader.radithnyahaniphanip.workers.dev/\n";
     return new Response(sitemap,{status:200,headers:{"content-type":"text/plain; charset=utf-8","cache-control":"public, max-age=3600","x-content-type-options":"nosniff"}});
   }
   if(url.pathname==="/robots.txt"&&request.method==="GET"){
-    const robots='User-agent: *\\nAllow: /\\n\\nSitemap: https://aryanzz-donwloader.radithnyahaniphanip.workers.dev/sitemap.txt\\n';
+    const robots='User-agent: *\nAllow: /\n\nSitemap: https://aryanzz-donwloader.radithnyahaniphanip.workers.dev/sitemap.txt\n';
     return new Response(robots,{status:200,headers:{"content-type":"text/plain; charset=utf-8","cache-control":"public, max-age=3600","x-content-type-options":"nosniff"}});
   }
   if(request.method==="OPTIONS"&&url.pathname.startsWith("/api/"))return new Response(null,{status:204,headers:{"access-control-allow-origin":url.origin,"access-control-allow-methods":"GET,POST,OPTIONS","access-control-allow-headers":"Content-Type"}});
