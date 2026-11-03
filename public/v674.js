@@ -56,7 +56,7 @@ info.append(title,meta,snippet,pick);card.append(info);results.append(card);
 if(images.length){
 const section=document.createElement("section");section.className="v674-image-results";
 const head=document.createElement("div");head.className="v674-image-results-head";
-const heading=document.createElement("h3");heading.textContent="Gambar dari berbagai media sosial";
+const heading=document.createElement("h3");heading.textContent="Gambar dari media sosial & web publik";
 const note=document.createElement("p");note.textContent="Setiap gambar punya tautan sumber asli dan tombol unduh.";
 head.append(heading,note);
 const grid=document.createElement("div");grid.className="aryanzz-inline-image-grid";

@@ -211,12 +211,13 @@ const checks=[
   ["V80.1 Image Studio supports all requested aspect ratios and custom pixel dimensions",html.includes('value="1:1"')&&html.includes('value="4:3"')&&html.includes('value="3:2"')&&html.includes('value="16:9"')&&html.includes('value="9:16"')&&html.includes('value="6:8"')&&html.includes('data-image-ratio="9:16"')&&html.includes('class="image-ratio-gallery"')&&imageStudioJs.includes('syncRatioGallery')&&imageStudioJs.includes('imageCustomWidth')&&imageStudioJs.includes('imageCustomHeight')],
   ["V80.1 Image Downloader has platform search and public-post extraction controls",html.includes('id="imageSearchPlatform"')&&html.includes('id="imageSearchQuery"')&&html.includes('id="imageExtractButton"')&&workerSource.includes('async function searchSocialImages')&&workerSource.includes('async function imagePostMetadata')],
   ["V81.2 routes image-only social links to the image gallery before MP4 stream extraction",downloader.includes("imageFirstPlatforms")&&downloader.includes("/api/image/extract?url=")&&downloader.includes("aryanzz-inline-image-grid")],
-  ["V81.4 main title search requests video and universal social-image results together",file("../public/v674.js").includes('fetch("/api/image/search"')&&file("../public/v674.js").includes('platform:"all"')&&file("../public/v674.js").includes("Gambar dari berbagai media sosial")],
-  ["V81.4 universal image search accepts all public platform domains and detects each result source",workerSource.includes('if(platform==="all")return [...new Set(Object.values(map).flat())]')&&workerSource.includes("const resultPlatform=socialImagePlatformKey(source.href,platform)")&&workerSource.includes('platformCounts')],
+  ["V81.4 main title search requests video and universal social-image results together",file("../public/v674.js").includes('fetch("/api/image/search"')&&file("../public/v674.js").includes('platform:"all"')&&file("../public/v674.js").includes("Gambar dari media sosial & web publik")],
+  ["V81.4 universal image search accepts all public platform domains and detects each result source",workerSource.includes('if(platform==="all")return [...new Set(Object.values(map).flat())]')&&workerSource.includes('const resultPlatform=socialImagePlatformKey(source.href,allowWeb?"web":platform)')&&workerSource.includes('platformCounts')],
   ["V81.4 image action buttons remain full-width horizontal labels on narrow screens",downloaderCss.includes("grid-template-columns:minmax(0,1fr)!important")&&downloaderCss.includes("writing-mode:horizontal-tb!important")&&downloaderCss.includes(".aryanzz-inline-image-caption")],
   ["V81.4 image-only cards expand a single result and keep download/source actions horizontal",downloaderCss.includes("repeat(auto-fit,minmax(min(100%,160px),1fr))")&&downloaderCss.includes("writing-mode:horizontal-tb!important")&&imageStudioCss.includes("repeat(auto-fit,minmax(min(100%,160px),1fr))")],
   ["V81.4 social image extraction prioritizes the canonical post page over provider preview thumbnails",workerSource.includes('...(page?.images||[]).map(item=>({...item,type:"image"')&&workerSource.indexOf('...(page?.images||[]).map(item=>({...item,type:"image"')<workerSource.indexOf('...providerImages.map(item=>({...item,url:item.url,source:"provider"')],
-  ["V81.4 universal image search limits each platform to four images before using public-post fallback",workerSource.includes('const maxPerPlatform=platform==="all"?6:19')&&workerSource.includes("distinctPlatforms<4")],
+  ["V81.4 universal image search limits each platform to four images before using public-post fallback",workerSource.includes('const maxPerPlatform=platform==="all"?6:19')&&workerSource.includes("distinctSocialPlatforms<3")],
+  ["V81.4 universal image search can include public-web images and preserve their source-page referrer",workerSource.includes("allowWeb=false")&&workerSource.includes("allowWeb?safePublicMediaUrl")&&workerSource.includes('referer:sourcePage?sourcePage.href:current.origin+"/"')&&workerSource.includes('if(source)out.searchParams.set("source",source.href)')],
 
   ["V81.2 removes the slogan punctuation and redundant helper copy",html.includes("dari satu tautan</span>")&&!html.includes("dari satu tautan.</span>")&&!html.includes("v75-platform-note")&&!html.includes("Tempel tautan media atau cari judul untuk memulai.")],
   ["V81.2 removes continuously animated blurred background and refreshes service worker cache",!v674Css.includes("body::before{content")&&!v674Css.includes("v674-aurora")&&sw.includes("aryanzz-v81-4")&&html.includes("V81.4 · GRATIS")],
@@ -316,6 +317,43 @@ try{
   assert.ok(data.results.every(item=>item.sourceUrl&&item.images[0].downloadUrl));
   console.log("✔ V81.4 universal image search supplements Pinterest-heavy image indexes with TikTok, Instagram and Reddit public posts");
 }finally{globalThis.fetch=originalDiverseImageSearchFetch;}
+
+const originalPublicWebImageFetch=globalThis.fetch;
+try{
+  let imageReferer="";
+  globalThis.fetch=async(input,init={})=>{
+    const url=new URL(typeof input==="string"?input:input.url);
+    if(url.hostname==="www.bing.com"){
+      if(url.searchParams.get("q")==="public cat image"){
+        const meta={murl:"https://cdn.example/public-cat-image.jpg",purl:"https://memes.example/posts/cat-meme-1",desc:"Public cat meme image",w:1200,h:900};
+        return new Response('<a class="iusc" m="'+JSON.stringify(meta).replace(/"/g,"&quot;")+'"></a>',{status:200,headers:{"content-type":"text/html"}});
+      }
+      return new Response("",{status:200,headers:{"content-type":"text/html"}});
+    }
+    if(url.hostname==="html.duckduckgo.com")return new Response("",{status:200,headers:{"content-type":"text/html"}});
+    if(url.hostname==="cdn.example"){
+      imageReferer=init.headers?.referer||"";
+      return new Response(new Uint8Array([1,2,3,4]),{status:200,headers:{"content-type":"image/jpeg","content-length":"4"}});
+    }
+    throw new Error("Unexpected public-web image request: "+url.hostname);
+  };
+  const response=await worker.fetch(new Request("https://aryanzz.example/api/image/search",{
+    method:"POST",headers:{"content-type":"application/json","cf-connecting-ip":"198.51.100.87"},
+    body:JSON.stringify({platform:"all",query:"public cat image"})
+  }),{});
+  assert.equal(response.status,200);
+  const data=await response.json();
+  assert.equal(data.ok,true);
+  assert.equal(data.imageCount,1);
+  assert.equal(data.platformCounts.web,1);
+  assert.equal(data.results[0].sourceUrl,"https://memes.example/posts/cat-meme-1");
+  const download=await worker.fetch(new Request(data.results[0].images[0].downloadUrl,{headers:{"cf-connecting-ip":"198.51.100.88"}}),{});
+  assert.equal(download.status,200);
+  assert.equal(download.headers.get("content-type"),"image/jpeg");
+  assert.match(download.headers.get("content-disposition")||"",/attachment/i);
+  assert.equal(imageReferer,"https://memes.example/posts/cat-meme-1");
+  console.log("✔ V81.4 all-source image search includes public-web results and downloads them with their source-page referrer");
+}finally{globalThis.fetch=originalPublicWebImageFetch;}
 
 const originalBingImageFetch=globalThis.fetch;
 try{
