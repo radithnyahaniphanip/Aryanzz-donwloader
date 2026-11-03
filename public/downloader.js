@@ -1128,7 +1128,8 @@
         ? await browserHybridYoutubeInfo(url.href)
         : await postJson("/api/info", {url:url.href});
       const imageFirstPlatforms=new Set(["Pinterest","Instagram","Facebook","X","Reddit","Threads","TikTok","SnackVideo","CapCut"]);
-      const hasVideoFormat=(info.formats||[]).some(item=>item?.mode==="video"||item?.type==="video"||/^video\\//i.test(String(item?.mimeType||item?.mime_type||""))||["mp4","m4v","webm","mov","avi","3gp"].includes(String(item?.ext||"").toLowerCase()));\n      if(!isYouTube&&imageFirstPlatforms.has(detectedPlatform)&&!hasVideoFormat){
+      const hasVideoFormat=(info.formats||[]).some(item=>item?.mode==="video"||item?.type==="video"||/^video\//i.test(String(item?.mimeType||item?.mime_type||""))||["mp4","m4v","webm","mov","avi","3gp"].includes(String(item?.ext||"").toLowerCase()));
+      if(!isYouTube&&imageFirstPlatforms.has(detectedPlatform)&&!hasVideoFormat){
         try{
           const imageResponse=await fetch("/api/image/extract?url="+encodeURIComponent(url.href),{cache:"no-store"});
           const imageData=await imageResponse.json().catch(()=>({}));
