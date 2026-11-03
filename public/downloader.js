@@ -18,7 +18,7 @@
     ["imgur.com","Imgur"],["bandcamp.com","Bandcamp"],["mixcloud.com","Mixcloud"],["snapchat.com","Snapchat"],["linkedin.com","LinkedIn"],["wechat.com","WeChat"],["weixin.qq.com","WeChat"],["kakao.com","KakaoTalk"],["idntimes.com","IDN App"],
     ["ted.com","TED"],["archive.org","Internet Archive"],["snackvideo.com","SnackVideo"],["threads.net","Threads"],["bluesky.app","Bluesky"],["kick.com","Kick"],["rumble.com","Rumble"],["odysee.com","Odysee"]
   ];
-  let activeDownloadController=null,activeDownloadFfmpeg=null;
+  let activeDownloadController=null,activeDownloadFfmpeg=null,analysisRunId=0;
   function downloadTimeoutSignal(ms){
     const timeout=AbortSignal.timeout(ms),parent=activeDownloadController?.signal;
     return parent&&typeof AbortSignal.any==="function"?AbortSignal.any([parent,timeout]):parent||timeout;
@@ -1109,6 +1109,7 @@
     throw new Error("MP4 belum tersedia dari provider gratis saat ini."+(detail?" Detail: "+detail:" Tidak ada instance yang mengirim format MP4 yang bisa digunakan.")+" Coba tautan lain nanti; bukan berarti tombol unduhnya rusak.");
   }
   async function checkLink(url, button) {
+    const runId=++analysisRunId;
     const out = $("downloadResult");
     out.hidden = false;
     out.replaceChildren();
@@ -1127,12 +1128,14 @@
       const info=isYouTube
         ? await browserHybridYoutubeInfo(url.href)
         : await postJson("/api/info", {url:url.href});
+      if(runId!==analysisRunId)return;
       const imageFirstPlatforms=new Set(["Pinterest","Instagram","Facebook","X","Reddit","Threads","TikTok","SnackVideo","CapCut"]);
       const hasVideoFormat=(info.formats||[]).some(item=>item?.mode==="video"||item?.type==="video"||/^video\//i.test(String(item?.mimeType||item?.mime_type||""))||["mp4","m4v","webm","mov","avi","3gp"].includes(String(item?.ext||"").toLowerCase()));
       if(!isYouTube&&imageFirstPlatforms.has(detectedPlatform)&&!hasVideoFormat){
         try{
           const imageResponse=await fetch("/api/image/extract?url="+encodeURIComponent(url.href),{cache:"no-store"});
           const imageData=await imageResponse.json().catch(()=>({}));
+          if(runId!==analysisRunId)return;
           const imageItems=Array.isArray(imageData.images)?imageData.images.slice(0,19):[];
           if(imageResponse.ok&&imageData.ok&&imageItems.length){
             box.replaceChildren();
@@ -1457,10 +1460,17 @@
     } catch (error) {
       showError(out,error,url.href);
     } finally {
-      button.disabled = false;
-      button.textContent = oldText;
+      if(runId===analysisRunId){
+        button.disabled = false;
+        button.textContent = oldText;
+      }
     }
   }
+  document.addEventListener("aryanzz:platform-change",()=>{
+    analysisRunId++;
+    const button=$("analyze");
+    if(button){button.disabled=false;button.textContent="Periksa ↗";}
+  });
   async function refreshBackendStatus(){
     const node=$("backendStatus");
     if(!node)return;
