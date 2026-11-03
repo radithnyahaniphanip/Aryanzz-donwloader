@@ -918,7 +918,10 @@ async function socialImageSearch(request){
     }else{
       const site=domains.map(domain=>"site:"+domain).join(" OR ");
       const selectedBucket=buckets.find(entry=>entry.platform===platform);
-      if(selectedBucket)selectedBucket.results=await fetchBing(site+" "+query,platform);
+      if(selectedBucket){
+        const publicResults=await fetchBing(site+" "+query,"all",true);
+        selectedBucket.results=publicResults.filter(item=>item.platform===platform);
+      }
     }
     const results=[],seenImages=new Set(),platformCounts={};
     const maxPerPlatform=platform==="all"?6:19;
