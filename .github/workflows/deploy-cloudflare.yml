@@ -126,7 +126,7 @@ jobs:
           }
           console.log("V82.4 SEO verified: XML + plain-text sitemap, robots and homepage all return HTTP 200 to Googlebot user-agent.");
 
-          for (const path of ["/editor.js?v=65.0", "/editor-pro.css?v=65.0", "/music-recognition.js?v=71.0", "/music-recognition.css?v=71.0", "/v674.js?v=86.0", "/v674.css?v=81.4", "/v677.js?v=67.7", "/v677.css?v=67.7", "/v680.js?v=71.0", "/v680.css?v=71.0", "/v690.css?v=71.0", "/downloader.js?v=81.4", "/downloader.css?v=81.4", "/v59.js?v=59.5", "/v59.css?v=59.5", "/audio-studio.js?v=80.0", "/audio-studio.css?v=80.0", "/image-studio.js?v=81.4", "/image-studio.css?v=81.4", "/robots.txt", "/sitemap.xml", "/sitemap.txt", "/favicon.svg", "/og-cover.svg"]) {
+          for (const path of ["/editor.js?v=65.0", "/editor-pro.css?v=65.0", "/music-recognition.js?v=71.0", "/music-recognition.css?v=71.0", "/v674.js?v=87.0", "/v674.css?v=81.4", "/v677.js?v=67.7", "/v677.css?v=67.7", "/v680.js?v=71.0", "/v680.css?v=71.0", "/v690.css?v=71.0", "/downloader.js?v=81.4", "/downloader.css?v=81.4", "/v59.js?v=59.5", "/v59.css?v=59.5", "/audio-studio.js?v=80.0", "/audio-studio.css?v=80.0", "/image-studio.js?v=81.4", "/image-studio.css?v=81.4", "/robots.txt", "/sitemap.xml", "/sitemap.txt", "/favicon.svg", "/og-cover.svg"]) {
             const response = await fetch(base + path, { cache: "no-store" });
             if (!response.ok) throw new Error("Static asset unavailable: " + path + " HTTP " + response.status);
           }
@@ -225,7 +225,7 @@ jobs:
             console.warn("Live universal social image search endpoint is healthy but public search providers returned zero image results for 'meme kucing'.");
           }
 
-          // Live title-search regression: TikTok-only Green Screen must never leak results from Pinterest/YouTube.
+          // Live title-search regression: TikTok-only video results must never leak from Pinterest/YouTube.
           const tiktokSearchResponse = await fetch(base + "/api/social/search", {
             method: "POST", headers: { "content-type": "application/json" },
             body: JSON.stringify({ platform: "tiktok", query: "greenscreen", mediaType: "video" }),
