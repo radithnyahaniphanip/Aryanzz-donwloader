@@ -63,7 +63,7 @@ const checks=[
   ["V73.7 adaptive progress updates while each 1 MiB chunk is streamed",downloader.includes("reader=response.body?.getReader()")&&downloader.includes("received:received+inFlight")&&downloader.includes("Potongan 1 MB disimpan lokal")],
   ["V77.0 adds Threads, SoundCloud and CapCut to the unified platform picker",html.includes('data-platform="threads"')&&html.includes('data-platform="soundcloud"')&&html.includes('data-platform="capcut"')&&workerSource.includes('soundcloud:["soundcloud.com"],capcut:["capcut.com"]')],
   ["V77.0 TikTok quality selector is populated from real provider resolutions",workerSource.includes("const rawQuality=item?.height??item?.quality??item?.resolution??item?.qualityLabel??label;")&&downloader.includes("available.map(value=>[value,value+\"p · tersedia\"])")&&downloader.includes("n>=100&&n<=4320")],
-  ["V77.0 title search routes YouTube through hybrid public search and displays in-page result cards",workerSource.includes("async function hybridYouTubeSearch(query)")&&workerSource.includes('if(url.pathname==="/api/search"&&request.method==="POST")return searchYouTube(request,env)')&&file("../public/v674.js").includes('selected==="youtube"?"/api/search":"/api/social/search"')&&file("../public/v674.js").includes("Lihat & unduh")],
+  ["V77.0 title search routes YouTube through hybrid public search and displays in-page result cards",workerSource.includes("async function hybridYouTubeSearch(query)")&&workerSource.includes('if(url.pathname==="/api/search"&&request.method==="POST")return searchYouTube(request,env)')&&file("../public/v674.js").includes('selected==="youtube"&&kind==="video"?"/api/search":"/api/social/search"')&&file("../public/v674.js").includes("Lihat & unduh")],
   ["V77.0 social downloads use a same-origin Worker proxy and validate MP4/WebM signatures",workerSource.includes('url.pathname==="/api/social-file"')&&workerSource.includes("detectSocialMediaSignature")&&downloader.includes('probeUrl.searchParams.set("probe","1")')&&downloader.includes('ready.pathname!=="/api/social-file"')],
   ["V77.0 social stream header timeout does not abort the media body after headers arrive",workerSource.includes("async function fetchSocialHeaders")&&workerSource.includes("finally{clearTimeout(timer);}")&&workerSource.includes("fetchSocialHeaders(current.href")],
   ["V77.0 social downloads reject image assets, HTML error pages and partial streams",workerSource.includes("if(image)return null")&&workerSource.includes("File ditolak: isi file tidak cocok")&&workerSource.includes("upstream.status===206")&&workerSource.includes("File media terpotong")],
@@ -157,7 +157,7 @@ const checks=[
   ["DJ mix scan uses AudD Enterprise endpoint",html.includes('id="musicFileScanButton"')&&html.includes('id="musicScanSkip"')&&musicJs.includes('/api/music/scan-video')&&workerSource.includes("enterprise.audd.io")],
   ["Music Finder supports file, video URL and microphone",musicJs.includes("captureMediaSample")&&musicJs.includes("getUserMedia")&&musicJs.includes("/api/music/recognize")&&musicJs.includes("musicVideoUrl")],
   ["AudD errors expose provider code and actionable quota guidance",workerSource.includes("function auddFailure")&&workerSource.includes("providerErrorCode")&&workerSource.includes("kode 901")&&workerSource.includes("kode 902")],
-  ["V74.0 runs without a self-hosted or paid extractor",workerSource.includes('version:"81.4"')&&workerSource.includes('mode:"cloudflare-worker-zero-server-hybrid"')&&workerSource.includes('platformBackend:"public-free-community-api"')&&!workerSource.includes("DOWNLOADER_CONTAINER")],
+  ["V74.0 runs without a self-hosted or paid extractor",workerSource.includes('version:"86.0"')&&workerSource.includes('mode:"cloudflare-worker-zero-server-hybrid"')&&workerSource.includes('platformBackend:"public-free-community-api"')&&!workerSource.includes("DOWNLOADER_CONTAINER")],
   ["Shazam fallback covers standard AudD auth/quota failures",workerSource.includes("shazamRecognize(audioBlob,env)")&&workerSource.includes("providerErrorCode")&&serverSource.includes("/api/music/recognize")&&serverSource.includes("shazam_recognize.py")],
   ["DJ mix scans fall back to Shazam when AudD Enterprise errors",workerSource.includes("shazamScan(fallbackSource")&&serverSource.includes("/api/music/scan")&&serverSource.includes("scanShazamMedia")],
   ["Docker backend includes yt-dlp, FFmpeg and ShazamIO",file("../Dockerfile").includes("yt-dlp")&&file("../Dockerfile").includes("shazamio==0.9.0")&&serverSource.includes("ffprobe")],
@@ -203,7 +203,7 @@ const checks=[
   ["V77.0 social downloads show real transfer progress and save only after complete Blob",downloader.includes("async function readBrowserChunk")&&downloader.includes("new Blob(chunks")&&downloader.includes("transfer baru dimulai, belum selesai.")&&downloader.includes('bar.style.width="100%"')],
   ["V77.0 downloaded MP4 must contain ftyp, moov and mdat and match the source duration before saving",downloader.includes("async function inspectMp4Blob")&&downloader.includes("File MP4 belum utuh")&&downloader.includes("berbeda jauh dari durasi sumber")&&downloader.indexOf('const blob=new Blob(chunks,{type:check.mimeType')<downloader.indexOf("await inspectMp4Blob(blob")&&downloader.indexOf("await inspectMp4Blob(blob")<downloader.lastIndexOf("await saveBrowserBlob(blob")],
 
-  ["V85.5.0 social title search restores V84.7 provider verification and adds query variants",workerSource.includes("function socialSearchQueryVariants")&&workerSource.includes("const checked=await Promise.all(candidates.slice(0,12).map(item=>verifySocialSearchResult(item,request.url)))")&&workerSource.includes("verification:\"provider-and-media-signature\"")],
+  ["V85.5.0 social title search restores V84.7 provider verification and adds query variants",workerSource.includes("function socialSearchQueryVariants")&&workerSource.includes("const checked=await Promise.all(candidates.slice(0,16).map(item=>verifySocialSearchResult(item,request.url,desiredMode)))")&&workerSource.includes("verification:\"provider-and-media-signature\"")],
 
 
   ["V84.7 platform picker renders all 20 services including Lite, Snapchat, IDN App, LinkedIn, WeChat and KakaoTalk",["youtube","tiktok","instagram","snackvideo","capcut","pinterest","facebook","x","reddit","vimeo","threads","soundcloud","tiktoklite","facebooklite","snapchat","idnapp","instagramlite","linkedin","wechat","kakaotalk"].every(id=>html.includes('data-platform="'+id+'"'))],
@@ -217,15 +217,15 @@ const checks=[
   ["V80.1 Image Studio supports all requested aspect ratios and custom pixel dimensions",html.includes('value="1:1"')&&html.includes('value="4:3"')&&html.includes('value="3:2"')&&html.includes('value="16:9"')&&html.includes('value="9:16"')&&html.includes('value="6:8"')&&html.includes('data-image-ratio="9:16"')&&html.includes('class="image-ratio-gallery"')&&imageStudioJs.includes('syncRatioGallery')&&imageStudioJs.includes('imageCustomWidth')&&imageStudioJs.includes('imageCustomHeight')],
   ["V80.1 Image Downloader has platform search and public-post extraction controls",html.includes('id="imageSearchPlatform"')&&html.includes('id="imageSearchQuery"')&&html.includes('id="imageExtractButton"')&&workerSource.includes('async function searchSocialImages')&&workerSource.includes('async function imagePostMetadata')],
   ["V85.2 resolves social media formats before image fallback so video links cannot be replaced by image galleries",downloader.indexOf('postJson("/api/info", {url:url.href})')<downloader.indexOf("/api/image/extract?url=")&&downloader.includes("const hasVideoFormat=")&&downloader.includes("!hasVideoFormat")&&downloader.includes("aryanzz-inline-image-grid")],
-  ["V85.5.0 title search has explicit content modes and sends only the selected platform",v674.includes('searchType?.value==="image"')&&v674.includes('platform:selected')&&v674.includes("Tidak ada hasil dari platform lain yang akan ditampilkan")&&!v674.includes('platform:"all"')],
+  ["V85.5.0 title search has explicit content modes and sends only the selected platform",v674.includes('searchType?.value==="image"')&&v674.includes('platform:selected')&&v674.includes('data-platform="all"')&&v674.includes('expected==="all"?!!domains[sourceKey]:sourceKey===expected')],
   ["V85.5.0 social title search expands Greenscreen and cat-meme queries while retaining strict platform domains",workerSource.includes("function socialSearchQueryVariants")&&workerSource.includes("greenscreen template chroma key")&&workerSource.includes("domains.some(domain=>link.hostname===domain||link.hostname.endsWith")&&workerSource.includes("verification:\"provider-and-media-signature\"")],
-  ["V85.5.0 title search selects one content type and never runs mixed video+image searches",v674.includes('searchType?.value==="image"')&&v674.includes('platform:selected')&&v674.includes("Video dan platform lain tidak akan ditampilkan")&&!v674.includes('platform:"all"')],
+  ["V85.5.0 title search selects one content type and never runs mixed video+image searches",v674.includes('searchType?.value==="image"')&&v674.includes('searchType?.value==="audio"')&&v674.includes('searchType?.value==="greenscreen"')&&v674.includes('platform:selected')],
   ["V85.4.0 title search does not hide results behind V85 relevance thresholds",!v674.includes("rankRelevant")&&!v674.includes("SEARCH_EQUIVALENTS")],
 
-  ["V85.5.0 title search exposes explicit image-only and video/audio modes",html.includes('id="titleSearchType"')&&html.includes('option value="image">Gambar saja</option>')&&html.includes('option value="video">Video / Audio</option>')],
-  ["V85.5.0 image search rejects weakly related titles and TikTok video thumbnails in image-only mode",workerSource.includes("publicSearchRelevance(query,title)<0.65")&&workerSource.includes('resultPlatform==="tiktok"&&!/\\/photo\\//i.test(source.pathname)')&&workerSource.includes('resultPlatform==="tiktok"&&!/\\/photo\\//i.test(link.pathname)')],
+  ["V85.5.0 title search exposes explicit image-only and video/audio modes",html.includes('id="titleSearchType"')&&html.includes('option value="image">Gambar</option>')&&html.includes('option value="video">Video</option>')&&html.includes('option value="audio">Audio</option>')&&html.includes('option value="greenscreen">Green Screen</option>')],
+  ["V85.5.0 image search rejects weakly related titles and TikTok video thumbnails in image-only mode",workerSource.includes("publicSearchRelevance(query,title)<0.40")&&workerSource.includes('resultPlatform==="tiktok"&&!/\\/photo\\//i.test(source.pathname)')&&workerSource.includes('resultPlatform==="tiktok"&&!/\\/photo\\//i.test(link.pathname)')],
   ["V85.3 Tools Center uses compact mobile cards and horizontal category filters",v677css.includes("#allTools .v674-tool-filters{position:sticky")&&v677css.includes("grid-template-columns:repeat(2,minmax(0,1fr))")&&v677css.includes("#allTools .tool{min-height:119px")],
-  ["V85.3 assets and PWA cache are versioned consistently",html.includes("V85.5.0 · GRATIS")&&html.includes("/v674.js?v=85.5.0")&&html.includes("/v677.css?v=85.3")&&html.includes("/v674.css?v=85.5.0")&&sw.includes("aryanzz-v85-5-0")&&sw.includes("/v674.js?v=85.5.0")&&sw.includes("/v677.css?v=85.3")&&sw.includes("/v674.css?v=85.5.0")],
+  ["V85.3 assets and PWA cache are versioned consistently",html.includes("V86.0 · GRATIS")&&html.includes("/v674.js?v=86.0")&&html.includes("/v677.css?v=85.3")&&html.includes("/v674.css?v=85.5.0")&&sw.includes("aryanzz-v86-0")&&sw.includes("/v674.js?v=86.0")&&sw.includes("/v677.css?v=85.3")&&sw.includes("/v674.css?v=85.5.0")],
 
   ["V85.5.0 image results are filtered to the selected platform source host",v674.includes("const expected=aliases[selected]||selected")&&v674.includes("host===domain||host.endsWith")&&v674.includes('gambar dari "+target.name')],
   ["V81.4 universal image search accepts all public platform domains and detects each result source",workerSource.includes('if(platform==="all")return [...new Set(Object.values(map).flat())]')&&workerSource.includes('const resultPlatform=socialImagePlatformKey(source.href,allowWeb?"web":platform)')&&workerSource.includes('platformCounts')],
@@ -236,7 +236,7 @@ const checks=[
   ["V81.4 universal image search can include public-web images and preserve their source-page referrer",workerSource.includes("allowWeb=false")&&workerSource.includes("allowWeb?safePublicMediaUrl")&&workerSource.includes('referer:sourcePage?sourcePage.href:current.origin+"/"')&&workerSource.includes('if(source)out.searchParams.set("source",source.href)')],
 
   ["V81.2 removes the slogan punctuation and redundant helper copy",html.includes("dari satu tautan</span>")&&!html.includes("dari satu tautan.</span>")&&!html.includes("v75-platform-note")&&!html.includes("Tempel tautan media atau cari judul untuk memulai.")],
-  ["V81.2 removes continuously animated blurred background and refreshes service worker cache",!v674Css.includes("body::before{content")&&!v674Css.includes("v674-aurora")&&sw.includes("aryanzz-v85-5-0")&&html.includes("V85.5.0 · GRATIS")],
+  ["V81.2 removes continuously animated blurred background and refreshes service worker cache",!v674Css.includes("body::before{content")&&!v674Css.includes("v674-aurora")&&sw.includes("aryanzz-v86-0")&&html.includes("V86.0 · GRATIS")],
   ["V80.1 image downloads use a validated same-origin image proxy and reject non-image content",workerSource.includes('url.pathname==="/api/image/file"')&&workerSource.includes('safePublicMediaUrl(raw)')&&workerSource.includes('image/jpeg')&&workerSource.includes('Sumber tidak mengirim file gambar yang didukung')],
   ["V80.1 Image Studio CSS and JavaScript are loaded and cached by the service worker",html.includes('/image-studio.css?v=81.4')&&html.includes('/image-studio.js?v=81.4')&&sw.includes('/image-studio.css?v=81.4')&&sw.includes('/image-studio.js?v=81.4')&&imageStudioCss.includes('.image-download-results')],
   ["V82.1 CapCut and SnackVideo marks use correct full-size SVG geometry",html.includes('aria-label="CapCut"')&&html.includes('M24.189 6.442')&&html.includes('aria-label="SnackVideo"')&&html.includes('viewBox="0 0 48 48"')&&html.includes('brand-refresh.css?v=82.1')],
@@ -496,7 +496,7 @@ console.log("✔ Image search validates short queries and image proxy blocks loc
 const healthResponse=await worker.fetch(new Request("https://aryanzz.example/api/health"),{});
 assert.equal(healthResponse.status,200);
 const health=await healthResponse.json();
-assert.equal(health.version,"81.4");
+assert.equal(health.version,"86.0");
 assert.equal(health.selfHostedDownloader,false);
 assert.equal(health.youtubeDownloader,true);
 assert.equal(health.mode,"cloudflare-worker-zero-server-hybrid");
@@ -1274,10 +1274,10 @@ try{
 
   const health=await worker.fetch(new Request("https://aryanzz.example/api/health"),{});
   const healthData=await health.json();
-  assert.equal(healthData.version,"81.4");
+  assert.equal(healthData.version,"86.0");
   assert.equal(healthData.cobalt,false);
   assert.equal(healthData.paidYoutubeProvider,false);
-  console.log("✔ Worker health reports V81.4 with no Cobalt or paid YouTube provider");
+  console.log("✔ Worker health reports V86.0 with no Cobalt or paid YouTube provider");
 
   const invalidImagePost=await worker.fetch(new Request("https://aryanzz.example/api/image/extract?url="+encodeURIComponent("http://127.0.0.1/private.png")),{}); 
   assert.equal(invalidImagePost.status,400);
