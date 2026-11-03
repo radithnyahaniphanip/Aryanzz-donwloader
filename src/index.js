@@ -465,68 +465,32 @@ async function searchSocial(request){
   if(!socialSearchDomains(platform).length||platform==="youtube")return json({error:"Platform pencarian belum didukung."},400);
   if(query.length<2||query.length>120)return json({error:"Masukkan judul antara 2 sampai 120 karakter."},400);
   if(socialRateLimited(request))return json({error:"Batas pencarian gratis tercapai. Tunggu satu menit lalu coba lagi."},429);
-  const normalized=canonicalPublicSearchQuery(query),variants=socialSearchQueryVariants(query,normalized);
-  const headers={accept:"text/html,application/xhtml+xml","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0.0.0 Safari/537.36"};
-  const candidates=[],seen=new Set();let providerErrors=[];
-  const add=(items)=>{for(const item of items){const safe=socialSearchCandidateAllowed(platform,item.url);if(!safe||seen.has(safe.href))continue;seen.add(safe.href);const score=publicSearchRelevance(query,[item.title,item.snippet].filter(Boolean).join(" "));if(score>=0.12)candidates.push({...item,url:safe.href,__score:score})}};
-  const bingQuery=(term)=>socialSearchDomains(platform).map(domain=>"site:"+domain).join(" OR ")+" "+term;
+  const searchUrl=socialSearchUrl(platform,query);
   try{
-    for(const term of variants.slice(0,2)){
-      if(candidates.length>=5)break;
-      try{
-        const url=socialSearchUrl(platform,term);
-        const response=await fetch(url.href,{headers,signal:AbortSignal.timeout(7000),cache:"no-store"});
-        if(response.ok){
-          const html=await response.text();
-          for(const match of html.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/gi)){
-            const attrs=match[1]||"";if(!/\bclass=["'][^"']*\bresult__a\b[^"']*["']/i.test(attrs))continue;
-            const href=attrs.match(/\bhref=["']([^"']+)["']/i)?.[1];if(!href)continue;
-            let link;try{link=new URL(decodeSearchHtml(href),"https://html.duckduckgo.com")}catch{continue}
-            if(link.hostname.endsWith("duckduckgo.com")){const target=link.searchParams.get("uddg");if(target){try{link=new URL(target)}catch{continue}}}
-            const safe=socialSearchCandidateAllowed(platform,link.href);if(!safe)continue;
-            const title=decodeSearchHtml(match[2].replace(/<[^>]+>/g," ")).trim();
-            const snippet=decodeSearchHtml(html.slice(match.index,match.index+1800).match(/class=["']result__snippet["'][^>]*>([\s\S]*?)<\/[^>]+>/i)?.[1]||"");
-            add([{title,url:safe.href,snippet,searchEngine:"DuckDuckGo"}]);
-            if(candidates.length>=12)break;
-          }
-        }else providerErrors.push("DuckDuckGo HTTP "+response.status);
-      }catch(error){providerErrors.push("DuckDuckGo: "+String(error?.message||error).slice(0,80))}
+    const response=await fetch(searchUrl.href,{headers:{accept:"text/html","user-agent":"Mozilla/5.0 (compatible; ARYANZZ/78.0; +https://aryanzz-donwloader.radithnyahaniphanip.workers.dev)"},signal:AbortSignal.timeout(12000),cache:"no-store"});
+    if(!response.ok)return json({error:"Pencarian publik sedang tidak tersedia (HTTP "+response.status+")."},502);
+    const html=await response.text(),candidates=[],seen=new Set();
+    const anchors=/<a\b([^>]*)>([\s\S]*?)<\/a>/gi;
+    for(const match of html.matchAll(anchors)){
+      const attrs=match[1]||"";
+      if(!/\bclass=["'][^"']*\bresult__a\b[^"']*["']/i.test(attrs))continue;
+      const hrefMatch=attrs.match(/\bhref=["']([^"']+)["']/i);
+      if(!hrefMatch)continue;
+      let link;try{link=new URL(decodeSearchHtml(hrefMatch[1]),"https://html.duckduckgo.com")}catch{continue}
+      if(link.hostname.endsWith("duckduckgo.com")){const target=link.searchParams.get("uddg");if(target){try{link=new URL(target)}catch{continue}}}
+      if(link.protocol!=="https:"||!socialSearchDomains(platform).some(domain=>link.hostname===domain||link.hostname.endsWith("."+domain)))continue;
+      const href=link.href.split("#")[0];if(seen.has(href))continue;seen.add(href);
+      const title=decodeSearchHtml(match[2]);if(!title)continue;
+      if(platform==="instagram"&&!/\/(?:p|reel|tv|share)\//i.test(link.pathname))continue;
+      if(platform==="tiktok"&&!/\/video\//i.test(link.pathname))continue;
+      if(platform==="pinterest"&&!/\/pin\//i.test(link.pathname))continue;
+      const snippetMatch=html.slice(match.index,match.index+1800).match(/class=["']result__snippet["'][^>]*>([\s\S]*?)<\/[^>]+>/i);
+      candidates.push({title,url:href,snippet:decodeSearchHtml(snippetMatch?.[1]||"")});
+      if(candidates.length>=8)break;
     }
-    if(candidates.length<6){
-      const bingTerms=variants.slice(0,2);
-      const bingResults=await Promise.all(bingTerms.map(async term=>{
-        try{
-          const url=new URL("https://www.bing.com/search");url.searchParams.set("q",bingQuery(term));
-          const response=await fetch(url.href,{headers,signal:AbortSignal.timeout(7000),cache:"no-store"});
-          if(!response.ok){providerErrors.push("Bing HTTP "+response.status);return []}
-          return parseBingSocialCandidates(await response.text(),platform);
-        }catch(error){providerErrors.push("Bing: "+String(error?.message||error).slice(0,80));return []}
-      }));
-      for(const batch of bingResults)add(batch);
-    }
-    if(candidates.length===0){
-      const googleResults=await Promise.all(variants.slice(0,2).map(async term=>{
-        try{
-          const url=new URL("https://www.google.com/search");url.searchParams.set("q",bingQuery(term));url.searchParams.set("num","20");
-          const response=await fetch(url.href,{headers,signal:AbortSignal.timeout(7000),cache:"no-store"});
-          if(!response.ok){providerErrors.push("Google HTTP "+response.status);return []}
-          return parseGoogleSocialCandidates(await response.text(),platform);
-        }catch(error){providerErrors.push("Google: "+String(error?.message||error).slice(0,80));return []}
-      }));
-      for(const batch of googleResults)add(batch);
-    }
-    candidates.sort((a,b)=>b.__score-a.__score);
-    const selected=candidates.slice(0,12);
-    const checked=await Promise.all(selected.map(async item=>{
-      const {__score,...candidate}=item;
-      const verified=await verifySocialSearchResult(candidate,request.url);
-      if(verified)return {...verified,sourceTitle:candidate.title,searchOnly:false,searchEngine:candidate.searchEngine};
-      return {...candidate,sourceTitle:candidate.title,channel:platform==="tiktok"?"TikTok":platform,verified:false,downloadable:false,searchOnly:true,searchEngine:candidate.searchEngine};
-    }));
-    const results=checked.map(item=>({...item,searchScore:publicSearchRelevance(query,[item.sourceTitle,item.title,item.snippet,item.mediaTitle].filter(Boolean).join(" "))}))
-      .filter(item=>item.searchScore>=0.12)
-      .sort((a,b)=>b.searchScore-a.searchScore);
-    return json({ok:true,platform,query,normalizedQuery:normalized,queryVariants:variants,results,verifiedCount:results.filter(item=>item.verified).length,searchOnlyCount:results.filter(item=>item.searchOnly).length,unavailableCount:Math.max(0,selected.length-results.length),providers:["DuckDuckGo","Bing","Google"],providerErrors:results.length?[]:providerErrors,verification:"provider-optional; public-source-results-retained"});
+    const checked=await Promise.all(candidates.map(item=>verifySocialSearchResult(item,request.url)));
+    const results=checked.filter(Boolean);
+    return json({ok:true,platform,query,results,verifiedCount:results.length,unavailableCount:candidates.length-results.length,verification:"provider-and-media-signature"});
   }catch(error){return json({error:"Pencarian publik gagal dijangkau. Coba lagi nanti. "+String(error?.message||error).slice(0,100)},502)}
 }
 
