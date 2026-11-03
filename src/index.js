@@ -444,12 +444,22 @@ async function searchTikTokPublicPage(query){
     return {items,status:response.status,bytes:html.length,pageTitle,scriptIds,videoLinks,hasUniversalData:html.includes("__UNIVERSAL_DATA_FOR_REHYDRATION__"),hasSigiState:html.includes("SIGI_STATE"),universalDiagnostics};
   }catch(error){return {items:[],status:0,bytes:0,error:String(error?.message||error).slice(0,100)}}
 }
+function decodeBingSocialResultUrl(raw){
+  let link;try{link=new URL(decodeSearchHtml(raw),"https://www.bing.com")}catch{return null}
+  if(link.hostname==="www.bing.com"||link.hostname==="bing.com"){
+    const encoded=link.searchParams.get("u")||link.searchParams.get("url")||"";
+    if(encoded.startsWith("a1")){
+      try{let value=encoded.slice(2).replace(/-/g,"+").replace(/_/g,"/");while(value.length%4)value+="=";const target=new URL(atob(value));if(target.protocol==="https:")return target}catch{}
+    }
+  }
+  return link;
+}
 function parseBingSocialVideoResults(html,platform,query,seen){
   const domains=socialSearchDomains(platform),out=[];
   for(const match of String(html||"").matchAll(/<li\b[^>]*class=["'][^"']*\bb_algo\b[^"']*["'][^>]*>([\s\S]*?)<\/li>/gi)){
     const block=match[1]||"",anchor=block.match(/<h2[^>]*>\s*<a\b([^>]*)>([\s\S]*?)<\/a>/i);if(!anchor)continue;
     const href=anchor[1].match(/\bhref=["']([^"']+)["']/i)?.[1];if(!href)continue;
-    let link;try{link=new URL(decodeSearchHtml(href))}catch{continue}
+    const link=decodeBingSocialResultUrl(href);if(!link)continue;
     if(link.protocol!=="https:"||!domains.some(domain=>link.hostname===domain||link.hostname.endsWith("."+domain)))continue;
     const key=freePlatformKey(link.href);if(!key)continue;
     if(key==="tiktok"&&!/\/video\//i.test(link.pathname))continue;
@@ -458,7 +468,7 @@ function parseBingSocialVideoResults(html,platform,query,seen){
     const url=link.href.split("#")[0];if(seen.has(url))continue;
     const title=decodeSearchHtml(anchor[2]);if(!title)continue;
     const snippet=decodeSearchHtml(block.match(/<p[^>]*>([\s\S]*?)<\/p>/i)?.[1]||"");
-    if(publicSearchRelevance(query,title+" "+snippet)<0.35)continue;
+    if(publicSearchRelevance(query,title+" "+snippet)<0.25)continue;
     seen.add(url);out.push({title,url,snippet,platform:key,searchProvider:"Bing Web"});
   }
   return out;
@@ -1832,7 +1842,7 @@ export default {async fetch(request,env){
    if(url.pathname==="/api/youtube/hybrid/file"&&request.method==="GET")return hybridYoutubeFile(request);
    if(url.pathname==="/api/youtube/hybrid/thumbnail"&&request.method==="GET")return hybridYoutubeThumbnail(request);
   if(url.pathname==="/api/youtube/info"&&request.method==="GET")return youtubeInfo(request,env);
-    if(url.pathname==="/api/health"&&request.method==="GET")return json({ok:true,service:"ARYANZZ",version:"88.0",mode:"cloudflare-worker-zero-server-hybrid",directMediaDownload:true,selfHostedDownloader:false,youtubeDownloader:true,youtubeApiKeyConfigured:false,cobalt:false,paidYoutubeProvider:false,musicRecognitionConfigured:!!env.AUDD_API_TOKEN,musicFallbackReady:false,musicVideoRecognitionReady:false,platformExtraction:true,platformBackend:"public-free-community-api"});
+    if(url.pathname==="/api/health"&&request.method==="GET")return json({ok:true,service:"ARYANZZ",version:"88.1",mode:"cloudflare-worker-zero-server-hybrid",directMediaDownload:true,selfHostedDownloader:false,youtubeDownloader:true,youtubeApiKeyConfigured:false,cobalt:false,paidYoutubeProvider:false,musicRecognitionConfigured:!!env.AUDD_API_TOKEN,musicFallbackReady:false,musicVideoRecognitionReady:false,platformExtraction:true,platformBackend:"public-free-community-api"});
   if(url.pathname==="/api/social-file"&&request.method==="GET")return socialMediaFile(request);
   if(url.pathname==="/api/info"&&request.method==="POST"){const proxied=await proxyPlatform(request,env,"/api/info");if(proxied)return proxied;return info(request);}
   if(url.pathname==="/api/direct-file"&&request.method==="GET")return download(request);
