@@ -15,7 +15,7 @@
     ["twitch.tv","Twitch"],["streamable.com","Streamable"],["tumblr.com","Tumblr"],
     ["bilibili.com","Bilibili"],["b23.tv","Bilibili"],["vk.com","VK"],["ok.ru","OK.ru"],
     ["rutube.ru","Rutube"],["likee.video","Likee"],["snapchat.com","Snapchat"],
-    ["imgur.com","Imgur"],["bandcamp.com","Bandcamp"],["mixcloud.com","Mixcloud"],
+    ["imgur.com","Imgur"],["bandcamp.com","Bandcamp"],["mixcloud.com","Mixcloud"],["snapchat.com","Snapchat"],["linkedin.com","LinkedIn"],["wechat.com","WeChat"],["weixin.qq.com","WeChat"],["kakao.com","KakaoTalk"],["idntimes.com","IDN App"],
     ["ted.com","TED"],["archive.org","Internet Archive"],["snackvideo.com","SnackVideo"],["threads.net","Threads"],["bluesky.app","Bluesky"],["kick.com","Kick"],["rumble.com","Rumble"],["odysee.com","Odysee"]
   ];
   let activeDownloadController=null,activeDownloadFfmpeg=null;
