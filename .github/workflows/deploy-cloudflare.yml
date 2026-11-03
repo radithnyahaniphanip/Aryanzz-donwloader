@@ -1,4 +1,4 @@
-name: Test and deploy ARYANZZ V88.13 security release
+name: Test and deploy ARYANZZ V88.14 security release
 
 concurrency:
   group: aryanzz-cloudflare-deploy
@@ -74,7 +74,7 @@ jobs:
           wrangler secret delete PLATFORM_API_ORIGIN || true
           wrangler secret delete PLATFORM_API_TOKEN || true
 
-      - name: Smoke test live Worker security and V88.13 assets
+      - name: Smoke test live Worker security and V88.14 assets
         env:
           WORKER_URL: https://aryanzz-donwloader.radithnyahaniphanip.workers.dev
         run: |
@@ -85,12 +85,12 @@ jobs:
             try {
               const healthResponse = await fetch(base + "/api/health", { cache: "no-store", signal: AbortSignal.timeout(10000) });
               if (healthResponse.ok) health = await healthResponse.json();
-              if (health?.version === "88.13" && health?.mode === "cloudflare-worker-zero-server-hybrid") break;
+              if (health?.version === "88.14" && health?.mode === "cloudflare-worker-zero-server-hybrid") break;
             } catch {}
             await new Promise(resolve => setTimeout(resolve, 2500));
           }
-          if (health?.version !== "88.13" || health?.mode !== "cloudflare-worker-zero-server-hybrid" || !health?.directMediaDownload) {
-            throw new Error("Live Worker has not propagated the V88.13 secure zero-server deployment: " + JSON.stringify(health));
+          if (health?.version !== "88.14" || health?.mode !== "cloudflare-worker-zero-server-hybrid" || !health?.directMediaDownload) {
+            throw new Error("Live Worker has not propagated the V88.14 secure zero-server deployment: " + JSON.stringify(health));
           }
           console.log("Live Worker health OK: V" + health.version + " in zero-server mode.");
           if (!health.securityActive) throw new Error("Worker security middleware is not active.");
@@ -131,7 +131,7 @@ jobs:
           }
           console.log("V82.4 SEO verified: XML + plain-text sitemap, robots and homepage all return HTTP 200 to Googlebot user-agent.");
 
-          for (const path of ["/editor.js?v=65.0", "/editor-pro.css?v=65.0", "/music-recognition.js?v=71.0", "/music-recognition.css?v=71.0", "/v674.js?v=88.13", "/v674.css?v=81.4", "/v677.js?v=67.7", "/v677.css?v=67.7", "/v680.js?v=71.0", "/v680.css?v=71.0", "/v690.css?v=71.0", "/downloader.js?v=88.8", "/downloader.css?v=88.7", "/v59.js?v=59.5", "/v59.css?v=59.5", "/audio-studio.js?v=80.0", "/audio-studio.css?v=80.0", "/image-studio.js?v=81.4", "/image-studio.css?v=81.4", "/robots.txt", "/sitemap.xml", "/sitemap.txt", "/favicon.svg", "/og-cover.svg"]) {
+          for (const path of ["/editor.js?v=65.0", "/editor-pro.css?v=65.0", "/music-recognition.js?v=71.0", "/music-recognition.css?v=71.0", "/v674.js?v=88.14", "/v674.css?v=81.4", "/v677.js?v=67.7", "/v677.css?v=67.7", "/v680.js?v=71.0", "/v680.css?v=71.0", "/v690.css?v=71.0", "/downloader.js?v=88.8", "/downloader.css?v=88.7", "/v59.js?v=59.5", "/v59.css?v=59.5", "/audio-studio.js?v=80.0", "/audio-studio.css?v=80.0", "/image-studio.js?v=81.4", "/image-studio.css?v=81.4", "/robots.txt", "/sitemap.xml", "/sitemap.txt", "/favicon.svg", "/og-cover.svg"]) {
             const response = await fetch(base + path, { cache: "no-store" });
             if (!response.ok) throw new Error("Static asset unavailable: " + path + " HTTP " + response.status);
           }
@@ -183,7 +183,7 @@ jobs:
           if (!downloaderSource.includes("available.map(value=>[value,value+\"p · tersedia\"])") || !downloaderSource.includes("Persiapan 100% · ketuk tombol") || !downloaderSource.includes("Kesiapan tautan unduhan")) {
             throw new Error("V81.4 social quality selector or honest link-ready progress is missing.");
           }
-          if (!pageResponse.ok || !pageSource.includes("V88.13 · GRATIS") || !pageSource.includes('id="imageTools"') || !pageSource.includes('src="/image-studio.js?v=81.4"') || !pageSource.includes("restoreAutoBackup") || !pageSource.includes("audioStudio") || !pageSource.includes("profileMotionToggle") || !pageSource.includes("Kontrol banner profil") || !pageSource.includes("audioStudioTempo") || !pageSource.includes("audioStudioTitle")) {
+          if (!pageResponse.ok || !pageSource.includes("V88.14 · GRATIS") || !pageSource.includes('id="imageTools"') || !pageSource.includes('src="/image-studio.js?v=81.4"') || !pageSource.includes("restoreAutoBackup") || !pageSource.includes("audioStudio") || !pageSource.includes("profileMotionToggle") || !pageSource.includes("Kontrol banner profil") || !pageSource.includes("audioStudioTempo") || !pageSource.includes("audioStudioTitle")) {
             throw new Error("V74.0 page, profile backup, or Audio Studio markup is not live.");
           }
           console.log("V88.3 page, Audio Studio, profile backup, and creative assets are available.");
