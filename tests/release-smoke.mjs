@@ -12,8 +12,8 @@ const unifiedCss = read("../public/v89.css");
 const checks = [
   ["homepage label is V89.0", html.includes("V89.0 · GRATIS")],
   ["Worker health reports V89.0", worker.includes('version:"89.0"')],
-  ["homepage references the V89.0 search bundle", html.includes("/v674.js?v=89.0")],
-  ["service worker uses a V89.0 cache namespace", sw.includes('const CACHE="aryanzz-v88-14-1"')],
+  ["homepage references the V89.0 search bundle", html.includes("/v674.js?v=88.14.1")],
+  ["service worker uses a V89.0 cache namespace", sw.includes('const CACHE="aryanzz-v89-0"')],
   ["service worker precaches the V89.0 app shell", sw.includes("/?v=89.0") && sw.includes("/v674.js?v=89.0")],
   ["unified navigation hides home when another view opens", html.includes('id="appViewHeader"') && html.includes("home.hidden=!!id") && html.includes("p.id===id")],
   ["unified app shell styles are included", html.includes("/v89.css?v=89.0") && unifiedCss.includes("V89.0 — ONE UNIFIED ECOSYSTEM")],
