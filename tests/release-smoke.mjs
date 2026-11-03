@@ -7,19 +7,23 @@ const worker = read("../src/index.js");
 const sw = read("../public/sw.js");
 const searchJs = read("../public/v674.js");
 const searchCss = read("../public/v674.css");
+const unifiedCss = read("../public/v89.css");
 
 const checks = [
-  ["homepage label is V88.14.1", html.includes("V88.14.1 · GRATIS")],
-  ["Worker health reports V88.14.1", worker.includes('version:"88.14.1"')],
-  ["homepage references the V88.14.1 search bundle", html.includes("/v674.js?v=88.14.1")],
-  ["service worker uses a V88.14.1 cache namespace", sw.includes('const CACHE="aryanzz-v88-14-1"')],
-  ["service worker precaches the V88.14.1 app shell", sw.includes("/?v=88.14.1") && sw.includes("/v674.js?v=88.14.1")],
+  ["homepage label is V89.0", html.includes("V89.0 · GRATIS")],
+  ["Worker health reports V89.0", worker.includes('version:"89.0"')],
+  ["homepage references the V89.0 search bundle", html.includes("/v674.js?v=89.0")],
+  ["service worker uses a V89.0 cache namespace", sw.includes('const CACHE="aryanzz-v88-14-1"')],
+  ["service worker precaches the V89.0 app shell", sw.includes("/?v=89.0") && sw.includes("/v674.js?v=89.0")],
   ["unified navigation hides home when another view opens", html.includes('id="appViewHeader"') && html.includes("home.hidden=!!id") && html.includes("p.id===id")],
-  ["unified app shell styles are included", html.includes("v8814-unified-app-shell")],
-  ["old hero slogan is removed from the home screen", !html.includes("Semua berawal") && !html.includes("dari satu tautan")],
-  ["mobile header is not sticky over the page content", html.includes(".v674-top{position:relative;top:auto;")],
-  ["home content and wrapper use the full responsive width", html.includes(".wrap{width:100%;max-width:1080px;") && searchCss.includes(".v674-home{width:100%;min-width:0;")],
-  ["mobile platform cards use compact dimensions", searchCss.includes("#platformPicker .v736-platform{min-width:0;min-height:76px;")],
+  ["unified app shell styles are included", html.includes("/v89.css?v=89.0") && unifiedCss.includes("V89.0 — ONE UNIFIED ECOSYSTEM")],
+  ["V89 welcome headline is preserved in the unified app shell", html.includes("id=\"v89Welcome\"") && html.includes("Semua berawal") && html.includes("dari satu tautan")],
+  ["one shared header and persistent brand welcome are present", html.includes("class=\"top v674-top\"") && html.includes("id=\"v89Welcome\"")],
+  ["every tool panel shares one unified responsive shell", unifiedCss.includes("#toolsArea>.panel{display:none;width:100%") && unifiedCss.includes("#toolsArea>.panel.active{display:block!important")],
+  ["shared bottom navigation stays within mobile viewport", unifiedCss.includes(".nav{position:fixed!important")],
+  ["mobile layout uses consistent grid and full-width content", unifiedCss.includes(".v736-platforms{grid-template-columns:repeat(5,minmax(0,1fr))") && unifiedCss.includes("@media(max-width:680px)")],
+  ["home content and wrapper use the full responsive width", unifiedCss.includes(".wrap{width:min(100% - 36px,1160px)!important;") && unifiedCss.includes("#home{width:100%;min-width:0;")],
+  ["mobile platform cards use compact dimensions", unifiedCss.includes(".v736-platform{width:100%;min-width:0!important;")],
   ["audio search has a 50-result cap", worker.includes('desiredMode==="audio"?50:80')],
   ["audio results provide an MP3 action", searchJs.includes("♫ Buat MP3") && searchJs.includes("v674-audio-inline-result")],
   ["audio result cards use compact responsive layout", searchCss.includes(".v674-audio-inline-result") && searchCss.includes("grid-template-columns:repeat(2,minmax(0,1fr))")],
@@ -33,4 +37,4 @@ for (const [name, ok] of checks) {
   assert.ok(ok, name + " failed");
   console.log("✔ " + name);
 }
-console.log("\nARYANZZ V88.14.1 release smoke tests passed.");
+console.log("\nARYANZZ V89.0 release smoke tests passed.");
