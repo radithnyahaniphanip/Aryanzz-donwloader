@@ -228,7 +228,7 @@ jobs:
           // Live title-search regression: TikTok-only video results must never leak from Pinterest/YouTube.
           const tiktokSearchResponse = await fetch(base + "/api/social/search", {
             method: "POST", headers: { "content-type": "application/json" },
-            body: JSON.stringify({ platform: "tiktok", query: "greenscreen", mediaType: "video" }),
+            body: JSON.stringify({ platform: "tiktok", query: "greenscreen meme", mediaType: "video" }),
             cache: "no-store", signal: AbortSignal.timeout(45000)
           });
           const tiktokSearchData = await tiktokSearchResponse.json().catch(() => ({}));
