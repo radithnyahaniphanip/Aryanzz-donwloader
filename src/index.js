@@ -917,7 +917,8 @@ async function socialImageSearch(request){
       }
     }else{
       const site=domains.map(domain=>"site:"+domain).join(" OR ");
-      buckets[0].results=await fetchBing(site+" "+query,platform);
+      const selectedBucket=buckets.find(entry=>entry.platform===platform);
+      if(selectedBucket)selectedBucket.results=await fetchBing(site+" "+query,platform);
     }
     const results=[],seenImages=new Set(),platformCounts={};
     const maxPerPlatform=platform==="all"?6:19;
@@ -934,7 +935,7 @@ async function socialImageSearch(request){
         if(!added)break;
       }
     }else{
-      for(const item of buckets[0]?.results||[]){
+      for(const item of (buckets.find(entry=>entry.platform===platform)?.results||[])){
         if(seenImages.has(item.url))continue;
         seenImages.add(item.url);results.push(item);platformCounts[item.platform||platform]=(platformCounts[item.platform||platform]||0)+1;
         if(results.length>=19)break;
