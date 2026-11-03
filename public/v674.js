@@ -38,19 +38,14 @@ picker?.addEventListener("click",e=>{const btn=e.target.closest("[data-platform]
 const duration=v=>{if(!Number.isFinite(Number(v)))return "";const n=Math.max(0,Math.floor(Number(v)));return Math.floor(n/60)+":"+String(n%60).padStart(2,"0")};
 function showFallback(target,q){
 const card=document.createElement("article");card.className="v674-search-result v736-search-handoff";
-const title=document.createElement("h3");title.textContent="Belum ada hasil "+target.name+" yang cocok";
-const note=document.createElement("p");note.textContent="Indeks pencarian publik belum mengembalikan hasil yang cocok. Sistem sudah mencoba beberapa variasi kata kunci; coba kata kunci yang lebih spesifik atau buka pencarian langsung.";
-const open=document.createElement("a");open.className="primary";open.href=target.url(q);open.target="_blank";open.rel="noopener noreferrer";open.textContent="Cari langsung di "+target.name+" ↗";
+const title=document.createElement("h3");title.textContent="Pencarian "+target.name+" belum tersedia";
+const note=document.createElement("p");note.textContent="Provider pencarian video/audio gratis belum mengirim hasil. Kamu tetap bisa membuka pencarian "+target.name+" dari sini.";
+const open=document.createElement("a");open.className="primary";open.href=target.url(q);open.target="_blank";open.rel="noopener noreferrer";open.textContent="Buka pencarian "+target.name+" ↗";
 card.append(title,note,open);results.append(card);
 }
 function safeImageProxy(raw){
 try{const url=new URL(raw,location.origin);return url.origin===location.origin&&["/api/social-image-file","/api/image/file"].includes(url.pathname)?url.href:""}catch{return ""}
 }
-const SEARCH_EQUIVALENTS={greenscreen:["green","screen"],"green-screen":["green","screen"],kucing:["cat"],anjing:["dog"],lucu:["funny","cute"],gambar:["image","photo"],foto:["photo","image"],video:["video","clip"],lagu:["song","music"],musik:["music","song"],meme:["meme"],"layar hijau":["green","screen"]};
-function canonicalSearchQuery(value){let q=String(value||"").toLowerCase().replace(/green\s*screen/gi,"green screen").replace(/greenscreen/gi,"green screen").replace(/\s+/g," ").trim();return q}
-function searchTokens(value){return canonicalSearchQuery(value).normalize("NFD").replace(/[\u0300-\u036f]/g,"").split(/[^a-z0-9]+/).filter(token=>token.length>1&&!["dan","yang","the","and","for","dari","di","ke","with"].includes(token))}
-function relevanceScore(query,text){const tokens=searchTokens(query);if(!tokens.length)return 0;const hay=canonicalSearchQuery(text).normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g," ");const padded=" "+hay+" ";let hits=0;for(const token of tokens){const alternatives=SEARCH_EQUIVALENTS[token]||[token];if(alternatives.some(word=>padded.includes(" "+word+" ")))hits++}const coverage=hits/tokens.length;const phrase=canonicalSearchQuery(query).length>3&&hay.includes(canonicalSearchQuery(query))?0.22:0;return Math.min(1,coverage*.78+phrase)}
-function rankRelevant(items,query,getText,minScore=.48){return (items||[]).map(item=>({...item,__relevance:relevanceScore(query,getText(item))})).filter(item=>item.__relevance>=minScore).sort((a,b)=>b.__relevance-a.__relevance).map(({__relevance,...item})=>item)}
 function render(items,target,q,unavailableCount=0,imageItems=[]){
 results.replaceChildren();
 const mediaCount=Array.isArray(items)?items.length:0,images=Array.isArray(imageItems)?imageItems:[];
@@ -61,10 +56,9 @@ if(item.thumbnail){try{const u=new URL(item.thumbnail);if(u.protocol==="https:")
 const info=document.createElement("div"),title=document.createElement("h3"),meta=document.createElement("p"),snippet=document.createElement("p"),pick=document.createElement("button");
 title.textContent=item.title||"Media tanpa judul";
 meta.textContent=[item.channel,target.name,item.mediaMode==="audio"?"Audio":"Video",duration(item.duration),item.verified?"✓ Tautan terverifikasi":""].filter(Boolean).join(" · ");
-snippet.textContent=item.searchOnly?"Hasil publik yang relevan. Provider unduhan belum memverifikasi media ini; buka sumber atau coba analisis tautannya.":(item.snippet||item.mediaTitle||"Pilih hasil ini untuk memeriksa pratinjau dan format unduhan.");
-pick.type="button";pick.className="primary";pick.textContent=item.searchOnly?"Coba analisis & unduh":"Lihat & unduh";
+snippet.textContent=item.snippet||"Pilih hasil ini untuk memeriksa pratinjau dan format unduhan.";
+pick.type="button";pick.className="primary";pick.textContent="Lihat & unduh";
 pick.addEventListener("click",()=>{const input=$("url");if(!input)return;input.value=item.url;setMode("link");$("analyze")?.click();$("downloadResult")?.scrollIntoView({behavior:"smooth",block:"nearest"})});
-if(item.searchOnly){const source=document.createElement("a");source.href=item.url;source.target="_blank";source.rel="noopener noreferrer";source.textContent="Buka sumber asli ↗";source.className="v674-source-link";info.append(source);}
 info.append(title,meta,snippet,pick);card.append(info);results.append(card);
 });
 if(images.length){
@@ -99,26 +93,26 @@ const go=async()=>{
 const q=(searchInput?.value||"").trim();if(!q){if(help)help.textContent="Masukkan judul atau kata kunci gambar.";return}if(q.length<2){if(help)help.textContent="Masukkan minimal 2 karakter.";return}
 searchController?.abort();searchController=new AbortController();
 results.hidden=false;results.replaceChildren();
-const target=platforms[selected],loading=document.createElement("div");loading.className="v674-search-loading";loading.textContent="Menganalisis kata kunci dan mencari media relevan di "+target.name+"…";results.append(loading);
+const target=platforms[selected],loading=document.createElement("div");loading.className="v674-search-loading";loading.textContent="Mencari video di "+target.name+" dan gambar di semua platform…";results.append(loading);
 const btn=$("titleSearchBtn");if(btn){btn.disabled=true;btn.textContent="Mencari…"}
-if(help)help.textContent="Menganalisis kata kunci, sinonim, judul, deskripsi, dan kecocokan sumber di "+target.name+". Tidak menampilkan hasil acak dari platform lain.";
+if(help)help.textContent="Mencari video/audio di platform terpilih dan gambar dari 12 platform publik.";
 try{
 const endpoint=selected==="youtube"?"/api/search":"/api/social/search";
 const options={method:"POST",headers:{"content-type":"application/json"},cache:"no-store"};
 const signal=AbortSignal.any([searchController.signal,AbortSignal.timeout(45000)]);
 const [mediaOutcome,imageOutcome]=await Promise.allSettled([
 fetch(endpoint,{...options,body:JSON.stringify({query:q,platform:selected}),signal}),
-fetch("/api/image/search",{...options,body:JSON.stringify({query:canonicalSearchQuery(q),platform:selected}),signal})
+fetch("/api/image/search",{...options,body:JSON.stringify({query:q,platform:"all"}),signal})
 ]);
 let mediaItems=[],imageItems=[],unavailable=0,mediaError=null,imageError=null;
 if(mediaOutcome.status==="fulfilled"){
 const response=mediaOutcome.value,data=await response.json().catch(()=>({}));
-if(response.ok){mediaItems=rankRelevant(Array.isArray(data.results)?data.results:[],q,item=>[item.sourceTitle,item.title,item.mediaTitle,item.snippet,item.channel,item.url].filter(Boolean).join(" "),.20);unavailable=Number(data.unavailableCount)||0}
+if(response.ok){mediaItems=Array.isArray(data.results)?data.results:[];unavailable=Number(data.unavailableCount)||0}
 else mediaError=data.error||"Pencarian video/audio belum tersedia.";
 }else mediaError=String(mediaOutcome.reason?.message||"Pencarian video/audio gagal.");
 if(imageOutcome.status==="fulfilled"){
 const response=imageOutcome.value,data=await response.json().catch(()=>({}));
-if(response.ok&&data.ok){const found=(data.results||[]).flatMap(item=>item.images||[]);imageItems=rankRelevant(found,q,item=>[item.title,item.sourceUrl,item.platform].filter(Boolean).join(" "),.48)}
+if(response.ok&&data.ok)imageItems=(data.results||[]).flatMap(item=>item.images||[]);
 else imageError=data.error||"Pencarian gambar belum tersedia.";
 }else imageError=String(imageOutcome.reason?.message||"Pencarian gambar gagal.");
 render(mediaItems,target,q,unavailable,imageItems);
