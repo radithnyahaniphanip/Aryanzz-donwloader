@@ -833,9 +833,7 @@ async function socialImageSearch(request){
   if(query.length<2||query.length>120)return json({error:"Masukkan kata kunci antara 2 sampai 120 karakter."},400);
   if(socialRateLimited(request))return json({error:"Batas pencarian gambar gratis tercapai. Tunggu satu menit lalu coba lagi."},429);
   try{
-    const searchPlatforms=platform==="all"
-      ?["pinterest","tiktok","instagram","facebook","x","reddit","threads","snackvideo","capcut","youtube","vimeo","soundcloud"]
-      :[platform];
+    const searchPlatforms=["pinterest","tiktok","instagram","facebook","x","reddit","threads","snackvideo","capcut","youtube","vimeo","soundcloud"];
     const fetchBing=async(searchTerm,scope)=>{
       const url=new URL("https://www.bing.com/images/search");
       url.searchParams.set("q",searchTerm);url.searchParams.set("form","HDRSC3");
@@ -844,19 +842,19 @@ async function socialImageSearch(request){
         return response.ok?parseBingSocialImageResults(await response.text(),scope,request.url,query):[];
       }catch{return []}
     };
-    const [buckets,broadResults]=await Promise.all([
-      Promise.all(searchPlatforms.map(async key=>{
-        const platformDomains=socialSearchDomains(key),site=platformDomains.map(domain=>"site:"+domain).join(" OR ");
-        return {platform:key,results:await fetchBing(site+" "+query,key)};
-      })),
-      platform==="all"?fetchBing(query,"all"):Promise.resolve([])
-    ]);
+    let buckets=[],broadResults=[];
     if(platform==="all"){
+      buckets=searchPlatforms.map(key=>({platform:key,results:[]}));
+      const allSiteQuery="("+domains.map(domain=>"site:"+domain).join(" OR ")+") "+query;
+      broadResults=(await Promise.all([fetchBing(allSiteQuery,"all"),fetchBing(query,"all")])).flat();
       for(const item of broadResults){
         const key=item.platform||"";
         const bucket=buckets.find(entry=>entry.platform===key);
-        if(bucket&&!bucket.results.some(existing=>existing.url===item.url))bucket.results.unshift(item);
+        if(bucket&&!bucket.results.some(existing=>existing.url===item.url))bucket.results.push(item);
       }
+    }else{
+      const site=domains.map(domain=>"site:"+domain).join(" OR ");
+      buckets=[{platform,results:await fetchBing(site+" "+query,platform)}];
     }
     const results=[],seenImages=new Set(),platformCounts={};
     const maxPerPlatform=platform==="all"?4:19;
