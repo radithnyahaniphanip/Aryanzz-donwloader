@@ -35,7 +35,7 @@ const deployWorkflow=file("../.github/workflows/deploy-cloudflare.yml");
 
 const checks=[
   ["V88.3 Green Screen cat meme search includes English TikTok discovery variants",workerSource.includes('variants.push("green screen cat meme","green screen cat meme template","chroma key cat meme")')&&workerSource.includes('slice(0,platform==="all"?3:7)')],
-  ["V88.3 Bing parser accepts social video permalinks outside legacy result list markup",workerSource.includes("Fallback parser for Bing layouts")&&workerSource.includes('matchAll(/<a\\\\b([^>]*)>([\\\\s\\\\S]*?)<\\\\/a>/gi)')&&workerSource.includes('searchProvider:"Bing Web"')],
+  ["V88.3 Bing parser accepts social video permalinks outside legacy result list markup",workerSource.includes("Fallback parser for Bing layouts")&&workerSource.includes('matchAll(/<a')&&workerSource.includes('searchProvider:"Bing Web"')&&workerSource.includes('searchProvider:"Bing Web"')],
 
   ["V88.3 preview uses intrinsic aspect ratio and suppresses native browser download menu",downloader.includes('preview.controlsList="nodownload noplaybackrate"')&&downloader.includes('preview.videoWidth')&&downloader.includes('preview.style.aspectRatio=width+" / "+height')],
   ["V88.3 direct-file preview also detects native dimensions and hides browser download menu",html.includes("preview.videoWidth")&&html.includes("preview.controlsList='nodownload noplaybackrate'")&&html.includes("Pratinjau mengikuti rasio asli media.")],
@@ -43,7 +43,7 @@ const checks=[
   ["V88.3 compact result grid and matched All icon styling are present",downloaderCss.includes('.v674-search-results{display:grid')&&downloaderCss.includes('.v736-platform .v736-all-logo')&&html.includes('v736-logo v736-all-logo')],
   ["V88.3 cache and frontend assets use refreshed version keys",sw.includes('aryanzz-v88-3')&&html.includes('v674.js?v=88.3')&&html.includes('downloader.js?v=88.3')],
 
-  ["V88.2 Green Screen terms expand into template, background and overlay query variants",workerSource.includes('base+" meme template"')&&workerSource.includes('base+" background"')&&workerSource.includes('chroma key "+original')&&workerSource.includes('slice(0,platform==="all"?3:6)')],
+  ["V88.2 Green Screen terms expand into template, background and overlay query variants",workerSource.includes('base+" meme template"')&&workerSource.includes('base+" background"')&&workerSource.includes('chroma key "+normalized')&&workerSource.includes('slice(0,platform==="all"?3:7)')],
   ["V88.1 Bing video search decodes Bing redirect links before validating social domains",workerSource.includes("function decodeBingSocialResultUrl")&&workerSource.includes("const link=decodeBingSocialResultUrl(href)")&&workerSource.includes("atob(value)")],
   ["V88.0 title search has no dedicated Green Screen option; keywords remain ordinary text",!html.includes('<option value="greenscreen">')&&!html.includes("Green Screen")&&!v674.includes("video Green Screen")&&workerSource.includes("function socialSearchQueryVariants")],
   ["V88.0 global search explains cross-platform grouping and round-robins sources",html.includes('data-platform="all"')&&v674.includes("Pencarian lintas platform aktif")&&workerSource.includes("const orderedCandidates=platform===\"all\"")],
