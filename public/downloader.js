@@ -1200,13 +1200,25 @@
       if(info.providerName==="Public API"){
         const previewFormat=(info.formats||[]).find(item=>item.mode==="video"&&!item.videoOnly&&["mp4","m4v"].includes(item.ext)&&item.url)||(info.formats||[]).find(item=>item.mode==="video"&&item.url);
         if(previewFormat){
+          const previewWrap=make("div","ary-video-preview-wrap");
           const preview=make("video","v737-media-preview");
           const previewSource=safeUrl(previewFormat.previewUrl);
           if(!previewSource||previewSource.origin!==location.origin||previewSource.pathname!=="/api/social-file")throw new Error("Pratinjau media tidak melewati proxy ARYANZZ.");
-          preview.src=previewSource.href;preview.controls=true;preview.controlsList="nodownload noplaybackrate";preview.disablePictureInPicture=true;preview.disableRemotePlayback=true;preview.playsInline=true;preview.preload="metadata";preview.style.aspectRatio="auto";preview.style.height="auto";preview.style.objectFit="contain";
+          preview.src=previewSource.href;preview.controls=false;preview.disablePictureInPicture=true;preview.disableRemotePlayback=true;preview.playsInline=true;preview.preload="metadata";preview.style.cssText="display:block;height:auto;max-width:100%;max-height:70svh;margin:0 auto;object-fit:contain;background:#02060c;border-radius:12px";
           if(info.thumbnail)preview.poster=info.thumbnail;
           preview.setAttribute("aria-label","Pratinjau video "+(info.title||"media"));
           const previewStatus=make("small","muted","");
+          const customControls=make("div","ary-video-controls");
+          const play=make("button","tag","▶ Putar");play.type="button";
+          const seek=make("input","ary-video-seek");seek.type="range";seek.min="0";seek.max="1000";seek.value="0";seek.step="1";seek.setAttribute("aria-label","Posisi video");
+          const clock=make("small","muted","0:00 / 0:00");
+          customControls.append(play,seek,clock);
+          const timeText=value=>{const n=Math.max(0,Math.floor(Number(value)||0));return Math.floor(n/60)+":"+String(n%60).padStart(2,"0")};
+          const syncControls=()=>{const d=Number(preview.duration)||0,t=Number(preview.currentTime)||0;seek.value=d?String(Math.round(t/d*1000)):"0";clock.textContent=timeText(t)+" / "+(Number.isFinite(d)&&d>0?timeText(d):"0:00");play.textContent=preview.paused?"▶ Putar":"Ⅱ Jeda"};
+          play.addEventListener("click",async()=>{try{if(preview.paused)await preview.play();else preview.pause();syncControls()}catch{previewStatus.textContent="Video tidak dapat diputar dari sumber ini.";previewStatus.className="warning"}});
+          preview.addEventListener("click",()=>{if(preview.paused)preview.play().catch(()=>{});else preview.pause()});
+          preview.addEventListener("timeupdate",syncControls);preview.addEventListener("play",syncControls);preview.addEventListener("pause",syncControls);preview.addEventListener("ended",syncControls);
+          seek.addEventListener("input",()=>{const d=Number(preview.duration)||0;if(d)preview.currentTime=d*(Number(seek.value)||0)/1000});
           const applyIntrinsicRatio=()=>{
              const width=Number(preview.videoWidth)||0,height=Number(preview.videoHeight)||0;
              if(width>0&&height>0){
@@ -1217,19 +1229,21 @@
                preview.style.width=ratio<1?Math.min(box.clientWidth||720,window.innerHeight*.70*ratio)+"px":"100%";
                preview.style.maxWidth="100%";preview.style.maxHeight="70svh";preview.style.marginInline="auto";
                previewStatus.textContent="Rasio asli "+width+" × "+height+" px · "+(ratio<0.92?"Vertikal":ratio>1.08?"Horizontal":"Persegi")+(Number.isFinite(Number(preview.duration))?" · "+Number(preview.duration).toFixed(1)+" detik":"");
-             }else previewStatus.textContent="Pratinjau siap · ukuran video belum terbaca";
+             }else previewStatus.textContent="Pratinjau siap · menunggu metadata ukuran video";
+             syncControls();
            };
            preview.addEventListener("loadedmetadata",()=>{
              applyIntrinsicRatio();
              const actual=Number(preview.duration),expected=Number(info.duration)||0;
              if(expected>0&&Number.isFinite(actual)&&Math.abs(actual-expected)>Math.max(3,expected*0.12)){
-               previewStatus.textContent="Peringatan: durasi stream "+actual.toFixed(1)+" detik berbeda dari sumber "+expected.toFixed(1)+" detik. Jangan simpan sebelum diperiksa.";
+               previewStatus.textContent="Peringatan: durasi stream "+actual.toFixed(1)+" detik berbeda dari sumber "+expected.toFixed(1)+" detik. Periksa sebelum menyimpan.";
                previewStatus.className="warning";
              }else previewStatus.className="muted";
            });
            window.addEventListener("resize",applyIntrinsicRatio,{passive:true});
-preview.addEventListener("error",()=>{previewStatus.textContent="Pratinjau gagal diputar. Periksa kembali sumber atau format codec video.";previewStatus.className="warning"});
-          box.append(preview,previewStatus);
+           preview.addEventListener("error",()=>{previewStatus.textContent="Pratinjau gagal diputar. Periksa kembali sumber atau format codec video.";previewStatus.className="warning"});
+           previewWrap.append(preview,customControls);
+           box.append(previewWrap,previewStatus);
         }else{
           const audioPreview=(info.formats||[]).find(item=>item.mode==="audio"&&item.url);
           if(audioPreview?.previewUrl){const preview=make("audio","v737-audio-preview");preview.src=audioPreview.previewUrl;preview.controls=true;preview.preload="metadata";box.append(preview)}
