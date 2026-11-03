@@ -70,7 +70,7 @@ const checks=[
   ["V77.0 custom output filename is honored by the public social provider",downloader.includes("info.outputName||info.title")&&downloader.includes("info.outputName||info.filename")],
   ["V82.2 SEO page title",html.includes("ARYANZZ Downloader - Pengunduh Video, Audio &amp; Gambar")],
   ["V59.5 versioned assets",html.includes("/v15.js?v=59.5")&&html.includes("/owner.js?v=59.5")&&html.includes("/downloader.js?v=81.4")&&html.includes("/downloader.css?v=81.4")&&html.includes("/v59.css?v=59.5")&&html.includes("/editor-pro.css?v=65.0")&&html.includes("/editor.js?v=65.0")],
-  ["service worker cache and V59.5 assets",html.includes("navigator.serviceWorker.register")&&sw.includes("aryanzz-v84-0")&&sw.includes("/editor.js?v=65.0")],
+  ["service worker cache and V59.5 assets",html.includes("navigator.serviceWorker.register")&&sw.includes("aryanzz-v84-2")&&sw.includes("/editor.js?v=65.0")],
   ["downloader input, result and backend status",html.includes('id="analyze"')&&html.includes('id="downloadResult"')&&html.includes('id="backendStatus"')],
   ["unified self-hosted downloader API",downloader.includes('postJson("/api/info"')&&downloader.includes('"/api/direct-file?url="')&&downloader.includes("PLATFORM_NAMES")&&!downloader.toLowerCase().includes("savenow")],
   ["single capture-phase universal URL handler",downloader.includes('button.addEventListener("click"')&&downloader.includes("event.stopImmediatePropagation()")&&downloader.includes("}, true);")],
