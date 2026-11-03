@@ -55,6 +55,21 @@ const mediaCount=Array.isArray(items)?items.length:0,images=Array.isArray(imageI
 if(!mediaCount&&!images.length)showFallback(target,q);
 const mediaGroups=new Map();
 (items||[]).forEach(item=>{
+if(searchType?.value==="audio"){
+const card=document.createElement("article");card.className="v674-audio-inline-result";
+const main=document.createElement("div");main.className="v674-audio-inline-main";
+const title=document.createElement("b");title.textContent=item.title||"Audio tanpa judul";
+const meta=document.createElement("small");meta.textContent=[platforms[item.platform]?.name||item.platform||target.name,duration(item.duration),item.verified?"Audio terverifikasi":"Sumber video"].filter(Boolean).join(" · ");
+main.append(title,meta);
+const action=document.createElement("button");action.type="button";action.className="v674-audio-inline-action";action.textContent=item.verified&&String(item.extension||"").toLowerCase()==="mp3"?"↓ Unduh MP3":"♫ Buat MP3";
+action.addEventListener("click",()=>{
+if(item.verified&&String(item.extension||"").toLowerCase()==="mp3"&&item.downloadUrl){
+const link=document.createElement("a");link.href=item.downloadUrl;link.download=(item.title||"aryanzz-audio").replace(/[^a-z0-9 _-]/gi,"").trim().slice(0,70)+".mp3";document.body.append(link);link.click();link.remove();return;
+}
+const input=$("url");if(!input)return;input.value=item.url;setMode("link");$("analyze")?.click();$("downloadResult")?.scrollIntoView({behavior:"smooth",block:"nearest"});
+});
+card.append(main,action);results.append(card);return;
+}
 const card=document.createElement("article");card.className="v674-search-result v737-media-result";
 if(item.thumbnail){try{const u=new URL(item.thumbnail);if(u.protocol==="https:"){const img=document.createElement("img");img.src=u.href;img.alt="Pratinjau "+(item.title||"media");img.loading="lazy";card.append(img)}}catch{}}
 const info=document.createElement("div"),title=document.createElement("h3"),meta=document.createElement("p"),snippet=document.createElement("p"),pick=document.createElement("button");
@@ -101,14 +116,14 @@ card.append(open,caption,actions);grid.append(card);
 if(grid.childElementCount){section.append(head,grid);results.append(section)}
 }
 const parts=[];if(mediaCount)parts.push(mediaCount+" video/audio dari "+target.name);if(images.length)parts.push(images.length+" gambar dari "+target.name);
-if(help)help.textContent=parts.length?parts.join(" · ")+(Number(unavailableCount)>0?" · "+Number(unavailableCount)+" tautan media dilewati":"")+" · pilih hasil untuk melihat atau mengunduh.":"Tidak ada hasil publik yang cocok. Coba kata kunci lain.";
+if(help)help.textContent=searchType?.value==="audio"?(mediaCount+" pilihan audio dari "+target.name+" · pilih Buat MP3 untuk memeriksa sumber dan format yang tersedia.") : parts.length?parts.join(" · ")+(Number(unavailableCount)>0?" · "+Number(unavailableCount)+" tautan media dilewati":"")+" · pilih hasil untuk melihat atau mengunduh.":"Tidak ada hasil publik yang cocok. Coba kata kunci lain.";
 }
 const go=async()=>{
 const q=(searchInput?.value||"").trim();if(!q){if(help)help.textContent="Masukkan judul atau kata kunci gambar.";return}if(q.length<2){if(help)help.textContent="Masukkan minimal 2 karakter.";return}
 searchController?.abort();searchController=new AbortController();
 results.hidden=false;results.replaceChildren();
 const target=platforms[selected],kind=["image","audio"].includes(searchType?.value)?searchType.value:"video";
-const loading=document.createElement("div");loading.className="v674-search-loading";loading.textContent=kind==="image"?"Mencari gambar dari "+target.name+"…":"Mencari video/audio dari "+target.name+"…";results.append(loading);
+const loading=document.createElement("div");loading.className="v674-search-loading";loading.textContent=kind==="image"?"Mencari gambar dari "+target.name+"…":kind==="audio"?"Mencari musik dan video sumber untuk dibuat MP3 dari "+target.name+"…":"Mencari video dari "+target.name+"…";results.append(loading);
 const btn=$("titleSearchBtn");if(btn){btn.disabled=true;btn.textContent="Mencari…"}
 if(help)help.textContent=selected==="all"?"Pencarian lintas platform aktif. Hasil video akan dikelompokkan menurut sumber.":kind==="image"?"Mode gambar: sumber "+target.name+".":kind==="audio"?"Mode audio: hanya file audio yang diverifikasi dari "+target.name+".":"Mode video: sumber "+target.name+".";
 try{
@@ -138,7 +153,7 @@ const allowedDomains=expected==="all"?Object.values(domains).flat():domains[expe
 if(!imageItems.length)throw new Error("Belum ada gambar yang cocok dari "+target.name+". Tidak ada hasil dari platform lain yang akan ditampilkan.");
 }else{
 mediaItems=Array.isArray(data.results)?data.results:[];
-if(!mediaItems.length)throw new Error("Belum ada "+(kind==="audio"?"audio":"video")+" terverifikasi dari "+target.name+". Coba variasi kata kunci lain.");
+if(!mediaItems.length)throw new Error("Belum ada sumber musik atau video yang cocok dari "+target.name+". Coba variasi kata kunci lain.");
 }
 render(mediaItems,target,q,unavailable,imageItems);
 }catch(error){
