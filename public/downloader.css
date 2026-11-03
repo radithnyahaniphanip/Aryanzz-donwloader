@@ -78,6 +78,15 @@
 .v736-vimeo{color:#1ab7ea}
 .v736-threads{color:#fff}
 .v736-soundcloud{color:#ff8a32}
+.v736-tiktok-lite{background:#080808;color:#fff;text-shadow:2px 1px #25f4ee,-2px -1px #fe2c55;border-radius:8px}
+.v736-facebook-lite{background:#1877f2;color:#fff;border-radius:50%;font-size:25px}
+.v736-snapchat{background:#fffc00;color:#111;border-radius:8px;font-size:21px}
+.v736-idn{background:linear-gradient(135deg,#ff315d,#ff6b35);color:#fff;border-radius:8px;font-size:11px;letter-spacing:-1px}
+.v736-instagram-lite{background:linear-gradient(135deg,#833ab4,#fd1d1d,#fcb045);color:#fff;border-radius:8px;font-size:25px}
+.v736-linkedin{background:#0a66c2;color:#fff;border-radius:6px;font-size:19px}
+.v736-wechat{background:#07c160;color:#fff;border-radius:8px;font-size:22px}
+.v736-kakao{background:#fee500;color:#191919;border-radius:8px;font-size:23px}
+
 .youtube-cancel{border-color:#855b55!important;color:#ffd0c7!important;background:#301b22!important}
 .youtube-cancel[hidden]{display:none!important}
 .youtube-ready-link{display:flex!important;width:100%;margin-top:8px;min-height:54px;font-size:15px}
