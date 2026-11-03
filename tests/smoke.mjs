@@ -383,7 +383,7 @@ try{
     assert.equal(url.hostname,"www.bing.com");
     assert.equal(url.pathname,"/images/search");
     requestedQuery=url.searchParams.get("q")||"";
-    assert.match(requestedQuery,/site:tiktok\\.com/i);
+    assert.match(requestedQuery,/site:tiktok\.com/i);
     assert.match(requestedQuery,/green screen/i);
     const meta={murl:"https://cdn.example/tiktok-green-screen.jpg",purl:"https://www.tiktok.com/video/123456789",desc:"Green Screen Meme Template",w:1080,h:1920};
     return new Response('<a class="iusc" m="'+JSON.stringify(meta).replace(/"/g,"&quot;")+'"></a>',{status:200,headers:{"content-type":"text/html"}});
@@ -397,7 +397,7 @@ try{
   assert.equal(data.ok,true);
   assert.equal(data.imageCount,1,"TikTok image results must be read from the selected TikTok bucket: "+JSON.stringify(data));
   assert.equal(data.results[0].platform,"tiktok");
-  assert.match(data.results[0].sourceUrl,/tiktok\\.com/);
+  assert.match(data.results[0].sourceUrl,/tiktok\.com/);
   assert.equal(data.results[0].title,"Green Screen Meme Template");
   console.log("✔ V85.3.2 selected TikTok image search returns matching TikTok results instead of reading the Pinterest bucket");
 }finally{globalThis.fetch=originalTikTokImageSearchFetch;}
