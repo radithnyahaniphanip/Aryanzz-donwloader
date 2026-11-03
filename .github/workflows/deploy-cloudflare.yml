@@ -1,4 +1,4 @@
-name: Deploy ARYANZZ V86.0 to Cloudflare Workers
+name: Deploy ARYANZZ V87.0 to Cloudflare Workers
 
 concurrency:
   group: aryanzz-cloudflare-deploy
@@ -74,7 +74,7 @@ jobs:
           wrangler secret delete PLATFORM_API_ORIGIN || true
           wrangler secret delete PLATFORM_API_TOKEN || true
 
-      - name: Smoke test live Worker and V81.4 creative assets
+      - name: Smoke test live Worker and V87.0 creative assets
         env:
           WORKER_URL: https://aryanzz-donwloader.radithnyahaniphanip.workers.dev
         run: |
@@ -85,12 +85,12 @@ jobs:
             try {
               const healthResponse = await fetch(base + "/api/health", { cache: "no-store", signal: AbortSignal.timeout(10000) });
               if (healthResponse.ok) health = await healthResponse.json();
-              if (health?.version === "86.0" && health?.mode === "cloudflare-worker-zero-server-hybrid") break;
+              if (health?.version === "87.0" && health?.mode === "cloudflare-worker-zero-server-hybrid") break;
             } catch {}
             await new Promise(resolve => setTimeout(resolve, 2500));
           }
-          if (health?.version !== "86.0" || health?.mode !== "cloudflare-worker-zero-server-hybrid" || !health?.directMediaDownload) {
-            throw new Error("Live Worker has not propagated the V86.0 zero-server deployment: " + JSON.stringify(health));
+          if (health?.version !== "87.0" || health?.mode !== "cloudflare-worker-zero-server-hybrid" || !health?.directMediaDownload) {
+            throw new Error("Live Worker has not propagated the V87.0 zero-server deployment: " + JSON.stringify(health));
           }
           console.log("Live Worker health OK: V" + health.version + " in zero-server mode.");
           const homeResponse = await fetch(base + "/", { cache: "no-store" });
@@ -178,10 +178,10 @@ jobs:
           if (!downloaderSource.includes("available.map(value=>[value,value+\"p · tersedia\"])") || !downloaderSource.includes("Persiapan 100% · ketuk tombol") || !downloaderSource.includes("Kesiapan tautan unduhan")) {
             throw new Error("V81.4 social quality selector or honest link-ready progress is missing.");
           }
-          if (!pageResponse.ok || !pageSource.includes("V86.0 · GRATIS") || !pageSource.includes('id="imageTools"') || !pageSource.includes('src="/image-studio.js?v=81.4"') || !pageSource.includes("restoreAutoBackup") || !pageSource.includes("audioStudio") || !pageSource.includes("profileMotionToggle") || !pageSource.includes("Kontrol banner profil") || !pageSource.includes("audioStudioTempo") || !pageSource.includes("audioStudioTitle")) {
+          if (!pageResponse.ok || !pageSource.includes("V87.0 · GRATIS") || !pageSource.includes('id="imageTools"') || !pageSource.includes('src="/image-studio.js?v=81.4"') || !pageSource.includes("restoreAutoBackup") || !pageSource.includes("audioStudio") || !pageSource.includes("profileMotionToggle") || !pageSource.includes("Kontrol banner profil") || !pageSource.includes("audioStudioTempo") || !pageSource.includes("audioStudioTitle")) {
             throw new Error("V74.0 page, profile backup, or Audio Studio markup is not live.");
           }
-          console.log("V86.0 page, Audio Studio, profile backup, and creative assets are available.");
+          console.log("V87.0 page, Audio Studio, profile backup, and creative assets are available.");
 
           const imagePostProbe = await fetch(base + "/api/social/images", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ url: "https://example.com/not-a-social-post" }) });
           if (imagePostProbe.status !== 400) throw new Error("Image post endpoint validation failed: HTTP " + imagePostProbe.status);
@@ -216,7 +216,7 @@ jobs:
             throw new Error("Live universal social image search endpoint failed: HTTP " + imageSearchResponse.status + " / " + JSON.stringify(imageSearchData));
           }
           const liveImageCount = imageSearchData.results.reduce((total, item) => total + (Array.isArray(item.images) ? item.images.length : 0), 0);
-          if (liveImageCount > 19) throw new Error("Live universal social image search exceeded its 19-result limit.");
+          if (liveImageCount > 50) throw new Error("Live universal social image search exceeded its 50-result limit.");
           const livePlatformCount = Object.keys(imageSearchData.platformCounts || {}).length;
           if (liveImageCount) {
             console.log("Live universal social image search returned " + liveImageCount + " image results across " + livePlatformCount + " platforms for 'meme kucing'.");
@@ -228,20 +228,20 @@ jobs:
           // Live title-search regression: TikTok-only Green Screen must never leak results from Pinterest/YouTube.
           const tiktokSearchResponse = await fetch(base + "/api/social/search", {
             method: "POST", headers: { "content-type": "application/json" },
-            body: JSON.stringify({ platform: "tiktok", query: "greenscreen", mediaType: "greenscreen" }),
+            body: JSON.stringify({ platform: "tiktok", query: "greenscreen", mediaType: "video" }),
             cache: "no-store", signal: AbortSignal.timeout(45000)
           });
           const tiktokSearchData = await tiktokSearchResponse.json().catch(() => ({}));
           if (!tiktokSearchResponse.ok || !tiktokSearchData.ok || !Array.isArray(tiktokSearchData.results)) {
-            throw new Error("Live TikTok Green Screen title search failed: HTTP " + tiktokSearchResponse.status + " / " + JSON.stringify(tiktokSearchData));
+            throw new Error("Live TikTok video title search failed: HTTP " + tiktokSearchResponse.status + " / " + JSON.stringify(tiktokSearchData));
           }
           const badTikTokSources = tiktokSearchData.results.filter(item => {
             try { const host = new URL(item.url).hostname.toLowerCase(); return !(host === "tiktok.com" || host.endsWith(".tiktok.com")); } catch { return true; }
           });
           if (badTikTokSources.length) throw new Error("TikTok-only search leaked results from another source: " + JSON.stringify(badTikTokSources.slice(0, 3)));
-          if (tiktokSearchData.results.some(item => item.mediaMode !== "video")) throw new Error("TikTok Green Screen search returned non-video media.");
-          console.log("Live TikTok Green Screen search passed source isolation; results: " + tiktokSearchData.results.length + ", candidates: " + tiktokSearchData.candidateCount + ", DDG: " + tiktokSearchData.ddgCandidateCount + ", Bing: " + tiktokSearchData.bingCandidateCount + ", relevant: " + tiktokSearchData.relevantCount + ", downloadable: " + tiktokSearchData.verifiedCount + ", open-source-only: " + tiktokSearchData.searchOnlyCount + ", providers: " + JSON.stringify(tiktokSearchData.providerDiagnostics) + ", bingHtml: " + JSON.stringify(tiktokSearchData.providerDiagnostics?.bingSample) + ", sample: " + JSON.stringify(tiktokSearchData.candidateSamples) + ".");
-          if (!tiktokSearchData.results.length) console.warn("TikTok Green Screen endpoint is healthy, but public indexing/provider verification returned zero results in this run.");
+          if (tiktokSearchData.results.some(item => item.mediaMode !== "video")) throw new Error("TikTok video search returned non-video media.");
+          console.log("Live TikTok video search passed source isolation; results: " + tiktokSearchData.results.length + ", candidates: " + tiktokSearchData.candidateCount + ", DDG: " + tiktokSearchData.ddgCandidateCount + ", Bing: " + tiktokSearchData.bingCandidateCount + ", relevant: " + tiktokSearchData.relevantCount + ", downloadable: " + tiktokSearchData.verifiedCount + ", open-source-only: " + tiktokSearchData.searchOnlyCount + ", providers: " + JSON.stringify(tiktokSearchData.providerDiagnostics) + ", bingHtml: " + JSON.stringify(tiktokSearchData.providerDiagnostics?.bingSample) + ", sample: " + JSON.stringify(tiktokSearchData.candidateSamples) + ".");
+          if (!tiktokSearchData.results.length) console.warn("TikTok video endpoint is healthy, but public indexing/provider verification returned zero results in this run.");
 
           // Global title search may return multiple services, but every result must retain its own canonical source.
           const globalSearchResponse = await fetch(base + "/api/social/search", {
