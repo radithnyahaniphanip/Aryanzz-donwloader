@@ -655,7 +655,7 @@ function extractSocialImageCandidates(html,pageUrl,platform){
   }
   return found.slice(0,24);
 }
-async function fetchSocialPostHtml(pageUrl){
+async function fetchSocialPostHtml(pageUrl,timeoutMs=18000){
   let current=safePublicMediaUrl(pageUrl);if(!current)throw new Error("Tautan postingan harus HTTPS dan tidak boleh mengarah ke jaringan lokal.");
   for(let hop=0;hop<6;hop++){
     const response=await fetchSocialHeaders(current.href,{headers:{
@@ -712,19 +712,20 @@ function providerImageCandidates(data){
   }
   return output;
 }
-async function resolveSocialImagePost(rawUrl,requestUrl){
+async function resolveSocialImagePost(rawUrl,requestUrl,options={}){
   const key=freePlatformKey(rawUrl);if(!key)return null;
   let providerTitle="",providerImages=[];
   const providerUrl=FREE_MEDIA_API+"/api/download/"+key+"?url="+encodeURIComponent(rawUrl);
+  const includeProvider=options.includeProvider!==false;
   const tasks=[
-    fetch(providerUrl,{headers:{accept:"application/json"},signal:AbortSignal.timeout(14000),cache:"no-store"}).then(async response=>{
+    includeProvider?fetch(providerUrl,{headers:{accept:"application/json"},signal:AbortSignal.timeout(14000),cache:"no-store"}).then(async response=>{
       if(!response.ok)throw new Error("Provider gambar HTTP "+response.status);
       const data=await response.json().catch(()=>({}));
       if(data?.success===false)throw new Error("Provider tidak mendukung konten gambar ini.");
       providerTitle=String(data?.normalized?.title||data?.result?.title||data?.result?.caption||"").slice(0,240);
       providerImages=providerImageCandidates(data);
-    }).catch(()=>{}),
-    fetchSocialPostHtml(rawUrl).then(page=>{
+    }).catch(()=>{}):Promise.resolve(),
+    fetchSocialPostHtml(rawUrl,Number(options.timeoutMs)||18000).then(page=>{
       const images=extractSocialImageCandidates(page.html,page.url,key);
       return {html:page.html,url:page.url,images};
     }).catch(()=>null)
@@ -838,17 +839,19 @@ async function socialImageSearch(request){
       const url=new URL("https://www.bing.com/images/search");
       url.searchParams.set("q",searchTerm);url.searchParams.set("form","HDRSC3");
       try{
-        const response=await fetch(url.href,{headers:{accept:"text/html,application/xhtml+xml","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/130.0.0.0 Safari/537.36"},signal:AbortSignal.timeout(12000),cache:"no-store"});
+        const response=await fetch(url.href,{headers:{accept:"text/html,application/xhtml+xml","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/130.0.0.0 Safari/537.36"},signal:AbortSignal.timeout(9000),cache:"no-store"});
         return response.ok?parseBingSocialImageResults(await response.text(),scope,request.url,query):[];
       }catch{return []}
     };
-    const buckets=await Promise.all(searchPlatforms.map(async key=>{
-      const platformDomains=socialSearchDomains(key),site=platformDomains.map(domain=>"site:"+domain).join(" OR ");
-      return {platform:key,results:await fetchBing(site+" "+query,key)};
-    }));
+    const [buckets,broadResults]=await Promise.all([
+      Promise.all(searchPlatforms.map(async key=>{
+        const platformDomains=socialSearchDomains(key),site=platformDomains.map(domain=>"site:"+domain).join(" OR ");
+        return {platform:key,results:await fetchBing(site+" "+query,key)};
+      })),
+      platform==="all"?fetchBing(query,"all"):Promise.resolve([])
+    ]);
     if(platform==="all"){
-      const broad=await fetchBing(query,"all");
-      for(const item of broad){
+      for(const item of broadResults){
         const key=item.platform||"";
         const bucket=buckets.find(entry=>entry.platform===key);
         if(bucket&&!bucket.results.some(existing=>existing.url===item.url))bucket.results.unshift(item);
@@ -888,7 +891,7 @@ async function socialImageSearch(request){
       }));
       const seenPosts=new Set();
       for(const page of pages)candidates.push(...parseSocialImageSearchLinks(page,platform,seenPosts,18-candidates.length));
-      const posts=await Promise.all(candidates.slice(0,12).map(item=>resolveSocialImagePost(item.url,request.url).then(post=>post?{item,post}:null).catch(()=>null)));
+      const posts=await Promise.all(candidates.slice(0,12).map(item=>resolveSocialImagePost(item.url,request.url,{includeProvider:false,timeoutMs:10000}).then(post=>post?{item,post}:null).catch(()=>null)));
       for(const entry of posts.filter(Boolean)){
         for(const image of entry.post.images||[]){
           if(results.length>=19)break;
