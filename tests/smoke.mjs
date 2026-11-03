@@ -375,6 +375,33 @@ try{
   console.log("✔ V81.4 all-source image search includes public-web results and downloads them with their source-page referrer");
 }finally{globalThis.fetch=originalPublicWebImageFetch;}
 
+const originalTikTokImageSearchFetch=globalThis.fetch;
+try{
+  let requestedQuery="";
+  globalThis.fetch=async(input)=>{
+    const url=new URL(typeof input==="string"?input:input.url);
+    assert.equal(url.hostname,"www.bing.com");
+    assert.equal(url.pathname,"/images/search");
+    requestedQuery=url.searchParams.get("q")||"";
+    assert.match(requestedQuery,/site:tiktok\\.com/i);
+    assert.match(requestedQuery,/green screen/i);
+    const meta={murl:"https://cdn.example/tiktok-green-screen.jpg",purl:"https://www.tiktok.com/@demo/video/123456789",desc:"Green Screen Meme Template",w:1080,h:1920};
+    return new Response('<a class="iusc" m="'+JSON.stringify(meta).replace(/"/g,"&quot;")+'"></a>',{status:200,headers:{"content-type":"text/html"}});
+  };
+  const response=await worker.fetch(new Request("https://aryanzz.example/api/image/search",{
+    method:"POST",headers:{"content-type":"application/json","cf-connecting-ip":"198.51.100.89"},
+    body:JSON.stringify({platform:"tiktok",query:"Greenscreen"})
+  }),{});
+  assert.equal(response.status,200);
+  const data=await response.json();
+  assert.equal(data.ok,true);
+  assert.equal(data.imageCount,1,"TikTok image results must be read from the selected TikTok bucket, not the first Pinterest bucket");
+  assert.equal(data.results[0].platform,"tiktok");
+  assert.match(data.results[0].sourceUrl,/tiktok\\.com/);
+  assert.equal(data.results[0].title,"Green Screen Meme Template");
+  console.log("✔ V85.3.2 selected TikTok image search returns matching TikTok results instead of reading the Pinterest bucket");
+}finally{globalThis.fetch=originalTikTokImageSearchFetch;}
+
 const originalBingImageFetch=globalThis.fetch;
 try{
   globalThis.fetch=async(input)=>{
