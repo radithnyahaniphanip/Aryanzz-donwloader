@@ -420,9 +420,16 @@ async function searchTikTokPublicPage(query){
   const url=new URL("https://www.tiktok.com/search/video");url.searchParams.set("q",query);
   try{
     const response=await fetch(url.href,{headers:{accept:"text/html,application/xhtml+xml","accept-language":"en-US,en;q=0.9,id;q=0.8","user-agent":"Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 Chrome/130.0.0.0 Mobile Safari/537.36","referer":"https://www.tiktok.com/"},signal:AbortSignal.timeout(9000),cache:"no-store"});
-    const html=response.ok?await response.text():"";const items=[],seen=new Set();
+    const html=response.ok?await response.text():"";const items=[],seen=new Set();let universalDiagnostics={rootKeys:[],scopeKeys:[],searchScope:null,preview:""};
     for(const match of html.matchAll(/<script[^>]*id=["'](?:__UNIVERSAL_DATA_FOR_REHYDRATION__|SIGI_STATE)["'][^>]*>([\s\S]*?)<\/script>/gi)){
-      try{collectTikTokSearchItems(JSON.parse(match[1]),items,seen)}catch{}
+      try{
+        const parsed=JSON.parse(match[1]);
+        universalDiagnostics.rootKeys=Object.keys(parsed||{}).slice(0,30);
+        const scope=parsed?.__DEFAULT_SCOPE__||{};universalDiagnostics.scopeKeys=Object.keys(scope).slice(0,60);
+        const searchEntry=Object.entries(scope).find(([key])=>/search/i.test(key));
+        if(searchEntry){universalDiagnostics.searchScope=searchEntry[0];universalDiagnostics.preview=JSON.stringify(searchEntry[1]).slice(0,2600)}
+        collectTikTokSearchItems(parsed,items,seen);
+      }catch{}
     }
     if(!items.length){
       for(const match of html.matchAll(/https?:\/\/www\.tiktok\.com\/@([A-Za-z0-9._-]+)\/video\/(\d{8,})/g)){
@@ -434,7 +441,7 @@ async function searchTikTokPublicPage(query){
     const scriptIds=[...html.matchAll(/<script[^>]*id=["']([^"']+)["']/gi)].map(match=>match[1]).slice(0,20);
     const videoLinks=[...html.matchAll(/https?:\/\/www\.tiktok\.com\/@[A-Za-z0-9._-]+\/video\/\d{8,}/g)].map(match=>match[0]).slice(0,5);
     const pageTitle=decodeSearchHtml(html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1]||"");
-    return {items,status:response.status,bytes:html.length,pageTitle,scriptIds,videoLinks,hasUniversalData:html.includes("__UNIVERSAL_DATA_FOR_REHYDRATION__"),hasSigiState:html.includes("SIGI_STATE")};
+    return {items,status:response.status,bytes:html.length,pageTitle,scriptIds,videoLinks,hasUniversalData:html.includes("__UNIVERSAL_DATA_FOR_REHYDRATION__"),hasSigiState:html.includes("SIGI_STATE"),universalDiagnostics};
   }catch(error){return {items:[],status:0,bytes:0,error:String(error?.message||error).slice(0,100)}}
 }
 function parseBingSocialVideoResults(html,platform,query,seen){
