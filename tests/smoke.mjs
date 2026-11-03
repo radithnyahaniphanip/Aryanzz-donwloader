@@ -203,10 +203,10 @@ const checks=[
   ["V77.0 social title search verifies metadata and actual CDN media bytes before filtering dead links",workerSource.includes("async function verifySocialSearchResult")&&workerSource.includes("socialMediaFile(new Request(probeUrl.href))")&&workerSource.includes("const results=checked.filter(Boolean)")&&file("../public/v674.js").includes("Tautan terverifikasi")&&file("../public/v674.js").includes("tautan media dilewati")],
 
 
-  ["V80.0 platform picker renders all 12 requested services including Vimeo in the markup",["youtube","tiktok","instagram","snackvideo","capcut","pinterest","facebook","x","reddit","vimeo","threads","soundcloud"].every(id=>html.includes('data-platform="'+id+'"'))],
+  ["V84.7 platform picker renders all 20 services including Lite, Snapchat, IDN App, LinkedIn, WeChat and KakaoTalk",["youtube","tiktok","instagram","snackvideo","capcut","pinterest","facebook","x","reddit","vimeo","threads","soundcloud"].every(id=>html.includes('data-platform="'+id+'"'))],
   ["V80.0 platform picker uses a five-column CSS grid with no horizontal scroll",downloaderCss.includes("grid-template-columns:repeat(5,minmax(0,1fr))!important")&&downloaderCss.includes("overflow:visible!important")&&downloaderCss.includes("min-width:0!important")],
   ["V80.0 narrow-screen overrides no longer force 74px platform cards or nowrap labels",v674Css.includes(".v736-platform{min-width:0}")&&v674Css.includes(".v736-platform span:last-child{white-space:normal}")&&!v674Css.includes("min-width:74px")&&!v674Css.includes("white-space:nowrap")],
-  ["V80.0 platform logos have consistent branded icon tiles and responsive labels",downloaderCss.includes(".v736-logo{")&&downloaderCss.includes(".v736-instagram{background:linear-gradient")&&downloaderCss.includes("overflow-wrap:anywhere")&&html.includes("12 PLATFORM")],
+  ["V84.7 platform logos have consistent branded icon tiles and responsive labels",downloaderCss.includes(".v736-logo{")&&downloaderCss.includes(".v736-instagram{")&&downloaderCss.includes("overflow-wrap:anywhere")&&html.includes("20 PLATFORM")],
   ["V80.0 Reddit short video host v.redd.it routes through the Reddit provider",workerSource.includes('"v.redd.it":"reddit"')&&workerSource.includes('id:"reddit",domains:["reddit.com","redd.it","v.redd.it"]')],
 
 
