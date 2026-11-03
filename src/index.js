@@ -403,15 +403,35 @@ function socialSearchUrl(platform,query){
   url.searchParams.set("q",site+" "+query);
   return url;
 }
+function parseBingSocialVideoResults(html,platform,query,seen){
+  const domains=socialSearchDomains(platform),out=[];
+  for(const match of String(html||"").matchAll(/<li\\b[^>]*class=["'][^"']*\\bb_algo\\b[^"']*["'][^>]*>([\\s\\S]*?)<\\/li>/gi)){
+    const block=match[1]||"",anchor=block.match(/<h2[^>]*>\\s*<a\\b([^>]*)>([\\s\\S]*?)<\\/a>/i);if(!anchor)continue;
+    const href=anchor[1].match(/\\bhref=["']([^"']+)["']/i)?.[1];if(!href)continue;
+    let link;try{link=new URL(decodeSearchHtml(href))}catch{continue}
+    if(link.protocol!=="https:"||!domains.some(domain=>link.hostname===domain||link.hostname.endsWith("."+domain)))continue;
+    const key=freePlatformKey(link.href);if(!key)continue;
+    if(key==="tiktok"&&!/\\/video\\//i.test(link.pathname))continue;
+    if(key==="instagram"&&!/\\/(?:p|reel|tv|share)\\//i.test(link.pathname))continue;
+    if(key==="pinterest"&&!/\\/pin\\//i.test(link.pathname))continue;
+    const url=link.href.split("#")[0];if(seen.has(url))continue;
+    const title=decodeSearchHtml(anchor[2]);if(!title)continue;
+    const snippet=decodeSearchHtml(block.match(/<p[^>]*>([\\s\\S]*?)<\\/p>/i)?.[1]||"");
+    if(publicSearchRelevance(query,title+" "+snippet)<0.65)continue;
+    seen.add(url);out.push({title,url,snippet,platform:key,searchProvider:"Bing Web"});
+  }
+  return out;
+}
 async function verifySocialSearchResult(result,requestUrl,desiredMode="any"){
   const key=freePlatformKey(result.url);
-  if(!key)return {...result,verified:false,downloadable:false,searchOnly:true,channel:"Hasil publik"};
+  const searchOnly=()=>({...result,platform:key||result.platform||"unknown",verified:false,downloadable:false,searchOnly:true,mediaMode:desiredMode==="audio"?"audio":"video",channel:"Hasil publik · unduhan belum diverifikasi"});
+  if(!key)return searchOnly();
   const endpoint=FREE_MEDIA_API+"/api/download/"+key+"?url="+encodeURIComponent(result.url);
   try{
     const response=await fetch(endpoint,{headers:{accept:"application/json"},signal:AbortSignal.timeout(9000),cache:"no-store"});
-    if(!response.ok)return null;
+    if(!response.ok)return searchOnly();
     const data=await response.json().catch(()=>({}));
-    if(data?.success===false)return null;
+    if(data?.success===false)return searchOnly();
     const info=freeProviderMediaInfo(data,result.url,requestUrl);
     const playableFormats=(info?.formats||[]).filter(item=>item.previewUrl&&item.downloadUrl&&!item.videoOnly);
     const mode=desiredMode==="greenscreen"?"video":desiredMode;
@@ -422,13 +442,13 @@ async function verifySocialSearchResult(result,requestUrl,desiredMode="any"){
         :key==="soundcloud"
           ?playableFormats.find(item=>item.mode==="audio"&&["mp3","m4a","aac","opus","ogg","wav","flac"].includes(item.ext))
           :playableFormats.find(item=>item.mode==="video"&&["mp4","m4v"].includes(item.ext))||playableFormats.find(item=>item.mode==="audio"&&["mp3","m4a"].includes(item.ext));
-    if(!playable)return null;
+    if(!playable)return searchOnly();
     const probeUrl=new URL(playable.downloadUrl);probeUrl.searchParams.set("probe","1");
     const mediaCheck=await socialMediaFile(new Request(probeUrl.href));
     const mediaData=await mediaCheck.json().catch(()=>({}));
-    if(!mediaCheck.ok||!mediaData.valid)return null;
+    if(!mediaCheck.ok||!mediaData.valid)return searchOnly();
     return {...result,platform:key,title:result.title||info.title,mediaTitle:info.title||"",thumbnail:info.thumbnail||null,duration:info.duration||null,verified:true,downloadable:true,mediaMode:playable.mode,extension:mediaData.extension,mediaType:mediaData.mimeType};
-  }catch{return null}
+  }catch{return searchOnly()}
 }
 async function searchSocial(request){
   let body;try{body=await request.json()}catch{return json({error:"Body JSON tidak valid."},400)}
@@ -472,6 +492,11 @@ async function searchSocial(request){
       }
       if(candidates.length>=20)break;
     }
+    const bingPages=await Promise.all(variants.map(async term=>{
+      const url=new URL("https://www.bing.com/search");url.searchParams.set("q",site+" "+term);url.searchParams.set("form","QBLH");
+      try{const response=await fetch(url.href,{headers:{accept:"text/html,application/xhtml+xml","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/130.0.0.0 Safari/537.36"},signal:AbortSignal.timeout(8000),cache:"no-store"});return response.ok?await response.text():""}catch{return ""}
+    }));
+    for(const page of bingPages)candidates.push(...parseBingSocialVideoResults(page,platform,query,seen));
     const relevantCandidates=candidates.filter(item=>publicSearchRelevance(query,item.title+" "+item.snippet)>=0.65);
     const checked=await Promise.all(relevantCandidates.slice(0,16).map(item=>verifySocialSearchResult(item,request.url,desiredMode)));
     const results=checked.filter(Boolean);
