@@ -30,9 +30,6 @@ const manifest=JSON.parse(file("../public/manifest.webmanifest"));
 const robots=file("../public/robots.txt");
 const sitemap=file("../public/sitemap.xml");
 const favicon=file("../public/favicon.svg");
-const authJs=file("../public/auth.js");
-const authCss=file("../public/auth.css");
-const authMigration=file("../migrations/0001_auth.sql");
 const deployWorkflow=file("../.github/workflows/deploy-cloudflare.yml");
 
 const checks=[
@@ -233,20 +230,11 @@ const checks=[
   ["V82.2 homepage exposes indexable SEO metadata, canonical URL and structured data",html.includes('name="robots" content="index,follow')&&html.includes('rel="canonical"')&&html.includes('application/ld+json')&&html.includes('ARYANZZ Downloader — Unduh Video, Audio & Gambar Online')],
   ["V82.2 crawler discovery files expose an open robots policy, sitemap and branded favicon",robots.includes("User-agent: *")&&robots.includes("Allow: /")&&robots.includes("/sitemap.xml")&&sitemap.includes("<urlset")&&sitemap.includes("https://aryanzz-donwloader.radithnyahaniphanip.workers.dev/")&&favicon.includes("<svg")],
   ["V82.2 web app manifest uses the ARYANZZ Downloader brand",manifest.name==="ARYANZZ Downloader — Pengunduh Video, Audio & Gambar"&&manifest.short_name==="ARYANZZ"],
-  ["V84.0 requires account login before showing the downloader and includes a registration screen",html.includes('id="authGate"')&&html.includes('id="authForm"')&&html.includes('/auth.js?v=84.0')&&html.includes('/auth.css?v=84.0')],
-  ["V84.0 password UI includes show/hide controls, confirmation and inline strength checks",authJs.includes("data-auth-eye")&&authJs.includes("passwordRules")&&authJs.includes("ruleSymbol")&&html.includes('id="authConfirm"')&&authJs.includes("Sembunyikan password")&&authJs.includes("Googlebot")],
-  ["V84.0 account passwords require digits and one allowed symbol and are hashed with PBKDF2",workerSource.includes("AUTH_ITERATIONS = 210000")&&workerSource.includes("PBKDF2")&&workerSource.includes("/[*\\-_#@]/")&&workerSource.includes("AUTH_SESSION_SECONDS")],
-  ["V84.0 D1 migration stores users and hashed session tokens, not plaintext passwords",authMigration.includes("CREATE TABLE IF NOT EXISTS users")&&authMigration.includes("password_hash")&&authMigration.includes("CREATE TABLE IF NOT EXISTS sessions")&&authMigration.includes("token_hash")],
-  ["V84.0 service worker cache includes authentication assets",sw.includes("aryanzz-v84-0")&&sw.includes("/auth.js?v=84.0")&&sw.includes("/auth.css?v=84.0")]
+  ["V84.1 opens the downloader directly without account registration or D1 auth",!html.includes("authGate")&&!html.includes("/auth.js")&&!workerSource.includes("/api/auth/")&&!workerSource.includes("AUTH_ITERATIONS")&&!wrangler.includes("d1_databases")&&sw.includes("aryanzz-v84-1")&&!sw.includes("/auth.js")]
+
 
  ];
  for(const [name,ok] of checks){assert.ok(ok,name+" failed");console.log("✔ "+name)}
- const authNotReady=await worker.fetch(new Request("https://aryanzz.example/api/auth/me"),{});
- assert.equal(authNotReady.status,503);
- const authNotReadyData=await authNotReady.json();
- assert.equal(authNotReadyData.code,"AUTH_DATABASE_NOT_READY");
- console.log("✔ V84.0 auth API fails closed until the persistent D1 database is bound");
-
 
 const originalUniversalImageFetch=globalThis.fetch;
 try{
