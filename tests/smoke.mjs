@@ -27,6 +27,9 @@ const imageStudioJs=file("../public/image-studio.js");
 const imageStudioCss=file("../public/image-studio.css");
 const profileJs=file("../public/v25.js");
 const manifest=JSON.parse(file("../public/manifest.webmanifest"));
+const robots=file("../public/robots.txt");
+const sitemap=file("../public/sitemap.xml");
+const favicon=file("../public/favicon.svg");
 const deployWorkflow=file("../.github/workflows/deploy-cloudflare.yml");
 
 const checks=[
@@ -223,7 +226,10 @@ const checks=[
   ["V81.2 removes continuously animated blurred background and refreshes service worker cache",!v674Css.includes("body::before{content")&&!v674Css.includes("v674-aurora")&&sw.includes("aryanzz-v81-4")&&html.includes("V81.4 · GRATIS")],
   ["V80.1 image downloads use a validated same-origin image proxy and reject non-image content",workerSource.includes('url.pathname==="/api/image/file"')&&workerSource.includes('safePublicMediaUrl(raw)')&&workerSource.includes('image/jpeg')&&workerSource.includes('Sumber tidak mengirim file gambar yang didukung')],
   ["V80.1 Image Studio CSS and JavaScript are loaded and cached by the service worker",html.includes('/image-studio.css?v=81.4')&&html.includes('/image-studio.js?v=81.4')&&sw.includes('/image-studio.css?v=81.4')&&sw.includes('/image-studio.js?v=81.4')&&imageStudioCss.includes('.image-download-results')],
-  ["V82.1 CapCut and SnackVideo marks use correct full-size SVG geometry",html.includes('aria-label="CapCut"')&&html.includes('M24.189 6.442')&&html.includes('aria-label="SnackVideo"')&&html.includes('viewBox="0 0 48 48"')&&html.includes('brand-refresh.css?v=82.1')]
+  ["V82.1 CapCut and SnackVideo marks use correct full-size SVG geometry",html.includes('aria-label="CapCut"')&&html.includes('M24.189 6.442')&&html.includes('aria-label="SnackVideo"')&&html.includes('viewBox="0 0 48 48"')&&html.includes('brand-refresh.css?v=82.1')],
+  ["V82.2 homepage exposes indexable SEO metadata, canonical URL and structured data",html.includes('name="robots" content="index,follow')&&html.includes('rel="canonical"')&&html.includes('application/ld+json')&&html.includes('ARYANZZ Downloader — Unduh Video, Audio & Gambar Online')],
+  ["V82.2 crawler discovery files expose an open robots policy, sitemap and branded favicon",robots.includes("User-agent: *")&&robots.includes("Allow: /")&&robots.includes("/sitemap.xml")&&sitemap.includes("<urlset")&&sitemap.includes("https://aryanzz-donwloader.radithnyahaniphanip.workers.dev/")&&favicon.includes("<svg")],
+  ["V82.2 web app manifest uses the ARYANZZ Downloader brand",manifest.name==="ARYANZZ Downloader — Pengunduh Video, Audio & Gambar"&&manifest.short_name==="ARYANZZ"]
 
  ];
  for(const [name,ok] of checks){assert.ok(ok,name+" failed");console.log("✔ "+name)}
