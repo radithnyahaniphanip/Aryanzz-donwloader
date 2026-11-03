@@ -34,6 +34,9 @@ const favicon=file("../public/favicon.svg");
 const deployWorkflow=file("../.github/workflows/deploy-cloudflare.yml");
 
 const checks=[
+  ["V88.0 title search has no dedicated Green Screen option; keywords remain ordinary text",!html.includes('<option value="greenscreen">')&&!html.includes("Green Screen")&&!v674.includes("video Green Screen")&&workerSource.includes("function socialSearchQueryVariants")],
+  ["V88.0 global search explains cross-platform grouping and round-robins sources",html.includes('data-platform="all"')&&v674.includes("Pencarian lintas platform aktif")&&workerSource.includes("const orderedCandidates=platform===\"all\"")],
+  ["V88.0 Pinterest image search expands queries and paginates Bing results",workerSource.includes('query+" template"')&&workerSource.includes('query+" png"')&&workerSource.includes('String(first)')&&workerSource.includes('results.length>=50')],
   ["V85.1 profile motion toggle reapplies visible mobile animations",profileJs.includes("if(next){setupReveal();setupPremiumEffects();")&&file("../public/v25.css").includes('body[data-motion="on"] .v736-platform:active')&&file("../public/v25.css").includes('body[data-motion="off"] *:before')],
   ["V85.1 completed downloads show a clear success panel and saved filename",file("../public/downloader.js").includes("v851-complete-panel")&&file("../public/downloader.js").includes("Unduhan berhasil disiapkan")&&file("../public/downloader.css").includes("#downloadResult .v851-complete-panel")],
 
@@ -1277,10 +1280,10 @@ try{
 
   const health=await worker.fetch(new Request("https://aryanzz.example/api/health"),{});
   const healthData=await health.json();
-  assert.equal(healthData.version,"86.0");
+  assert.equal(healthData.version,"88.0");
   assert.equal(healthData.cobalt,false);
   assert.equal(healthData.paidYoutubeProvider,false);
-  console.log("✔ Worker health reports V86.0 with no Cobalt or paid YouTube provider");
+  console.log("✔ Worker health reports V88.0 with no Cobalt or paid YouTube provider");
 
   const invalidImagePost=await worker.fetch(new Request("https://aryanzz.example/api/image/extract?url="+encodeURIComponent("http://127.0.0.1/private.png")),{}); 
   assert.equal(invalidImagePost.status,400);
