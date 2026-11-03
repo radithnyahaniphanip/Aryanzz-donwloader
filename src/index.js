@@ -537,13 +537,13 @@ async function searchSocial(request){
     let tiktokPageDiagnostics={status:null,bytes:0,count:0};
     if(platform==="tiktok"||platform==="tiktoklite"||platform==="all"){
       const direct=await searchTikTokPublicPage(query);
-      tiktokPageDiagnostics={status:direct.status,bytes:direct.bytes,count:direct.items.length};
+      tiktokPageDiagnostics={status:direct.status,bytes:direct.bytes,count:direct.items.length,pageTitle:direct.pageTitle,scriptIds:direct.scriptIds,videoLinks:direct.videoLinks,hasUniversalData:direct.hasUniversalData,hasSigiState:direct.hasSigiState};
       for(const item of direct.items){if(!seen.has(item.url)){seen.add(item.url);candidates.push(item)}}
     }
     const relevantCandidates=candidates.filter(item=>publicSearchRelevance(query,item.title+" "+item.snippet)>=0.65);
     const checked=await Promise.all(relevantCandidates.slice(0,16).map(item=>verifySocialSearchResult(item,request.url,desiredMode)));
     const results=checked.filter(Boolean);
-    return json({ok:true,platform,query,mediaType:desiredMode,results,candidateCount:candidates.length,ddgCandidateCount,bingCandidateCount,relevantCount:relevantCandidates.length,verifiedCount:results.filter(item=>item.verified).length,searchOnlyCount:results.filter(item=>item.searchOnly).length,unavailableCount:relevantCandidates.length-results.length,candidateSamples:candidates.slice(0,5).map(item=>({title:item.title,url:item.url,score:publicSearchRelevance(query,item.title+" "+item.snippet)})),providerDiagnostics:{ddgPages:pages.length,ddgNonEmpty:pages.filter(Boolean).length,bingPages:bingPages.length,bingNonEmpty:bingPages.filter(Boolean).length,bingSample:(bingPages.find(Boolean)||"").slice(0,2200),tiktokPublicPage:tiktokPageDiagnostics},searchVariants:variants,verification:"provider-and-media-signature"});
+    return json({ok:true,platform,query,mediaType:desiredMode,results,candidateCount:candidates.length,ddgCandidateCount,bingCandidateCount,relevantCount:relevantCandidates.length,verifiedCount:results.filter(item=>item.verified).length,searchOnlyCount:results.filter(item=>item.searchOnly).length,unavailableCount:relevantCandidates.length-results.length,candidateSamples:candidates.slice(0,5).map(item=>({title:item.title,url:item.url,score:publicSearchRelevance(query,item.title+" "+item.snippet)})),providerDiagnostics:{ddgPages:pages.length,ddgNonEmpty:pages.filter(Boolean).length,bingPages:bingPages.length,bingNonEmpty:bingPages.filter(Boolean).length,bingAlgoCount:bingPages.reduce((sum,page)=>sum+[...page.matchAll(/<li\\b[^>]*class=["'][^"']*\\bb_algo\\b/gi)].length,0),ddgResultLinkCount:pages.reduce((sum,page)=>sum+[...page.matchAll(/class=["'][^"']*\\bresult__a\\b/gi)].length,0),bingSample:(bingPages.find(Boolean)||"").slice(0,2200),tiktokPublicPage:tiktokPageDiagnostics},searchVariants:variants,verification:"provider-and-media-signature"});
   }catch(error){return json({error:"Pencarian publik gagal dijangkau. Coba lagi nanti. "+String(error?.message||error).slice(0,100)},502)}
 }
 
