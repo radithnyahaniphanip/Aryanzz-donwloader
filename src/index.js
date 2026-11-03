@@ -202,7 +202,7 @@ function detectSocialMediaSignature(bytes,mode){
   return null;
 }
 function socialFileName(value,ext){
-  const base=String(value||"aryanzz-media").replace(/[\\/:*?"<>|\u0000-\u001f]/g,"_").replace(/\s+/g," ").trim().slice(0,110).replace(/\.[a-z0-9]{2,5}$/i,"")||"aryanzz-media";
+  const base=String(value||"aryanzz-media").replace(/[\/:*?"<>|\u0000-\u001f]/g,"_").replace(/\s+/g," ").trim().slice(0,110).replace(/\.[a-z0-9]{2,5}$/i,"")||"aryanzz-media";
   return base+"."+ext;
 }
 async function fetchSocialHeaders(url,init,timeoutMs=25000){
@@ -624,7 +624,7 @@ async function searchSocial(request){
 }
 
 function imageSafeFilename(title,index,ext){
-  const base=String(title||"aryanzz-image").replace(/[\\/:*?"<>|\u0000-\u001f]/g," ").replace(/\s+/g," ").trim().slice(0,72)||"aryanzz-image";
+  const base=String(title||"aryanzz-image").replace(/[\/:*?"<>|\u0000-\u001f]/g," ").replace(/\s+/g," ").trim().slice(0,72)||"aryanzz-image";
   return base+"-"+String(index+1)+"."+ext;
 }
 function imageProxyLinks(imageUrl,sourceUrl,requestUrl,title,index){
@@ -713,7 +713,7 @@ async function imageExtract(request){
   return result.ok?json(result):json(result,502);
 }
 async function imageFile(request){
-  const u=new URL(request.url),raw=u.searchParams.get("url")||"",source=u.searchParams.get("source")||"",filename=String(u.searchParams.get("filename")||"aryanzz-image.jpg").replace(/[\\/:*?"<>|\u0000-\u001f]/g,"_").slice(0,120),preview=u.searchParams.get("preview")==="1";
+  const u=new URL(request.url),raw=u.searchParams.get("url")||"",source=u.searchParams.get("source")||"",filename=String(u.searchParams.get("filename")||"aryanzz-image.jpg").replace(/[\/:*?"<>|\u0000-\u001f]/g,"_").slice(0,120),preview=u.searchParams.get("preview")==="1";
   let current=safePublicMediaUrl(raw);
   if(!current)return json({error:"URL gambar tidak valid atau bukan HTTPS publik."},400);
   if(source&&!isPlatformLink(source))return json({error:"Tautan sumber postingan tidak valid."},400);
@@ -776,7 +776,7 @@ function socialImageProxyUrl(raw,requestUrl,filename,download=false,sourceUrl=""
 function collectImageUrls(value,output,depth=0,forceImage=false){
   if(depth>6||value==null)return;
   if(typeof value==="string"){
-    const candidate=value.replace(/\\u0026/g,"&").replace(/\\u003d/g,"=").replace(/\\\//g,"/");
+    const candidate=value.replace(/\\u0026/g,"&").replace(/\\u003d/g,"=").replace(/\\//g,"/");
     if(/^https?:\/\//i.test(candidate)&&(forceImage||/\.(?:jpe?g|png|webp|gif|avif|bmp)(?:[?#]|$)/i.test(candidate)||/image|photo|picture/i.test(candidate)))output.push(candidate);
     return;
   }
@@ -790,7 +790,7 @@ function collectImageUrls(value,output,depth=0,forceImage=false){
 function extractSocialImageCandidates(html,pageUrl,platform){
   const found=[],seen=new Set(),jsonImages=[];
   const add=(raw,source="metadata")=>{
-    const value=String(raw||"").replace(/&amp;/g,"&").replace(/\\u0026/g,"&").replace(/\\\//g,"/").trim();
+    const value=String(raw||"").replace(/&amp;/g,"&").replace(/\\u0026/g,"&").replace(/\\//g,"/").trim();
     const safe=safePublicMediaUrl(value);if(!safe||seen.has(safe.href))return;
     if(!imageExtensionFromUrl(safe.href)&&source==="html-image"&&!/image|photo|picture|media/i.test(safe.hostname+safe.pathname))return;
     if(/\.(?:svg|ico)(?:[?#]|$)/i.test(safe.href))return;
@@ -1154,7 +1154,7 @@ async function socialImageFile(request){
       cancel(reason){return reader.cancel(reason)}
     });
     const ext=({ "image/jpeg":"jpg","image/png":"png","image/webp":"webp","image/gif":"gif","image/avif":"avif","image/bmp":"bmp"})[mime]||"jpg";
-    const base=String(u.searchParams.get("filename")||"aryanzz-image").replace(/[\\/:*?"<>|\u0000-\u001f]/g,"_").replace(/\s+/g," ").slice(0,90)||"aryanzz-image";
+    const base=String(u.searchParams.get("filename")||"aryanzz-image").replace(/[\/:*?"<>|\u0000-\u001f]/g,"_").replace(/\s+/g," ").slice(0,90)||"aryanzz-image";
     const filename=base.replace(/\.[a-z0-9]{2,5}$/i,"")+"."+ext;
     const disposition=u.searchParams.get("download")==="1"?"attachment":"inline";
     return new Response(limited,{status:200,headers:{
@@ -1394,7 +1394,7 @@ async function hybridYoutubeInfo(request){
   }
 }
 function hybridFilename(title,ext){
-  const clean=String(title||"aryanzz-youtube").replace(/[\\/:*?"<>|\u0000-\u001f]/g," ").replace(/\s+/g," ").trim().slice(0,90)||"aryanzz-youtube";
+  const clean=String(title||"aryanzz-youtube").replace(/[\/:*?"<>|\u0000-\u001f]/g," ").replace(/\s+/g," ").trim().slice(0,90)||"aryanzz-youtube";
   return clean.toLowerCase().endsWith("."+ext)?clean:clean+"."+ext;
 }
 async function hybridYoutubeValidate(request){
@@ -1926,9 +1926,9 @@ const workerHandler = {async fetch(request,env){
 const SECURITY_BUCKETS=new Map();
 const SECURITY_EVENTS={blockedOrigin:0,rateLimited:0,oversizedRequest:0,blockedMethod:0};
 const SECURITY_LIMITS=[
-  {match:/^\\/api\\/(?:social\\/search|social\\/image-search|image\\/search|search)$/,limit:18},
-  {match:/^\\/api\\/(?:social-file|image\\/file|social-image-file|direct-file)$/,limit:90},
-  {match:/^\\/api\\//,limit:90}
+  {match:/^\/api\/(?:social\/search|social\/image-search|image\/search|search)$/,limit:18},
+  {match:/^\/api\/(?:social-file|image\/file|social-image-file|direct-file)$/,limit:90},
+  {match:/^\/api\//,limit:90}
 ];
 function securityClientKey(request){
   const ip=request.headers.get("cf-connecting-ip")||"unknown";
@@ -1994,7 +1994,7 @@ async function securityFetch(request,env){
     }
     if(request.method==="POST"){
       const contentType=(request.headers.get("content-type")||"").toLowerCase();
-      if(contentType&&!(/^(application\\/json|application\\/octet-stream|multipart\\/form-data)(?:;|$)/.test(contentType))){
+      if(contentType&&!(/^(application\/json|application\/octet-stream|multipart\/form-data)(?:;|$)/.test(contentType))){
         return securityError("Jenis konten permintaan tidak diizinkan.",415,requestId);
       }
       const length=Number(request.headers.get("content-length")||0);
