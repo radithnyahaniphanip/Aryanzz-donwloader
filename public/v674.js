@@ -38,9 +38,9 @@ picker?.addEventListener("click",e=>{const btn=e.target.closest("[data-platform]
 const duration=v=>{if(!Number.isFinite(Number(v)))return "";const n=Math.max(0,Math.floor(Number(v)));return Math.floor(n/60)+":"+String(n%60).padStart(2,"0")};
 function showFallback(target,q){
 const card=document.createElement("article");card.className="v674-search-result v736-search-handoff";
-const title=document.createElement("h3");title.textContent="Pencarian "+target.name+" belum tersedia";
-const note=document.createElement("p");note.textContent="Provider pencarian video/audio gratis belum mengirim hasil. Kamu tetap bisa membuka pencarian "+target.name+" dari sini.";
-const open=document.createElement("a");open.className="primary";open.href=target.url(q);open.target="_blank";open.rel="noopener noreferrer";open.textContent="Buka pencarian "+target.name+" ↗";
+const title=document.createElement("h3");title.textContent="Belum ada hasil "+target.name+" yang cocok";
+const note=document.createElement("p");note.textContent="Indeks pencarian publik belum mengembalikan hasil yang cocok. Sistem sudah mencoba beberapa variasi kata kunci; coba kata kunci yang lebih spesifik atau buka pencarian langsung.";
+const open=document.createElement("a");open.className="primary";open.href=target.url(q);open.target="_blank";open.rel="noopener noreferrer";open.textContent="Cari langsung di "+target.name+" ↗";
 card.append(title,note,open);results.append(card);
 }
 function safeImageProxy(raw){
