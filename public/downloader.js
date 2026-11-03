@@ -1391,7 +1391,7 @@
         try {
           const downloadInfo={...info,outputName:safeFilename(outputName.value||info.title||"aryanzz-media")};
           const filename = isYouTube&&downloadInfo.providerName!=="Public API" ? await downloadYouTube(url.href,mode.value,Number(quality.value)||480,bar,progressText,progressMeta,downloadInfo,audioFormat.value,Number(speedSelect.value)||3) : await downloadFile(url.href, mode.value, Number(quality.value) || 0, bar, progressText, downloadInfo, audioFormat.value,progressMeta);
-          start.textContent = "File siap ✓";start.disabled=true;
+          start.textContent = "File siap ✓";start.disabled=true;box.classList.add("v851-download-complete");const complete=make("div","v851-complete-panel");complete.append(make("span","v851-complete-icon","✓"),make("div","v851-complete-copy", "Unduhan berhasil disiapkan"),make("small","",filename));box.insertBefore(complete,actions);progressText.textContent="Selesai · file siap disimpan ke perangkat.";progressMeta.textContent="Periksa nama dan ukuran file, lalu gunakan tombol unduh yang muncul di atas.";cancel.hidden=true;
         } catch (error) {
           progress.classList.remove("is-indeterminate");progress.classList.add("is-failed");
           bar.style.width="0%";progress.setAttribute("aria-valuenow","0");
