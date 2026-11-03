@@ -12,7 +12,7 @@ const checks = [
   ["homepage label is V88.14.1", html.includes("V88.14.1 · GRATIS")],
   ["Worker health reports V88.14.1", worker.includes('version:"88.14.1"')],
   ["homepage references the V88.14.1 search bundle", html.includes("/v674.js?v=88.14.1")],
-  ["service worker uses a V88.14.1 cache namespace", sw.includes('const CACHE="aryanzz-v88-14"')],
+  ["service worker uses a V88.14.1 cache namespace", sw.includes('const CACHE="aryanzz-v88-14-1"')],
   ["service worker precaches the V88.14.1 app shell", sw.includes("/?v=88.14.1") && sw.includes("/v674.js?v=88.14.1")],
   ["unified navigation hides home when another view opens", html.includes('id="appViewHeader"') && html.includes("home.hidden=!!id") && html.includes("p.id===id")],
   ["unified app shell styles are included", html.includes("v8814-unified-app-shell")],
