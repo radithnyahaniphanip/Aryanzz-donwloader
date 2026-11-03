@@ -214,6 +214,9 @@ const checks=[
   ["V81.4 main title search requests video and universal social-image results together",file("../public/v674.js").includes('fetch("/api/image/search"')&&file("../public/v674.js").includes('platform:"all"')&&file("../public/v674.js").includes("Gambar dari berbagai media sosial")],
   ["V81.4 universal image search accepts all public platform domains and detects each result source",workerSource.includes('if(platform==="all")return [...new Set(Object.values(map).flat())]')&&workerSource.includes('platform:freePlatformKey(source.href)||platform')&&workerSource.includes('platformCounts')],
   ["V81.4 image action buttons remain full-width horizontal labels on narrow screens",downloaderCss.includes("grid-template-columns:minmax(0,1fr)!important")&&downloaderCss.includes("writing-mode:horizontal-tb!important")&&downloaderCss.includes(".aryanzz-inline-image-caption")],
+  ["V81.4 image-only cards expand a single result and keep download/source actions horizontal",downloaderCss.includes("repeat(auto-fit,minmax(min(100%,160px),1fr))")&&downloaderCss.includes("writing-mode:horizontal-tb!important")&&imageStudioCss.includes("repeat(auto-fit,minmax(min(100%,160px),1fr))")],
+  ["V81.4 social image extraction prioritizes the canonical post page over provider preview thumbnails",workerSource.includes('...(page?.images||[]).map(item=>({...item,type:"image"')&&workerSource.indexOf('...(page?.images||[]).map(item=>({...item,type:"image"')<workerSource.indexOf('...providerImages.map(item=>({...item,url:item.url,source:"provider"')],
+  ["V81.4 universal image search limits each platform to four images before using public-post fallback",workerSource.includes('const maxPerPlatform=platform==="all"?4:19')&&workerSource.includes("distinctPlatforms<5")],
 
   ["V81.2 removes the slogan punctuation and redundant helper copy",html.includes("dari satu tautan</span>")&&!html.includes("dari satu tautan.</span>")&&!html.includes("v75-platform-note")&&!html.includes("Tempel tautan media atau cari judul untuk memulai.")],
   ["V81.2 removes continuously animated blurred background and refreshes service worker cache",!v674Css.includes("body::before{content")&&!v674Css.includes("v674-aurora")&&sw.includes("aryanzz-v81-4")&&html.includes("V81.4 · GRATIS")],
@@ -249,7 +252,7 @@ try{
     const query=url.searchParams.get("q")||"";
     assert.match(query,/meme kucing/i);
     const entry=platforms.find(item=>query.includes(item[1]));
-    assert.ok(entry,"Universal search must issue a separate scoped query for every platform: "+query);
+    if(!entry){assert.equal(query,"meme kucing","Universal image search also runs one broad image-index query");return new Response("",{status:200,headers:{"content-type":"text/html"}});}
     calls.push(entry[0]);
     const html=Array.from({length:2},(_,i)=>{
       let purl=entry[2];
@@ -271,7 +274,46 @@ try{
   assert.ok(Object.keys(data.platformCounts).length>=10);
   assert.ok(data.results.every(item=>item.sourceUrl&&item.images[0].downloadUrl&&item.images[0].previewUrl));
   console.log("✔ V81.4 universal image search fans out to 12 platforms and returns 19 mixed results with source/download links");
-}finally{globalThis.fetch=originalUniversalImageFetch;}
+ }finally{globalThis.fetch=originalUniversalImageFetch;}
+
+const originalDiverseImageSearchFetch=globalThis.fetch;
+try{
+  const pinterestHtml=Array.from({length:12},(_,i)=>{
+    const meta={murl:"https://cdn.example/pinterest-cat-"+i+".jpg",purl:"https://www.pinterest.com/pin/"+(7000+i)+"/",desc:"Meme kucing Pinterest "+i,w:900,h:900};
+    return '<a class="iusc" m="'+JSON.stringify(meta).replace(/"/g,"&quot;")+'"></a>';
+  }).join("");
+  const ddgLinks=[
+    '<a class="result__a" href="https://www.tiktok.com/@cats/photo/8101">Foto meme kucing TikTok</a>',
+    '<a class="result__a" href="https://www.instagram.com/p/8102/">Meme kucing Instagram</a>',
+    '<a class="result__a" href="https://www.reddit.com/r/cats/comments/8103/cat-meme/">Meme kucing Reddit</a>'
+  ].join("");
+  globalThis.fetch=async(input)=>{
+    const url=new URL(typeof input==="string"?input:input.url);
+    if(url.hostname==="www.bing.com"){
+      const query=url.searchParams.get("q")||"";
+      return new Response(query.includes("site:pinterest.com")?pinterestHtml:"",{status:200,headers:{"content-type":"text/html"}});
+    }
+    if(url.hostname==="html.duckduckgo.com")return new Response(ddgLinks,{status:200,headers:{"content-type":"text/html"}});
+    if(url.hostname==="btch-downloader-api-green.vercel.app")return new Response(JSON.stringify({success:false}),{status:200,headers:{"content-type":"application/json"}});
+    if(["www.tiktok.com","www.instagram.com","www.reddit.com"].includes(url.hostname)){
+      const slug=url.pathname.split("/").filter(Boolean).pop()||"cat";
+      return new Response('<html><head><title>'+slug+' cat meme</title><meta property="og:image" content="https://cdn.example/'+slug+'.jpg"></head></html>',{status:200,headers:{"content-type":"text/html"}});
+    }
+    throw new Error("Unexpected universal image fallback request: "+url.hostname);
+  };
+  const response=await worker.fetch(new Request("https://aryanzz.example/api/image/search",{
+    method:"POST",headers:{"content-type":"application/json","cf-connecting-ip":"198.51.100.85"},
+    body:JSON.stringify({platform:"all",query:"meme kucing"})
+  }),{});
+  assert.equal(response.status,200);
+  const data=await response.json();
+  assert.equal(data.ok,true);
+  assert.ok(data.imageCount>=7,"Fallback should add accessible images from other public platforms");
+  assert.ok(data.platformCounts.pinterest<=4,"Pinterest must not crowd out all other platforms");
+  assert.ok(data.platformCounts.tiktok>=1&&data.platformCounts.instagram>=1&&data.platformCounts.reddit>=1);
+  assert.ok(data.results.every(item=>item.sourceUrl&&item.images[0].downloadUrl));
+  console.log("✔ V81.4 universal image search supplements Pinterest-heavy image indexes with TikTok, Instagram and Reddit public posts");
+}finally{globalThis.fetch=originalDiverseImageSearchFetch;}
 
 const originalBingImageFetch=globalThis.fetch;
 try{
@@ -330,7 +372,27 @@ try{
   const cdnRequest=seenRequests.find(item=>item.url.hostname==="i.pinimg.com");
   assert.equal(cdnRequest.init.headers.referer,"https://www.pinterest.com/pin/123456/");
   console.log("✔ V81.2 Pinterest short links extract and proxy image pins even when no MP4 stream exists");
-}finally{globalThis.fetch=originalPinterestImageFetch;}
+ }finally{globalThis.fetch=originalPinterestImageFetch;}
+
+const originalPinterestPriorityFetch=globalThis.fetch;
+try{
+  globalThis.fetch=async(input)=>{
+    const url=new URL(typeof input==="string"?input:input.url);
+    if(url.hostname==="btch-downloader-api-green.vercel.app")
+      return new Response(JSON.stringify({success:true,normalized:{title:"Pinned by Zafii",images:[{url:"https://cdn.example/pinterest-collage-with-logo.jpg",type:"image"}]}}),{status:200,headers:{"content-type":"application/json"}});
+    if(url.hostname==="www.pinterest.com")
+      return new Response('<html><head><title>PINNED BY ZAFII</title><meta property="og:title" content="PINNED BY ZAFII"><meta property="og:image" content="https://i.pinimg.com/originals/aa/bb/actual-anime-pin.jpg"></head></html>',{status:200,headers:{"content-type":"text/html"}});
+    if(url.hostname==="i.pinimg.com"||url.hostname==="cdn.example")
+      return new Response(new Uint8Array([1,2,3,4]),{status:200,headers:{"content-type":"image/jpeg","content-length":"4"}});
+    throw new Error("Unexpected Pinterest priority request: "+url.hostname);
+  };
+  const response=await worker.fetch(new Request("https://aryanzz.example/api/image/extract?url="+encodeURIComponent("https://www.pinterest.com/pin/987654321/"),{headers:{"cf-connecting-ip":"198.51.100.86"}}),{});
+  assert.equal(response.status,200);
+  const data=await response.json();
+  assert.equal(data.images[0].url,"https://i.pinimg.com/originals/aa/bb/actual-anime-pin.jpg");
+  assert.ok(data.images[0].downloadUrl.includes("download=1"));
+  console.log("✔ V81.4 Pinterest extraction prefers the actual Pin image over a provider collage/preview");
+}finally{globalThis.fetch=originalPinterestPriorityFetch;}
 
 const invalidImageSearch=await worker.fetch(new Request("https://aryanzz.example/api/image/search",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({platform:"pinterest",query:"x"})}),{});
 assert.equal(invalidImageSearch.status,400);
