@@ -73,7 +73,7 @@ const checks=[
   ["V77.0 custom output filename is honored by the public social provider",downloader.includes("info.outputName||info.title")&&downloader.includes("info.outputName||info.filename")],
   ["V82.2 SEO page title",html.includes("ARYANZZ Downloader - Pengunduh Video, Audio &amp; Gambar")],
   ["V85.0 versioned assets",html.includes("/v15.js?v=59.5")&&html.includes("/owner.js?v=59.5")&&html.includes("/downloader.js?v=85.2")&&html.includes("/downloader.css?v=85.1")&&html.includes("/v25.js?v=85.1")&&html.includes("/v25.css?v=85.1")&&html.includes("/v59.css?v=59.5")&&html.includes("/editor-pro.css?v=65.0")&&html.includes("/editor.js?v=65.0")],
-  ["service worker cache and V59.5 assets",html.includes("navigator.serviceWorker.register")&&sw.includes("aryanzz-v85-2")&&sw.includes("/editor.js?v=65.0")],
+  ["service worker cache and V59.5 assets",html.includes("navigator.serviceWorker.register")&&sw.includes("aryanzz-v85-3")&&sw.includes("/editor.js?v=65.0")],
   ["downloader input and result; remove backend status badge",html.includes('id="analyze"')&&html.includes('id="downloadResult"')&&!html.includes('id="backendStatus"')],
   ["unified self-hosted downloader API",downloader.includes('postJson("/api/info"')&&downloader.includes('"/api/direct-file?url="')&&downloader.includes("PLATFORM_NAMES")&&!downloader.toLowerCase().includes("savenow")],
   ["single capture-phase universal URL handler",downloader.includes('button.addEventListener("click"')&&downloader.includes("event.stopImmediatePropagation()")&&downloader.includes("}, true);")],
@@ -165,7 +165,7 @@ const checks=[
   ["Video URL DJ scanning goes directly through AudD Enterprise",workerSource.includes('fetch("https://enterprise.audd.io/"')&&!musicJs.includes("identifyVideoUrl(url,startSeconds)")],
   ["tool hub remains available",html.includes('id="allTools"')],
   ["PWA manifest version",manifest.name==="ARYANZZ Downloader — Pengunduh Video, Audio & Gambar"&&manifest.version==="83.0.0"],
-  ["V67.7 visual assets are loaded",html.includes("/v677.css?v=67.7")&&html.includes("/v677.js?v=67.7")&&sw.includes("/v677.css?v=67.7")&&sw.includes("/v677.js?v=67.7")],
+  ["V67.7 visual assets are loaded",html.includes("/v677.css?v=85.3")&&html.includes("/v677.js?v=67.7")&&sw.includes("/v677.css?v=85.3")&&sw.includes("/v677.js?v=67.7")],
   ["V67.7 home remains focused on the downloader",html.includes('id="home"')&&html.includes('id="downloadLinkMode"')&&!html.slice(html.indexOf('id="home"'),html.indexOf('id="toolsArea"')).includes('id="toolGrid"')],
   ["V67.7 feature identity map covers all tools",file("../public/v677.js").includes("const ICONS=")&&["speed","checker","queue","editor","musicFinder","history","imageTools","pdfTools","qrTools","securityTools","colorStudio","profile","owner","about","help"].every(id=>file("../public/v677.js").includes(id))],
   ["V67.7 expanded Color Studio palettes",file("../public/v677.js").includes("990M+ kombinasi palet")&&file("../public/v677.js").includes("Tyrian Purple")&&file("../public/v677.js").includes("holographic")],
@@ -173,7 +173,7 @@ const checks=[
   ["V67.9 remaining tools have branded backgrounds",v677css.includes('data-feature="gradientStudio"')&&v677css.includes('data-feature="fileHash"')&&v677css.includes("#editor .editor-pro-head")&&v677css.includes("#profile .v25-profile-cover")],
   ["V67.9 Color Studio favorites and clipboard work after redesign",v677js.includes("palette.onclick=async event")&&v677js.includes("favorites.onclick=async event")&&v677js.includes('localStorage.setItem("aryanzz.color-favorites.v674"')&&v677js.includes("copyExpandedColor")],
 
-  ["V74.0 service worker cache and creative assets",sw.includes("aryanzz-v85-2")&&sw.includes("/v680.css?v=71.0")&&sw.includes("/v680.js?v=71.0")&&html.includes("/v680.js?v=71.0")],
+  ["V74.0 service worker cache and creative assets",sw.includes("aryanzz-v85-3")&&sw.includes("/v680.css?v=71.0")&&sw.includes("/v680.js?v=71.0")&&html.includes("/v680.js?v=71.0")],
   ["V67.9 downloader preserves direct-source details",downloader.includes("function responseFilename")&&downloader.includes("const directMedia=!!info.extension&&!info.extractor")&&downloader.includes("/api/platform/status")],
   ["V73.7 unified title search renders social results in-page",file("../public/v674.js").includes('youtube:{name:"YouTube"')&&file("../public/v674.js").includes("/api/social/search")&&file("../public/v674.js").includes("Lihat & unduh")&&html.includes('data-platform="snackvideo"')],
   ["V67.9 direct media whitelist includes common formats",workerSource.includes('"mkv"')&&workerSource.includes('"avi"')&&workerSource.includes('"aiff"')&&workerSource.includes('"opus"')],
@@ -217,7 +217,12 @@ const checks=[
   ["V80.1 Image Studio supports all requested aspect ratios and custom pixel dimensions",html.includes('value="1:1"')&&html.includes('value="4:3"')&&html.includes('value="3:2"')&&html.includes('value="16:9"')&&html.includes('value="9:16"')&&html.includes('value="6:8"')&&html.includes('data-image-ratio="9:16"')&&html.includes('class="image-ratio-gallery"')&&imageStudioJs.includes('syncRatioGallery')&&imageStudioJs.includes('imageCustomWidth')&&imageStudioJs.includes('imageCustomHeight')],
   ["V80.1 Image Downloader has platform search and public-post extraction controls",html.includes('id="imageSearchPlatform"')&&html.includes('id="imageSearchQuery"')&&html.includes('id="imageExtractButton"')&&workerSource.includes('async function searchSocialImages')&&workerSource.includes('async function imagePostMetadata')],
   ["V85.2 resolves social media formats before image fallback so video links cannot be replaced by image galleries",downloader.indexOf('postJson("/api/info", {url:url.href})')<downloader.indexOf("/api/image/extract?url=")&&downloader.includes("const hasVideoFormat=")&&downloader.includes("!hasVideoFormat")&&downloader.includes("aryanzz-inline-image-grid")],
-  ["V81.4 main title search requests video and universal social-image results together",file("../public/v674.js").includes('fetch("/api/image/search"')&&file("../public/v674.js").includes('platform:"all"')&&file("../public/v674.js").includes("Gambar dari media sosial & web publik")],
+  ["V85.3 title search ranks media by relevance and scopes image results to the selected platform",v674.includes("function relevanceScore")&&v674.includes("rankRelevant")&&v674.includes('platform:selected')&&!v674.includes('platform:"all"')&&v674.includes("canonicalSearchQuery(q)")],
+  ["V85.3 public image search canonicalizes compound and Indonesian search terms and rejects unrelated titles",workerSource.includes("function canonicalPublicSearchQuery")&&workerSource.includes("function publicSearchRelevance")&&workerSource.includes("publicSearchRelevance(query,title)<0.40")&&workerSource.includes("canonicalPublicSearchQuery(searchTerm)")],
+  ["V85.3 Tools Center uses compact mobile cards and horizontal category filters",v677css.includes("#allTools .v674-tool-filters{position:sticky")&&v677css.includes("grid-template-columns:repeat(2,minmax(0,1fr))")&&v677css.includes("#allTools .tool{min-height:119px")],
+  ["V85.3 assets and PWA cache are versioned consistently",html.includes("V85.3 · GRATIS")&&html.includes("/v674.js?v=85.3")&&html.includes("/v677.css?v=85.3")&&sw.includes("aryanzz-v85-3")&&sw.includes("/v674.js?v=85.3")&&sw.includes("/v677.css?v=85.3")],
+
+  ["V85.3 main title search requests video and images from the selected platform only",file("../public/v674.js").includes('fetch("/api/image/search"')&&file("../public/v674.js").includes("platform:selected")&&file("../public/v674.js").includes("Gambar dari media sosial & web publik")],
   ["V81.4 universal image search accepts all public platform domains and detects each result source",workerSource.includes('if(platform==="all")return [...new Set(Object.values(map).flat())]')&&workerSource.includes('const resultPlatform=socialImagePlatformKey(source.href,allowWeb?"web":platform)')&&workerSource.includes('platformCounts')],
   ["V81.4 image action buttons remain full-width horizontal labels on narrow screens",downloaderCss.includes("grid-template-columns:minmax(0,1fr)!important")&&downloaderCss.includes("writing-mode:horizontal-tb!important")&&downloaderCss.includes(".aryanzz-inline-image-caption")],
   ["V81.4 image-only cards expand a single result and keep download/source actions horizontal",downloaderCss.includes("repeat(auto-fit,minmax(min(100%,160px),1fr))")&&downloaderCss.includes("writing-mode:horizontal-tb!important")&&imageStudioCss.includes("repeat(auto-fit,minmax(min(100%,160px),1fr))")],
@@ -226,14 +231,14 @@ const checks=[
   ["V81.4 universal image search can include public-web images and preserve their source-page referrer",workerSource.includes("allowWeb=false")&&workerSource.includes("allowWeb?safePublicMediaUrl")&&workerSource.includes('referer:sourcePage?sourcePage.href:current.origin+"/"')&&workerSource.includes('if(source)out.searchParams.set("source",source.href)')],
 
   ["V81.2 removes the slogan punctuation and redundant helper copy",html.includes("dari satu tautan</span>")&&!html.includes("dari satu tautan.</span>")&&!html.includes("v75-platform-note")&&!html.includes("Tempel tautan media atau cari judul untuk memulai.")],
-  ["V81.2 removes continuously animated blurred background and refreshes service worker cache",!v674Css.includes("body::before{content")&&!v674Css.includes("v674-aurora")&&sw.includes("aryanzz-v85-2")&&html.includes("V85.2 · GRATIS")],
+  ["V81.2 removes continuously animated blurred background and refreshes service worker cache",!v674Css.includes("body::before{content")&&!v674Css.includes("v674-aurora")&&sw.includes("aryanzz-v85-3")&&html.includes("V85.3 · GRATIS")],
   ["V80.1 image downloads use a validated same-origin image proxy and reject non-image content",workerSource.includes('url.pathname==="/api/image/file"')&&workerSource.includes('safePublicMediaUrl(raw)')&&workerSource.includes('image/jpeg')&&workerSource.includes('Sumber tidak mengirim file gambar yang didukung')],
   ["V80.1 Image Studio CSS and JavaScript are loaded and cached by the service worker",html.includes('/image-studio.css?v=81.4')&&html.includes('/image-studio.js?v=81.4')&&sw.includes('/image-studio.css?v=81.4')&&sw.includes('/image-studio.js?v=81.4')&&imageStudioCss.includes('.image-download-results')],
   ["V82.1 CapCut and SnackVideo marks use correct full-size SVG geometry",html.includes('aria-label="CapCut"')&&html.includes('M24.189 6.442')&&html.includes('aria-label="SnackVideo"')&&html.includes('viewBox="0 0 48 48"')&&html.includes('brand-refresh.css?v=82.1')],
   ["V82.2 homepage exposes indexable SEO metadata, canonical URL and structured data",html.includes('name="robots" content="index,follow')&&html.includes('rel="canonical"')&&html.includes('application/ld+json')&&html.includes('ARYANZZ Downloader — Unduh Video, Audio & Gambar Online')],
   ["V82.2 crawler discovery files expose an open robots policy, sitemap and branded favicon",robots.includes("User-agent: *")&&robots.includes("Allow: /")&&robots.includes("/sitemap.xml")&&sitemap.includes("<urlset")&&sitemap.includes("https://aryanzz-donwloader.radithnyahaniphanip.workers.dev/")&&favicon.includes("<svg")],
   ["V82.2 web app manifest uses the ARYANZZ Downloader brand",manifest.name==="ARYANZZ Downloader — Pengunduh Video, Audio & Gambar"&&manifest.short_name==="ARYANZZ"],
-  ["V84.6 compact Pustaka tabs and local favorites",html.includes("aryLibraryHistoryTab")&&html.includes("aryLibraryFavoriteTab")&&html.includes("function renderLibrary")&&html.includes("aryanzz-library-favorites-v1")&&sw.includes("aryanzz-v85-2")],
+  ["V84.6 compact Pustaka tabs and local favorites",html.includes("aryLibraryHistoryTab")&&html.includes("aryLibraryFavoriteTab")&&html.includes("function renderLibrary")&&html.includes("aryanzz-library-favorites-v1")&&sw.includes("aryanzz-v85-3")],
 
   ["V85.0 explicit profile motion toggle overrides OS reduced-motion only after user opt-in",profileJs.includes('saved==="on"||(!reduceMotion&&saved!=="off")')&&profileJs.includes('input.disabled=false;')&&profileJs.includes('const next=input.checked;')],
   ["V85.0 profile cover and stats visibly animate when motion is enabled",profileJs.includes('saved==="on"')&&file("../public/v25.css").includes('body[data-motion="on"] .v25-profile-cover:after')&&file("../public/v25.css").includes('body[data-motion="on"] .v25-avatar')],
@@ -266,8 +271,8 @@ try{
     assert.equal(url.hostname,"www.bing.com");
     assert.equal(url.pathname,"/images/search");
     const query=url.searchParams.get("q")||"";
-    assert.match(query,/meme kucing/i);
-    if(query==="meme kucing"){generalCalls++;return new Response("",{status:200,headers:{"content-type":"text/html"}});}
+    assert.match(query,/meme cat/i);
+    if(query==="meme cat"){generalCalls++;return new Response("",{status:200,headers:{"content-type":"text/html"}});}
     const entry=platforms.find(item=>query.includes(item[1]));
     assert.ok(entry,"Universal image search should query each supported platform in small batches: "+query);
     calls.push(entry[0]);
@@ -376,7 +381,7 @@ try{
     const url=new URL(typeof input==="string"?input:input.url);
     assert.equal(url.hostname,"www.bing.com");
     assert.equal(url.pathname,"/images/search");
-    assert.match(url.searchParams.get("q")||"",/meme kucing/i);
+    assert.match(url.searchParams.get("q")||"",/meme cat/i);
     assert.match(url.searchParams.get("q")||"",/site:pinterest\.com/);
     const html=Array.from({length:23},(_,i)=>{
       const meta={murl:"https://cdn.example/cat-meme-"+i+".jpg",purl:"https://www.pinterest.com/pin/"+(1000+i)+"/",desc:"Meme kucing lucu "+i,w:1200,h:1600};
@@ -657,7 +662,7 @@ try{
       const media=item.mode==="audio"
         ?[{label:"Audio MP3",type:"audio",mimeType:"audio/mpeg",url:"https://cdn.example/"+item.id+".mp3"}]
         :[{label:"Video MP4",type:"video",mimeType:"video/mp4",url:"https://cdn.example/"+item.id+"-search.mp4",height:720}];
-      return new Response(JSON.stringify({success:true,normalized:{kind:"media",title:"Verified "+item.id+" result",duration:28,media}}),{status:200,headers:{"content-type":"application/json"}});
+      return new Response(JSON.stringify({success:true,normalized:{kind:"media",title:"Tabola Bale Verified "+item.id+" result",duration:28,media}}),{status:200,headers:{"content-type":"application/json"}});
     }
     assert.equal(url.hostname,"cdn.example");
     const range=new Headers(init.headers).get("range");assert.equal(range,"bytes=0-65535");

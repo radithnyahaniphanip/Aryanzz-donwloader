@@ -419,7 +419,7 @@ async function searchSocial(request){
   if(!socialSearchDomains(platform).length||platform==="youtube")return json({error:"Platform pencarian belum didukung."},400);
   if(query.length<2||query.length>120)return json({error:"Masukkan judul antara 2 sampai 120 karakter."},400);
   if(socialRateLimited(request))return json({error:"Batas pencarian gratis tercapai. Tunggu satu menit lalu coba lagi."},429);
-  const searchUrl=socialSearchUrl(platform,query);
+  const searchUrl=socialSearchUrl(platform,canonicalPublicSearchQuery(query));
   try{
     const response=await fetch(searchUrl.href,{headers:{accept:"text/html","user-agent":"Mozilla/5.0 (compatible; ARYANZZ/78.0; +https://aryanzz-donwloader.radithnyahaniphanip.workers.dev)"},signal:AbortSignal.timeout(12000),cache:"no-store"});
     if(!response.ok)return json({error:"Pencarian publik sedang tidak tersedia (HTTP "+response.status+")."},502);
@@ -443,7 +443,7 @@ async function searchSocial(request){
       if(candidates.length>=8)break;
     }
     const checked=await Promise.all(candidates.map(item=>verifySocialSearchResult(item,request.url)));
-    const results=checked.filter(Boolean);
+    const results=checked.filter(Boolean).filter(item=>publicSearchRelevance(query,[item.title,item.snippet].filter(Boolean).join(" "))>=0.40);
     return json({ok:true,platform,query,results,verifiedCount:results.length,unavailableCount:candidates.length-results.length,verification:"provider-and-media-signature"});
   }catch(error){return json({error:"Pencarian publik gagal dijangkau. Coba lagi nanti. "+String(error?.message||error).slice(0,100)},502)}
 }
@@ -777,6 +777,17 @@ function socialImageSearchDomainsMatch(raw,platform){
   const domains=socialSearchDomains(platform);
   return domains.some(domain=>safe.hostname===domain||safe.hostname.endsWith("."+domain))?safe:null;
 }
+function canonicalPublicSearchQuery(value){
+  return String(value||"").toLowerCase().replace(/green\s*screen/gi,"green screen").replace(/greenscreen/gi,"green screen").replace(/layar\s*hijau/gi,"green screen").replace(/\bkucing\b/gi,"cat").replace(/\banjing\b/gi,"dog").replace(/\blucu\b/gi,"funny").replace(/\bgambar\b/gi,"image").replace(/\bfoto\b/gi,"photo").replace(/\bmusik\b/gi,"music").replace(/\blagu\b/gi,"song").replace(/\s+/g," ").trim();
+}
+function publicSearchRelevance(query,text){
+  const q=canonicalPublicSearchQuery(query),tokens=q.normalize("NFD").replace(/[\u0300-\u036f]/g,"").split(/[^a-z0-9]+/).filter(token=>token.length>1&&!["the","and","for","with","from"].includes(token));
+  if(!tokens.length)return 0;
+  const hay=" "+canonicalPublicSearchQuery(text).normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g," ")+" ";
+  let hits=0;for(const token of tokens)if(hay.includes(" "+token+" "))hits++;
+  const coverage=hits/tokens.length,phrase=hay.includes(" "+q+" ")?0.2:0;
+  return Math.min(1,coverage*.8+phrase);
+}
 function parseBingSocialImageResults(html,platform,requestUrl,query,allowWeb=false){
   const results=[],seen=new Set(),domains=socialSearchDomains(platform);
   const tags=String(html||"").matchAll(/<a\b[^>]*class=["'][^"']*\biusc\b[^"']*["'][^>]*>/gi);
@@ -793,6 +804,7 @@ function parseBingSocialImageResults(html,platform,requestUrl,query,allowWeb=fal
     if(/\.(?:svg|ico)(?:[?#]|$)/i.test(image.href)||/(?:avatar|profile|favicon|logo|emoji|sprite|icon)(?:[._/-]|$)/i.test(image.href))continue;
     if(seen.has(image.href))continue;seen.add(image.href);
     const title=decodeSearchHtml(meta.desc||meta.t||meta.title||query)||query;
+    if(publicSearchRelevance(query,title)<0.40)continue;
     const index=results.length,ext=imageExtensionFromUrl(image.href)||"jpg";
     const filename=imageSafeFilename(title,index,ext);
     results.push({
@@ -836,7 +848,7 @@ async function socialImageSearch(request){
     const searchPlatforms=["pinterest","tiktok","instagram","facebook","x","reddit","threads","snackvideo","capcut","youtube","vimeo","soundcloud"];
     const fetchBing=async(searchTerm,scope,allowWeb=false)=>{
       const url=new URL("https://www.bing.com/images/search");
-      url.searchParams.set("q",searchTerm);url.searchParams.set("form","HDRSC3");
+      url.searchParams.set("q",canonicalPublicSearchQuery(searchTerm));url.searchParams.set("form","HDRSC3");
       try{
         const response=await fetch(url.href,{headers:{accept:"text/html,application/xhtml+xml","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/130.0.0.0 Safari/537.36"},signal:AbortSignal.timeout(5000),cache:"no-store"});
         return response.ok?parseBingSocialImageResults(await response.text(),scope,request.url,query,allowWeb):[];
@@ -902,7 +914,7 @@ async function socialImageSearch(request){
         try{const response=await fetch(url.href,{headers:{accept:"text/html","user-agent":"Mozilla/5.0 (compatible; ARYANZZ/81.4)"},signal:AbortSignal.timeout(11000),cache:"no-store"});return response.ok?await response.text():""}catch{return ""}
       }));
       const seenPosts=new Set();
-      for(const page of pages)candidates.push(...parseSocialImageSearchLinks(page,platform,seenPosts,18-candidates.length));
+      for(const page of pages)candidates.push(...parseSocialImageSearchLinks(page,platform,seenPosts,18-candidates.length).filter(item=>publicSearchRelevance(query,item.title)>=0.40));
       const posts=await Promise.all(candidates.slice(0,12).map(item=>resolveSocialImagePost(item.url,request.url,{timeoutMs:8000,providerTimeoutMs:9000}).then(post=>post?{item,post}:null).catch(()=>null)));
       for(const entry of posts.filter(Boolean)){
         for(const image of entry.post.images||[]){
