@@ -103,7 +103,7 @@ body[data-custom-background="true"]{background-image:linear-gradient(180deg,rgba
 @media(max-width:780px){.v25-plan-grid{grid-template-columns:1fr}.v25-plan-card{padding:18px}.v25-plan-caption{min-height:0}.v25-plan-card ul{grid-template-columns:1fr 1fr;column-gap:13px}.v25-plan-basic,.v25-plan-pro,.v25-plan-elite{max-width:560px;width:100%;margin:auto}}
 @media(max-width:600px){.v25-profile-cover{height:184px}.v25-profile-identity{padding:0 16px;gap:12px}.v25-avatar{width:78px;height:78px;border-radius:23px}.v25-identity-copy h2{font-size:20px}.v25-profile-stats{margin:17px 16px;gap:7px}.v25-profile-stats>div{padding:10px}.v25-profile-stats b{font-size:17px}.v25-profile-layout{grid-template-columns:1fr;padding:0 16px 13px}.v25-backup-card{margin:0 16px 17px}.v25-subscription{padding:22px 16px}.v25-plan-compare{overflow:hidden}.v25-compare-row{grid-template-columns:minmax(0,1.4fr) repeat(3,minmax(38px,.55fr));font-size:8px}.v25-compare-row b{font-size:10px}}
 @media(max-width:370px){.v25-profile-cover{height:164px}.v25-profile-identity{align-items:center;margin-top:-30px}.v25-avatar{width:65px;height:65px;border-radius:20px}.v25-identity-copy h2{font-size:17px}.v25-profile-stats span{font-size:8px}.v25-plan-card ul{grid-template-columns:1fr}.v25-form-foot{align-items:stretch;flex-direction:column}.v25-form-foot .primary{width:100%}.v25-compare-row{grid-template-columns:minmax(0,1.3fr) repeat(3,minmax(33px,.55fr));gap:3px}}
-@media(prefers-reduced-motion:reduce){.v25-profile-cover:before,.v25-profile-cover:after,.v25-cover-glow{animation:none!important}.v25-reveal{opacity:1;transform:none;transition:none}}
+
 
 .v25-device-card{margin-top:18px}.v25-device-current{display:grid;gap:6px;padding:14px;border:1px solid #2b405e;border-radius:14px;background:rgba(4,12,25,.38);margin:14px 0}.v25-device-current small{color:#80dce7;font-size:.68rem;font-weight:800;letter-spacing:.14em}.v25-device-current b{overflow-wrap:anywhere}.v25-device-list{display:grid;gap:9px;margin:12px 0 16px}.v25-device-row{display:grid;gap:4px;padding:12px;border:1px solid rgba(92,125,165,.25);border-radius:12px;background:rgba(8,18,34,.45)}.v25-device-row small{color:#8fa3be}.v25-device-card button,.v25-device-card a{margin:5px 6px 5px 0}
 
@@ -150,3 +150,15 @@ body[data-motion="off"] *,body[data-motion="off"] *:before,body[data-motion="off
 @keyframes v75Rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 @media(max-width:680px){.v25-cover-actions{justify-content:flex-start;padding:9px 14px 0;gap:6px}.v25-profile-identity{margin-top:9px;padding:0 15px}.v75-motion-card{margin:0 15px 14px}}
 @media(prefers-reduced-motion:reduce){body[data-motion="on"] .hero-v6,body[data-motion="on"] .v6-download,body[data-motion="on"] .home-shortcuts,body[data-motion="on"] .home-bottom,body[data-motion="on"] .all-tools-grid .tool,body[data-motion="on"] .shortcut,body[data-motion="on"] .v25-profile-card,body[data-motion="on"] .owner-profile-card,body[data-motion="on"] .audio-studio-panel,body[data-motion="on"] .youtube-result{animation:none!important}}
+
+/* V85.0 — explicit profile motion preference and richer profile motion */
+body[data-motion="on"] .v25-profile-cover:before{animation:v25Orbit 18s linear infinite!important}
+body[data-motion="on"] .v25-profile-cover:after{animation:v25Orbit 23s linear infinite reverse!important}
+body[data-motion="on"] .v25-cover-glow{animation:v25Shine 8s ease-in-out infinite!important}
+body[data-motion="on"] .v25-profile-card{animation:v75Rise .55s both}
+body[data-motion="on"] .v25-profile-stats>div{animation:v75Rise .55s both}
+body[data-motion="on"] .v25-profile-stats>div:nth-child(2){animation-delay:.08s}
+body[data-motion="on"] .v25-profile-stats>div:nth-child(3){animation-delay:.16s}
+body[data-motion="on"] .v25-profile-stats>div:nth-child(4){animation-delay:.24s}
+body[data-motion="on"] .v25-profile-cover{isolation:isolate}
+body[data-motion="off"] .v25-profile-cover:before,body[data-motion="off"] .v25-profile-cover:after,body[data-motion="off"] .v25-cover-glow{animation:none!important}
