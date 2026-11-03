@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "start": "node server/index.js",
-    "test": "node tests/smoke.mjs"
+    "test": "node tests/smoke.mjs",
+    "test:release": "node tests/release-smoke.mjs"
   },
   "dependencies": {
     "cors": "^2.8.5",
