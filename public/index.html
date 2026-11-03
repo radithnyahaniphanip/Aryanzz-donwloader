@@ -178,9 +178,9 @@ body:before{content:"";position:fixed;z-index:-1;inset:-30%;pointer-events:none;
 .v736-kakao{background:#fee500!important;color:#191919!important;font-size:25px}
 </style><style id="v8814-unified-app-shell">
 :root{--ary-app-bg:#080e1c;--ary-app-surface:#101b2d;--ary-app-border:#293e5c}
-html{scroll-padding-top:92px}
+html{scroll-padding-top:24px}
 body{background-color:var(--ary-app-bg)}
-.v674-top{position:sticky;top:0;z-index:80;background:linear-gradient(180deg,#080e1cf5,#080e1cdd);backdrop-filter:blur(18px);padding:8px 2px 12px;margin-bottom:10px}
+.v674-top{position:relative;top:auto;z-index:20;width:100%;background:linear-gradient(180deg,#080e1cf5,#080e1cdd);padding:8px 2px 12px;margin-bottom:10px}
 .v8814-view-header{display:flex;align-items:center;gap:11px;margin:8px 0 16px;padding:11px 13px;border:1px solid var(--ary-app-border);border-radius:15px;background:linear-gradient(110deg,#14243b,#0d1728);box-shadow:0 8px 24px #0002}
 .v8814-view-header[hidden]{display:none!important}
 .v8814-view-mark{width:35px;height:35px;flex:0 0 35px;display:grid;place-items:center;border-radius:11px;background:linear-gradient(135deg,#a855f7,#3188ff);color:white;font-weight:1000}
@@ -202,17 +202,15 @@ body{background-color:var(--ary-app-bg)}
 .nav button{min-width:0;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:7px 3px;border:1px solid transparent;border-radius:13px;font-weight:700}
 .nav button.active{background:linear-gradient(145deg,#28205b,#152b4a);border-color:#7957e9;color:#fff;box-shadow:0 0 18px #754cff30}
 .nav button .nav-icon{font-size:18px;line-height:1.1}
-.wrap{padding-bottom:calc(104px + env(safe-area-inset-bottom))}
+.wrap{width:100%;max-width:1080px;margin-inline:auto;padding-bottom:calc(104px + env(safe-area-inset-bottom))}
 @keyframes v8814ViewIn{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
 @media(max-width:420px){.v8814-view-state{font-size:7px;padding:5px 6px}.nav button{font-size:10px}.nav button .nav-icon{font-size:17px}}
 @media(prefers-reduced-motion:reduce){#toolsArea>.panel.active{animation:none}html{scroll-behavior:auto}}
 </style></head><body>
 <div class="wrap">
-<header class="top v674-top"><a class="brand v674-brand" href="/" aria-label="ARYANZZ Home"><span class="logo v674-logo">A<span>✦</span></span><span>ARYANZZ<small>RUANG KREATIF</small></span></a><div class="v674-top-actions"><span class="pill v674-version"><i></i> V88.14 · GRATIS</span><span class="v674-security-indicator" id="securityStatusIndicator" role="status" aria-live="polite" title="Memeriksa perlindungan website"><i></i><span>Memeriksa keamanan</span></span><button class="v674-theme-toggle" id="themeToggle" type="button" aria-label="Ganti tema">☼</button></div></header>
+<header class="top v674-top"><a class="brand v674-brand" href="/" aria-label="ARYANZZ Home"><span class="logo v674-logo">A<span>✦</span></span><span>ARYANZZ<small>RUANG KREATIF</small></span></a><div class="v674-top-actions"><span class="pill v674-version"><i></i> V88.14.1 · GRATIS</span><span class="v674-security-indicator" id="securityStatusIndicator" role="status" aria-live="polite" title="Memeriksa perlindungan website"><i></i><span>Memeriksa keamanan</span></span><button class="v674-theme-toggle" id="themeToggle" type="button" aria-label="Ganti tema">☼</button></div></header>
 <div class="v8814-view-header" id="appViewHeader" hidden><span class="v8814-view-mark">A+</span><div><small>ARYANZZ · RUANG KREATIF</small><b id="appViewTitle">Pusat Alat</b></div><span class="v8814-view-state">TERHUBUNG</span></div>
 <section id="home" class="v674-home">
-<div class="v674-hero"><h1>Semua berawal<br><span>dari satu tautan</span></h1></div>
-
 <div class="card download v6-download v674-download">
 <div class="v674-download-heading"><div><span class="section-kicker">PENGUNDUH ARYANZZ</span><h2>Mau unduh apa?</h2></div><span class="v674-download-mark">↗</span></div>
 <div class="v674-mode-switch" role="tablist"><button id="downloadLinkMode" class="active" type="button" role="tab" aria-selected="true">↗ Tempel tautan</button><button id="downloadTitleMode" type="button" role="tab" aria-selected="false">⌕ Cari judul</button></div>
@@ -960,5 +958,5 @@ $('checkSite').onclick=()=>{const o=$('siteResult');o.hidden=false;try{const u=n
 // V15.1 Speed Test is initialized from public/v15.js.
 let stream=null;$('camStart').onclick=async()=>{try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false});$('camera').srcObject=stream;$('camStart').hidden=true;$('camStop').hidden=false;$('heartResult').textContent='Kamera aktif. Demo ini belum mengestimasi BPM.';}catch{$('heartResult').textContent='Kamera perlu HTTPS dan izin browser.';}};function stop(){if(stream)stream.getTracks().forEach(t=>t.stop());stream=null;$('camera').srcObject=null;$('camStart').hidden=false;$('camStop').hidden=true;}$('camStop').onclick=stop;window.addEventListener('pagehide',stop);
 let deferred=null;window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferred=e;});$('installBtn').onclick=async()=>{if(deferred){deferred.prompt();await deferred.userChoice;deferred=null;}else $('installMsg').textContent='Gunakan menu Chrome ⋮ → Tambahkan ke layar utama.';};
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('/sw.js?v=88.14').catch(()=>{}));
-</script><script src="/audio-studio.js?v=80.0" defer></script><script src="/image-studio.js?v=81.4" defer></script><script src="/advanced.js?v=59.5" defer></script><script src="/v15.js?v=59.5" defer></script><script src="/v25.js?v=85.1" defer></script><script src="/owner.js?v=59.5" defer></script><script src="/downloader.js?v=88.8" defer></script><script src="/v59.js?v=59.5" defer></script><script src="/editor.js?v=65.0" defer></script><script src="/music-recognition.js?v=71.0" defer></script><script src="/v674.js?v=88.14" defer></script><script src="/v677.js?v=67.7" defer></script><script src="/v680.js?v=71.0" defer></script></body></html>
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('/sw.js?v=88.14.1').catch(()=>{}));
+</script><script src="/audio-studio.js?v=80.0" defer></script><script src="/image-studio.js?v=81.4" defer></script><script src="/advanced.js?v=59.5" defer></script><script src="/v15.js?v=59.5" defer></script><script src="/v25.js?v=85.1" defer></script><script src="/owner.js?v=59.5" defer></script><script src="/downloader.js?v=88.8" defer></script><script src="/v59.js?v=59.5" defer></script><script src="/editor.js?v=65.0" defer></script><script src="/music-recognition.js?v=71.0" defer></script><script src="/v674.js?v=88.14.1" defer></script><script src="/v677.js?v=67.7" defer></script><script src="/v680.js?v=71.0" defer></script></body></html>
