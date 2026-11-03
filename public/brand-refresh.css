@@ -1,0 +1,36 @@
+/* ARYANZZ V82.0 — logo correction and reference-matched home polish */
+:root{--bg:#070b16;--panel:#101b2e;--line:#293f60;--txt:#f4f7ff;--muted:#a4b4cc;--violet:#9064ff;--blue:#4b83ff;--cyan:#32d5e8}
+html{background:#070b16}
+body{background:radial-gradient(760px 420px at 78% -10%,#202b66 0%,transparent 64%),radial-gradient(520px 360px at 5% 34%,#102b48 0%,transparent 72%),#070b16;color:var(--txt)}
+.v674-hero h1{font-weight:950;letter-spacing:-1.9px;line-height:1.06;color:#f7f9ff}
+.v674-hero h1 span{background:linear-gradient(100deg,#a77aff 0%,#648dff 48%,#35d9df 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.v674-download{background:linear-gradient(150deg,#111e32 0%,#0c1728 100%);border:1px solid #354b78;box-shadow:0 22px 60px #0005,inset 0 1px #ffffff0b;border-radius:24px}
+.v674-download-heading h2{color:#f4f7ff}
+.v674-download-mark{background:linear-gradient(140deg,#9160ff,#328dff);box-shadow:0 8px 24px #635cff55}
+.v674-mode-switch{background:#070e1b;border:1px solid #1f304b;border-radius:17px;padding:5px}
+.v674-mode-switch button.active{background:linear-gradient(110deg,#8b4df4,#268ff1);box-shadow:0 7px 18px #4c70ff35}
+.v80-platform-picker-head{color:#c2d1e7;letter-spacing:1.6px}
+.v736-platforms{grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:8px!important}
+.v736-platform{min-height:82px!important;border-radius:16px!important;background:linear-gradient(155deg,#14243a,#0b1526)!important;border:1px solid #2d4566!important;color:#eef4ff!important;box-shadow:inset 0 1px #ffffff0a,0 7px 16px #0002!important}
+.v736-platform.active{border-color:#8297ff!important;background:linear-gradient(150deg,#283e68,#152946)!important;box-shadow:0 0 0 1px #8297ff55,0 8px 20px #416bcb33!important}
+.v736-logo{width:34px!important;height:34px!important;display:grid!important;place-items:center!important;flex:0 0 34px!important;overflow:visible!important}
+.v736-logo svg{width:100%!important;height:100%!important;display:block!important;max-width:none!important;overflow:visible!important}
+.v736-capcut{width:36px!important;height:36px!important;border-radius:10px!important;background:#fff!important;color:#050505!important;padding:4px!important;filter:none!important}
+.v736-capcut svg{width:100%!important;height:100%!important}
+.v736-pinterest{width:36px!important;height:36px!important;border-radius:50%!important;background:#e60023!important;color:#fff!important;padding:0!important;overflow:hidden!important}
+.v736-pinterest svg{width:100%!important;height:100%!important}
+.v736-youtube{width:36px!important;height:36px!important;color:#fff!important}
+.v736-youtube svg rect{fill:#ff0033!important}
+.v736-tiktok{width:36px!important;height:36px!important;border-radius:10px!important;background:#05070b!important;color:#fff!important;filter:none!important;padding:4px!important}
+.v736-instagram{width:36px!important;height:36px!important;border-radius:10px!important;background:linear-gradient(35deg,#ffd45b,#ff4d65 48%,#9b45d5)!important;color:#fff!important;padding:5px!important}
+.v736-snack{width:36px!important;height:36px!important;border-radius:10px!important;background:linear-gradient(145deg,#ffb22f,#ff593f)!important;color:#fff!important}
+.v736-facebook{width:36px!important;height:36px!important;border-radius:10px!important;background:#1877f2!important;color:#fff!important;padding:3px!important}
+.v736-x{width:36px!important;height:36px!important;border-radius:10px!important;background:#05070b!important;color:#fff!important;padding:4px!important}
+.v736-reddit{width:36px!important;height:36px!important;border-radius:10px!important;background:#ff4500!important;color:#fff!important;padding:4px!important}
+.v736-vimeo{width:36px!important;height:36px!important;border-radius:10px!important;background:#19b9e8!important;color:#fff!important;padding:4px!important}
+.v736-threads{width:36px!important;height:36px!important;border-radius:10px!important;background:#05070b!important;color:#fff!important;padding:4px!important}
+.v736-soundcloud{width:36px!important;height:36px!important;border-radius:10px!important;background:#ff8500!important;color:#fff!important;padding:4px!important}
+.nav{background:#080f1fee!important;border-top:1px solid #283b5b!important;backdrop-filter:blur(18px)}
+.nav button.active{background:#1a2d4d!important;box-shadow:inset 0 0 0 1px #765dff!important;color:#fff!important}
+@media(max-width:480px){.v736-platforms{gap:7px!important}.v736-platform{min-height:76px!important}.v736-logo,.v736-youtube,.v736-tiktok,.v736-instagram,.v736-snack,.v736-capcut,.v736-pinterest,.v736-facebook,.v736-x,.v736-reddit,.v736-vimeo,.v736-threads,.v736-soundcloud{width:34px!important;height:34px!important;flex-basis:34px!important}}
+@media(prefers-reduced-motion:reduce){.v736-platform,.v674-download,.v674-hero h1{animation:none!important;transition:none!important}}
