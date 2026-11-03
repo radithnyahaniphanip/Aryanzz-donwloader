@@ -390,7 +390,7 @@ try{
     requestedQuery=url.searchParams.get("q")||"";
     assert.match(requestedQuery,/site:tiktok\.com/i);
     assert.match(requestedQuery,/green screen/i);
-    const meta={murl:"https://cdn.example/tiktok-green-screen.jpg",purl:"https://www.tiktok.com/video/123456789",desc:"Green Screen Meme Template",w:1080,h:1920};
+    const meta={murl:"https://cdn.example/tiktok-green-screen.jpg",purl:"https://www.tiktok.com/@demo/photo/123456789",desc:"Green Screen Meme Template",w:1080,h:1920};
     return new Response('<a class="iusc" m="'+JSON.stringify(meta).replace(/"/g,"&quot;")+'"></a>',{status:200,headers:{"content-type":"text/html"}});
   };
   const response=await worker.fetch(new Request("https://aryanzz.example/api/image/search",{
@@ -404,7 +404,7 @@ try{
   assert.equal(data.results[0].platform,"tiktok");
   assert.match(data.results[0].sourceUrl,/tiktok\.com/);
   assert.equal(data.results[0].title,"Green Screen Meme Template");
-  console.log("✔ V85.3.2 selected TikTok image search returns matching TikTok results instead of reading the Pinterest bucket");
+  console.log("✔ V85.5.0 TikTok image-only search accepts photo posts and rejects video thumbnails");
 }finally{globalThis.fetch=originalTikTokImageSearchFetch;}
 
 const originalBingImageFetch=globalThis.fetch;
