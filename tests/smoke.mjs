@@ -34,6 +34,9 @@ const favicon=file("../public/favicon.svg");
 const deployWorkflow=file("../.github/workflows/deploy-cloudflare.yml");
 
 const checks=[
+  ["V88.3 Green Screen cat meme search includes English TikTok discovery variants",workerSource.includes('variants.push("green screen cat meme","green screen cat meme template","chroma key cat meme")')&&workerSource.includes('slice(0,platform==="all"?3:7)')],
+  ["V88.3 Bing parser accepts social video permalinks outside legacy result list markup",workerSource.includes("Fallback parser for Bing layouts")&&workerSource.includes('matchAll(/<a\\\\b([^>]*)>([\\\\s\\\\S]*?)<\\\\/a>/gi)')&&workerSource.includes('searchProvider:"Bing Web"')],
+
   ["V88.3 preview uses intrinsic aspect ratio and suppresses native browser download menu",downloader.includes('preview.controlsList="nodownload noplaybackrate"')&&downloader.includes('preview.videoWidth')&&downloader.includes('preview.style.aspectRatio=width+" / "+height')],
   ["V88.3 direct-file preview also detects native dimensions and hides browser download menu",html.includes("preview.videoWidth")&&html.includes("preview.controlsList='nodownload noplaybackrate'")&&html.includes("Pratinjau mengikuti rasio asli media.")],
   ["V88.3 media metadata no longer displays community-provider wording",downloader.includes('info.extractor || platformName(url)')&&!downloader.includes('info.extractor || info.source || platformName(url)')],
