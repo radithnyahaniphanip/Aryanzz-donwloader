@@ -91,7 +91,7 @@ if(help)help.textContent="Mencari video/audio di platform terpilih dan gambar da
 try{
 const endpoint=selected==="youtube"?"/api/search":"/api/social/search";
 const options={method:"POST",headers:{"content-type":"application/json"},cache:"no-store"};
-const signal=AbortSignal.any([searchController.signal,AbortSignal.timeout(30000)]);
+const signal=AbortSignal.any([searchController.signal,AbortSignal.timeout(45000)]);
 const [mediaOutcome,imageOutcome]=await Promise.allSettled([
 fetch(endpoint,{...options,body:JSON.stringify({query:q,platform:selected}),signal}),
 fetch("/api/image/search",{...options,body:JSON.stringify({query:q,platform:"all"}),signal})

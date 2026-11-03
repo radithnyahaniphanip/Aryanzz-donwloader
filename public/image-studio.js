@@ -181,7 +181,7 @@
     setDownloadStatus(platform==="all"?"Mencari gambar publik di semua media sosial…":"Mencari gambar publik di "+platform+"…");
     $("imageDownloadResults").replaceChildren();
     try {
-      const response=await fetch("/api/image/search",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({platform,query})});
+      const response=await fetch("/api/image/search",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({platform,query}),signal:AbortSignal.timeout(45000)});
       const data=await response.json(); if(!response.ok||!data.ok)throw new Error(data.error||"Pencarian gagal.");
       const images=(data.results||[]).flatMap(item=>item.images||[]);
       renderImages(images);
