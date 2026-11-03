@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+<defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#090e1b"/><stop offset="1" stop-color="#172e54"/></linearGradient><linearGradient id="a" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#a77aff"/><stop offset=".55" stop-color="#648dff"/><stop offset="1" stop-color="#35d9df"/></linearGradient></defs>
+<rect width="1200" height="630" fill="url(#bg)"/>
+<circle cx="1030" cy="90" r="260" fill="#5c58d9" opacity=".12"/>
+<circle cx="120" cy="600" r="280" fill="#23c8db" opacity=".08"/>
+<rect x="95" y="120" width="112" height="112" rx="30" fill="url(#a)"/>
+<path d="M120 208 148 143h14l28 65h-17l-6-16h-25l-6 16zm28-30h14l-7-18z" fill="#fff"/>
+<text x="95" y="330" fill="#fff" font-family="Arial,sans-serif" font-size="76" font-weight="800">ARYANZZ Downloader</text>
+<text x="98" y="405" fill="url(#a)" font-family="Arial,sans-serif" font-size="42" font-weight="700">Unduh Video, Audio &amp; Gambar</text>
+<text x="100" y="480" fill="#b5c5dc" font-family="Arial,sans-serif" font-size="28">Satu halaman untuk kebutuhan media digital</text>
+<text x="100" y="555" fill="#7f94b4" font-family="Arial,sans-serif" font-size="22">Gratis • Praktis • Responsif</text>
+</svg>
