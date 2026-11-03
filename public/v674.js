@@ -34,7 +34,7 @@ const platforms={
 let selected="youtube",searchController=null;
 const setMode=v=>{const link=v==="link";if(x)x.hidden=!link;if(y)y.hidden=link;if(a){a.classList.toggle("active",link);a.setAttribute("aria-selected",String(link))}if(b){b.classList.toggle("active",!link);b.setAttribute("aria-selected",String(!link))}};
 a?.addEventListener("click",()=>setMode("link"));b?.addEventListener("click",()=>setMode("title"));
-const setPlatform=id=>{selected=platforms[id]?id:"youtube";picker?.querySelectorAll("[data-platform]").forEach(btn=>{const active=btn.dataset.platform===selected;btn.classList.toggle("active",active);btn.setAttribute("aria-pressed",String(active))});const name=platforms[selected].name;const label=y?.querySelector("label");if(label)label.textContent="CARI VIDEO / AUDIO / GAMBAR · "+name.toUpperCase();if(searchInput)searchInput.placeholder=selected==="youtube"?"Contoh: DJ tabola bale atau meme kucing":"Cari video, meme, musik, atau foto…";if(searchType)searchType.value=selected==="pinterest"?"image":"video";if(help)help.textContent=selected==="all"?"Pencarian lintas platform aktif. Hasil akan diberi label sesuai sumber aslinya.":"Hasil hanya dari "+name+". Pilih Video, Audio, atau Gambar.";setMode("title")};
+const setPlatform=id=>{const next=platforms[id]?id:"youtube";if(next!==selected){searchController?.abort();const urlInput=$("url"),downloadResult=$("downloadResult");if(urlInput)urlInput.value="";if(downloadResult){downloadResult.replaceChildren();downloadResult.hidden=true;}if(results){results.replaceChildren();results.hidden=true;}if(help)help.textContent="Platform berubah ke "+platforms[next].name+". Tempel tautan atau mulai pencarian baru.";if(searchInput)searchInput.value="";}selected=next;picker?.querySelectorAll("[data-platform]").forEach(btn=>{const active=btn.dataset.platform===selected;btn.classList.toggle("active",active);btn.setAttribute("aria-pressed",String(active))});const name=platforms[selected].name;const label=y?.querySelector("label");if(label)label.textContent="CARI VIDEO / AUDIO / GAMBAR · "+name.toUpperCase();if(searchInput)searchInput.placeholder=selected==="youtube"?"Contoh: DJ tabola bale atau meme kucing":"Cari video, meme, musik, atau foto…";if(searchType)searchType.value=selected==="pinterest"?"image":"video";if(help)help.textContent=selected==="all"?"Pencarian lintas platform aktif. Hasil akan diberi label sesuai sumber aslinya.":"Hasil hanya dari "+name+". Pilih Video, Audio, atau Gambar.";setMode("title")};
 picker?.addEventListener("click",e=>{const btn=e.target.closest("[data-platform]");if(btn)setPlatform(btn.dataset.platform)});
 const duration=v=>{if(!Number.isFinite(Number(v)))return "";const n=Math.max(0,Math.floor(Number(v)));return Math.floor(n/60)+":"+String(n%60).padStart(2,"0")};
 function showFallback(target,q){
@@ -51,6 +51,7 @@ function render(items,target,q,unavailableCount=0,imageItems=[]){
 results.replaceChildren();
 const mediaCount=Array.isArray(items)?items.length:0,images=Array.isArray(imageItems)?imageItems:[];
 if(!mediaCount&&!images.length)showFallback(target,q);
+const mediaGroups=new Map();
 (items||[]).forEach(item=>{
 const card=document.createElement("article");card.className="v674-search-result v737-media-result";
 if(item.thumbnail){try{const u=new URL(item.thumbnail);if(u.protocol==="https:"){const img=document.createElement("img");img.src=u.href;img.alt="Pratinjau "+(item.title||"media");img.loading="lazy";card.append(img)}}catch{}}
@@ -60,8 +61,15 @@ meta.textContent=[item.channel,item.platform||target.name,item.mediaMode==="audi
 snippet.textContent=item.snippet||"Pilih hasil ini untuk memeriksa pratinjau dan format unduhan.";
 pick.type="button";pick.className="primary";pick.textContent=item.searchOnly?"Buka di "+(platforms[item.platform]?.name||target.name):"Lihat & unduh";
 pick.addEventListener("click",()=>{if(item.searchOnly){window.open(item.url,"_blank","noopener,noreferrer");return}const input=$("url");if(!input)return;input.value=item.url;setMode("link");$("analyze")?.click();$("downloadResult")?.scrollIntoView({behavior:"smooth",block:"nearest"})});
-info.append(title,meta,snippet,pick);card.append(info);results.append(card);
+info.append(title,meta,snippet,pick);card.append(info);
+if(selected==="all"){
+const key=String(item.platform||"other").toLowerCase();
+let group=mediaGroups.get(key);
+if(!group){group=document.createElement("section");group.className="v674-platform-result-group";const groupTitle=document.createElement("h3");groupTitle.textContent=platforms[key]?.name||key.toUpperCase();group.append(groupTitle);const list=document.createElement("div");list.className="v674-platform-result-list";group.append(list);mediaGroups.set(key,{group,list});}
+group.list.append(card);
+}else results.append(card);
 });
+if(selected==="all")mediaGroups.forEach(value=>results.append(value.group));
 if(images.length){
 const section=document.createElement("section");section.className="v674-image-results";
 const head=document.createElement("div");head.className="v674-image-results-head";
