@@ -1166,7 +1166,7 @@
       const header = make("div", "youtube-heading");
       const details = make("div", "youtube-details");
       details.append(make("b", "youtube-title", info.title || info.filename || "Media siap diunduh"));
-      details.append(make("small", "muted", [info.extractor || info.source || platformName(url), duration(info.duration), info.size ? (info.size / 1048576).toFixed(1) + " MB" : ""].filter(Boolean).join(" · ")));
+      details.append(make("small", "muted", [info.extractor || platformName(url), duration(info.duration), info.size ? (info.size / 1048576).toFixed(1) + " MB" : ""].filter(Boolean).join(" · ")));
       if(isYouTube&&info.thumbnail){
         try{
           const imageUrl=new URL(info.thumbnail);
@@ -1203,18 +1203,32 @@
           const preview=make("video","v737-media-preview");
           const previewSource=safeUrl(previewFormat.previewUrl);
           if(!previewSource||previewSource.origin!==location.origin||previewSource.pathname!=="/api/social-file")throw new Error("Pratinjau media tidak melewati proxy ARYANZZ.");
-          preview.src=previewSource.href;preview.controls=true;preview.playsInline=true;preview.preload="metadata";
+          preview.src=previewSource.href;preview.controls=true;preview.controlsList="nodownload noplaybackrate";preview.disablePictureInPicture=true;preview.disableRemotePlayback=true;preview.playsInline=true;preview.preload="metadata";preview.style.aspectRatio="auto";preview.style.height="auto";preview.style.objectFit="contain";
           if(info.thumbnail)preview.poster=info.thumbnail;
           preview.setAttribute("aria-label","Pratinjau video "+(info.title||"media"));
           const previewStatus=make("small","muted","");
-          preview.addEventListener("loadedmetadata",()=>{
-            const actual=Number(preview.duration),expected=Number(info.duration)||0;
-            if(expected>0&&Number.isFinite(actual)&&Math.abs(actual-expected)>Math.max(3,expected*0.12)){
-              previewStatus.textContent="Peringatan: durasi stream "+actual.toFixed(1)+" detik berbeda dari sumber "+expected.toFixed(1)+" detik. Jangan simpan sebelum diperiksa.";
-              previewStatus.className="warning";
-            }else previewStatus.textContent="Pratinjau siap · "+(Number.isFinite(actual)?actual.toFixed(1)+" detik":"durasi belum tersedia");
-          });
-          preview.addEventListener("error",()=>{previewStatus.textContent="Pratinjau gagal diputar. Periksa kembali sumber atau format codec video.";previewStatus.className="warning"});
+          const applyIntrinsicRatio=()=>{
+             const width=Number(preview.videoWidth)||0,height=Number(preview.videoHeight)||0;
+             if(width>0&&height>0){
+               const ratio=width/height;
+               preview.dataset.aspectRatio=width+":"+height;
+               preview.dataset.orientation=ratio<0.92?"portrait":ratio>1.08?"landscape":"square";
+               preview.style.aspectRatio=width+" / "+height;
+               preview.style.width=ratio<1?Math.min(box.clientWidth||720,window.innerHeight*.70*ratio)+"px":"100%";
+               preview.style.maxWidth="100%";preview.style.maxHeight="70svh";preview.style.marginInline="auto";
+               previewStatus.textContent="Rasio asli "+width+" × "+height+" px · "+(ratio<0.92?"Vertikal":ratio>1.08?"Horizontal":"Persegi")+(Number.isFinite(Number(preview.duration))?" · "+Number(preview.duration).toFixed(1)+" detik":"");
+             }else previewStatus.textContent="Pratinjau siap · ukuran video belum terbaca";
+           };
+           preview.addEventListener("loadedmetadata",()=>{
+             applyIntrinsicRatio();
+             const actual=Number(preview.duration),expected=Number(info.duration)||0;
+             if(expected>0&&Number.isFinite(actual)&&Math.abs(actual-expected)>Math.max(3,expected*0.12)){
+               previewStatus.textContent="Peringatan: durasi stream "+actual.toFixed(1)+" detik berbeda dari sumber "+expected.toFixed(1)+" detik. Jangan simpan sebelum diperiksa.";
+               previewStatus.className="warning";
+             }else previewStatus.className="muted";
+           });
+           window.addEventListener("resize",applyIntrinsicRatio,{passive:true});
+preview.addEventListener("error",()=>{previewStatus.textContent="Pratinjau gagal diputar. Periksa kembali sumber atau format codec video.";previewStatus.className="warning"});
           box.append(preview,previewStatus);
         }else{
           const audioPreview=(info.formats||[]).find(item=>item.mode==="audio"&&item.url);
