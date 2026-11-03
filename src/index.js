@@ -848,7 +848,7 @@ function parseSocialImageSearchLinks(html,platform,seen,limit=18){
     if(link.protocol!=="https:"||!domains.some(domain=>link.hostname===domain||link.hostname.endsWith("."+domain)))continue;
     const resultPlatform=freePlatformKey(link.href)||platform;
     if(resultPlatform==="pinterest"&&!/\/pin\//i.test(link.pathname))continue;
-    if(resultPlatform==="tiktok"&&!/(?:\/photo\/|\/video\/)/i.test(link.pathname))continue;
+    if(resultPlatform==="tiktok"&&!/\/photo\//i.test(link.pathname))continue;
     if(resultPlatform==="instagram"&&!/(?:\/p\/|\/reel\/|\/tv\/|\/share\/)/i.test(link.pathname))continue;
     const href=link.href.split("#")[0];if(seen.has(href))continue;seen.add(href);
     const title=decodeSearchHtml(match[2]);if(!title)continue;
