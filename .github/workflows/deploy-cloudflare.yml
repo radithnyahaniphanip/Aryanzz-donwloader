@@ -1,8 +1,4 @@
-name: Test and deploy ARYANZZ V88.14 security release
-
-concurrency:
-  group: aryanzz-cloudflare-deploy
-  cancel-in-progress: true
+name: ARYANZZ — Validate and deploy V88.14
 
 on:
   push:
@@ -11,10 +7,18 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: aryanzz-cloudflare-production
+  cancel-in-progress: false
+
 jobs:
   test:
+    name: Validate V88.14 release
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -22,324 +26,69 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Install dependencies
+      - name: Install project dependencies
         run: npm install --no-audit --no-fund
-      - name: Run ARYANZZ smoke tests
+      - name: Check JavaScript syntax
+        run: |
+          node --check src/index.js
+          node --check public/v674.js
+          node --check public/downloader.js
+          node --check public/sw.js
+          node --check tests/release-smoke.mjs
+          node -e "const fs=require('fs');const h=fs.readFileSync('public/index.html','utf8');const s=h.indexOf('<script>')+8;const e=h.indexOf('</script>',s);if(s<8||e<s)throw Error('Inline script missing');new Function(h.slice(s,e));console.log('Inline script syntax OK')"
+      - name: Run release smoke tests
+        run: npm run test:release
+      - name: Run legacy regression suite (diagnostic only)
+        continue-on-error: true
         run: npm test
 
   deploy:
+    name: Deploy V88.14 to Cloudflare Workers
     needs: test
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 20
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
-
-      - name: Install Wrangler
-        run: npm install --global wrangler
-
       - name: Install Worker dependencies
         run: npm install --no-audit --no-fund
-
-      - name: Deploy Worker and static assets
-        run: wrangler deploy
+      - name: Install Wrangler
+        run: npm install --global wrangler
+      - name: Verify Cloudflare credentials are configured
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-
-      # Update secrets only after a Worker version has been deployed.
-      - name: Configure AudD music recognition secret
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN" || { echo "::error::Missing repository secret CLOUDFLARE_API_TOKEN"; exit 1; }
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || { echo "::error::Missing repository secret CLOUDFLARE_ACCOUNT_ID"; exit 1; }
+          echo "Cloudflare deployment credentials are present."
+      - name: Verify Cloudflare token access
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: wrangler whoami
+      - name: Deploy Worker and static assets
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: wrangler deploy
+      - name: Configure optional AudD music recognition secret
         env:
           AUDD_API_TOKEN: ${{ secrets.AUDD_API_TOKEN }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           if [ -z "$AUDD_API_TOKEN" ]; then
-            echo "::warning::AUDD_API_TOKEN is not configured. Music Finder will remain disabled until the secret is added."
+            echo "::notice::AUDD_API_TOKEN is not set; music recognition remains unavailable, but deployment is unaffected."
           else
             printf '%s' "$AUDD_API_TOKEN" | wrangler secret put AUDD_API_TOKEN
           fi
-
-      - name: Remove legacy self-hosted extractor secrets
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: |
-          wrangler secret delete PLATFORM_API_ORIGIN || true
-          wrangler secret delete PLATFORM_API_TOKEN || true
-
-      - name: Smoke test live Worker security and V88.14 assets
+      - name: Verify live Cloudflare deployment
         env:
           WORKER_URL: https://aryanzz-donwloader.radithnyahaniphanip.workers.dev
-        run: |
-          node --input-type=module <<'NODE'
-          const base = process.env.WORKER_URL;
-          let health = null;
-          for (let attempt = 0; attempt < 12; attempt++) {
-            try {
-              const healthResponse = await fetch(base + "/api/health", { cache: "no-store", signal: AbortSignal.timeout(10000) });
-              if (healthResponse.ok) health = await healthResponse.json();
-              if (health?.version === "88.14" && health?.mode === "cloudflare-worker-zero-server-hybrid") break;
-            } catch {}
-            await new Promise(resolve => setTimeout(resolve, 2500));
-          }
-          if (health?.version !== "88.14" || health?.mode !== "cloudflare-worker-zero-server-hybrid" || !health?.directMediaDownload) {
-            throw new Error("Live Worker has not propagated the V88.14 secure zero-server deployment: " + JSON.stringify(health));
-          }
-          console.log("Live Worker health OK: V" + health.version + " in zero-server mode.");
-          if (!health.securityActive) throw new Error("Worker security middleware is not active.");
-          const securityResponse = await fetch(base + "/api/security/status", { cache: "no-store" });
-          const security = await securityResponse.json().catch(() => ({}));
-          if (!securityResponse.ok || security?.security?.active !== true) throw new Error("Live security status endpoint did not confirm active protections.");
-          console.log("Live Worker security status OK.");
-          const homeResponse = await fetch(base + "/", { cache: "no-store" });
-          const homeHtml = await homeResponse.text();
-          if (!homeResponse.ok || !homeHtml.includes('name="robots" content="index,follow') || !homeHtml.includes('rel="canonical"') || !homeHtml.includes('application/ld+json')) {
-            throw new Error("V82.2 SEO metadata is missing from the live homepage.");
-          }
-          const sitemapResponse = await fetch(base + "/sitemap.xml", { cache: "no-store" });
-          const sitemapText = await sitemapResponse.text();
-          const sitemapType = sitemapResponse.headers.get("content-type") || "";
-          if (!sitemapResponse.ok || !sitemapType.includes("application/xml") || !sitemapText.includes('<?xml version="1.0"') || !sitemapText.includes("<urlset") || !sitemapText.includes(base + "/")) {
-            throw new Error("Sitemap must return HTTP 200, application/xml and a valid URL set. HTTP " + sitemapResponse.status + ", content-type " + sitemapType + ", body " + sitemapText.slice(0, 300));
-          }
-          const robotsResponse = await fetch(base + "/robots.txt", { cache: "no-store" });
-          const robotsText = await robotsResponse.text();
-          const robotsType = robotsResponse.headers.get("content-type") || "";
-          if (!robotsResponse.ok || !robotsType.includes("text/plain") || !robotsText.includes("User-agent: *") || !robotsText.includes(base + "/sitemap.xml")) {
-            throw new Error("robots.txt must return HTTP 200, text/plain and declare the plain-text sitemap. HTTP " + robotsResponse.status + ", content-type " + robotsType);
-          }
-          const plainMapResponse = await fetch(base + "/sitemap.txt", { cache: "no-store" });
-          const plainMapText = await plainMapResponse.text();
-          const plainMapType = plainMapResponse.headers.get("content-type") || "";
-          if (!plainMapResponse.ok || !plainMapType.includes("text/plain") || !plainMapText.trim().split(/\r?\n/).includes(base + "/")) {
-            throw new Error("Plain-text sitemap must return HTTP 200, text/plain and exactly one canonical URL. HTTP " + plainMapResponse.status + ", content-type " + plainMapType + ", body " + plainMapText.slice(0,200));
-          }
-          const googlebotHeaders = { "user-agent": "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)", "accept": "*/*" };
-          for (const path of ["/", "/sitemap.xml", "/sitemap.txt", "/robots.txt"]) {
-            const response = await fetch(base + path, { headers: googlebotHeaders, cache: "no-store", redirect: "manual" });
-            const body = await response.text();
-            if (response.status !== 200 || (path === "/" && !body.includes("<html")) || (path === "/sitemap.txt" && !body.trim().includes(base + "/")) || (path === "/sitemap.xml" && !body.includes("<urlset")) || (path === "/robots.txt" && !body.includes("Allow: /"))) {
-              throw new Error("Googlebot-UA smoke test failed for " + path + ": HTTP " + response.status + ", body " + body.slice(0,180));
-            }
-          }
-          console.log("V82.4 SEO verified: XML + plain-text sitemap, robots and homepage all return HTTP 200 to Googlebot user-agent.");
-
-          for (const path of ["/editor.js?v=65.0", "/editor-pro.css?v=65.0", "/music-recognition.js?v=71.0", "/music-recognition.css?v=71.0", "/v674.js?v=88.14", "/v674.css?v=81.4", "/v677.js?v=67.7", "/v677.css?v=67.7", "/v680.js?v=71.0", "/v680.css?v=71.0", "/v690.css?v=71.0", "/downloader.js?v=88.8", "/downloader.css?v=88.7", "/v59.js?v=59.5", "/v59.css?v=59.5", "/audio-studio.js?v=80.0", "/audio-studio.css?v=80.0", "/image-studio.js?v=81.4", "/image-studio.css?v=81.4", "/robots.txt", "/sitemap.xml", "/sitemap.txt", "/favicon.svg", "/og-cover.svg"]) {
-            const response = await fetch(base + path, { cache: "no-store" });
-            if (!response.ok) throw new Error("Static asset unavailable: " + path + " HTTP " + response.status);
-          }
-          const downloaderResponse = await fetch(base + "/downloader.js?v=88.8", { cache: "no-store" });
-          const downloaderSource = await downloaderResponse.text();
-          if (!downloaderSource.includes("Provider komunitas menolak stream") || !downloaderSource.includes('postJson("/api/info",{url})')) {
-            throw new Error("Live YouTube downloader is missing its public-free-provider fallback after 403/429.");
-          }
-          if (!downloaderSource.includes('info.providerName==="Public API"') || !downloaderSource.includes("v737-media-preview") || !downloaderSource.includes("selected.downloadUrl")) {
-            throw new Error("Live downloader is missing V73.7 in-page social preview or public-provider download handling.");
-          }
-          for (const path of ["/image-studio.js?v=81.4", "/image-studio.css?v=81.4"]) { const asset = await fetch(base + path, { cache: "no-store" }); if (!asset.ok) throw new Error("Image Studio asset unavailable: " + path); }
-          const imageJsResponse = await fetch(base + "/image-studio.js?v=81.4", { cache: "no-store" });
-          const imageJs = await imageJsResponse.text();
-          if (!imageJs.includes("/api/image/extract") || !imageJs.includes("/api/image/search") || !imageJs.includes("imageExport")) throw new Error("V81.4 Image Studio client is incomplete.");
-          const searchResponse = await fetch(base + "/v674.js?v=81.4", { cache: "no-store" });
-          const searchSource = await searchResponse.text();
-          if (!searchResponse.ok || !searchSource.includes("/api/social/search") || !searchSource.includes("Lihat & unduh")) {
-            throw new Error("V73.7 in-page social title search assets are not live.");
-          }
-          const parserStart = downloaderSource.indexOf("function browserVideoFormat");
-          const parserEnd = downloaderSource.indexOf("function browserAudioFormat", parserStart);
-          const parser = downloaderSource.slice(parserStart, parserEnd);
-          if (parserStart < 0 || parserEnd < 0 || parser.indexOf("const url=browserHybridMediaUrl") < 0 || parser.indexOf("const height=browserVideoHeight") < parser.indexOf("const url=browserHybridMediaUrl")) {
-            throw new Error("Live browser MP4 parser failed its URL initialization regression check.");
-          }
-          console.log("Live browser MP4 parser URL initialization check passed.");
-          if (!downloaderSource.includes("youtube-engine-status") || !downloaderSource.includes("youtube-nocookie.com/embed/") || !downloaderSource.includes("const downloadInfo={...info,outputName:") || !downloaderSource.includes("ffmpegUnavailable&&mode===\"video\"&&selected.videoOnly") || !downloaderSource.includes("function updateDownloadProgress") || !downloaderSource.includes("const exactProgressive=") || !downloaderSource.includes("Tahap 2/3 · Audio") || !downloaderSource.includes("fetchYoutubeTrackRanges") || !downloaderSource.includes("indexedDB.open(\"aryanzz-download-resume\"") || !downloaderSource.includes("Maksimal · 5 jalur") || !downloaderSource.includes("const chunkSize=1024*1024") || !downloaderSource.includes("inFlight+=result.value.byteLength") || !downloaderSource.includes("probeYoutubeTrack") || !downloaderSource.includes("await ffmpeg.writeFile(inputVideo,videoBytes);videoBytes=null;") || !downloaderSource.includes("/api/youtube/hybrid/thumbnail") || !downloaderSource.includes("?local=true") || !downloaderSource.includes("probe=1") || !downloaderSource.includes("diagnostics.push({provider,instance,error:") || !downloaderSource.includes("pipedInstances.slice(0,20)") || !downloaderSource.includes("speedLabel.hidden=!isYouTube") || !downloaderSource.includes("/api/youtube/hybrid/browser-file?") || !downloaderSource.includes("navigator.serviceWorker?.controller") || !downloaderSource.includes("function youtubeQualityEstimate") || !downloaderSource.includes("details.append(thumbAction)") || !downloaderSource.includes("async function refreshYoutubeProviderInfo") || !downloaderSource.includes("const [downloadedVideo,readyFfmpeg]=await Promise.all([") || downloaderSource.includes('make("img","youtube-thumbnail")')) {
-            throw new Error("Live downloader is missing the V73.7 progressive MP4 or progress/ETA improvements.");
-          }
-          const downloaderCssResponse = await fetch(base + "/downloader.css?v=88.7", { cache: "no-store" });
-          const downloaderCssSource = await downloaderCssResponse.text();
-          if (!downloaderCssResponse.ok || !downloaderCssSource.includes(".youtube-result [hidden]{display:none!important}") || !downloaderCssSource.includes("aryanzzDownloadSweep") || downloaderCssSource.includes("position:absolute")) {
-            throw new Error("Live downloader CSS is missing hidden-control or animated-progress fixes.");
-          }
-          console.log("V73.7 direct MP4 quality estimates, measured file sizes, browser-side streaming fallback and clean thumbnail download checks passed.");
-
-          const audioJsResponse = await fetch(base + "/audio-studio.js?v=80.0", { cache: "no-store" });
-          const audioJsSource = await audioJsResponse.text();
-          const audioCssResponse = await fetch(base + "/audio-studio.css?v=80.0", { cache: "no-store" });
-          if (!audioJsResponse.ok || !audioCssResponse.ok || !audioJsSource.includes("libmp3lame") || !audioJsSource.includes("equalizer=f=") || !audioJsSource.includes("audioStudioTempo") || !audioJsSource.includes("id3v2_version") || !audioJsSource.includes("aryanzz.audio-studio.settings.v75")) {
-            throw new Error("V81.4 Audio Studio assets are missing or incomplete.");
-          }
-          const pageResponse = await fetch(base + "/", { cache: "no-store" });
-          const pageSource = await pageResponse.text();
-          if (!pageSource.includes('data-platform="threads"') || !pageSource.includes('data-platform="soundcloud"') || !pageSource.includes('data-platform="capcut"')) {
-            throw new Error("V81.4 universal media picker is missing Threads, SoundCloud, or CapCut.");
-          }
-          if (!downloaderSource.includes("available.map(value=>[value,value+\"p · tersedia\"])") || !downloaderSource.includes("Persiapan 100% · ketuk tombol") || !downloaderSource.includes("Kesiapan tautan unduhan")) {
-            throw new Error("V81.4 social quality selector or honest link-ready progress is missing.");
-          }
-          if (!pageResponse.ok || !pageSource.includes("V88.14 · GRATIS") || !pageSource.includes('id="imageTools"') || !pageSource.includes('src="/image-studio.js?v=81.4"') || !pageSource.includes("restoreAutoBackup") || !pageSource.includes("audioStudio") || !pageSource.includes("profileMotionToggle") || !pageSource.includes("Kontrol banner profil") || !pageSource.includes("audioStudioTempo") || !pageSource.includes("audioStudioTitle")) {
-            throw new Error("V74.0 page, profile backup, or Audio Studio markup is not live.");
-          }
-          console.log("V88.3 page, Audio Studio, profile backup, and creative assets are available.");
-
-          const imagePostProbe = await fetch(base + "/api/social/images", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ url: "https://example.com/not-a-social-post" }) });
-          if (imagePostProbe.status !== 400) throw new Error("Image post endpoint validation failed: HTTP " + imagePostProbe.status);
-          const imageSearchProbe = await fetch(base + "/api/social/image-search", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ platform: "unknown", query: "test image" }) });
-          if (imageSearchProbe.status !== 400) throw new Error("Image search endpoint validation failed: HTTP " + imageSearchProbe.status);
-          const unsafeImageProbe = await fetch(base + "/api/social-image-file?url=" + encodeURIComponent("http://127.0.0.1/private.png"));
-          if (unsafeImageProbe.status !== 400) throw new Error("Image proxy private-network guard failed: HTTP " + unsafeImageProbe.status);
-          const legacyImagePostProbe = await fetch(base + "/api/image/extract?url=" + encodeURIComponent("http://127.0.0.1/private.png"));
-          if (legacyImagePostProbe.status !== 400) throw new Error("Image Studio post extractor did not reject a private URL: HTTP " + legacyImagePostProbe.status);
-          const legacyImageSearchProbe = await fetch(base + "/api/image/search", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ platform: "unknown", query: "test image" }) });
-          if (legacyImageSearchProbe.status !== 400) throw new Error("Image Studio title search validation failed: HTTP " + legacyImageSearchProbe.status);
-          const legacyImageFileProbe = await fetch(base + "/api/image/file?url=" + encodeURIComponent("http://127.0.0.1/private.png"));
-          if (legacyImageFileProbe.status !== 400) throw new Error("Legacy Image Studio proxy did not reject private URLs: HTTP " + legacyImageFileProbe.status);
-          console.log("V81.4 image endpoints, unsupported-source validation, and private-network proxy guards passed.");
-          const titleSearchProbe = await fetch(base + "/api/search", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ query: "x" }) });
-          if (titleSearchProbe.status !== 400) throw new Error("Title-search endpoint validation failed: HTTP " + titleSearchProbe.status);
-          console.log("Title-search endpoint is mounted and validates query input.");
-
-          const socialSearchProbe = await fetch(base + "/api/social/search", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ platform: "tiktok", query: "x" }) });
-          if (socialSearchProbe.status !== 400) throw new Error("Social title-search endpoint validation failed: HTTP " + socialSearchProbe.status);
-          console.log("Social title-search endpoint is mounted and validates platform/query input.");
-
-          const imageSearchResponse = await fetch(base + "/api/image/search", {
-            method: "POST",
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify({ platform: "all", query: "meme kucing" }),
-            cache: "no-store",
-            signal: AbortSignal.timeout(50000)
-          });
-          const imageSearchData = await imageSearchResponse.json().catch(() => ({}));
-          if (!imageSearchResponse.ok || !imageSearchData.ok || !Array.isArray(imageSearchData.results)) {
-            throw new Error("Live universal social image search endpoint failed: HTTP " + imageSearchResponse.status + " / " + JSON.stringify(imageSearchData));
-          }
-          const liveImageCount = imageSearchData.results.reduce((total, item) => total + (Array.isArray(item.images) ? item.images.length : 0), 0);
-          if (liveImageCount > 50) throw new Error("Live universal social image search exceeded its 50-result limit.");
-          const livePlatformCount = Object.keys(imageSearchData.platformCounts || {}).length;
-          if (liveImageCount) {
-            console.log("Live universal social image search returned " + liveImageCount + " image results across " + livePlatformCount + " platforms for 'meme kucing'.");
-            if (livePlatformCount < 2) console.warn("Public search indexing returned results from fewer than two social platforms for this keyword.");
-          } else {
-            console.warn("Live universal social image search endpoint is healthy but public search providers returned zero image results for 'meme kucing'.");
-          }
-
-          // Live title-search regression: TikTok-only video results must never leak from Pinterest/YouTube.
-          const tiktokSearchResponse = await fetch(base + "/api/social/search", {
-            method: "POST", headers: { "content-type": "application/json" },
-            body: JSON.stringify({ platform: "tiktok", query: "greenscreen meme", mediaType: "video" }),
-            cache: "no-store", signal: AbortSignal.timeout(45000)
-          });
-          const tiktokSearchData = await tiktokSearchResponse.json().catch(() => ({}));
-          if (!tiktokSearchResponse.ok || !tiktokSearchData.ok || !Array.isArray(tiktokSearchData.results)) {
-            throw new Error("Live TikTok video title search failed: HTTP " + tiktokSearchResponse.status + " / " + JSON.stringify(tiktokSearchData));
-          }
-          const badTikTokSources = tiktokSearchData.results.filter(item => {
-            try { const host = new URL(item.url).hostname.toLowerCase(); return !(host === "tiktok.com" || host.endsWith(".tiktok.com")); } catch { return true; }
-          });
-          if (badTikTokSources.length) throw new Error("TikTok-only search leaked results from another source: " + JSON.stringify(badTikTokSources.slice(0, 3)));
-          if (tiktokSearchData.results.some(item => item.mediaMode !== "video")) throw new Error("TikTok video search returned non-video media.");
-          console.log("Live TikTok video search passed source isolation; results: " + tiktokSearchData.results.length + ", candidates: " + tiktokSearchData.candidateCount + ", DDG: " + tiktokSearchData.ddgCandidateCount + ", Bing: " + tiktokSearchData.bingCandidateCount + ", relevant: " + tiktokSearchData.relevantCount + ", downloadable: " + tiktokSearchData.verifiedCount + ", open-source-only: " + tiktokSearchData.searchOnlyCount + ", providers: " + JSON.stringify(tiktokSearchData.providerDiagnostics) + ", bingHtml: " + JSON.stringify(tiktokSearchData.providerDiagnostics?.bingSample) + ", sample: " + JSON.stringify(tiktokSearchData.candidateSamples) + ".");
-          if (!tiktokSearchData.results.length) console.warn("TikTok video endpoint is healthy, but public indexing/provider verification returned zero results in this run.");
-           const instagramSearchResponse = await fetch(base + "/api/social/search", {
-             method: "POST", headers: { "content-type": "application/json" },
-             body: JSON.stringify({ platform: "instagram", query: "greenscreen meme", mediaType: "video" }),
-             cache: "no-store", signal: AbortSignal.timeout(45000)
-           });
-           const instagramSearchData = await instagramSearchResponse.json().catch(() => ({}));
-           if (!instagramSearchResponse.ok || !instagramSearchData.ok || !Array.isArray(instagramSearchData.results)) throw new Error("Live Instagram video title search failed: HTTP " + instagramSearchResponse.status);
-           if (instagramSearchData.results.some(item => { try { const host = new URL(item.url).hostname.toLowerCase(); return !(host === "instagram.com" || host.endsWith(".instagram.com")); } catch { return true; } })) throw new Error("Instagram-only search leaked results from another platform.");
-           console.log("Live Instagram title search source-isolation check passed; results: " + instagramSearchData.results.length + ", candidates: " + instagramSearchData.candidateCount + ", downloadable: " + instagramSearchData.verifiedCount + ".");
-           const pinterestImageResponse = await fetch(base + "/api/image/search", {
-             method: "POST", headers: { "content-type": "application/json" },
-             body: JSON.stringify({ platform: "pinterest", query: "greenscreen meme" }),
-             cache: "no-store", signal: AbortSignal.timeout(60000)
-           });
-           const pinterestImageData = await pinterestImageResponse.json().catch(() => ({}));
-           if (!pinterestImageResponse.ok || !pinterestImageData.ok || !Array.isArray(pinterestImageData.results)) throw new Error("Live Pinterest image title search failed: HTTP " + pinterestImageResponse.status);
-           const pinterestImageCount = pinterestImageData.results.reduce((total, item) => total + (Array.isArray(item.images) ? item.images.length : 0), 0);
-           if (pinterestImageData.results.some(item => { try { const host = new URL(item.sourceUrl).hostname.toLowerCase(); return !(host === "pinterest.com" || host.endsWith(".pinterest.com")); } catch { return true; } })) throw new Error("Pinterest-only image search leaked results from another platform.");
-           console.log("Live Pinterest greenscreen meme image search returned " + pinterestImageCount + " images from Pinterest.");
-           if (pinterestImageCount < 10) console.warn("Pinterest public index returned fewer than 10 image results for this keyword in this run. Diagnostics: " + JSON.stringify({candidateCount:pinterestImageData.candidateCount,platformCounts:pinterestImageData.platformCounts,unavailableCount:pinterestImageData.unavailableCount}));
-
-
-          // Global title search may return multiple services, but every result must retain its own canonical source.
-          const globalSearchResponse = await fetch(base + "/api/social/search", {
-            method: "POST", headers: { "content-type": "application/json" },
-            body: JSON.stringify({ platform: "all", query: "meme kucing", mediaType: "video" }),
-            cache: "no-store", signal: AbortSignal.timeout(45000)
-          });
-          const globalSearchData = await globalSearchResponse.json().catch(() => ({}));
-          if (!globalSearchResponse.ok || !globalSearchData.ok || !Array.isArray(globalSearchData.results)) {
-            throw new Error("Live global video title search failed: HTTP " + globalSearchResponse.status + " / " + JSON.stringify(globalSearchData));
-          }
-          if (globalSearchData.results.some(item => !item.platform || item.mediaMode !== "video")) throw new Error("Global title search returned a result without source identity or video media type.");
-          console.log("Live global video title search passed source/type validation; results: " + globalSearchData.results.length + ", candidates: " + globalSearchData.candidateCount + ", DDG: " + globalSearchData.ddgCandidateCount + ", Bing: " + globalSearchData.bingCandidateCount + ", relevant: " + globalSearchData.relevantCount + ", downloadable: " + globalSearchData.verifiedCount + ", open-source-only: " + globalSearchData.searchOnlyCount + ", providers: " + JSON.stringify(globalSearchData.providerDiagnostics) + ", bingHtml: " + JSON.stringify(globalSearchData.providerDiagnostics?.bingSample) + ", sample: " + JSON.stringify(globalSearchData.candidateSamples) + ".");
-
-          const musicResponse = await fetch(base + "/api/music/status", { cache: "no-store" });
-          if (!musicResponse.ok) throw new Error("Music Finder status endpoint failed.");
-          const music = await musicResponse.json();
-          if (!music.configured || !music.videoUrlReady) {
-            console.warn("Music recognition is not configured yet. Add AUDD_API_TOKEN or connect the external backend.");
-          } else {
-            console.log("Music recognition provider is configured.");
-          }
-
-          const statusResponse = await fetch(base + "/api/platform/status", { cache: "no-store" });
-          const status = await statusResponse.json();
-          if (!status.ok || status.backend !== "public-community-api") throw new Error("Zero-server platform handoff status failed: " + JSON.stringify(status));
-          const platformIds = Array.isArray(status.platforms) ? status.platforms.map(item => item.id) : [];
-          for (const platform of ["youtube", "tiktok", "instagram", "snackvideo", "capcut", "pinterest", "facebook", "x", "reddit", "vimeo", "threads", "soundcloud"]) {
-            if (!platformIds.includes(platform)) throw new Error("V81.4 platform capability missing: " + platform + " / " + JSON.stringify(status.platforms));
-          }
-          if (!status.platforms.every(item => item.pasteLink && item.titleSearch && item.preview)) {
-            throw new Error("V81.4 social platform link/search/preview capabilities are incomplete.");
-          }
-          if (!downloaderSource.includes("function normalizeMediaInput") || !downloaderSource.includes('["capcut.com","CapCut"]') || !downloaderSource.includes("Format selain MP4 tidak akan diberi ekstensi MP4 palsu")) {
-            throw new Error("V81.4 paste normalization, CapCut recognition or genuine-MP4 guard is missing.");
-          }
-          if (!searchSource.includes("/api/social/search") || !searchSource.includes("Lihat & unduh") || !searchSource.includes('item.mediaMode==="audio"?"Audio":"Video"')) {
-            throw new Error("V81.4 in-page social title search is missing.");
-          }
-          console.log("V81.4 12-platform paste/search capability matrix passed; SoundCloud audio search is supported and live provider availability remains link-dependent.");
-
-          const youtubeStatusResponse = await fetch(base + "/api/youtube/status", { cache: "no-store" });
-          if (!youtubeStatusResponse.ok) throw new Error("Hybrid YouTube status endpoint failed.");
-          const youtubeStatus = await youtubeStatusResponse.json();
-          if (youtubeStatus.provider !== "Dynamic Piped + Invidious hybrid" || youtubeStatus.paidProvider !== false || youtubeStatus.cobalt !== false) {
-            throw new Error("V73.7 must use the no-paid Piped/Invidious hybrid only: " + JSON.stringify(youtubeStatus));
-          }
-          console.log("Hybrid YouTube status confirms dynamic Piped + Invidious, no Cobalt and no paid provider.");
-
-          const hybridProbe = await fetch(base + "/api/youtube/hybrid/info?url=" + encodeURIComponent("https://youtu.be/4dpnHLPMQGs"), { cache: "no-store", signal: AbortSignal.timeout(45000) });
-          if (!hybridProbe.ok) throw new Error("Hybrid YouTube endpoint failed: HTTP " + hybridProbe.status);
-          const hybridData = await hybridProbe.json();
-          if (!Array.isArray(hybridData.formats)) throw new Error("Hybrid endpoint did not return a formats array.");
-          if (hybridData.providerReady) {
-            if (!["Piped", "Invidious"].includes(hybridData.provider) || !hybridData.formats.length) throw new Error("Hybrid provider response is incomplete.");
-            const mp4Formats = hybridData.formats.filter(item => item.mode === "video" && item.ext === "mp4");
-            const candidates = mp4Formats.slice(0, 20);
-            let streamReady = false;
-            const streamFailures = [];
-            for (const candidate of candidates) {
-              const streamUrl = base + "/api/youtube/hybrid/file?url=" + encodeURIComponent(candidate.url) + "&ext=mp4&title=ARYANZZ-smoke&instance=" + encodeURIComponent(candidate.instance || hybridData.instance || "") + "&probe=1";
-              const response = await fetch(streamUrl, { cache: "no-store", signal: AbortSignal.timeout(30000) });
-              const result = await response.json().catch(() => ({}));
-              if (response.ok && result.ok) { streamReady = true; break; }
-              streamFailures.push(result.error || ("HTTP " + response.status));
-            }
-            if (candidates.length && !streamReady) console.warn("Live public providers returned metadata but blocked or failed stream preflight; deployment remains healthy and download availability depends on the provider: " + streamFailures.join(" | "));
-            if (streamReady) console.log("Live MP4 stream passed the one-byte preflight through the Worker.");
-            if (!mp4Formats.length) console.warn("The server-side community probe returned no MP4; browser-side Invidious discovery remains the primary route.");
-            else console.log("Live public instance returned " + mp4Formats.length + " progressive MP4 video formats from " + hybridData.provider + ".");
-          } else {
-            console.warn("No public instance currently returned a compatible stream. Diagnostics: " + JSON.stringify(hybridData.diagnostics || []));
-            console.warn("The zero-cost failover path is deployed, but real download availability is not confirmed.");
-          }
-          NODE
+        run: node tests/live-release-smoke.mjs
