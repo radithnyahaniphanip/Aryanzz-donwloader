@@ -271,8 +271,8 @@ try{
     assert.equal(url.hostname,"www.bing.com");
     assert.equal(url.pathname,"/images/search");
     const query=url.searchParams.get("q")||"";
-    assert.match(query,/meme kucing/i);
-    if(query==="meme kucing"){generalCalls++;return new Response("",{status:200,headers:{"content-type":"text/html"}});}
+    assert.match(query,/meme cat/i);
+    if(query==="meme cat"){generalCalls++;return new Response("",{status:200,headers:{"content-type":"text/html"}});}
     const entry=platforms.find(item=>query.includes(item[1]));
     assert.ok(entry,"Universal image search should query each supported platform in small batches: "+query);
     calls.push(entry[0]);
