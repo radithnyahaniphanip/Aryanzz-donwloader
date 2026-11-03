@@ -30,6 +30,7 @@
     $("authSwitchText").textContent = mode === "register" ? "Sudah punya akun?" : "Belum punya akun?";
     $("authSwitch").textContent = mode === "register" ? "Masuk" : "Daftar sekarang";
     $("authPassword").autocomplete = mode === "register" ? "new-password" : "current-password";
+    updateRules();
   }
   function updateRules() {
     const value = $("authPassword").value;
