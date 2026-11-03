@@ -575,38 +575,44 @@ async function imageFile(request){
 }
 async function searchSocialImages(request){
   let body;try{body=await request.json()}catch{return json({error:"Body JSON tidak valid."},400)}
-  const platform=String(body?.platform||"").toLowerCase(),query=String(body?.query||"").replace(/\s+/g," ").trim();
-  if(!socialSearchDomains(platform).length||platform==="youtube"||platform==="soundcloud"||platform==="capcut")return json({error:"Platform pencarian gambar belum didukung."},400);
+  const platform=String(body?.platform||"").toLowerCase(),query=String(body?.query||"").replace(/\\s+/g," ").trim();
+  // Image search is available for public social platforms. Video/audio-only search
+  // remains in the unified media search instead of being presented as image results.
+  if(!socialSearchDomains(platform).length||platform==="youtube"||platform==="soundcloud")return json({error:"Platform pencarian gambar belum didukung."},400);
   if(query.length<2||query.length>120)return json({error:"Masukkan judul antara 2 sampai 120 karakter."},400);
   if(socialRateLimited(request))return json({error:"Batas pencarian gratis tercapai. Tunggu satu menit lalu coba lagi."},429);
   const searchUrl=socialSearchUrl(platform,query);
   try{
-    const response=await fetch(searchUrl.href,{headers:{accept:"text/html","user-agent":"Mozilla/5.0 (compatible; ARYANZZ/80.1)"},signal:AbortSignal.timeout(12000),cache:"no-store"});
+    const response=await fetch(searchUrl.href,{headers:{accept:"text/html","user-agent":"Mozilla/5.0 (compatible; ARYANZZ/81.1)"},signal:AbortSignal.timeout(14000),cache:"no-store"});
     if(!response.ok)return json({error:"Pencarian publik sedang tidak tersedia (HTTP "+response.status+")."},502);
     const html=await response.text(),candidates=[],seen=new Set(),domains=socialSearchDomains(platform);
-    for(const match of html.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/gi)){
+    for(const match of html.matchAll(/<a\\b([^>]*)>([\\s\\S]*?)<\\/a>/gi)){
       const attrs=match[1]||"";
-      if(!/\bclass=["'][^"']*\bresult__a\b[^"']*["']/i.test(attrs))continue;
-      const hrefMatch=attrs.match(/\bhref=["']([^"']+)["']/i);if(!hrefMatch)continue;
+      if(!/\\bclass=["'][^"']*\\bresult__a\\b[^"']*["']/i.test(attrs))continue;
+      const hrefMatch=attrs.match(/\\bhref=["']([^"']+)["']/i);if(!hrefMatch)continue;
       let link;try{link=new URL(decodeSearchHtml(hrefMatch[1]),"https://html.duckduckgo.com")}catch{continue}
       if(link.hostname.endsWith("duckduckgo.com")){const target=link.searchParams.get("uddg");if(target){try{link=new URL(target)}catch{continue}}}
       if(link.protocol!=="https:"||!domains.some(domain=>link.hostname===domain||link.hostname.endsWith("."+domain)))continue;
-      if(platform==="instagram"&&!/(?:\/p\/|\/reel\/|\/tv\/|\/share\/)/i.test(link.pathname))continue;
-      if(platform==="tiktok"&&!/(?:\/video\/|\/photo\/)/i.test(link.pathname))continue;
-      if(platform==="pinterest"&&!/\/pin\//i.test(link.pathname))continue;
+      if(platform==="instagram"&&!/(?:\\/p\\/|\\/reel\\/|\\/tv\\/|\\/share\\/)/i.test(link.pathname))continue;
+      if(platform==="tiktok"&&!/(?:\\/video\\/|\\/photo\\/)/i.test(link.pathname))continue;
+      if(platform==="pinterest"&&!/\\/pin\\//i.test(link.pathname))continue;
       const href=link.href.split("#")[0];if(seen.has(href))continue;seen.add(href);
       const title=decodeSearchHtml(match[2]);if(!title)continue;
-      const snippetMatch=html.slice(match.index,match.index+1800).match(/class=["']result__snippet["'][^>]*>([\s\S]*?)<\/[^>]+>/i);
+      const snippetMatch=html.slice(match.index,match.index+1800).match(/class=["']result__snippet["'][^>]*>([\\s\\S]*?)<\\/[^>]+>/i);
       candidates.push({title,url:href,snippet:decodeSearchHtml(snippetMatch?.[1]||"")});
       if(candidates.length>=8)break;
     }
+    // Use the same provider + public-page image resolver as direct post links.
+    // This is important for JS-heavy pages whose image URLs are absent from basic HTML metadata.
     const checked=await Promise.all(candidates.map(async item=>{
-      const data=await imagePostMetadata(item.url,request.url);
-      if(!data.ok||!data.images.length)return null;
-      return {...item,title:data.title||item.title,images:data.images,sourceUrl:data.sourceUrl||item.url,platform};
+      const post=await resolveSocialImagePost(item.url,request.url).catch(()=>null);
+      if(!post||!Array.isArray(post.images)||!post.images.length)return null;
+      const title=post.title||item.title;
+      const images=post.images.map(image=>({...image,title,platform:post.platform||platform,sourceUrl:item.url}));
+      return {...item,title,images,sourceUrl:item.url,platform:post.platform||platform,verified:true};
     }));
     const results=checked.filter(Boolean);
-    return json({ok:true,platform,query,results,verifiedCount:results.length,unavailableCount:candidates.length-results.length,verification:"public-image-metadata"});
+    return json({ok:true,platform,query,results,verifiedCount:results.length,unavailableCount:candidates.length-results.length,verification:"provider-and-public-image-metadata"});
   }catch(error){return json({error:"Pencarian gambar publik gagal dijangkau. "+String(error?.message||error).slice(0,100)},502)}
 }
 
