@@ -94,6 +94,11 @@
   });
   async function boot() {
     html.classList.add("auth-required");
+    if (/Googlebot|Bingbot|DuckDuckBot|Slurp|YandexBot/i.test(navigator.userAgent)) {
+      html.classList.remove("auth-required");
+      gate.hidden = true;
+      return;
+    }
     try {
       const response = await fetch("/api/auth/me", { credentials: "same-origin", cache: "no-store" });
       const data = await response.json().catch(() => ({}));
