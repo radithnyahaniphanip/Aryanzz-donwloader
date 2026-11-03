@@ -410,7 +410,7 @@ async function verifySocialSearchResult(result,requestUrl){
     const mediaCheck=await socialMediaFile(new Request(probeUrl.href));
     const mediaData=await mediaCheck.json().catch(()=>({}));
     if(!mediaCheck.ok||!mediaData.valid)return null;
-    return {...result,title:info.title||result.title,thumbnail:info.thumbnail||null,duration:info.duration||null,verified:true,downloadable:true,mediaMode:playable.mode,extension:mediaData.extension,mediaType:mediaData.mimeType};
+    return {...result,title:result.title||info.title,mediaTitle:info.title||"",thumbnail:info.thumbnail||null,duration:info.duration||null,verified:true,downloadable:true,mediaMode:playable.mode,extension:mediaData.extension,mediaType:mediaData.mimeType};
   }catch{return null}
 }
 function socialSearchCandidateAllowed(platform,rawUrl){
@@ -465,7 +465,7 @@ async function searchSocial(request){
         }
       }else providerErrors.push("DuckDuckGo HTTP "+response.status);
     }catch(error){providerErrors.push("DuckDuckGo: "+String(error?.message||error).slice(0,80))}
-    if(candidates.length<4){
+    if(candidates.length===0){
       try{
         const response=await fetch(bingUrl.href,{headers,signal:AbortSignal.timeout(10000),cache:"no-store"});
         if(response.ok)add(parseBingSocialCandidates(await response.text(),platform));
