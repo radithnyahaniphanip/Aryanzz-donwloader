@@ -129,7 +129,13 @@ function freeProviderMediaInfo(data,rawUrl,requestUrl){
     const finalExt=ext||(audio?"mp3":"mp4");
     const rawQuality=item?.height??item?.quality??item?.resolution??item?.qualityLabel??label;
     const qualityMatch=String(rawQuality||"").match(/(?:^|\D)(144|240|360|480|540|576|720|900|960|1080|1440|2160)\s*p?/i)||String(label).match(/(144|240|360|480|540|576|720|900|960|1080|1440|2160)p/i);
-    const height=Number(rawQuality)>0?Number(rawQuality):Number(qualityMatch?.[1]||0);
+    const dimensionText=[item?.resolution,item?.qualityLabel,item?.label,label].filter(Boolean).join(" ");
+    const dimensionMatch=dimensionText.match(/(\d{2,5})\s*[x×]\s*(\d{2,5})/i);
+    const width=Number(item?.width??item?.videoWidth??item?.video_width??dimensionMatch?.[1]??0)||0;
+    const height=dimensionMatch?Number(dimensionMatch[2]):(Number(rawQuality)>0?Number(rawQuality):Number(qualityMatch?.[1]||0));
+    const ratio=width>0&&height>0?width/height:null;
+    const orientation=ratio===null?null:ratio<0.92?"portrait":ratio>1.08?"landscape":"square";
+    const aspectLabel=ratio===null?null:Math.abs(ratio-9/16)<0.025?"9:16":Math.abs(ratio-16/9)<0.025?"16:9":Math.abs(ratio-1)<0.025?"1:1":Math.abs(ratio-4/5)<0.025?"4:5":Math.abs(ratio-5/4)<0.025?"5:4":ratio.toFixed(2)+":1";
     const videoOnly=video&&(item?.videoOnly===true||item?.video_only===true||item?.hasAudio===false||item?.has_audio===false||item?.audio===false);
     const filenameBase=title.replace(/\.[a-z0-9]{2,5}$/i,"").replace(/[^a-zA-Z0-9._-]/g,"_").slice(0,90)||"aryanzz-media";
     const downloadUrl=new URL("/api/social-file",requestUrl);
@@ -139,7 +145,7 @@ function freeProviderMediaInfo(data,rawUrl,requestUrl){
     downloadUrl.searchParams.set("ext",finalExt);
     downloadUrl.searchParams.set("mode",audio?"audio":"video");
     const previewUrl=new URL(downloadUrl.href);previewUrl.searchParams.set("preview","1");
-    return {mode:audio?"audio":"video",type:audio?"audio":"video",ext:finalExt,height:audio?0:height,videoOnly,hasAudio:video?!videoOnly:undefined,mimeType:mime||null,url:mediaUrl.href,downloadUrl:downloadUrl.href,previewUrl:previewUrl.href,label,filesize:Number(item?.sizeBytes||item?.size_bytes||item?.filesize||item?.size||0)||null};
+    return {mode:audio?"audio":"video",type:audio?"audio":"video",ext:finalExt,width:audio?0:width,height:audio?0:height,aspectRatio:audio?null:ratio,aspectLabel:audio?null:aspectLabel,orientation:audio?null:orientation,videoOnly,hasAudio:video?!videoOnly:undefined,mimeType:mime||null,url:mediaUrl.href,downloadUrl:downloadUrl.href,previewUrl:previewUrl.href,label,filesize:Number(item?.sizeBytes||item?.size_bytes||item?.filesize||item?.size||0)||null};
   }).filter(Boolean);
   const thumbnail=safePublicMediaUrl(normalized?.thumbnail||rawResult.thumbnail||rawResult.cover)?.href||null;
   const duration=Number(normalized?.duration||rawResult.duration||rawResult.video?.duration||0)||null;
@@ -1844,7 +1850,7 @@ export default {async fetch(request,env){
    if(url.pathname==="/api/youtube/hybrid/file"&&request.method==="GET")return hybridYoutubeFile(request);
    if(url.pathname==="/api/youtube/hybrid/thumbnail"&&request.method==="GET")return hybridYoutubeThumbnail(request);
   if(url.pathname==="/api/youtube/info"&&request.method==="GET")return youtubeInfo(request,env);
-    if(url.pathname==="/api/health"&&request.method==="GET")return json({ok:true,service:"ARYANZZ",version:"88.2",mode:"cloudflare-worker-zero-server-hybrid",directMediaDownload:true,selfHostedDownloader:false,youtubeDownloader:true,youtubeApiKeyConfigured:false,cobalt:false,paidYoutubeProvider:false,musicRecognitionConfigured:!!env.AUDD_API_TOKEN,musicFallbackReady:false,musicVideoRecognitionReady:false,platformExtraction:true,platformBackend:"public-free-community-api"});
+    if(url.pathname==="/api/health"&&request.method==="GET")return json({ok:true,service:"ARYANZZ",version:"88.3",mode:"cloudflare-worker-zero-server-hybrid",directMediaDownload:true,selfHostedDownloader:false,youtubeDownloader:true,youtubeApiKeyConfigured:false,cobalt:false,paidYoutubeProvider:false,musicRecognitionConfigured:!!env.AUDD_API_TOKEN,musicFallbackReady:false,musicVideoRecognitionReady:false,platformExtraction:true,platformBackend:"public-free-community-api"});
   if(url.pathname==="/api/social-file"&&request.method==="GET")return socialMediaFile(request);
   if(url.pathname==="/api/info"&&request.method==="POST"){const proxied=await proxyPlatform(request,env,"/api/info");if(proxied)return proxied;return info(request);}
   if(url.pathname==="/api/direct-file"&&request.method==="GET")return download(request);
