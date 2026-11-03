@@ -554,7 +554,7 @@ async function searchSocial(request){
       ? [query,query+" audio",query+" song",query+" soundtrack",query+" instrumental",...baseVariants]
       : desiredMode==="video"
         ? [query,query+" video",query+" clip",query+" shorts",...baseVariants]
-        : baseVariants).filter((value,index,array)=>array.indexOf(value)===index).slice(0,platform==="all"?4:9);
+        : baseVariants).filter((value,index,array)=>array.indexOf(value)===index).slice(0,platform==="all"?5:12);
     const pages=await Promise.all(variants.flatMap(term=>searchSites.map(async searchSite=>{
       const url=new URL("https://html.duckduckgo.com/html/");url.searchParams.set("q",searchSite+" "+term);
       try{
