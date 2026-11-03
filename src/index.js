@@ -441,7 +441,9 @@ async function searchSocial(request){
   const domains=socialSearchDomains(platform),site=domains.map(domain=>"site:"+domain).join(" OR ");
   const canonicalPlatform=({tiktoklite:"tiktok",instagramlite:"instagram",facebooklite:"facebook"})[platform]||platform;
   try{
-    const variants=socialSearchQueryVariants(query);
+    const variants=desiredMode==="greenscreen"
+      ?[...new Set([...socialSearchQueryVariants(query),query+" green screen",query+" greenscreen","green screen "+query])].slice(0,4)
+      :socialSearchQueryVariants(query);
     const pages=await Promise.all(variants.map(async term=>{
       const url=new URL("https://html.duckduckgo.com/html/");url.searchParams.set("q",site+" "+term);
       try{
