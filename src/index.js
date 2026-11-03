@@ -609,6 +609,12 @@ async function searchSocial(request){
         for(const item of direct.items){if(!seen.has(item.url)){seen.add(item.url);candidates.push(item)}}
       }
     }
+    if((platform==="all"||platform==="youtube")&&desiredMode==="audio"){
+      const youtubePages=await Promise.all(variants.slice(0,Math.min(8,variants.length)).map(term=>hybridYouTubeSearch(term)));
+      for(const page of youtubePages)for(const item of page?.results||[]){
+        if(!seen.has(item.url)){seen.add(item.url);candidates.push({...item,platform:"youtube",snippet:item.channel||"YouTube video",searchProvider:item.provider||"YouTube public search"});}
+      }
+    }
     if(platform==="all"&&desiredMode!=="audio"){
       const youtubePages=await Promise.all(variants.slice(0,5).map(term=>hybridYouTubeSearch(term)));
       for(const page of youtubePages)for(const item of page?.results||[]){
@@ -617,8 +623,8 @@ async function searchSocial(request){
     }
     const relevantCandidates=candidates.filter(item=>publicSearchRelevance(query,item.title+" "+item.snippet)>=0.25);
     const orderedCandidates=platform==="all"?(()=>{const buckets=new Map();for(const item of relevantCandidates){const key=freePlatformKey(item.url)||"other";if(!buckets.has(key))buckets.set(key,[]);buckets.get(key).push(item)}const out=[];for(let round=0;round<12;round++)for(const list of buckets.values())if(list[round])out.push(list[round]);return out})():relevantCandidates;
-    const verificationLimit=12;const verificationCandidates=orderedCandidates.slice(0,verificationLimit);const checked=await Promise.all(verificationCandidates.map(item=>verifySocialSearchResult(item,request.url,desiredMode)));const searchOnlyRemainder=orderedCandidates.slice(verificationLimit,80).map(item=>({...item,platform:freePlatformKey(item.url)||item.platform||"unknown",verified:false,downloadable:false,searchOnly:true,mediaMode:desiredMode==="audio"?"audio":"video",channel:"Hasil publik · unduhan belum diverifikasi"}));
-    const results=[...checked.filter(Boolean),...searchOnlyRemainder];
+    const verificationLimit=12;const verificationCandidates=orderedCandidates.slice(0,verificationLimit);const checked=await Promise.all(verificationCandidates.map(item=>verifySocialSearchResult(item,request.url,desiredMode)));const searchOnlyRemainder=orderedCandidates.slice(verificationLimit,desiredMode==="audio"?50:80).map(item=>({...item,platform:freePlatformKey(item.url)||item.platform||"unknown",verified:false,downloadable:false,searchOnly:true,mediaMode:desiredMode==="audio"?"audio":"video",channel:desiredMode==="audio"?"Sumber video · audio MP3 diproses saat dipilih":"Hasil publik · unduhan belum diverifikasi"}));
+    const results=[...checked.filter(Boolean),...searchOnlyRemainder].slice(0,desiredMode==="audio"?50:80);
     return json({ok:true,platform,query,mediaType:desiredMode,results,candidateCount:candidates.length,ddgCandidateCount,bingCandidateCount,relevantCount:relevantCandidates.length,verifiedCount:results.filter(item=>item.verified).length,searchOnlyCount:results.filter(item=>item.searchOnly).length,unavailableCount:relevantCandidates.length-results.length,candidateSamples:candidates.slice(0,5).map(item=>({title:item.title,url:item.url,score:publicSearchRelevance(query,item.title+" "+item.snippet)})),providerDiagnostics:{ddgPages:pages.length,ddgNonEmpty:pages.filter(Boolean).length,bingPages:bingPages.length,bingNonEmpty:bingPages.filter(Boolean).length,bingAlgoCount:bingPages.reduce((sum,page)=>sum+[...page.matchAll(/<li\b[^>]*class=["'][^"']*\bb_algo\b/gi)].length,0),ddgResultLinkCount:pages.reduce((sum,page)=>sum+[...page.matchAll(/class=["'][^"']*\bresult__a\b/gi)].length,0),bingSample:(bingPages.find(Boolean)||"").slice(0,2200),tiktokPublicPage:tiktokPageDiagnostics},searchVariants:variants,verification:"provider-and-media-signature",verificationLimit,searchScope:platform==="all"?"all-supported-platform-domains":"selected-platform",returnedPublicResults:results.length,verifiedChecks:verificationCandidates.length});
   }catch(error){return json({error:"Pencarian publik gagal dijangkau. Coba lagi nanti. "+String(error?.message||error).slice(0,100)},502)}
 }
