@@ -475,7 +475,7 @@ async function searchSocial(request){
       if(candidates.length>=5)break;
       try{
         const url=socialSearchUrl(platform,term);
-        const response=await fetch(url.href,{headers,signal:AbortSignal.timeout(8000),cache:"no-store"});
+        const response=await fetch(url.href,{headers,signal:AbortSignal.timeout(7000),cache:"no-store"});
         if(response.ok){
           const html=await response.text();
           for(const match of html.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/gi)){
@@ -497,7 +497,7 @@ async function searchSocial(request){
       const bingResults=await Promise.all(bingTerms.map(async term=>{
         try{
           const url=new URL("https://www.bing.com/search");url.searchParams.set("q",bingQuery(term));
-          const response=await fetch(url.href,{headers,signal:AbortSignal.timeout(8000),cache:"no-store"});
+          const response=await fetch(url.href,{headers,signal:AbortSignal.timeout(7000),cache:"no-store"});
           if(!response.ok){providerErrors.push("Bing HTTP "+response.status);return []}
           return parseBingSocialCandidates(await response.text(),platform);
         }catch(error){providerErrors.push("Bing: "+String(error?.message||error).slice(0,80));return []}
@@ -505,15 +505,15 @@ async function searchSocial(request){
       for(const batch of bingResults)add(batch);
     }
     if(candidates.length===0){
-      for(const term of variants.slice(0,2)){
+      const googleResults=await Promise.all(variants.slice(0,2).map(async term=>{
         try{
           const url=new URL("https://www.google.com/search");url.searchParams.set("q",bingQuery(term));url.searchParams.set("num","20");
-          const response=await fetch(url.href,{headers,signal:AbortSignal.timeout(8000),cache:"no-store"});
-          if(!response.ok){providerErrors.push("Google HTTP "+response.status);continue}
-          add(parseGoogleSocialCandidates(await response.text(),platform));
-          if(candidates.length)break;
-        }catch(error){providerErrors.push("Google: "+String(error?.message||error).slice(0,80))}
-      }
+          const response=await fetch(url.href,{headers,signal:AbortSignal.timeout(7000),cache:"no-store"});
+          if(!response.ok){providerErrors.push("Google HTTP "+response.status);return []}
+          return parseGoogleSocialCandidates(await response.text(),platform);
+        }catch(error){providerErrors.push("Google: "+String(error?.message||error).slice(0,80));return []}
+      }));
+      for(const batch of googleResults)add(batch);
     }
     candidates.sort((a,b)=>b.__score-a.__score);
     const selected=candidates.slice(0,12);
