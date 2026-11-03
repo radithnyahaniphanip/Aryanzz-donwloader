@@ -1,11 +1,11 @@
 {
-  "name": "ARYANZZ V81.4 — All-in-One Creative Space",
-  "short_name": "ARYANZZ V81.4",
+  "name": "ARYANZZ Downloader — Pengunduh Video, Audio & Gambar",
+  "short_name": "ARYANZZ",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "background_color": "#070b16",
   "theme_color": "#070b16",
-  "description": "Pengunduh media mobile dengan unduhan file langsung, pencarian platform, dan alat kreatif.",
-  "version": "81.4.0"
+  "description": "Pengunduh video, audio, dan gambar online dari berbagai platform.",
+  "version": "82.2.0"
 }
