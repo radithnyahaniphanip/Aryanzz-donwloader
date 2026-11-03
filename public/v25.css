@@ -162,3 +162,23 @@ body[data-motion="on"] .v25-profile-stats>div:nth-child(3){animation-delay:.16s}
 body[data-motion="on"] .v25-profile-stats>div:nth-child(4){animation-delay:.24s}
 body[data-motion="on"] .v25-profile-cover{isolation:isolate}
 body[data-motion="off"] .v25-profile-cover:before,body[data-motion="off"] .v25-profile-cover:after,body[data-motion="off"] .v25-cover-glow{animation:none!important}
+
+/* V85.1 — visible, touch-friendly motion system */
+@keyframes v851-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+@keyframes v851-glow{0%,100%{box-shadow:0 8px 26px #635bff16}50%{box-shadow:0 12px 34px #635bff45,0 0 18px #2dd4bf20}}
+@keyframes v851-sheen{0%{background-position:180% 0}100%{background-position:-180% 0}}
+@keyframes v851-pop{0%{opacity:.55;transform:scale(.985)}65%{opacity:1;transform:scale(1.012)}100%{transform:scale(1)}}
+body[data-motion="on"] .v25-profile-card{animation:v851-glow 5.5s ease-in-out infinite}
+body[data-motion="on"] .v25-profile-card:nth-of-type(2n){animation-delay:.8s}
+body[data-motion="on"] .v25-profile-card .v25-heading-icon{animation:v25Orbit 9s linear infinite}
+body[data-motion="on"] .v25-avatar{animation:v851-float 4s ease-in-out infinite}
+body[data-motion="on"] .v25-profile-cover:after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(110deg,transparent 20%,#ffffff12 48%,transparent 72%);background-size:220% 100%;animation:v851-sheen 7s ease-in-out infinite}
+body[data-motion="on"] .v25-profile-card:active{transform:scale(.992);transition:transform .18s ease}
+body[data-motion="on"] .v736-platform,body[data-motion="on"] .v674-tools-panel .tool,body[data-motion="on"] .v674-download{transition:transform .28s ease,box-shadow .28s ease,border-color .28s ease}
+body[data-motion="on"] .v736-platform:active,body[data-motion="on"] .v674-tools-panel .tool:active{transform:translateY(-3px) scale(1.025)}
+body[data-motion="on"] .v674-logo{animation:v851-float 4.5s ease-in-out infinite}
+body[data-motion="on"] .v674-download{animation:v851-glow 7s ease-in-out infinite}
+body.v25-motion-pulse .v25-profile-card{animation:v851-pop .45s ease both}
+body[data-motion="off"] *,body[data-motion="off"] *:before,body[data-motion="off"] *:after{animation:none!important;scroll-behavior:auto!important;transition:none!important}
+@media(prefers-reduced-motion:reduce){body:not([data-motion="on"]) *,body:not([data-motion="on"]) *:before,body:not([data-motion="on"]) *:after{animation:none!important;transition:none!important}}
+@media(max-width:700px){body[data-motion="on"] .v25-profile-card{animation-duration:7s}body[data-motion="on"] .v25-profile-cover:after{animation-duration:9s}}
