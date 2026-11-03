@@ -215,3 +215,13 @@ body[data-motion="off"] .youtube-result .progress-fill{animation:none!important;
 
 .v80-platform-picker-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:2px 1px 0;color:#a9bbd8;font-size:9px;font-weight:900;letter-spacing:1.4px}
 .v80-platform-picker-head span:last-child{color:#7e96bb;font-size:8px;letter-spacing:1px}
+
+/* V81.2 inline gallery for image-only social posts */
+.aryanzz-inline-image-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin:14px 0}
+.aryanzz-inline-image-card{min-width:0;overflow:hidden;border:1px solid #2b4260;border-radius:13px;background:#0c1727}
+.aryanzz-inline-image-open{display:block;line-height:0}
+.aryanzz-inline-image-open img{display:block;width:100%;aspect-ratio:1/1;object-fit:cover;background:#070d17}
+.aryanzz-inline-image-actions{display:flex;gap:6px;padding:8px}
+.aryanzz-inline-image-actions a{flex:1;display:flex;justify-content:center;align-items:center;min-height:35px;padding:6px;border-radius:8px;text-decoration:none;font-size:11px;font-weight:800}
+.aryanzz-inline-image-actions .primary{background:#2b69ba;color:#fff}.aryanzz-inline-image-actions .tag{border:1px solid #395574;color:#c4d7ef;background:#14243a}
+@media(min-width:700px){.aryanzz-inline-image-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}

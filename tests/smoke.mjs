@@ -65,9 +65,9 @@ const checks=[
   ["V77.0 verified social files use the detected extension with inline preview and attachment download headers",downloader.includes('else link.removeAttribute("download")')&&workerSource.includes('(preview?"inline":"attachment")+"; filename*=UTF-8')],
   ["V77.0 social media files are saved only after source-size preflight and full browser transfer",downloader.includes("Memeriksa ukuran dan isi media")&&downloader.includes("probeUrl.searchParams.set(\"probe\",\"1\")")&&downloader.includes("await saveBrowserBlob(blob")&&downloader.includes("response.headers.get(\"x-aryanzz-media-validation\")")],
   ["V77.0 custom output filename is honored by the public social provider",downloader.includes("info.outputName||info.title")&&downloader.includes("info.outputName||info.filename")],
-  ["V81.0 page title",html.includes("ARYANZZ V81.0 — Ruang Kreatif")],
-  ["V59.5 versioned assets",html.includes("/v15.js?v=59.5")&&html.includes("/owner.js?v=59.5")&&html.includes("/downloader.js?v=80.0")&&html.includes("/downloader.css?v=80.0")&&html.includes("/v59.css?v=59.5")&&html.includes("/editor-pro.css?v=65.0")&&html.includes("/editor.js?v=65.0")],
-  ["service worker cache and V59.5 assets",html.includes("navigator.serviceWorker.register")&&sw.includes("aryanzz-v80-1")&&sw.includes("/editor.js?v=65.0")],
+  ["V81.2 page title",html.includes("ARYANZZ V81.2 — Ruang Kreatif")],
+  ["V59.5 versioned assets",html.includes("/v15.js?v=59.5")&&html.includes("/owner.js?v=59.5")&&html.includes("/downloader.js?v=81.2")&&html.includes("/downloader.css?v=81.2")&&html.includes("/v59.css?v=59.5")&&html.includes("/editor-pro.css?v=65.0")&&html.includes("/editor.js?v=65.0")],
+  ["service worker cache and V59.5 assets",html.includes("navigator.serviceWorker.register")&&sw.includes("aryanzz-v81-2")&&sw.includes("/editor.js?v=65.0")],
   ["downloader input, result and backend status",html.includes('id="analyze"')&&html.includes('id="downloadResult"')&&html.includes('id="backendStatus"')],
   ["unified self-hosted downloader API",downloader.includes('postJson("/api/info"')&&downloader.includes('"/api/direct-file?url="')&&downloader.includes("PLATFORM_NAMES")&&!downloader.toLowerCase().includes("savenow")],
   ["single capture-phase universal URL handler",downloader.includes('button.addEventListener("click"')&&downloader.includes("event.stopImmediatePropagation()")&&downloader.includes("}, true);")],
@@ -151,14 +151,14 @@ const checks=[
   ["DJ mix scan uses AudD Enterprise endpoint",html.includes('id="musicFileScanButton"')&&html.includes('id="musicScanSkip"')&&musicJs.includes('/api/music/scan-video')&&workerSource.includes("enterprise.audd.io")],
   ["Music Finder supports file, video URL and microphone",musicJs.includes("captureMediaSample")&&musicJs.includes("getUserMedia")&&musicJs.includes("/api/music/recognize")&&musicJs.includes("musicVideoUrl")],
   ["AudD errors expose provider code and actionable quota guidance",workerSource.includes("function auddFailure")&&workerSource.includes("providerErrorCode")&&workerSource.includes("kode 901")&&workerSource.includes("kode 902")],
-  ["V74.0 runs without a self-hosted or paid extractor",workerSource.includes('version:"81.0"')&&workerSource.includes('mode:"cloudflare-worker-zero-server-hybrid"')&&workerSource.includes('platformBackend:"public-free-community-api"')&&!workerSource.includes("DOWNLOADER_CONTAINER")],
+  ["V74.0 runs without a self-hosted or paid extractor",workerSource.includes('version:"81.2"')&&workerSource.includes('mode:"cloudflare-worker-zero-server-hybrid"')&&workerSource.includes('platformBackend:"public-free-community-api"')&&!workerSource.includes("DOWNLOADER_CONTAINER")],
   ["Shazam fallback covers standard AudD auth/quota failures",workerSource.includes("shazamRecognize(audioBlob,env)")&&workerSource.includes("providerErrorCode")&&serverSource.includes("/api/music/recognize")&&serverSource.includes("shazam_recognize.py")],
   ["DJ mix scans fall back to Shazam when AudD Enterprise errors",workerSource.includes("shazamScan(fallbackSource")&&serverSource.includes("/api/music/scan")&&serverSource.includes("scanShazamMedia")],
   ["Docker backend includes yt-dlp, FFmpeg and ShazamIO",file("../Dockerfile").includes("yt-dlp")&&file("../Dockerfile").includes("shazamio==0.9.0")&&serverSource.includes("ffprobe")],
   ["Music Finder responsive styling",musicCss.includes(".music-grid")&&musicCss.includes("@media(max-width:620px)")],
   ["Video URL DJ scanning goes directly through AudD Enterprise",workerSource.includes('fetch("https://enterprise.audd.io/"')&&!musicJs.includes("identifyVideoUrl(url,startSeconds)")],
   ["tool hub remains available",html.includes('id="allTools"')],
-  ["PWA manifest version",manifest.name.includes("V81.0")],
+  ["PWA manifest version",manifest.name.includes("V81.2")],
   ["V67.7 visual assets are loaded",html.includes("/v677.css?v=67.7")&&html.includes("/v677.js?v=67.7")&&sw.includes("/v677.css?v=67.7")&&sw.includes("/v677.js?v=67.7")],
   ["V67.7 home remains focused on the downloader",html.includes('id="home"')&&html.includes('id="downloadLinkMode"')&&!html.slice(html.indexOf('id="home"'),html.indexOf('id="toolsArea"')).includes('id="toolGrid"')],
   ["V67.7 feature identity map covers all tools",file("../public/v677.js").includes("const ICONS=")&&["speed","checker","queue","editor","musicFinder","history","imageTools","pdfTools","qrTools","securityTools","colorStudio","profile","owner","about","help"].every(id=>file("../public/v677.js").includes(id))],
@@ -167,7 +167,7 @@ const checks=[
   ["V67.9 remaining tools have branded backgrounds",v677css.includes('data-feature="gradientStudio"')&&v677css.includes('data-feature="fileHash"')&&v677css.includes("#editor .editor-pro-head")&&v677css.includes("#profile .v25-profile-cover")],
   ["V67.9 Color Studio favorites and clipboard work after redesign",v677js.includes("palette.onclick=async event")&&v677js.includes("favorites.onclick=async event")&&v677js.includes('localStorage.setItem("aryanzz.color-favorites.v674"')&&v677js.includes("copyExpandedColor")],
 
-  ["V74.0 service worker cache and creative assets",sw.includes("aryanzz-v80-1")&&sw.includes("/v680.css?v=71.0")&&sw.includes("/v680.js?v=71.0")&&html.includes("/v680.js?v=71.0")],
+  ["V74.0 service worker cache and creative assets",sw.includes("aryanzz-v81-2")&&sw.includes("/v680.css?v=71.0")&&sw.includes("/v680.js?v=71.0")&&html.includes("/v680.js?v=71.0")],
   ["V67.9 downloader preserves direct-source details",downloader.includes("function responseFilename")&&downloader.includes("const directMedia=!!info.extension&&!info.extractor")&&downloader.includes("/api/platform/status")],
   ["V73.7 unified title search renders social results in-page",file("../public/v674.js").includes('youtube:{name:"YouTube"')&&file("../public/v674.js").includes("/api/social/search")&&file("../public/v674.js").includes("Lihat & unduh")&&html.includes('data-platform="snackvideo"')],
   ["V67.9 direct media whitelist includes common formats",workerSource.includes('"mkv"')&&workerSource.includes('"avi"')&&workerSource.includes('"aiff"')&&workerSource.includes('"opus"')],
@@ -210,13 +210,75 @@ const checks=[
   ["V80.1 Image Studio editor controls and client-side export are present",html.includes('id="imageStudioFile"')&&html.includes('id="imageEditorCanvas"')&&html.includes('id="imageExport"')&&imageStudioJs.includes("createImageBitmap")&&imageStudioJs.includes("canvas.toBlob")],
   ["V80.1 Image Studio supports all requested aspect ratios and custom pixel dimensions",html.includes('value="1:1"')&&html.includes('value="4:3"')&&html.includes('value="3:2"')&&html.includes('value="16:9"')&&html.includes('value="9:16"')&&html.includes('value="6:8"')&&html.includes('data-image-ratio="9:16"')&&html.includes('class="image-ratio-gallery"')&&imageStudioJs.includes('syncRatioGallery')&&imageStudioJs.includes('imageCustomWidth')&&imageStudioJs.includes('imageCustomHeight')],
   ["V80.1 Image Downloader has platform search and public-post extraction controls",html.includes('id="imageSearchPlatform"')&&html.includes('id="imageSearchQuery"')&&html.includes('id="imageExtractButton"')&&workerSource.includes('async function searchSocialImages')&&workerSource.includes('async function imagePostMetadata')],
+  ["V81.2 routes image-only social links to the image gallery before MP4 stream extraction",downloader.includes("imageFirstPlatforms")&&downloader.includes("/api/image/extract?url=")&&downloader.includes("aryanzz-inline-image-grid")],
+  ["V81.2 removes the slogan punctuation and redundant helper copy",html.includes("dari satu tautan</span>")&&!html.includes("dari satu tautan.</span>")&&!html.includes("v75-platform-note")&&!html.includes("Tempel tautan media atau cari judul untuk memulai.")],
+  ["V81.2 removes continuously animated blurred background and refreshes service worker cache",!v674Css.includes("body::before{content")&&!v674Css.includes("v674-aurora")&&sw.includes("aryanzz-v81-2")&&html.includes("V81.2 · GRATIS")],
   ["V80.1 image downloads use a validated same-origin image proxy and reject non-image content",workerSource.includes('url.pathname==="/api/image/file"')&&workerSource.includes('safePublicMediaUrl(raw)')&&workerSource.includes('image/jpeg')&&workerSource.includes('Sumber tidak mengirim file gambar yang didukung')],
-  ["V80.1 Image Studio CSS and JavaScript are loaded and cached by the service worker",html.includes('/image-studio.css?v=81.0')&&html.includes('/image-studio.js?v=80.1')&&sw.includes('/image-studio.css?v=81.0')&&sw.includes('/image-studio.js?v=80.1')&&imageStudioCss.includes('.image-download-results')],
+  ["V80.1 Image Studio CSS and JavaScript are loaded and cached by the service worker",html.includes('/image-studio.css?v=81.2')&&html.includes('/image-studio.js?v=81.2')&&sw.includes('/image-studio.css?v=81.2')&&sw.includes('/image-studio.js?v=81.2')&&imageStudioCss.includes('.image-download-results')],
   ["V80.1 CapCut and Pinterest marks use updated reference-style SVG paths",html.includes('viewBox="0 0 24 24"')&&html.includes('class="v736-logo v736-pinterest"')&&html.includes('class="v736-logo v736-capcut"')&&html.includes('fill="#E60023"')&&html.includes('fill="#FFFFFF"')]
 
  ];
  for(const [name,ok] of checks){assert.ok(ok,name+" failed");console.log("✔ "+name)}
 
+
+const originalBingImageFetch=globalThis.fetch;
+try{
+  globalThis.fetch=async(input)=>{
+    const url=new URL(typeof input==="string"?input:input.url);
+    assert.equal(url.hostname,"www.bing.com");
+    assert.equal(url.pathname,"/images/search");
+    assert.match(url.searchParams.get("q")||"",/meme kucing/i);
+    assert.match(url.searchParams.get("q")||"",/site:pinterest\.com/);
+    const html=Array.from({length:23},(_,i)=>{
+      const meta={murl:"https://cdn.example/cat-meme-"+i+".jpg",purl:"https://www.pinterest.com/pin/"+(1000+i)+"/",desc:"Meme kucing lucu "+i,w:1200,h:1600};
+      return '<a class="iusc" m="'+JSON.stringify(meta).replace(/"/g,"&quot;")+'"></a>';
+    }).join("");
+    return new Response(html,{status:200,headers:{"content-type":"text/html"}});
+  };
+  const response=await worker.fetch(new Request("https://aryanzz.example/api/image/search",{
+    method:"POST",headers:{"content-type":"application/json","cf-connecting-ip":"198.51.100.82"},
+    body:JSON.stringify({platform:"pinterest",query:"meme kucing"})
+  }),{});
+  assert.equal(response.status,200);
+  const data=await response.json();
+  assert.equal(data.ok,true);
+  assert.equal(data.imageCount,19);
+  assert.equal(data.results.flatMap(item=>item.images||[]).length,19);
+  assert.ok(data.results.every(item=>item.images[0].previewUrl.includes("/api/social-image-file")));
+  console.log("✔ V81.2 Pinterest image search returns up to 19 visual image results for broad keywords");
+}finally{globalThis.fetch=originalBingImageFetch;}
+
+const originalPinterestImageFetch=globalThis.fetch;
+try{
+  const seenRequests=[];
+  globalThis.fetch=async(input,init={})=>{
+    const url=new URL(typeof input==="string"?input:input.url);seenRequests.push({url,init});
+    if(url.hostname==="btch-downloader-api-green.vercel.app")
+      return new Response(JSON.stringify({success:false,message:"image pin has no video stream"}),{status:200,headers:{"content-type":"application/json"}});
+    if(url.hostname==="pin.it")
+      return new Response(null,{status:302,headers:{location:"https://www.pinterest.com/pin/123456/"}});
+    if(url.hostname==="www.pinterest.com")
+      return new Response('<html><head><title>Funny cat meme</title><meta property="og:title" content="Funny cat meme"><meta property="og:image" content="https://i.pinimg.com/originals/ab/cd/cat-meme.jpg"></head></html>',{status:200,headers:{"content-type":"text/html"}});
+    if(url.hostname==="i.pinimg.com")
+      return new Response(new Uint8Array([1,2,3,4]),{status:200,headers:{"content-type":"image/jpeg","content-length":"4"}});
+    throw new Error("Unexpected Pinterest image request: "+url.hostname);
+  };
+  const response=await worker.fetch(new Request("https://aryanzz.example/api/image/extract?url="+encodeURIComponent("http://pin.it/short123"),{headers:{"cf-connecting-ip":"198.51.100.83"}}),{});
+  assert.equal(response.status,200);
+  const data=await response.json();
+  assert.equal(data.ok,true);
+  assert.equal(data.platform,"pinterest");
+  assert.equal(data.images.length,1);
+  const downloadUrl=new URL(data.images[0].downloadUrl);
+  assert.equal(downloadUrl.pathname,"/api/social-image-file");
+  assert.equal(downloadUrl.searchParams.get("source"),"https://www.pinterest.com/pin/123456/");
+  const imageResponse=await worker.fetch(new Request(data.images[0].downloadUrl,{headers:{"cf-connecting-ip":"198.51.100.83"}}),{});
+  assert.equal(imageResponse.status,200);
+  assert.equal(imageResponse.headers.get("content-type"),"image/jpeg");
+  const cdnRequest=seenRequests.find(item=>item.url.hostname==="i.pinimg.com");
+  assert.equal(cdnRequest.init.headers.referer,"https://www.pinterest.com/pin/123456/");
+  console.log("✔ V81.2 Pinterest short links extract and proxy image pins even when no MP4 stream exists");
+}finally{globalThis.fetch=originalPinterestImageFetch;}
 
 const invalidImageSearch=await worker.fetch(new Request("https://aryanzz.example/api/image/search",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({platform:"pinterest",query:"x"})}),{});
 assert.equal(invalidImageSearch.status,400);
@@ -228,7 +290,7 @@ console.log("✔ Image search validates short queries and image proxy blocks loc
 const healthResponse=await worker.fetch(new Request("https://aryanzz.example/api/health"),{});
 assert.equal(healthResponse.status,200);
 const health=await healthResponse.json();
-assert.equal(health.version,"81.0");
+assert.equal(health.version,"81.2");
 assert.equal(health.selfHostedDownloader,false);
 assert.equal(health.youtubeDownloader,true);
 assert.equal(health.mode,"cloudflare-worker-zero-server-hybrid");
@@ -1005,10 +1067,10 @@ try{
 
   const health=await worker.fetch(new Request("https://aryanzz.example/api/health"),{});
   const healthData=await health.json();
-  assert.equal(healthData.version,"81.0");
+  assert.equal(healthData.version,"81.2");
   assert.equal(healthData.cobalt,false);
   assert.equal(healthData.paidYoutubeProvider,false);
-  console.log("✔ Worker health reports V81.0 with no Cobalt or paid YouTube provider");
+  console.log("✔ Worker health reports V81.2 with no Cobalt or paid YouTube provider");
 
   const invalidImagePost=await worker.fetch(new Request("https://aryanzz.example/api/image/extract?url="+encodeURIComponent("http://127.0.0.1/private.png")),{}); 
   assert.equal(invalidImagePost.status,400);
