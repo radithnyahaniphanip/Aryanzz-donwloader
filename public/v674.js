@@ -46,6 +46,11 @@ card.append(title,note,open);results.append(card);
 function safeImageProxy(raw){
 try{const url=new URL(raw,location.origin);return url.origin===location.origin&&["/api/social-image-file","/api/image/file"].includes(url.pathname)?url.href:""}catch{return ""}
 }
+const SEARCH_EQUIVALENTS={greenscreen:["green","screen"],"green-screen":["green","screen"],kucing:["cat"],anjing:["dog"],lucu:["funny","cute"],gambar:["image","photo"],foto:["photo","image"],video:["video","clip"],lagu:["song","music"],musik:["music","song"],meme:["meme"],"layar hijau":["green","screen"]};
+function canonicalSearchQuery(value){let q=String(value||"").toLowerCase().replace(/green\\s*screen/gi,"green screen").replace(/greenscreen/gi,"green screen").replace(/\s+/g," ").trim();return q}
+function searchTokens(value){return canonicalSearchQuery(value).normalize("NFD").replace(/[\\u0300-\\u036f]/g,"").split(/[^a-z0-9]+/).filter(token=>token.length>1&&!["dan","yang","the","and","for","dari","di","ke","with"].includes(token))}
+function relevanceScore(query,text){const tokens=searchTokens(query);if(!tokens.length)return 0;const hay=canonicalSearchQuery(text).normalize("NFD").replace(/[\\u0300-\\u036f]/g,"").replace(/[^a-z0-9]+/g," ");const padded=" "+hay+" ";let hits=0;for(const token of tokens){const alternatives=SEARCH_EQUIVALENTS[token]||[token];if(alternatives.some(word=>padded.includes(" "+word+" ")))hits++}const coverage=hits/tokens.length;const phrase=canonicalSearchQuery(query).length>3&&hay.includes(canonicalSearchQuery(query))?0.22:0;return Math.min(1,coverage*.78+phrase)}
+function rankRelevant(items,query,getText,minScore=.48){return (items||[]).map(item=>({...item,__relevance:relevanceScore(query,getText(item))})).filter(item=>item.__relevance>=minScore).sort((a,b)=>b.__relevance-a.__relevance).map(({__relevance,...item})=>item)}
 function render(items,target,q,unavailableCount=0,imageItems=[]){
 results.replaceChildren();
 const mediaCount=Array.isArray(items)?items.length:0,images=Array.isArray(imageItems)?imageItems:[];
@@ -93,26 +98,26 @@ const go=async()=>{
 const q=(searchInput?.value||"").trim();if(!q){if(help)help.textContent="Masukkan judul atau kata kunci gambar.";return}if(q.length<2){if(help)help.textContent="Masukkan minimal 2 karakter.";return}
 searchController?.abort();searchController=new AbortController();
 results.hidden=false;results.replaceChildren();
-const target=platforms[selected],loading=document.createElement("div");loading.className="v674-search-loading";loading.textContent="Mencari video di "+target.name+" dan gambar di semua platform…";results.append(loading);
+const target=platforms[selected],loading=document.createElement("div");loading.className="v674-search-loading";loading.textContent="Menganalisis kata kunci dan mencari media relevan di "+target.name+"…";results.append(loading);
 const btn=$("titleSearchBtn");if(btn){btn.disabled=true;btn.textContent="Mencari…"}
-if(help)help.textContent="Mencari video/audio di platform terpilih dan gambar dari 12 platform publik.";
+if(help)help.textContent="Menganalisis kata kunci, sinonim, judul, deskripsi, dan kecocokan sumber di "+target.name+". Tidak menampilkan hasil acak dari platform lain.";
 try{
 const endpoint=selected==="youtube"?"/api/search":"/api/social/search";
 const options={method:"POST",headers:{"content-type":"application/json"},cache:"no-store"};
 const signal=AbortSignal.any([searchController.signal,AbortSignal.timeout(45000)]);
 const [mediaOutcome,imageOutcome]=await Promise.allSettled([
 fetch(endpoint,{...options,body:JSON.stringify({query:q,platform:selected}),signal}),
-fetch("/api/image/search",{...options,body:JSON.stringify({query:q,platform:"all"}),signal})
+fetch("/api/image/search",{...options,body:JSON.stringify({query:canonicalSearchQuery(q),platform:selected}),signal})
 ]);
 let mediaItems=[],imageItems=[],unavailable=0,mediaError=null,imageError=null;
 if(mediaOutcome.status==="fulfilled"){
 const response=mediaOutcome.value,data=await response.json().catch(()=>({}));
-if(response.ok){mediaItems=Array.isArray(data.results)?data.results:[];unavailable=Number(data.unavailableCount)||0}
+if(response.ok){mediaItems=rankRelevant(Array.isArray(data.results)?data.results:[],q,item=>[item.title,item.snippet,item.channel].filter(Boolean).join(" "),.43);unavailable=Number(data.unavailableCount)||0}
 else mediaError=data.error||"Pencarian video/audio belum tersedia.";
 }else mediaError=String(mediaOutcome.reason?.message||"Pencarian video/audio gagal.");
 if(imageOutcome.status==="fulfilled"){
 const response=imageOutcome.value,data=await response.json().catch(()=>({}));
-if(response.ok&&data.ok)imageItems=(data.results||[]).flatMap(item=>item.images||[]);
+if(response.ok&&data.ok){const found=(data.results||[]).flatMap(item=>item.images||[]);imageItems=rankRelevant(found,q,item=>[item.title,item.sourceUrl,item.platform].filter(Boolean).join(" "),.48)}
 else imageError=data.error||"Pencarian gambar belum tersedia.";
 }else imageError=String(imageOutcome.reason?.message||"Pencarian gambar gagal.");
 render(mediaItems,target,q,unavailable,imageItems);
