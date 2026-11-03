@@ -393,8 +393,8 @@ function socialSearchQueryVariants(query){
   if(isGreen){
     const normalized=original.replace(/greenscreen/ig,"green screen").replace(/layar\s*hijau/ig,"green screen").replace(/\s+/g," ").trim();
     variants.push(normalized);
-    if(isCat)variants.push("green screen cat meme","green screen cat meme template","chroma key cat meme");
-    else variants.push(normalized+" template",normalized+" meme template",normalized+" background",normalized+" overlay","chroma key "+normalized);
+    if(isCat)variants.push("green screen cat meme","green screen cat meme template","chroma key cat meme","cat green screen meme");
+    else variants.push("green screen video","green screen meme","green screen template","chroma key video","green screen overlay","green screen background");
   }
   if(/meme\s+kucing/i.test(original))variants.push("cat meme","funny cat meme");
   if(/meme\s+cat/i.test(original))variants.push("meme kucing");
@@ -570,11 +570,15 @@ async function searchSocial(request){
     })));
     let bingCandidateCount=0;
     for(const page of bingPages){const parsed=parseBingSocialVideoResults(page,platform,query,seen);bingCandidateCount+=parsed.length;candidates.push(...parsed)}
-    let tiktokPageDiagnostics={status:null,bytes:0,count:0};
+    let tiktokPageDiagnostics={status:null,bytes:0,count:0,queries:[]};
     if(platform==="tiktok"||platform==="tiktoklite"||platform==="all"){
-      const direct=await searchTikTokPublicPage(query);
-      tiktokPageDiagnostics={status:direct.status,bytes:direct.bytes,count:direct.items.length,pageTitle:direct.pageTitle,scriptIds:direct.scriptIds,videoLinks:direct.videoLinks,hasUniversalData:direct.hasUniversalData,hasSigiState:direct.hasSigiState};
-      for(const item of direct.items){if(!seen.has(item.url)){seen.add(item.url);candidates.push(item)}}
+      const directPages=await Promise.all(variants.slice(0,platform==="all"?3:5).map(term=>searchTikTokPublicPage(term)));
+      for(let index=0;index<directPages.length;index++){
+        const direct=directPages[index];
+        tiktokPageDiagnostics.queries.push({query:variants[index],status:direct.status,bytes:direct.bytes,count:direct.items.length});
+        if(index===0)tiktokPageDiagnostics={...tiktokPageDiagnostics,status:direct.status,bytes:direct.bytes,count:direct.items.length,pageTitle:direct.pageTitle,scriptIds:direct.scriptIds,videoLinks:direct.videoLinks,hasUniversalData:direct.hasUniversalData,hasSigiState:direct.hasSigiState};
+        for(const item of direct.items){if(!seen.has(item.url)){seen.add(item.url);candidates.push(item)}}
+      }
     }
     const relevantCandidates=candidates.filter(item=>publicSearchRelevance(query,item.title+" "+item.snippet)>=0.25);
     const orderedCandidates=platform==="all"?(()=>{const buckets=new Map();for(const item of relevantCandidates){const key=freePlatformKey(item.url)||"other";if(!buckets.has(key))buckets.set(key,[]);buckets.get(key).push(item)}const out=[];for(let round=0;round<12;round++)for(const list of buckets.values())if(list[round])out.push(list[round]);return out})():relevantCandidates;
@@ -922,7 +926,10 @@ function publicSearchRelevance(query,text){
   const hay=" "+canonicalPublicSearchQuery(text).normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g," ")+" ";
   let hits=0;for(const token of tokens)if(hay.includes(" "+token+" "))hits++;
   const coverage=hits/tokens.length,phrase=hay.includes(" "+q+" ")?0.2:0;
-  return Math.min(1,coverage*.8+phrase);
+  let score=Math.min(1,coverage*.8+phrase);
+  if(/green\s*screen|greenscreen|layar\s*hijau/i.test(String(query||""))&&/green\s*screen|greenscreen|chroma\s*key|layar\s*hijau|green\s*background/i.test(String(text||"")))score=Math.max(score,0.42);
+  if(/meme\s+kucing|kucing\s+meme|cat\s+meme/i.test(String(query||""))&&/cat|kucing|kitten|meow/i.test(String(text||"")))score=Math.max(score,0.38);
+  return score;
 }
 function parseBingSocialImageResults(html,platform,requestUrl,query,allowWeb=false){
   const results=[],seen=new Set(),domains=socialSearchDomains(platform);
