@@ -63,7 +63,7 @@ const checks=[
   ["V73.7 adaptive progress updates while each 1 MiB chunk is streamed",downloader.includes("reader=response.body?.getReader()")&&downloader.includes("received:received+inFlight")&&downloader.includes("Potongan 1 MB disimpan lokal")],
   ["V77.0 adds Threads, SoundCloud and CapCut to the unified platform picker",html.includes('data-platform="threads"')&&html.includes('data-platform="soundcloud"')&&html.includes('data-platform="capcut"')&&workerSource.includes('soundcloud:["soundcloud.com"],capcut:["capcut.com"]')],
   ["V77.0 TikTok quality selector is populated from real provider resolutions",workerSource.includes("const rawQuality=item?.height??item?.quality??item?.resolution??item?.qualityLabel??label;")&&downloader.includes("available.map(value=>[value,value+\"p · tersedia\"])")&&downloader.includes("n>=100&&n<=4320")],
-  ["V77.0 title search routes YouTube through hybrid public search and displays in-page result cards",workerSource.includes("async function hybridYouTubeSearch(query)")&&workerSource.includes('if(url.pathname==="/api/search"&&request.method==="POST")return searchYouTube(request,env)')&&file("../public/v674.js").includes('selected==="youtube"?"/api/search":"/api/social/search"')&&file("../public/v674.js").includes('item.searchOnly?"Coba analisis & unduh":"Lihat & unduh"')],
+  ["V77.0 title search routes YouTube through hybrid public search and displays in-page result cards",workerSource.includes("async function hybridYouTubeSearch(query)")&&workerSource.includes('if(url.pathname==="/api/search"&&request.method==="POST")return searchYouTube(request,env)')&&file("../public/v674.js").includes('selected==="youtube"?"/api/search":"/api/social/search"')&&file("../public/v674.js").includes('item.searchOnly?"Buka sumber asli ↗":"Lihat & unduh"')],
   ["V77.0 social downloads use a same-origin Worker proxy and validate MP4/WebM signatures",workerSource.includes('url.pathname==="/api/social-file"')&&workerSource.includes("detectSocialMediaSignature")&&downloader.includes('probeUrl.searchParams.set("probe","1")')&&downloader.includes('ready.pathname!=="/api/social-file"')],
   ["V77.0 social stream header timeout does not abort the media body after headers arrive",workerSource.includes("async function fetchSocialHeaders")&&workerSource.includes("finally{clearTimeout(timer);}")&&workerSource.includes("fetchSocialHeaders(current.href")],
   ["V77.0 social downloads reject image assets, HTML error pages and partial streams",workerSource.includes("if(image)return null")&&workerSource.includes("File ditolak: isi file tidak cocok")&&workerSource.includes("upstream.status===206")&&workerSource.includes("File media terpotong")],
@@ -203,7 +203,7 @@ const checks=[
   ["V77.0 social downloads show real transfer progress and save only after complete Blob",downloader.includes("async function readBrowserChunk")&&downloader.includes("new Blob(chunks")&&downloader.includes("transfer baru dimulai, belum selesai.")&&downloader.includes('bar.style.width="100%"')],
   ["V77.0 downloaded MP4 must contain ftyp, moov and mdat and match the source duration before saving",downloader.includes("async function inspectMp4Blob")&&downloader.includes("File MP4 belum utuh")&&downloader.includes("berbeda jauh dari durasi sumber")&&downloader.indexOf('const blob=new Blob(chunks,{type:check.mimeType')<downloader.indexOf("await inspectMp4Blob(blob")&&downloader.indexOf("await inspectMp4Blob(blob")<downloader.lastIndexOf("await saveBrowserBlob(blob")],
 
-  ["V85.3.1 social title search preserves public results when media verification is unavailable",workerSource.includes("async function verifySocialSearchResult")&&workerSource.includes("socialMediaFile(new Request(probeUrl.href))")&&workerSource.includes("const results=checked.map")&&workerSource.includes("searchOnly:true")&&workerSource.includes("parseBingSocialCandidates")&&file("../public/v674.js").includes("Coba analisis & unduh")],
+  ["V85.4.0 restores verified V84.7 social title search",workerSource.includes("const searchUrl=socialSearchUrl(platform,query)")&&workerSource.includes("const checked=await Promise.all(candidates.map(item=>verifySocialSearchResult(item,request.url)))")&&workerSource.includes("verification:\"provider-and-media-signature\"")],
 
 
   ["V84.7 platform picker renders all 20 services including Lite, Snapchat, IDN App, LinkedIn, WeChat and KakaoTalk",["youtube","tiktok","instagram","snackvideo","capcut","pinterest","facebook","x","reddit","vimeo","threads","soundcloud","tiktoklite","facebooklite","snapchat","idnapp","instagramlite","linkedin","wechat","kakaotalk"].every(id=>html.includes('data-platform="'+id+'"'))],
@@ -217,7 +217,7 @@ const checks=[
   ["V80.1 Image Studio supports all requested aspect ratios and custom pixel dimensions",html.includes('value="1:1"')&&html.includes('value="4:3"')&&html.includes('value="3:2"')&&html.includes('value="16:9"')&&html.includes('value="9:16"')&&html.includes('value="6:8"')&&html.includes('data-image-ratio="9:16"')&&html.includes('class="image-ratio-gallery"')&&imageStudioJs.includes('syncRatioGallery')&&imageStudioJs.includes('imageCustomWidth')&&imageStudioJs.includes('imageCustomHeight')],
   ["V80.1 Image Downloader has platform search and public-post extraction controls",html.includes('id="imageSearchPlatform"')&&html.includes('id="imageSearchQuery"')&&html.includes('id="imageExtractButton"')&&workerSource.includes('async function searchSocialImages')&&workerSource.includes('async function imagePostMetadata')],
   ["V85.2 resolves social media formats before image fallback so video links cannot be replaced by image galleries",downloader.indexOf('postJson("/api/info", {url:url.href})')<downloader.indexOf("/api/image/extract?url=")&&downloader.includes("const hasVideoFormat=")&&downloader.includes("!hasVideoFormat")&&downloader.includes("aryanzz-inline-image-grid")],
-  ["V85.3 title search ranks media by relevance and scopes image results to the selected platform",v674.includes("function relevanceScore")&&v674.includes("rankRelevant")&&v674.includes('platform:selected')&&!v674.includes('platform:"all"')&&v674.includes("canonicalSearchQuery(q)")],
+  ["V85.4.0 restores V84.7 title search without aggressive client-side relevance filters",!v674.includes("rankRelevant")&&!v674.includes("SEARCH_EQUIVALENTS")&&v674.includes('platform:"all"')],
   ["V85.4.0 restores V84.7 DuckDuckGo social title search and provider/media verification",workerSource.includes("const searchUrl=socialSearchUrl(platform,query)")&&workerSource.includes("verification:\"provider-and-media-signature\"")&&!workerSource.includes("socialSearchQueryVariants")],
   ["V85.4.0 restores V84.7 title search rendering and broad public image search",v674.includes('fetch("/api/image/search"')&&v674.includes('platform:"all"')&&v674.includes("Mencari video/audio di platform terpilih dan gambar dari 12 platform publik.")],
   ["V85.4.0 title search does not hide results behind V85 relevance thresholds",!v674.includes("rankRelevant")&&!v674.includes("SEARCH_EQUIVALENTS")],
@@ -226,7 +226,7 @@ const checks=[
   ["V85.3 Tools Center uses compact mobile cards and horizontal category filters",v677css.includes("#allTools .v674-tool-filters{position:sticky")&&v677css.includes("grid-template-columns:repeat(2,minmax(0,1fr))")&&v677css.includes("#allTools .tool{min-height:119px")],
   ["V85.3 assets and PWA cache are versioned consistently",html.includes("V85.4.0 · GRATIS")&&html.includes("/v674.js?v=85.4.0")&&html.includes("/v677.css?v=85.3")&&sw.includes("aryanzz-v85-4-0")&&sw.includes("/v674.js?v=85.4.0")&&sw.includes("/v677.css?v=85.3")],
 
-  ["V85.3 main title search requests video and images from the selected platform only",file("../public/v674.js").includes('fetch("/api/image/search"')&&file("../public/v674.js").includes("platform:selected")&&file("../public/v674.js").includes("Gambar dari media sosial & web publik")],
+  ["V85.4.0 title search restores the V84.7 public cross-platform image search flow",file("../public/v674.js").includes('fetch("/api/image/search"')&&file("../public/v674.js").includes('platform:"all"')&&file("../public/v674.js").includes("Gambar dari media sosial & web publik")],
   ["V81.4 universal image search accepts all public platform domains and detects each result source",workerSource.includes('if(platform==="all")return [...new Set(Object.values(map).flat())]')&&workerSource.includes('const resultPlatform=socialImagePlatformKey(source.href,allowWeb?"web":platform)')&&workerSource.includes('platformCounts')],
   ["V81.4 image action buttons remain full-width horizontal labels on narrow screens",downloaderCss.includes("grid-template-columns:minmax(0,1fr)!important")&&downloaderCss.includes("writing-mode:horizontal-tb!important")&&downloaderCss.includes(".aryanzz-inline-image-caption")],
   ["V81.4 image-only cards expand a single result and keep download/source actions horizontal",downloaderCss.includes("repeat(auto-fit,minmax(min(100%,160px),1fr))")&&downloaderCss.includes("writing-mode:horizontal-tb!important")&&imageStudioCss.includes("repeat(auto-fit,minmax(min(100%,160px),1fr))")],
@@ -756,29 +756,6 @@ try{
   assert.equal(socialSearchData.searchOnlyCount,0);
   console.log("✔ Social title search shows only provider-verified videos and skips dead links");
 }finally{globalThis.fetch=originalSocialSearch;}
-const originalSearchOnlyFallback=globalThis.fetch;
-try{
-  globalThis.fetch=async(input,init={})=>{
-    const url=new URL(typeof input==="string"?input:input.url);
-    if(url.hostname==="html.duckduckgo.com")return new Response("<html></html>",{status:200,headers:{"content-type":"text/html"}});
-    if(url.hostname==="www.bing.com")return new Response('<ol><li class="b_algo"><h2><a href="https://www.tiktok.com/@greenscreen/video/1234567890">Green Screen Meme TikTok</a></h2><p>Greenscreen meme video</p></li></ol>',{status:200,headers:{"content-type":"text/html"}});
-    assert.equal(url.hostname,"btch-downloader-api-green.vercel.app");
-    return new Response(JSON.stringify({success:false,error:"Provider temporarily unavailable"}),{status:503,headers:{"content-type":"application/json"}});
-  };
-  const response=await worker.fetch(new Request("https://aryanzz.example/api/social/search",{
-    method:"POST",headers:{"content-type":"application/json"},
-    body:JSON.stringify({platform:"tiktok",query:"Greenscreen"})
-  }),{});
-  assert.equal(response.status,200);
-  const data=await response.json();
-  assert.equal(data.results.length,1,"Relevant public results must remain visible when download provider is unavailable");
-  assert.equal(data.results[0].searchOnly,true);
-  assert.equal(data.results[0].verified,false);
-  assert.match(data.results[0].title,/Green Screen Meme/i);
-  assert.equal(data.searchOnlyCount,1);
-  assert.ok(data.providers.includes("Bing"));
-  console.log("✔ V85.3 regression: Bing fallback keeps relevant TikTok search results visible without a working downloader provider");
-}finally{globalThis.fetch=originalSearchOnlyFallback;}
 const originalYoutubeSearch=globalThis.fetch;
 try{
   globalThis.fetch=async(input,init={})=>{
