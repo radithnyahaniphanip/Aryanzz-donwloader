@@ -176,9 +176,40 @@ body:before{content:"";position:fixed;z-index:-1;inset:-30%;pointer-events:none;
 .v736-linkedin{background:#0a66c2!important;color:#fff!important;font-size:20px}
 .v736-wechat{background:#07c160!important;color:#fff!important;font-size:24px}
 .v736-kakao{background:#fee500!important;color:#191919!important;font-size:25px}
+</style><style id="v8814-unified-app-shell">
+:root{--ary-app-bg:#080e1c;--ary-app-surface:#101b2d;--ary-app-border:#293e5c}
+html{scroll-padding-top:92px}
+body{background-color:var(--ary-app-bg)}
+.v674-top{position:sticky;top:0;z-index:80;background:linear-gradient(180deg,#080e1cf5,#080e1cdd);backdrop-filter:blur(18px);padding:8px 2px 12px;margin-bottom:10px}
+.v8814-view-header{display:flex;align-items:center;gap:11px;margin:8px 0 16px;padding:11px 13px;border:1px solid var(--ary-app-border);border-radius:15px;background:linear-gradient(110deg,#14243b,#0d1728);box-shadow:0 8px 24px #0002}
+.v8814-view-header[hidden]{display:none!important}
+.v8814-view-mark{width:35px;height:35px;flex:0 0 35px;display:grid;place-items:center;border-radius:11px;background:linear-gradient(135deg,#a855f7,#3188ff);color:white;font-weight:1000}
+.v8814-view-header>div{display:flex;flex:1;min-width:0;flex-direction:column;gap:2px}
+.v8814-view-header small{font-size:8px;letter-spacing:1.1px;color:#8ea8c9;font-weight:900}
+.v8814-view-header b{font-size:15px;color:#f2f6ff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.v8814-view-state{font-size:8px;letter-spacing:.7px;color:#71e7b0;border:1px solid #246a52;background:#0c2a22;padding:6px 8px;border-radius:30px;font-weight:900}
+#home[hidden]{display:none!important}
+#toolsArea{min-height:55vh}
+#toolsArea.v8814-view-active{display:block}
+#toolsArea>.panel{width:100%;max-width:920px;margin:0 auto 24px}
+#toolsArea>.panel.active{display:block;animation:v8814ViewIn .22s ease both}
+#toolsArea>.panel:not(.active){display:none!important}
+#toolsArea>.panel.active:not(.owner-panel){border:1px solid var(--ary-app-border);border-radius:21px;background:linear-gradient(145deg,#111e32,#0b1423);box-shadow:0 16px 44px #0003;padding:clamp(14px,3vw,22px)}
+#toolsArea>.panel.active.owner-panel{padding:0;background:transparent;border:0;box-shadow:none}
+#toolsArea>.panel.active.owner-panel .owner-shell{max-width:920px;margin:0 auto;background:transparent!important;border:0!important;box-shadow:none!important}
+#toolsArea>.panel.active h1,#toolsArea>.panel.active h2{scroll-margin-top:100px}
+.nav{z-index:100;justify-content:space-around;gap:4px;padding:8px 6px calc(8px + env(safe-area-inset-bottom));background:#080e1cf2;border-top:1px solid #293e5c;box-shadow:0 -10px 30px #0003}
+.nav button{min-width:0;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:7px 3px;border:1px solid transparent;border-radius:13px;font-weight:700}
+.nav button.active{background:linear-gradient(145deg,#28205b,#152b4a);border-color:#7957e9;color:#fff;box-shadow:0 0 18px #754cff30}
+.nav button .nav-icon{font-size:18px;line-height:1.1}
+.wrap{padding-bottom:calc(104px + env(safe-area-inset-bottom))}
+@keyframes v8814ViewIn{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:420px){.v8814-view-state{font-size:7px;padding:5px 6px}.nav button{font-size:10px}.nav button .nav-icon{font-size:17px}}
+@media(prefers-reduced-motion:reduce){#toolsArea>.panel.active{animation:none}html{scroll-behavior:auto}}
 </style></head><body>
 <div class="wrap">
-<header class="top v674-top"><a class="brand v674-brand" href="/" aria-label="ARYANZZ Home"><span class="logo v674-logo">A<span>✦</span></span><span>ARYANZZ<small>RUANG KREATIF</small></span></a><div class="v674-top-actions"><span class="pill v674-version"><i></i> V88.13 · GRATIS</span><span class="v674-security-indicator" id="securityStatusIndicator" role="status" aria-live="polite" title="Memeriksa perlindungan website"><i></i><span>Memeriksa keamanan</span></span><button class="v674-theme-toggle" id="themeToggle" type="button" aria-label="Ganti tema">☼</button></div></header>
+<header class="top v674-top"><a class="brand v674-brand" href="/" aria-label="ARYANZZ Home"><span class="logo v674-logo">A<span>✦</span></span><span>ARYANZZ<small>RUANG KREATIF</small></span></a><div class="v674-top-actions"><span class="pill v674-version"><i></i> V88.14 · GRATIS</span><span class="v674-security-indicator" id="securityStatusIndicator" role="status" aria-live="polite" title="Memeriksa perlindungan website"><i></i><span>Memeriksa keamanan</span></span><button class="v674-theme-toggle" id="themeToggle" type="button" aria-label="Ganti tema">☼</button></div></header>
+<div class="v8814-view-header" id="appViewHeader" hidden><span class="v8814-view-mark">A+</span><div><small>ARYANZZ · RUANG KREATIF</small><b id="appViewTitle">Pusat Alat</b></div><span class="v8814-view-state">TERHUBUNG</span></div>
 <section id="home" class="v674-home">
 <div class="v674-hero"><h1>Semua berawal<br><span>dari satu tautan</span></h1></div>
 
@@ -791,7 +822,18 @@ body:before{content:"";position:fixed;z-index:-1;inset:-30%;pointer-events:none;
 <nav class="nav" aria-label="Navigasi utama"><button class="active" data-nav="home"><span class="nav-icon">⌂</span><span>Beranda</span></button><button data-nav="allTools"><span class="nav-icon">✦</span><span>Alat</span></button><button data-nav="history"><span class="nav-icon">◷</span><span>Pustaka</span></button><button data-nav="owner"><span class="nav-icon">♛</span><span>Pemilik</span></button><button data-nav="profile"><span class="nav-icon">◉</span><span>Profil</span></button></nav>
 <script>
 const $=id=>document.getElementById(id);$('year').textContent=new Date().getFullYear();
-function panel(id){document.body.dataset.view=id?'tool':'home';document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active',p.id===id));const navKey=!id?'home':id==='history'?'history':id==='owner'?'owner':id==='profile'?'profile':'allTools';document.querySelectorAll('[data-nav]').forEach(b=>b.classList.toggle('active',b.dataset.nav===navKey));const target=id?$(id):$('home');if(target)target.scrollIntoView({behavior:'smooth',block:'start'});}
+function panel(id){
+  const home=$('home'),toolsArea=$('toolsArea'),viewHeader=$('appViewHeader'),viewTitle=$('appViewTitle');
+  document.body.dataset.view=id?(id==='allTools'?'tools':id):'home';
+  if(home)home.hidden=!!id;
+  if(toolsArea)toolsArea.classList.toggle('v8814-view-active',!!id);
+  document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active',p.id===id));
+  const navKey=!id?'home':id==='history'?'history':id==='owner'?'owner':id==='profile'?'profile':'allTools';
+  document.querySelectorAll('[data-nav]').forEach(b=>{const active=b.dataset.nav===navKey;b.classList.toggle('active',active);b.setAttribute('aria-current',active?'page':'false');});
+  const target=id?$(id):home;
+  if(viewHeader){viewHeader.hidden=!id;if(viewTitle&&target){const heading=target.querySelector('h1,h2,h3');viewTitle.textContent=heading?heading.textContent.trim():({history:'Pustaka',owner:'Pemilik',profile:'Profil'}[id]||'Ruang Kreatif');}}
+  window.scrollTo({top:0,behavior:'smooth'});
+}
 document.querySelectorAll('[data-panel]').forEach(b=>b.onclick=()=>panel(b.dataset.panel));document.querySelectorAll('[data-nav]').forEach(b=>b.onclick=()=>panel(b.dataset.nav==='home'?'':b.dataset.nav));
 const API=(window.ARYANZZ_API_BASE||'').replace(new RegExp("/+$"),"");let activeUrl='',activeName='aryanzz-media';
 const historyKey='aryanzz-download-history-v1';
@@ -918,5 +960,5 @@ $('checkSite').onclick=()=>{const o=$('siteResult');o.hidden=false;try{const u=n
 // V15.1 Speed Test is initialized from public/v15.js.
 let stream=null;$('camStart').onclick=async()=>{try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false});$('camera').srcObject=stream;$('camStart').hidden=true;$('camStop').hidden=false;$('heartResult').textContent='Kamera aktif. Demo ini belum mengestimasi BPM.';}catch{$('heartResult').textContent='Kamera perlu HTTPS dan izin browser.';}};function stop(){if(stream)stream.getTracks().forEach(t=>t.stop());stream=null;$('camera').srcObject=null;$('camStart').hidden=false;$('camStop').hidden=true;}$('camStop').onclick=stop;window.addEventListener('pagehide',stop);
 let deferred=null;window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferred=e;});$('installBtn').onclick=async()=>{if(deferred){deferred.prompt();await deferred.userChoice;deferred=null;}else $('installMsg').textContent='Gunakan menu Chrome ⋮ → Tambahkan ke layar utama.';};
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('/sw.js?v=88.13').catch(()=>{}));
-</script><script src="/audio-studio.js?v=80.0" defer></script><script src="/image-studio.js?v=81.4" defer></script><script src="/advanced.js?v=59.5" defer></script><script src="/v15.js?v=59.5" defer></script><script src="/v25.js?v=85.1" defer></script><script src="/owner.js?v=59.5" defer></script><script src="/downloader.js?v=88.8" defer></script><script src="/v59.js?v=59.5" defer></script><script src="/editor.js?v=65.0" defer></script><script src="/music-recognition.js?v=71.0" defer></script><script src="/v674.js?v=88.13" defer></script><script src="/v677.js?v=67.7" defer></script><script src="/v680.js?v=71.0" defer></script></body></html>
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('/sw.js?v=88.14').catch(()=>{}));
+</script><script src="/audio-studio.js?v=80.0" defer></script><script src="/image-studio.js?v=81.4" defer></script><script src="/advanced.js?v=59.5" defer></script><script src="/v15.js?v=59.5" defer></script><script src="/v25.js?v=85.1" defer></script><script src="/owner.js?v=59.5" defer></script><script src="/downloader.js?v=88.8" defer></script><script src="/v59.js?v=59.5" defer></script><script src="/editor.js?v=65.0" defer></script><script src="/music-recognition.js?v=71.0" defer></script><script src="/v674.js?v=88.14" defer></script><script src="/v677.js?v=67.7" defer></script><script src="/v680.js?v=71.0" defer></script></body></html>
