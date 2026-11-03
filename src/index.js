@@ -462,7 +462,7 @@ async function searchSocial(request){
   const canonicalPlatform=({tiktoklite:"tiktok",instagramlite:"instagram",facebooklite:"facebook"})[platform]||platform;
   try{
     const variants=desiredMode==="greenscreen"
-      ?[...new Set([...socialSearchQueryVariants(query),query+" green screen",query+" greenscreen","green screen "+query])].slice(0,4)
+      ?[...new Set([query,"#greenscreen","#greenscreenvideo","green screen video","green screen effect","green screen background",...socialSearchQueryVariants(query)])].slice(0,6)
       :socialSearchQueryVariants(query);
     const pages=await Promise.all(variants.map(async term=>{
       const url=new URL("https://html.duckduckgo.com/html/");url.searchParams.set("q",site+" "+term);
@@ -492,15 +492,17 @@ async function searchSocial(request){
       }
       if(candidates.length>=20)break;
     }
+    const ddgCandidateCount=candidates.length;
     const bingPages=await Promise.all(variants.map(async term=>{
       const url=new URL("https://www.bing.com/search");url.searchParams.set("q",site+" "+term);url.searchParams.set("form","QBLH");
       try{const response=await fetch(url.href,{headers:{accept:"text/html,application/xhtml+xml","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/130.0.0.0 Safari/537.36"},signal:AbortSignal.timeout(8000),cache:"no-store"});return response.ok?await response.text():""}catch{return ""}
     }));
-    for(const page of bingPages)candidates.push(...parseBingSocialVideoResults(page,platform,query,seen));
+    let bingCandidateCount=0;
+    for(const page of bingPages){const parsed=parseBingSocialVideoResults(page,platform,query,seen);bingCandidateCount+=parsed.length;candidates.push(...parsed)}
     const relevantCandidates=candidates.filter(item=>publicSearchRelevance(query,item.title+" "+item.snippet)>=0.65);
     const checked=await Promise.all(relevantCandidates.slice(0,16).map(item=>verifySocialSearchResult(item,request.url,desiredMode)));
     const results=checked.filter(Boolean);
-    return json({ok:true,platform,query,mediaType:desiredMode,results,verifiedCount:results.length,unavailableCount:relevantCandidates.length-results.length,searchVariants:variants,verification:"provider-and-media-signature"});
+    return json({ok:true,platform,query,mediaType:desiredMode,results,candidateCount:candidates.length,ddgCandidateCount,bingCandidateCount,relevantCount:relevantCandidates.length,verifiedCount:results.filter(item=>item.verified).length,searchOnlyCount:results.filter(item=>item.searchOnly).length,unavailableCount:relevantCandidates.length-results.length,searchVariants:variants,verification:"provider-and-media-signature"});
   }catch(error){return json({error:"Pencarian publik gagal dijangkau. Coba lagi nanti. "+String(error?.message||error).slice(0,100)},502)}
 }
 
