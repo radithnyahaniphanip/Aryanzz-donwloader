@@ -82,3 +82,13 @@ body[data-theme="light"] .v674-search-result h3{color:#1b2440}
 .v674-security-indicator.is-active i{background:#22c55e}
 .v674-security-indicator.is-warning{border-color:#92400e;color:#fbbf24;background:#422006}
 @media(max-width:420px){.v674-security-indicator{padding:6px 7px;font-size:9px}.v674-top-actions{gap:5px}}
+
+/* V88.13 compact audio discovery: two-column chips, no long vertical audio list */
+.v674-audio-inline-result{display:flex;align-items:center;justify-content:space-between;gap:10px;min-width:0;padding:10px 11px;border:1px solid #294365;border-radius:13px;background:linear-gradient(135deg,#101d31,#0b1424)}
+.v674-audio-inline-main{display:flex;flex:1;min-width:0;flex-direction:column;gap:4px}
+.v674-audio-inline-main b{font-size:12px;line-height:1.35;color:#eef4ff;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.v674-audio-inline-main small{font-size:10px;color:#91a7c5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.v674-audio-inline-action{flex:0 0 auto;border:1px solid #7655e8;border-radius:10px;padding:8px 10px;background:linear-gradient(110deg,#6848df,#c04edc);color:#fff;font-size:10px;font-weight:900;white-space:nowrap;cursor:pointer}
+#titleSearchResults:has(.v674-audio-inline-result){display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;align-items:stretch}
+#titleSearchResults:has(.v674-audio-inline-result) .v674-audio-inline-result{min-height:74px}
+@media(max-width:380px){#titleSearchResults:has(.v674-audio-inline-result){grid-template-columns:1fr}.v674-audio-inline-main b{-webkit-line-clamp:1}}
