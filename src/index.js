@@ -62,7 +62,7 @@ function isPlatformLink(raw){
 }
 const FREE_MEDIA_API="https://btch-downloader-api-green.vercel.app";
 const FREE_PLATFORM_KEYS={
-  "youtube.com":"youtube","youtu.be":"youtube","youtube-nocookie.com":"youtube","tiktok.com":"tiktok","instagram.com":"instagram","instagr.am":"instagram",
+  "youtube.com":"youtube","youtu.be":"youtube","youtube-nocookie.com":"youtube","tiktok.com":"tiktok","vm.tiktok.com":"tiktok","vt.tiktok.com":"tiktok","instagram.com":"instagram","instagr.am":"instagram",
   "snackvideo.com":"snackvideo","pinterest.com":"pinterest","pin.it":"pinterest",
   "facebook.com":"facebook","fb.watch":"facebook","x.com":"twitter","twitter.com":"twitter",
   "reddit.com":"reddit","redd.it":"reddit","v.redd.it":"reddit","vimeo.com":"vimeo","threads.net":"threads",
@@ -380,7 +380,7 @@ function decodeSearchHtml(value){
   return String(value||"").replace(/<[^>]*>/g,"").replace(/&amp;/g,"&").replace(/&quot;/g,'"').replace(/&#39;|&#x27;/gi,"'").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&nbsp;/g," ").replace(/&#(\d+);/g,(_,n)=>String.fromCodePoint(Number(n))).replace(/&#x([0-9a-f]+);/gi,(_,n)=>String.fromCodePoint(parseInt(n,16))).replace(/\s+/g," ").trim();
 }
 function socialSearchDomains(platform){
-  const map={tiktok:["tiktok.com"],tiktoklite:["tiktok.com"],instagram:["instagram.com","instagr.am"],instagramlite:["instagram.com","instagr.am"],snackvideo:["snackvideo.com"],pinterest:["pinterest.com"],facebook:["facebook.com","fb.watch"],facebooklite:["facebook.com","fb.watch"],x:["x.com","twitter.com"],reddit:["reddit.com"],vimeo:["vimeo.com"],threads:["threads.net"],soundcloud:["soundcloud.com"],capcut:["capcut.com"],snapchat:["snapchat.com"],idnapp:["idntimes.com"],linkedin:["linkedin.com"],wechat:["wechat.com","weixin.qq.com"],kakaotalk:["kakao.com"],youtube:["youtube.com","youtu.be"]};
+  const map={tiktok:["tiktok.com","vm.tiktok.com","vt.tiktok.com"],tiktoklite:["tiktok.com","vm.tiktok.com","vt.tiktok.com"],instagram:["instagram.com","instagr.am"],instagramlite:["instagram.com","instagr.am"],snackvideo:["snackvideo.com"],pinterest:["pinterest.com"],facebook:["facebook.com","fb.watch"],facebooklite:["facebook.com","fb.watch"],x:["x.com","twitter.com"],reddit:["reddit.com"],vimeo:["vimeo.com"],threads:["threads.net"],soundcloud:["soundcloud.com"],capcut:["capcut.com"],snapchat:["snapchat.com"],idnapp:["idntimes.com"],linkedin:["linkedin.com"],wechat:["wechat.com","weixin.qq.com"],kakaotalk:["kakao.com"],youtube:["youtube.com","youtu.be"]};
   if(platform==="all")return [...new Set(Object.values(map).flat())];
   return map[platform]||[];
 }
@@ -436,41 +436,84 @@ function parseBingSocialCandidates(html,platform){
   }
   return out;
 }
+function socialSearchQueryVariants(query,normalized){
+  const variants=[query,normalized];
+  if(!/\bvideo\b/i.test(query))variants.push(query+" video");
+  if(!/\bgreenscreen\b/i.test(query)&&/\bgreen screen\b/i.test(normalized))variants.push("greenscreen "+query.replace(/\bgreen\s*screen\b/i,"").trim());
+  return [...new Set(variants.map(value=>String(value||"").replace(/\s+/g," ").trim()).filter(Boolean))].slice(0,3);
+}
+function parseGoogleSocialCandidates(html,platform){
+  const out=[],seen=new Set();
+  for(const match of String(html||"").matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/gi)){
+    const attrs=match[1]||"",raw=attrs.match(/\bhref=["']([^"']+)["']/i)?.[1];if(!raw)continue;
+    let url;try{url=new URL(decodeSearchHtml(raw),"https://www.google.com")}catch{continue}
+    if(url.hostname==="www.google.com"||url.hostname==="google.com"){
+      const target=url.searchParams.get("q")||url.searchParams.get("url");if(target){try{url=new URL(target)}catch{continue}}
+    }
+    const safe=socialSearchCandidateAllowed(platform,url.href);if(!safe||seen.has(safe.href))continue;
+    const titleMatch=match[2].match(/<h3\b[^>]*>([\s\S]*?)<\/h3>/i);
+    const title=decodeSearchHtml((titleMatch?.[1]||match[2]).replace(/<[^>]+>/g," ")).trim();
+    if(!title||title.length<3)continue;
+    seen.add(safe.href);out.push({title,url:safe.href,snippet:"",searchEngine:"Google"});
+    if(out.length>=12)break;
+  }
+  return out;
+}
 async function searchSocial(request){
   let body;try{body=await request.json()}catch{return json({error:"Body JSON tidak valid."},400)}
   const platform=String(body?.platform||"").toLowerCase(),query=String(body?.query||"").replace(/\s+/g," ").trim();
   if(!socialSearchDomains(platform).length||platform==="youtube")return json({error:"Platform pencarian belum didukung."},400);
   if(query.length<2||query.length>120)return json({error:"Masukkan judul antara 2 sampai 120 karakter."},400);
   if(socialRateLimited(request))return json({error:"Batas pencarian gratis tercapai. Tunggu satu menit lalu coba lagi."},429);
-  const normalized=canonicalPublicSearchQuery(query),ddgUrl=socialSearchUrl(platform,normalized);
-  const bingUrl=new URL("https://www.bing.com/search");bingUrl.searchParams.set("q",socialSearchDomains(platform).map(domain=>"site:"+domain).join(" OR ")+" "+normalized);
+  const normalized=canonicalPublicSearchQuery(query),variants=socialSearchQueryVariants(query,normalized);
   const headers={accept:"text/html,application/xhtml+xml","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0.0.0 Safari/537.36"};
   const candidates=[],seen=new Set();let providerErrors=[];
-  const add=(items)=>{for(const item of items){const safe=socialSearchCandidateAllowed(platform,item.url);if(!safe||seen.has(safe.href))continue;seen.add(safe.href);const score=publicSearchRelevance(query,[item.title,item.snippet].filter(Boolean).join(" "));if(score>=0.16)candidates.push({...item,url:safe.href,__score:score})}};
+  const add=(items)=>{for(const item of items){const safe=socialSearchCandidateAllowed(platform,item.url);if(!safe||seen.has(safe.href))continue;seen.add(safe.href);const score=publicSearchRelevance(query,[item.title,item.snippet].filter(Boolean).join(" "));if(score>=0.12)candidates.push({...item,url:safe.href,__score:score})}};
+  const bingQuery=(term)=>socialSearchDomains(platform).map(domain=>"site:"+domain).join(" OR ")+" "+term;
   try{
-    try{
-      const response=await fetch(ddgUrl.href,{headers,signal:AbortSignal.timeout(10000),cache:"no-store"});
-      if(response.ok){
-        const html=await response.text();
-        for(const match of html.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/gi)){
-          const attrs=match[1]||"";if(!/\bclass=["'][^"']*\bresult__a\b[^"']*["']/i.test(attrs))continue;
-          const href=attrs.match(/\bhref=["']([^"']+)["']/i)?.[1];if(!href)continue;
-          let link;try{link=new URL(decodeSearchHtml(href),"https://html.duckduckgo.com")}catch{continue}
-          if(link.hostname.endsWith("duckduckgo.com")){const target=link.searchParams.get("uddg");if(target){try{link=new URL(target)}catch{continue}}}
-          const safe=socialSearchCandidateAllowed(platform,link.href);if(!safe)continue;
-          const title=decodeSearchHtml(match[2].replace(/<[^>]+>/g," ")).trim();
-          const snippet=decodeSearchHtml(html.slice(match.index,match.index+1800).match(/class=["']result__snippet["'][^>]*>([\s\S]*?)<\/[^>]+>/i)?.[1]||"");
-          add([{title,url:safe.href,snippet,searchEngine:"DuckDuckGo"}]);
-          if(candidates.length>=12)break;
-        }
-      }else providerErrors.push("DuckDuckGo HTTP "+response.status);
-    }catch(error){providerErrors.push("DuckDuckGo: "+String(error?.message||error).slice(0,80))}
-    if(candidates.length===0){
+    for(const term of variants.slice(0,2)){
+      if(candidates.length>=5)break;
       try{
-        const response=await fetch(bingUrl.href,{headers,signal:AbortSignal.timeout(10000),cache:"no-store"});
-        if(response.ok)add(parseBingSocialCandidates(await response.text(),platform));
-        else providerErrors.push("Bing HTTP "+response.status);
-      }catch(error){providerErrors.push("Bing: "+String(error?.message||error).slice(0,80))}
+        const url=socialSearchUrl(platform,term);
+        const response=await fetch(url.href,{headers,signal:AbortSignal.timeout(8000),cache:"no-store"});
+        if(response.ok){
+          const html=await response.text();
+          for(const match of html.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/gi)){
+            const attrs=match[1]||"";if(!/\bclass=["'][^"']*\bresult__a\b[^"']*["']/i.test(attrs))continue;
+            const href=attrs.match(/\bhref=["']([^"']+)["']/i)?.[1];if(!href)continue;
+            let link;try{link=new URL(decodeSearchHtml(href),"https://html.duckduckgo.com")}catch{continue}
+            if(link.hostname.endsWith("duckduckgo.com")){const target=link.searchParams.get("uddg");if(target){try{link=new URL(target)}catch{continue}}}
+            const safe=socialSearchCandidateAllowed(platform,link.href);if(!safe)continue;
+            const title=decodeSearchHtml(match[2].replace(/<[^>]+>/g," ")).trim();
+            const snippet=decodeSearchHtml(html.slice(match.index,match.index+1800).match(/class=["']result__snippet["'][^>]*>([\s\S]*?)<\/[^>]+>/i)?.[1]||"");
+            add([{title,url:safe.href,snippet,searchEngine:"DuckDuckGo"}]);
+            if(candidates.length>=12)break;
+          }
+        }else providerErrors.push("DuckDuckGo HTTP "+response.status);
+      }catch(error){providerErrors.push("DuckDuckGo: "+String(error?.message||error).slice(0,80))}
+    }
+    if(candidates.length<6){
+      const bingTerms=variants.slice(0,2);
+      const bingResults=await Promise.all(bingTerms.map(async term=>{
+        try{
+          const url=new URL("https://www.bing.com/search");url.searchParams.set("q",bingQuery(term));
+          const response=await fetch(url.href,{headers,signal:AbortSignal.timeout(8000),cache:"no-store"});
+          if(!response.ok){providerErrors.push("Bing HTTP "+response.status);return []}
+          return parseBingSocialCandidates(await response.text(),platform);
+        }catch(error){providerErrors.push("Bing: "+String(error?.message||error).slice(0,80));return []}
+      }));
+      for(const batch of bingResults)add(batch);
+    }
+    if(candidates.length===0){
+      for(const term of variants.slice(0,2)){
+        try{
+          const url=new URL("https://www.google.com/search");url.searchParams.set("q",bingQuery(term));url.searchParams.set("num","20");
+          const response=await fetch(url.href,{headers,signal:AbortSignal.timeout(8000),cache:"no-store"});
+          if(!response.ok){providerErrors.push("Google HTTP "+response.status);continue}
+          add(parseGoogleSocialCandidates(await response.text(),platform));
+          if(candidates.length)break;
+        }catch(error){providerErrors.push("Google: "+String(error?.message||error).slice(0,80))}
+      }
     }
     candidates.sort((a,b)=>b.__score-a.__score);
     const selected=candidates.slice(0,12);
@@ -481,9 +524,9 @@ async function searchSocial(request){
       return {...candidate,sourceTitle:candidate.title,channel:platform==="tiktok"?"TikTok":platform,verified:false,downloadable:false,searchOnly:true,searchEngine:candidate.searchEngine};
     }));
     const results=checked.map(item=>({...item,searchScore:publicSearchRelevance(query,[item.sourceTitle,item.title,item.snippet,item.mediaTitle].filter(Boolean).join(" "))}))
-      .filter(item=>item.searchScore>=0.16)
+      .filter(item=>item.searchScore>=0.12)
       .sort((a,b)=>b.searchScore-a.searchScore);
-    return json({ok:true,platform,query,normalizedQuery:normalized,results,verifiedCount:results.filter(item=>item.verified).length,searchOnlyCount:results.filter(item=>item.searchOnly).length,unavailableCount:Math.max(0,selected.length-results.length),providers:["DuckDuckGo","Bing"],providerErrors:results.length?[]:providerErrors,verification:"provider-optional; public-source-results-retained"});
+    return json({ok:true,platform,query,normalizedQuery:normalized,queryVariants:variants,results,verifiedCount:results.filter(item=>item.verified).length,searchOnlyCount:results.filter(item=>item.searchOnly).length,unavailableCount:Math.max(0,selected.length-results.length),providers:["DuckDuckGo","Bing","Google"],providerErrors:results.length?[]:providerErrors,verification:"provider-optional; public-source-results-retained"});
   }catch(error){return json({error:"Pencarian publik gagal dijangkau. Coba lagi nanti. "+String(error?.message||error).slice(0,100)},502)}
 }
 
