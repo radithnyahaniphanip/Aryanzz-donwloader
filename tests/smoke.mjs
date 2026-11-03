@@ -244,22 +244,23 @@ try{
     ["vimeo","site:vimeo.com","https://vimeo.com/3011"],
     ["soundcloud","site:soundcloud.com","https://soundcloud.com/cats/track3012"]
   ];
-  const calls=[];
+  const calls=[];let generalCalls=0;
   globalThis.fetch=async(input)=>{
     const url=new URL(typeof input==="string"?input:input.url);
     assert.equal(url.hostname,"www.bing.com");
     assert.equal(url.pathname,"/images/search");
     const query=url.searchParams.get("q")||"";
     assert.match(query,/meme kucing/i);
-    calls.push(query);
-    if(query==="meme kucing")return new Response("",{status:200,headers:{"content-type":"text/html"}});
-    for(const [,site] of platforms)assert.ok(query.includes(site),"Combined image query must include "+site);
-    const html=platforms.flatMap(([platform,,base],p)=>Array.from({length:2},(_,i)=>{
-      let purl=base;
+    if(query==="meme kucing"){generalCalls++;return new Response("",{status:200,headers:{"content-type":"text/html"}});}
+    const entry=platforms.find(item=>query.includes(item[1]));
+    assert.ok(entry,"Universal image search should query each supported platform in small batches: "+query);
+    calls.push(entry[0]);
+    const html=Array.from({length:2},(_,i)=>{
+      let purl=entry[2];
       if(i===1)purl=purl.replace(/(\d+)(\/?$)/,(_,id,slash)=>String(Number(id)+100)+slash);
-      const meta={murl:"https://cdn.example/universal-cat-"+platform+"-"+i+".jpg",purl,desc:"Meme kucing dari "+platform,w:900,h:900};
+      const meta={murl:"https://cdn.example/universal-cat-"+entry[0]+"-"+i+".jpg",purl,desc:"Meme kucing dari "+entry[0],w:900,h:900};
       return '<a class="iusc" m="'+JSON.stringify(meta).replace(/"/g,"&quot;")+'"></a>';
-    })).join("");
+    }).join("");
     return new Response(html,{status:200,headers:{"content-type":"text/html"}});
   };
   const response=await worker.fetch(new Request("https://aryanzz.example/api/image/search",{
@@ -269,11 +270,12 @@ try{
   assert.equal(response.status,200);
   const data=await response.json();
   assert.equal(data.ok,true);
-  assert.equal(calls.length,2,"Universal image search should use two broad queries, not burst 13 provider requests");
+  assert.equal(generalCalls,1);
+  assert.equal(calls.length,12,"Universal search should query 12 platforms in bounded batches");
   assert.equal(data.imageCount,19);
   assert.ok(Object.keys(data.platformCounts).length>=10);
   assert.ok(data.results.every(item=>item.sourceUrl&&item.images[0].downloadUrl&&item.images[0].previewUrl));
-  console.log("✔ V81.4 universal image search uses two broad image-index queries and returns 19 mixed results with source/download links");
+  console.log("✔ V81.4 universal image search queries all 12 platforms in bounded batches and returns 19 mixed results with source/download links");
 }finally{globalThis.fetch=originalUniversalImageFetch;}
 
 const originalDiverseImageSearchFetch=globalThis.fetch;
