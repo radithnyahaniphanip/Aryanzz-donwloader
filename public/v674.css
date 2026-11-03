@@ -72,3 +72,5 @@ body[data-theme="light"] .v674-search-result h3{color:#1b2440}
 .v674-search-results .aryanzz-inline-image-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
 .v674-search-results .aryanzz-inline-image-card{min-width:0}
 @media(min-width:700px){.v674-search-results .aryanzz-inline-image-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+
+.v674-search-type-row{margin:0 0 9px;display:flex;align-items:center}.v674-search-type-row .field{width:100%;max-width:260px;min-height:46px;border-radius:13px;background:#080e1b;border-color:#354365;color:#edf4ff;padding:11px 14px}
