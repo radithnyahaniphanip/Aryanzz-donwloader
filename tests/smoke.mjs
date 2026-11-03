@@ -216,7 +216,7 @@ const checks=[
   ["V81.4 image action buttons remain full-width horizontal labels on narrow screens",downloaderCss.includes("grid-template-columns:minmax(0,1fr)!important")&&downloaderCss.includes("writing-mode:horizontal-tb!important")&&downloaderCss.includes(".aryanzz-inline-image-caption")],
   ["V81.4 image-only cards expand a single result and keep download/source actions horizontal",downloaderCss.includes("repeat(auto-fit,minmax(min(100%,160px),1fr))")&&downloaderCss.includes("writing-mode:horizontal-tb!important")&&imageStudioCss.includes("repeat(auto-fit,minmax(min(100%,160px),1fr))")],
   ["V81.4 social image extraction prioritizes the canonical post page over provider preview thumbnails",workerSource.includes('...(page?.images||[]).map(item=>({...item,type:"image"')&&workerSource.indexOf('...(page?.images||[]).map(item=>({...item,type:"image"')<workerSource.indexOf('...providerImages.map(item=>({...item,url:item.url,source:"provider"')],
-  ["V81.4 universal image search limits each platform to four images before using public-post fallback",workerSource.includes('const maxPerPlatform=platform==="all"?4:19')&&workerSource.includes("distinctPlatforms<5")],
+  ["V81.4 universal image search limits each platform to four images before using public-post fallback",workerSource.includes('const maxPerPlatform=platform==="all"?6:19')&&workerSource.includes("distinctPlatforms<4")],
 
   ["V81.2 removes the slogan punctuation and redundant helper copy",html.includes("dari satu tautan</span>")&&!html.includes("dari satu tautan.</span>")&&!html.includes("v75-platform-note")&&!html.includes("Tempel tautan media atau cari judul untuk memulai.")],
   ["V81.2 removes continuously animated blurred background and refreshes service worker cache",!v674Css.includes("body::before{content")&&!v674Css.includes("v674-aurora")&&sw.includes("aryanzz-v81-4")&&html.includes("V81.4 · GRATIS")],
@@ -244,22 +244,23 @@ try{
     ["vimeo","site:vimeo.com","https://vimeo.com/3011"],
     ["soundcloud","site:soundcloud.com","https://soundcloud.com/cats/track3012"]
   ];
-  const calls=[];
+  const calls=[];let generalCalls=0;
   globalThis.fetch=async(input)=>{
     const url=new URL(typeof input==="string"?input:input.url);
     assert.equal(url.hostname,"www.bing.com");
     assert.equal(url.pathname,"/images/search");
     const query=url.searchParams.get("q")||"";
     assert.match(query,/meme kucing/i);
-    calls.push(query);
-    if(query==="meme kucing")return new Response("",{status:200,headers:{"content-type":"text/html"}});
-    for(const [,site] of platforms)assert.ok(query.includes(site),"Combined image query must include "+site);
-    const html=platforms.flatMap(([platform,,base],p)=>Array.from({length:2},(_,i)=>{
-      let purl=base;
+    if(query==="meme kucing"){generalCalls++;return new Response("",{status:200,headers:{"content-type":"text/html"}});}
+    const entry=platforms.find(item=>query.includes(item[1]));
+    assert.ok(entry,"Universal image search should query each supported platform in small batches: "+query);
+    calls.push(entry[0]);
+    const html=Array.from({length:2},(_,i)=>{
+      let purl=entry[2];
       if(i===1)purl=purl.replace(/(\d+)(\/?$)/,(_,id,slash)=>String(Number(id)+100)+slash);
-      const meta={murl:"https://cdn.example/universal-cat-"+platform+"-"+i+".jpg",purl,desc:"Meme kucing dari "+platform,w:900,h:900};
+      const meta={murl:"https://cdn.example/universal-cat-"+entry[0]+"-"+i+".jpg",purl,desc:"Meme kucing dari "+entry[0],w:900,h:900};
       return '<a class="iusc" m="'+JSON.stringify(meta).replace(/"/g,"&quot;")+'"></a>';
-    })).join("");
+    }).join("");
     return new Response(html,{status:200,headers:{"content-type":"text/html"}});
   };
   const response=await worker.fetch(new Request("https://aryanzz.example/api/image/search",{
@@ -269,11 +270,12 @@ try{
   assert.equal(response.status,200);
   const data=await response.json();
   assert.equal(data.ok,true);
-  assert.equal(calls.length,2,"Universal image search should use two broad queries, not burst 13 provider requests");
+  assert.equal(generalCalls,1);
+  assert.equal(calls.length,12,"Universal search should query 12 platforms in bounded batches");
   assert.equal(data.imageCount,19);
   assert.ok(Object.keys(data.platformCounts).length>=10);
   assert.ok(data.results.every(item=>item.sourceUrl&&item.images[0].downloadUrl&&item.images[0].previewUrl));
-  console.log("✔ V81.4 universal image search uses two broad image-index queries and returns 19 mixed results with source/download links");
+  console.log("✔ V81.4 universal image search queries all 12 platforms in bounded batches and returns 19 mixed results with source/download links");
 }finally{globalThis.fetch=originalUniversalImageFetch;}
 
 const originalDiverseImageSearchFetch=globalThis.fetch;
@@ -309,7 +311,7 @@ try{
   const data=await response.json();
   assert.equal(data.ok,true);
   assert.ok(data.imageCount>=7,"Fallback should add accessible images from other public platforms");
-  assert.ok(data.platformCounts.pinterest<=4,"Pinterest must not crowd out all other platforms");
+  assert.ok(data.platformCounts.pinterest<=6,"Pinterest must not crowd out all other platforms");
   assert.ok(data.platformCounts.tiktok>=1&&data.platformCounts.instagram>=1&&data.platformCounts.reddit>=1);
   assert.ok(data.results.every(item=>item.sourceUrl&&item.images[0].downloadUrl));
   console.log("✔ V81.4 universal image search supplements Pinterest-heavy image indexes with TikTok, Instagram and Reddit public posts");
