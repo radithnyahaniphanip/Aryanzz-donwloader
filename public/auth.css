@@ -33,3 +33,5 @@ html.auth-required #authGate{display:flex}
 .auth-consent{font-size:10px;color:#8498b4;margin:13px 0 0}
 .auth-logout{border:1px solid #314867;border-radius:10px;background:#101d30;color:#dbeafe;padding:7px 10px}
 @media(max-width:390px){#authGate{padding:16px 12px}.auth-card{padding:20px}.auth-card h1{font-size:25px}}
+
+#authGate[hidden],#authGate [hidden]{display:none!important}
