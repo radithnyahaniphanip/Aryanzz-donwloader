@@ -1,11 +1,11 @@
 {
-  "name": "ARYANZZ V81.0 — All-in-One Creative Space",
-  "short_name": "ARYANZZ V81.0",
+  "name": "ARYANZZ V81.2 — All-in-One Creative Space",
+  "short_name": "ARYANZZ V81.2",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "background_color": "#070b16",
   "theme_color": "#070b16",
   "description": "Pengunduh media mobile dengan unduhan file langsung, pencarian platform, dan alat kreatif.",
-  "version": "81.0.0"
+  "version": "81.2.0"
 }
