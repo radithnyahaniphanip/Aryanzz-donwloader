@@ -388,14 +388,17 @@ function socialSearchDomains(platform){
 }
 function socialSearchQueryVariants(query){
   const original=String(query||"").replace(/\s+/g," ").trim(),variants=[original];
-  if(/green\s*screen|greenscreen|layar\s*hijau/i.test(original)){
-    const normalized=original.replace(/greenscreen/ig,"green screen").replace(/layar\s*hijau/ig,"green screen");
-    const base=normalized.replace(/\s+/g," ").trim();
-    variants.push(base,base+" template",base+" meme template",base+" background",base+" overlay","chroma key "+original.replace(/greenscreen/ig,"green screen"));
+  const isGreen=/green\s*screen|greenscreen|layar\s*hijau/i.test(original);
+  const isCat=/meme\s+kucing|kucing\s+meme|meme\s+cat|cat\s+meme/i.test(original);
+  if(isGreen){
+    const normalized=original.replace(/greenscreen/ig,"green screen").replace(/layar\s*hijau/ig,"green screen").replace(/\s+/g," ").trim();
+    variants.push(normalized);
+    if(isCat)variants.push("green screen cat meme","green screen cat meme template","chroma key cat meme");
+    else variants.push(normalized+" template",normalized+" meme template",normalized+" background",normalized+" overlay","chroma key "+normalized);
   }
   if(/meme\s+kucing/i.test(original))variants.push("cat meme","funny cat meme");
   if(/meme\s+cat/i.test(original))variants.push("meme kucing");
-  return [...new Set(variants.map(value=>value.replace(/\s+/g," ").trim()).filter(Boolean))].slice(0,6);
+  return [...new Set(variants.map(value=>value.replace(/\s+/g," ").trim()).filter(Boolean))].slice(0,7);
 }
 function socialSearchUrl(platform,query){
   const domains=socialSearchDomains(platform);if(!domains.length)return null;
@@ -472,6 +475,22 @@ function parseBingSocialVideoResults(html,platform,query,seen){
     if(publicSearchRelevance(query,title+" "+snippet)<0.25)continue;
     seen.add(url);out.push({title,url,snippet,platform:key,searchProvider:"Bing Web"});
   }
+  // Fallback parser for Bing layouts that expose social permalinks outside legacy b_algo list markup.
+  for(const match of String(html||"").matchAll(/<a\\b([^>]*)>([\\s\\S]*?)<\\/a>/gi)){
+    const attrs=match[1]||"",href=attrs.match(/\\bhref=["']([^"']+)["']/i)?.[1];if(!href)continue;
+    const link=decodeBingSocialResultUrl(href);if(!link||link.protocol!=="https:"||!domains.some(domain=>link.hostname===domain||link.hostname.endsWith("."+domain)))continue;
+    const key=freePlatformKey(link.href);if(!key)continue;
+    if(key==="tiktok"&&!/\\/video\\//i.test(link.pathname))continue;
+    if(key==="instagram"&&!/\\/(?:p|reel|tv|share)\\//i.test(link.pathname))continue;
+    if(key==="pinterest"&&!/\\/pin\\//i.test(link.pathname))continue;
+    const url=link.href.split("#")[0];if(seen.has(url))continue;
+    const rawTitle=decodeSearchHtml((match[2]||"").replace(/<[^>]+>/g," ")).replace(/\\s+/g," ").trim();
+    const title=rawTitle||decodeSearchHtml(attrs.match(/\\btitle=["']([^"']+)["']/i)?.[1]||"")||((key==="tiktok"?"Video TikTok ":"Konten ")+query);
+    const context=String(html||"").slice(Math.max(0,match.index-350),Math.min(String(html||"").length,match.index+1300));
+    const snippet=decodeSearchHtml(context.replace(/<[^>]+>/g," ").replace(/\\s+/g," ")).slice(0,500);
+    if(publicSearchRelevance(query,title+" "+snippet)<0.18)continue;
+    seen.add(url);out.push({title,url,snippet,platform:key,searchProvider:"Bing Web"});
+  }
   return out;
 }
 async function verifySocialSearchResult(result,requestUrl,desiredMode="any"){
@@ -515,7 +534,7 @@ async function searchSocial(request){
     const searchSites=platform==="all"?Object.values(platformDomains).map(domain=>"site:"+domain):domains.map(domain=>"site:"+domain);
   const canonicalPlatform=({tiktoklite:"tiktok",instagramlite:"instagram",facebooklite:"facebook"})[platform]||platform;
   try{
-    const variants=socialSearchQueryVariants(query).slice(0,platform==="all"?3:6);
+    const variants=socialSearchQueryVariants(query).slice(0,platform==="all"?3:7);
     const pages=await Promise.all(variants.flatMap(term=>searchSites.map(async searchSite=>{
       const url=new URL("https://html.duckduckgo.com/html/");url.searchParams.set("q",searchSite+" "+term);
       try{
