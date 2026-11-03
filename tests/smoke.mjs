@@ -230,7 +230,7 @@ const checks=[
   ["V82.2 homepage exposes indexable SEO metadata, canonical URL and structured data",html.includes('name="robots" content="index,follow')&&html.includes('rel="canonical"')&&html.includes('application/ld+json')&&html.includes('ARYANZZ Downloader — Unduh Video, Audio & Gambar Online')],
   ["V82.2 crawler discovery files expose an open robots policy, sitemap and branded favicon",robots.includes("User-agent: *")&&robots.includes("Allow: /")&&robots.includes("/sitemap.xml")&&sitemap.includes("<urlset")&&sitemap.includes("https://aryanzz-donwloader.radithnyahaniphanip.workers.dev/")&&favicon.includes("<svg")],
   ["V82.2 web app manifest uses the ARYANZZ Downloader brand",manifest.name==="ARYANZZ Downloader — Pengunduh Video, Audio & Gambar"&&manifest.short_name==="ARYANZZ"],
-  ["V84.1 opens the downloader directly without account registration or D1 auth",!html.includes("authGate")&&!html.includes("/auth.js")&&!workerSource.includes("/api/auth/")&&!workerSource.includes("AUTH_ITERATIONS")&&sw.includes("aryanzz-v84-1")&&!sw.includes("/auth.js")]
+  ["V84.2 SEO description is contained in the home section only",html.indexOf('<section id="home"')<html.indexOf('<section class="seo-copy"')&&html.indexOf('<section class="seo-copy"')<html.indexOf('<section id="toolsArea"')&&html.includes("V84.2 · GRATIS")&&sw.includes("aryanzz-v84-2")],
 
 
  ];
