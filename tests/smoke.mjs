@@ -1018,6 +1018,39 @@ try{
   assert.equal(invalidImageSearch.status,400);
   console.log("✔ V81.0 Image Studio title search validates supported platforms");
 
+  const originalCapcutImageSearchFetch=globalThis.fetch;
+  try{
+    globalThis.fetch=async(input)=>{
+      const url=new URL(typeof input==="string"?input:input.url);
+      if(url.hostname==="html.duckduckgo.com"){
+        assert.match(url.searchParams.get("q")||"",/site:capcut\.com/);
+        return new Response('<a class="result__a" href="https://www.capcut.com/template-detail/123456">CapCut photo template</a>',{status:200,headers:{"content-type":"text/html"}});
+      }
+      if(url.hostname==="btch-downloader-api-green.vercel.app"){
+        assert.equal(url.pathname,"/api/download/capcut");
+        return new Response(JSON.stringify({success:true,normalized:{title:"CapCut photo post",images:[{url:"https://cdn.example/capcut-photo.jpg",type:"image",width:1080,height:1350}]}}),{status:200,headers:{"content-type":"application/json"}});
+      }
+      if(url.hostname==="www.capcut.com"){
+        return new Response("<html><head><title>CapCut photo post</title></head><body></body></html>",{status:200,headers:{"content-type":"text/html"}});
+      }
+      throw new Error("Unexpected image-search fetch host: "+url.hostname);
+    };
+    const capcutImageSearch=await worker.fetch(new Request("https://aryanzz.example/api/image/search",{
+      method:"POST",
+      headers:{"content-type":"application/json","cf-connecting-ip":"198.51.100.81"},
+      body:JSON.stringify({platform:"capcut",query:"photo template"})
+    }),{});
+    assert.equal(capcutImageSearch.status,200);
+    const capcutImageData=await capcutImageSearch.json();
+    assert.equal(capcutImageData.ok,true);
+    assert.equal(capcutImageData.platform,"capcut");
+    assert.equal(capcutImageData.verifiedCount,1);
+    assert.equal(capcutImageData.results[0].images.length,1);
+    assert.ok(capcutImageData.results[0].images[0].downloadUrl.includes("/api/social-image-file"));
+    assert.equal(capcutImageData.results[0].images[0].sourceUrl,"https://www.capcut.com/template-detail/123456");
+    console.log("✔ V81.1 CapCut image title search resolves a verified image and same-origin download link");
+  }finally{globalThis.fetch=originalCapcutImageSearchFetch;}
+
   const unsafeImageFile=await worker.fetch(new Request("https://aryanzz.example/api/image/file?url="+encodeURIComponent("http://127.0.0.1/private.png")),{}); 
   assert.equal(unsafeImageFile.status,400);
   console.log("✔ V81.0 Image Studio file proxy rejects private-network targets");
