@@ -34,6 +34,7 @@ const favicon=file("../public/favicon.svg");
 const deployWorkflow=file("../.github/workflows/deploy-cloudflare.yml");
 
 const checks=[
+  ["V88.2 Green Screen terms expand into template, background and overlay query variants",workerSource.includes('base+" meme template"')&&workerSource.includes('base+" background"')&&workerSource.includes('chroma key "+original')&&workerSource.includes('slice(0,platform==="all"?3:6)')],
   ["V88.1 Bing video search decodes Bing redirect links before validating social domains",workerSource.includes("function decodeBingSocialResultUrl")&&workerSource.includes("const link=decodeBingSocialResultUrl(href)")&&workerSource.includes("atob(value)")],
   ["V88.0 title search has no dedicated Green Screen option; keywords remain ordinary text",!html.includes('<option value="greenscreen">')&&!html.includes("Green Screen")&&!v674.includes("video Green Screen")&&workerSource.includes("function socialSearchQueryVariants")],
   ["V88.0 global search explains cross-platform grouping and round-robins sources",html.includes('data-platform="all"')&&v674.includes("Pencarian lintas platform aktif")&&workerSource.includes("const orderedCandidates=platform===\"all\"")],
@@ -77,7 +78,7 @@ const checks=[
   ["V77.0 custom output filename is honored by the public social provider",downloader.includes("info.outputName||info.title")&&downloader.includes("info.outputName||info.filename")],
   ["V82.2 SEO page title",html.includes("ARYANZZ Downloader - Pengunduh Video, Audio &amp; Gambar")],
   ["V85.0 versioned assets",html.includes("/v15.js?v=59.5")&&html.includes("/owner.js?v=59.5")&&html.includes("/downloader.js?v=85.2")&&html.includes("/downloader.css?v=85.1")&&html.includes("/v25.js?v=85.1")&&html.includes("/v25.css?v=85.1")&&html.includes("/v59.css?v=59.5")&&html.includes("/editor-pro.css?v=65.0")&&html.includes("/editor.js?v=65.0")],
-  ["service worker cache and V59.5 assets",html.includes("navigator.serviceWorker.register")&&sw.includes("aryanzz-v88-1")&&sw.includes("/editor.js?v=65.0")],
+  ["service worker cache and V59.5 assets",html.includes("navigator.serviceWorker.register")&&sw.includes("aryanzz-v88-2")&&sw.includes("/editor.js?v=65.0")],
   ["downloader input and result; remove backend status badge",html.includes('id="analyze"')&&html.includes('id="downloadResult"')&&!html.includes('id="backendStatus"')],
   ["unified self-hosted downloader API",downloader.includes('postJson("/api/info"')&&downloader.includes('"/api/direct-file?url="')&&downloader.includes("PLATFORM_NAMES")&&!downloader.toLowerCase().includes("savenow")],
   ["single capture-phase universal URL handler",downloader.includes('button.addEventListener("click"')&&downloader.includes("event.stopImmediatePropagation()")&&downloader.includes("}, true);")],
@@ -161,7 +162,7 @@ const checks=[
   ["DJ mix scan uses AudD Enterprise endpoint",html.includes('id="musicFileScanButton"')&&html.includes('id="musicScanSkip"')&&musicJs.includes('/api/music/scan-video')&&workerSource.includes("enterprise.audd.io")],
   ["Music Finder supports file, video URL and microphone",musicJs.includes("captureMediaSample")&&musicJs.includes("getUserMedia")&&musicJs.includes("/api/music/recognize")&&musicJs.includes("musicVideoUrl")],
   ["AudD errors expose provider code and actionable quota guidance",workerSource.includes("function auddFailure")&&workerSource.includes("providerErrorCode")&&workerSource.includes("kode 901")&&workerSource.includes("kode 902")],
-  ["V74.0 runs without a self-hosted or paid extractor",workerSource.includes('version:"88.1"')&&workerSource.includes('mode:"cloudflare-worker-zero-server-hybrid"')&&workerSource.includes('platformBackend:"public-free-community-api"')&&!workerSource.includes("DOWNLOADER_CONTAINER")],
+  ["V74.0 runs without a self-hosted or paid extractor",workerSource.includes('version:"88.2"')&&workerSource.includes('mode:"cloudflare-worker-zero-server-hybrid"')&&workerSource.includes('platformBackend:"public-free-community-api"')&&!workerSource.includes("DOWNLOADER_CONTAINER")],
   ["Shazam fallback covers standard AudD auth/quota failures",workerSource.includes("shazamRecognize(audioBlob,env)")&&workerSource.includes("providerErrorCode")&&serverSource.includes("/api/music/recognize")&&serverSource.includes("shazam_recognize.py")],
   ["DJ mix scans fall back to Shazam when AudD Enterprise errors",workerSource.includes("shazamScan(fallbackSource")&&serverSource.includes("/api/music/scan")&&serverSource.includes("scanShazamMedia")],
   ["Docker backend includes yt-dlp, FFmpeg and ShazamIO",file("../Dockerfile").includes("yt-dlp")&&file("../Dockerfile").includes("shazamio==0.9.0")&&serverSource.includes("ffprobe")],
@@ -177,7 +178,7 @@ const checks=[
   ["V67.9 remaining tools have branded backgrounds",v677css.includes('data-feature="gradientStudio"')&&v677css.includes('data-feature="fileHash"')&&v677css.includes("#editor .editor-pro-head")&&v677css.includes("#profile .v25-profile-cover")],
   ["V67.9 Color Studio favorites and clipboard work after redesign",v677js.includes("palette.onclick=async event")&&v677js.includes("favorites.onclick=async event")&&v677js.includes('localStorage.setItem("aryanzz.color-favorites.v674"')&&v677js.includes("copyExpandedColor")],
 
-  ["V74.0 service worker cache and creative assets",sw.includes("aryanzz-v88-1")&&sw.includes("/v680.css?v=71.0")&&sw.includes("/v680.js?v=71.0")&&html.includes("/v680.js?v=71.0")],
+  ["V74.0 service worker cache and creative assets",sw.includes("aryanzz-v88-2")&&sw.includes("/v680.css?v=71.0")&&sw.includes("/v680.js?v=71.0")&&html.includes("/v680.js?v=71.0")],
   ["V67.9 downloader preserves direct-source details",downloader.includes("function responseFilename")&&downloader.includes("const directMedia=!!info.extension&&!info.extractor")&&downloader.includes("/api/platform/status")],
   ["V73.7 unified title search renders social results in-page",file("../public/v674.js").includes('youtube:{name:"YouTube"')&&file("../public/v674.js").includes("/api/social/search")&&file("../public/v674.js").includes("Lihat & unduh")&&html.includes('data-platform="snackvideo"')],
   ["V67.9 direct media whitelist includes common formats",workerSource.includes('"mkv"')&&workerSource.includes('"avi"')&&workerSource.includes('"aiff"')&&workerSource.includes('"opus"')],
@@ -230,9 +231,9 @@ const checks=[
   ["V85.4.0 title search does not hide results behind V85 relevance thresholds",!v674.includes("rankRelevant")&&!v674.includes("SEARCH_EQUIVALENTS")],
 
   ["V87.0 title search exposes image, video and audio modes only",html.includes('id="titleSearchType"')&&html.includes('option value="image">Gambar</option>')&&html.includes('option value="video">Video</option>')&&html.includes('option value="audio">Audio</option>')&&!html.includes('option value="greenscreen">Green Screen</option>')],
-  ["V87.0 image search expands candidate coverage while excluding TikTok video thumbnails",workerSource.includes("publicSearchRelevance(query,title)<0.30")&&workerSource.includes('resultPlatform==="tiktok"&&!/\\/photo\\//i.test(source.pathname)')&&workerSource.includes('resultPlatform==="tiktok"&&!/\\/photo\\//i.test(link.pathname)')],
+  ["V87.0 image search expands candidate coverage while excluding TikTok video thumbnails",workerSource.includes("publicSearchRelevance(query,title)<0.12")&&workerSource.includes('resultPlatform==="tiktok"&&!/\\/photo\\//i.test(source.pathname)')&&workerSource.includes('resultPlatform==="tiktok"&&!/\\/photo\\//i.test(link.pathname)')],
   ["V85.3 Tools Center uses compact mobile cards and horizontal category filters",v677css.includes("#allTools .v674-tool-filters{position:sticky")&&v677css.includes("grid-template-columns:repeat(2,minmax(0,1fr))")&&v677css.includes("#allTools .tool{min-height:119px")],
-  ["V85.3 assets and PWA cache are versioned consistently",html.includes("V88.1 · GRATIS")&&html.includes("/v674.js?v=88.1")&&html.includes("/v677.css?v=85.3")&&html.includes("/v674.css?v=85.5.0")&&sw.includes("aryanzz-v88-1")&&sw.includes("/v674.js?v=88.1")&&sw.includes("/v677.css?v=85.3")&&sw.includes("/v674.css?v=85.5.0")],
+  ["V85.3 assets and PWA cache are versioned consistently",html.includes("V88.1 · GRATIS")&&html.includes("/v674.js?v=88.1")&&html.includes("/v677.css?v=85.3")&&html.includes("/v674.css?v=85.5.0")&&sw.includes("aryanzz-v88-2")&&sw.includes("/v674.js?v=88.1")&&sw.includes("/v677.css?v=85.3")&&sw.includes("/v674.css?v=85.5.0")],
 
   ["V85.5.0 image results are filtered to the selected platform source host",v674.includes("const expected=aliases[selected]||selected")&&v674.includes("host===domain||host.endsWith")&&v674.includes('gambar dari "+target.name')],
   ["V81.4 universal image search accepts all public platform domains and detects each result source",workerSource.includes('if(platform==="all")return [...new Set(Object.values(map).flat())]')&&workerSource.includes('const resultPlatform=socialImagePlatformKey(source.href,allowWeb?"web":platform)')&&workerSource.includes('platformCounts')],
@@ -243,14 +244,14 @@ const checks=[
   ["V81.4 universal image search can include public-web images and preserve their source-page referrer",workerSource.includes("allowWeb=false")&&workerSource.includes("allowWeb?safePublicMediaUrl")&&workerSource.includes('referer:sourcePage?sourcePage.href:current.origin+"/"')&&workerSource.includes('if(source)out.searchParams.set("source",source.href)')],
 
   ["V81.2 removes the slogan punctuation and redundant helper copy",html.includes("dari satu tautan</span>")&&!html.includes("dari satu tautan.</span>")&&!html.includes("v75-platform-note")&&!html.includes("Tempel tautan media atau cari judul untuk memulai.")],
-  ["V81.2 removes continuously animated blurred background and refreshes service worker cache",!v674Css.includes("body::before{content")&&!v674Css.includes("v674-aurora")&&sw.includes("aryanzz-v88-1")&&html.includes("V88.1 · GRATIS")],
+  ["V81.2 removes continuously animated blurred background and refreshes service worker cache",!v674Css.includes("body::before{content")&&!v674Css.includes("v674-aurora")&&sw.includes("aryanzz-v88-2")&&html.includes("V88.1 · GRATIS")],
   ["V80.1 image downloads use a validated same-origin image proxy and reject non-image content",workerSource.includes('url.pathname==="/api/image/file"')&&workerSource.includes('safePublicMediaUrl(raw)')&&workerSource.includes('image/jpeg')&&workerSource.includes('Sumber tidak mengirim file gambar yang didukung')],
   ["V80.1 Image Studio CSS and JavaScript are loaded and cached by the service worker",html.includes('/image-studio.css?v=81.4')&&html.includes('/image-studio.js?v=81.4')&&sw.includes('/image-studio.css?v=81.4')&&sw.includes('/image-studio.js?v=81.4')&&imageStudioCss.includes('.image-download-results')],
   ["V82.1 CapCut and SnackVideo marks use correct full-size SVG geometry",html.includes('aria-label="CapCut"')&&html.includes('M24.189 6.442')&&html.includes('aria-label="SnackVideo"')&&html.includes('viewBox="0 0 48 48"')&&html.includes('brand-refresh.css?v=82.1')],
   ["V82.2 homepage exposes indexable SEO metadata, canonical URL and structured data",html.includes('name="robots" content="index,follow')&&html.includes('rel="canonical"')&&html.includes('application/ld+json')&&html.includes('ARYANZZ Downloader — Unduh Video, Audio & Gambar Online')],
   ["V82.2 crawler discovery files expose an open robots policy, sitemap and branded favicon",robots.includes("User-agent: *")&&robots.includes("Allow: /")&&robots.includes("/sitemap.xml")&&sitemap.includes("<urlset")&&sitemap.includes("https://aryanzz-donwloader.radithnyahaniphanip.workers.dev/")&&favicon.includes("<svg")],
   ["V82.2 web app manifest uses the ARYANZZ Downloader brand",manifest.name==="ARYANZZ Downloader — Pengunduh Video, Audio & Gambar"&&manifest.short_name==="ARYANZZ"],
-  ["V84.6 compact Pustaka tabs and local favorites",html.includes("aryLibraryHistoryTab")&&html.includes("aryLibraryFavoriteTab")&&html.includes("function renderLibrary")&&html.includes("aryanzz-library-favorites-v1")&&sw.includes("aryanzz-v88-1")],
+  ["V84.6 compact Pustaka tabs and local favorites",html.includes("aryLibraryHistoryTab")&&html.includes("aryLibraryFavoriteTab")&&html.includes("function renderLibrary")&&html.includes("aryanzz-library-favorites-v1")&&sw.includes("aryanzz-v88-2")],
 
   ["V85.0 explicit profile motion toggle overrides OS reduced-motion only after user opt-in",profileJs.includes('saved==="on"||(!reduceMotion&&saved!=="off")')&&profileJs.includes('input.disabled=false;')&&profileJs.includes('const next=input.checked;')],
   ["V85.0 profile cover and stats visibly animate when motion is enabled",profileJs.includes('saved==="on"')&&file("../public/v25.css").includes('body[data-motion="on"] .v25-profile-cover:after')&&file("../public/v25.css").includes('body[data-motion="on"] .v25-avatar')],
@@ -503,7 +504,7 @@ console.log("✔ Image search validates short queries and image proxy blocks loc
 const healthResponse=await worker.fetch(new Request("https://aryanzz.example/api/health"),{});
 assert.equal(healthResponse.status,200);
 const health=await healthResponse.json();
-assert.equal(health.version,"88.1");
+assert.equal(health.version,"88.2");
 assert.equal(health.selfHostedDownloader,false);
 assert.equal(health.youtubeDownloader,true);
 assert.equal(health.mode,"cloudflare-worker-zero-server-hybrid");
@@ -1281,10 +1282,10 @@ try{
 
   const health=await worker.fetch(new Request("https://aryanzz.example/api/health"),{});
   const healthData=await health.json();
-  assert.equal(healthData.version,"88.1");
+  assert.equal(healthData.version,"88.2");
   assert.equal(healthData.cobalt,false);
   assert.equal(healthData.paidYoutubeProvider,false);
-  console.log("✔ Worker health reports V88.1 with no Cobalt or paid YouTube provider");
+  console.log("✔ Worker health reports V88.2 with no Cobalt or paid YouTube provider");
 
   const invalidImagePost=await worker.fetch(new Request("https://aryanzz.example/api/image/extract?url="+encodeURIComponent("http://127.0.0.1/private.png")),{}); 
   assert.equal(invalidImagePost.status,400);
