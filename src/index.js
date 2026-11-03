@@ -778,12 +778,12 @@ function socialImageSearchDomainsMatch(raw,platform){
   return domains.some(domain=>safe.hostname===domain||safe.hostname.endsWith("."+domain))?safe:null;
 }
 function canonicalPublicSearchQuery(value){
-  return String(value||"").toLowerCase().replace(/green\\s*screen/gi,"green screen").replace(/greenscreen/gi,"green screen").replace(/layar\\s*hijau/gi,"green screen").replace(/\\bkucing\\b/gi,"cat").replace(/\\banjing\\b/gi,"dog").replace(/\\blucu\\b/gi,"funny").replace(/\\bgambar\\b/gi,"image").replace(/\\bfoto\\b/gi,"photo").replace(/\\bmusik\\b/gi,"music").replace(/\\blagu\\b/gi,"song").replace(/\\s+/g," ").trim();
+  return String(value||"").toLowerCase().replace(/green\s*screen/gi,"green screen").replace(/greenscreen/gi,"green screen").replace(/layar\s*hijau/gi,"green screen").replace(/\bkucing\b/gi,"cat").replace(/\banjing\b/gi,"dog").replace(/\blucu\b/gi,"funny").replace(/\bgambar\b/gi,"image").replace(/\bfoto\b/gi,"photo").replace(/\bmusik\b/gi,"music").replace(/\blagu\b/gi,"song").replace(/\s+/g," ").trim();
 }
 function publicSearchRelevance(query,text){
-  const q=canonicalPublicSearchQuery(query),tokens=q.normalize("NFD").replace(/[\\u0300-\\u036f]/g,"").split(/[^a-z0-9]+/).filter(token=>token.length>1&&!["the","and","for","with","from"].includes(token));
+  const q=canonicalPublicSearchQuery(query),tokens=q.normalize("NFD").replace(/[\u0300-\u036f]/g,"").split(/[^a-z0-9]+/).filter(token=>token.length>1&&!["the","and","for","with","from"].includes(token));
   if(!tokens.length)return 0;
-  const hay=" "+canonicalPublicSearchQuery(text).normalize("NFD").replace(/[\\u0300-\\u036f]/g,"").replace(/[^a-z0-9]+/g," ")+" ";
+  const hay=" "+canonicalPublicSearchQuery(text).normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g," ")+" ";
   let hits=0;for(const token of tokens)if(hay.includes(" "+token+" "))hits++;
   const coverage=hits/tokens.length,phrase=hay.includes(" "+q+" ")?0.2:0;
   return Math.min(1,coverage*.8+phrase);
