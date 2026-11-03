@@ -62,8 +62,9 @@ const info=document.createElement("div"),title=document.createElement("h3"),meta
 title.textContent=item.title||"Media tanpa judul";
 meta.textContent=[item.channel,target.name,item.mediaMode==="audio"?"Audio":"Video",duration(item.duration),item.verified?"✓ Tautan terverifikasi":""].filter(Boolean).join(" · ");
 snippet.textContent=item.searchOnly?"Hasil publik yang relevan. Provider unduhan belum memverifikasi media ini; buka sumber atau coba analisis tautannya.":(item.snippet||item.mediaTitle||"Pilih hasil ini untuk memeriksa pratinjau dan format unduhan.");
-pick.type="button";pick.className="primary";pick.textContent=item.searchOnly?"Buka sumber asli ↗":"Lihat & unduh";
-if(item.searchOnly){pick.addEventListener("click",()=>window.open(item.url,"_blank","noopener,noreferrer"));snippet.textContent="Hasil pencarian publik. Buka sumber aslinya; unduhan otomatis belum didukung untuk platform ini.";}else{pick.addEventListener("click",()=>{const input=$("url");if(!input)return;input.value=item.url;setMode("link");$("analyze")?.click();$("downloadResult")?.scrollIntoView({behavior:"smooth",block:"nearest"})});}
+pick.type="button";pick.className="primary";pick.textContent=item.searchOnly?"Coba analisis & unduh":"Lihat & unduh";
+pick.addEventListener("click",()=>{const input=$("url");if(!input)return;input.value=item.url;setMode("link");$("analyze")?.click();$("downloadResult")?.scrollIntoView({behavior:"smooth",block:"nearest"})});
+if(item.searchOnly){const source=document.createElement("a");source.href=item.url;source.target="_blank";source.rel="noopener noreferrer";source.textContent="Buka sumber asli ↗";source.className="v674-source-link";info.append(source);}
 info.append(title,meta,snippet,pick);card.append(info);results.append(card);
 });
 if(images.length){
