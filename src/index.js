@@ -416,21 +416,21 @@ async function verifySocialSearchResult(result,requestUrl){
 function socialSearchCandidateAllowed(platform,rawUrl){
   const link=safePublicMediaUrl(rawUrl);if(!link)return null;
   if(!socialSearchDomains(platform).some(domain=>link.hostname===domain||link.hostname.endsWith("."+domain)))return null;
-  if(platform==="instagram"&&!/(?:^|\\/)(?:p|reel|tv|share)\\//i.test(link.pathname))return null;
-  if(platform==="tiktok"&&!/\\/video\\//i.test(link.pathname))return null;
-  if(platform==="pinterest"&&!/\\/pin\\//i.test(link.pathname))return null;
+  if(platform==="instagram"&&!/(?:^|\/)(?:p|reel|tv|share)\//i.test(link.pathname))return null;
+  if(platform==="tiktok"&&!/\/video\//i.test(link.pathname))return null;
+  if(platform==="pinterest"&&!/\/pin\//i.test(link.pathname))return null;
   return link;
 }
 function parseBingSocialCandidates(html,platform){
   const out=[],seen=new Set();
-  for(const block of String(html||"").matchAll(/<li\\b[^>]*class=["'][^"']*b_algo[^"']*["'][^>]*>[\\s\\S]*?<\\/li>/gi)){
-    const anchor=block[0].match(/<h2\\b[^>]*>[\\s\\S]*?<a\\b([^>]*)>([\\s\\S]*?)<\\/a>/i);
+  for(const block of String(html||"").matchAll(/<li\b[^>]*class=["'][^"']*b_algo[^"']*["'][^>]*>[\s\S]*?<\/li>/gi)){
+    const anchor=block[0].match(/<h2\b[^>]*>[\s\S]*?<a\b([^>]*)>([\s\S]*?)<\/a>/i);
     if(!anchor)continue;
-    const href=anchor[1].match(/\\bhref=["']([^"']+)["']/i)?.[1];if(!href)continue;
+    const href=anchor[1].match(/\bhref=["']([^"']+)["']/i)?.[1];if(!href)continue;
     let url;try{url=new URL(decodeSearchHtml(href))}catch{continue}
     const safe=socialSearchCandidateAllowed(platform,url.href);if(!safe||seen.has(safe.href))continue;
     const title=decodeSearchHtml(anchor[2].replace(/<[^>]+>/g," ")).trim();if(!title)continue;
-    const snippet=decodeSearchHtml((block[0].match(/<p\\b[^>]*>([\\s\\S]*?)<\\/p>/i)?.[1]||"").replace(/<[^>]+>/g," ")).trim();
+    const snippet=decodeSearchHtml((block[0].match(/<p\b[^>]*>([\s\S]*?)<\/p>/i)?.[1]||"").replace(/<[^>]+>/g," ")).trim();
     seen.add(safe.href);out.push({title,url:safe.href,snippet,searchEngine:"Bing"});
     if(out.length>=12)break;
   }
@@ -438,7 +438,7 @@ function parseBingSocialCandidates(html,platform){
 }
 async function searchSocial(request){
   let body;try{body=await request.json()}catch{return json({error:"Body JSON tidak valid."},400)}
-  const platform=String(body?.platform||"").toLowerCase(),query=String(body?.query||"").replace(/\\s+/g," ").trim();
+  const platform=String(body?.platform||"").toLowerCase(),query=String(body?.query||"").replace(/\s+/g," ").trim();
   if(!socialSearchDomains(platform).length||platform==="youtube")return json({error:"Platform pencarian belum didukung."},400);
   if(query.length<2||query.length>120)return json({error:"Masukkan judul antara 2 sampai 120 karakter."},400);
   if(socialRateLimited(request))return json({error:"Batas pencarian gratis tercapai. Tunggu satu menit lalu coba lagi."},429);
@@ -452,14 +452,14 @@ async function searchSocial(request){
       const response=await fetch(ddgUrl.href,{headers,signal:AbortSignal.timeout(10000),cache:"no-store"});
       if(response.ok){
         const html=await response.text();
-        for(const match of html.matchAll(/<a\\b([^>]*)>([\\s\\S]*?)<\\/a>/gi)){
-          const attrs=match[1]||"";if(!/\\bclass=["'][^"']*\\bresult__a\\b[^"']*["']/i.test(attrs))continue;
-          const href=attrs.match(/\\bhref=["']([^"']+)["']/i)?.[1];if(!href)continue;
+        for(const match of html.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/gi)){
+          const attrs=match[1]||"";if(!/\bclass=["'][^"']*\bresult__a\b[^"']*["']/i.test(attrs))continue;
+          const href=attrs.match(/\bhref=["']([^"']+)["']/i)?.[1];if(!href)continue;
           let link;try{link=new URL(decodeSearchHtml(href),"https://html.duckduckgo.com")}catch{continue}
           if(link.hostname.endsWith("duckduckgo.com")){const target=link.searchParams.get("uddg");if(target){try{link=new URL(target)}catch{continue}}}
           const safe=socialSearchCandidateAllowed(platform,link.href);if(!safe)continue;
           const title=decodeSearchHtml(match[2].replace(/<[^>]+>/g," ")).trim();
-          const snippet=decodeSearchHtml(html.slice(match.index,match.index+1800).match(/class=["']result__snippet["'][^>]*>([\\s\\S]*?)<\\/[^>]+>/i)?.[1]||"");
+          const snippet=decodeSearchHtml(html.slice(match.index,match.index+1800).match(/class=["']result__snippet["'][^>]*>([\s\S]*?)<\/[^>]+>/i)?.[1]||"");
           add([{title,url:safe.href,snippet,searchEngine:"DuckDuckGo"}]);
           if(candidates.length>=12)break;
         }
