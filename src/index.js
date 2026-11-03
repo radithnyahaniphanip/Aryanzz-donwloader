@@ -885,8 +885,8 @@ async function socialImageSearch(request){
   if(socialRateLimited(request))return json({error:"Batas pencarian gambar gratis tercapai. Tunggu satu menit lalu coba lagi."},429);
   try{
     const searchPlatforms=["pinterest","tiktok","instagram","facebook","x","reddit","threads","snackvideo","capcut","youtube","vimeo","soundcloud"];
+    let lastBingError="";
     const fetchBing=async(searchTerm,scope,allowWeb=false)=>{
-      let lastBingError="";
       const url=new URL("https://www.bing.com/images/search");
       url.searchParams.set("q",canonicalPublicSearchQuery(searchTerm));url.searchParams.set("form","HDRSC3");
       try{
