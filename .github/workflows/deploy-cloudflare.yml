@@ -103,7 +103,7 @@ jobs:
           const robotsResponse = await fetch(base + "/robots.txt", { cache: "no-store" });
           const robotsText = await robotsResponse.text();
           const robotsType = robotsResponse.headers.get("content-type") || "";
-          if (!robotsResponse.ok || !robotsType.includes("text/plain") || !robotsText.includes("User-agent: *") || !robotsText.includes(base + "/sitemap.txt")) {
+          if (!robotsResponse.ok || !robotsType.includes("text/plain") || !robotsText.includes("User-agent: *") || !robotsText.includes(base + "/sitemap.xml")) {
             throw new Error("robots.txt must return HTTP 200, text/plain and declare the plain-text sitemap. HTTP " + robotsResponse.status + ", content-type " + robotsType);
           }
           const plainMapResponse = await fetch(base + "/sitemap.txt", { cache: "no-store" });
