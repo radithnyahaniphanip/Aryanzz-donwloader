@@ -580,6 +580,12 @@ async function searchSocial(request){
         for(const item of direct.items){if(!seen.has(item.url)){seen.add(item.url);candidates.push(item)}}
       }
     }
+    if(platform==="all"&&desiredMode!=="audio"){
+      const youtubePages=await Promise.all(variants.slice(0,3).map(term=>hybridYouTubeSearch(term)));
+      for(const page of youtubePages)for(const item of page?.results||[]){
+        if(!seen.has(item.url)){seen.add(item.url);candidates.push({...item,platform:"youtube",snippet:item.channel||"YouTube video",searchProvider:item.provider||"YouTube public search"});}
+      }
+    }
     const relevantCandidates=candidates.filter(item=>publicSearchRelevance(query,item.title+" "+item.snippet)>=0.25);
     const orderedCandidates=platform==="all"?(()=>{const buckets=new Map();for(const item of relevantCandidates){const key=freePlatformKey(item.url)||"other";if(!buckets.has(key))buckets.set(key,[]);buckets.get(key).push(item)}const out=[];for(let round=0;round<12;round++)for(const list of buckets.values())if(list[round])out.push(list[round]);return out})():relevantCandidates;
     const checked=await Promise.all(orderedCandidates.slice(0,platform==="all"?50:35).map(item=>verifySocialSearchResult(item,request.url,desiredMode)));
