@@ -76,3 +76,10 @@
 .image-result-actions .primary{min-height:40px}
 .image-result-body{min-width:0}
 .image-result-body>b{overflow-wrap:anywhere}
+
+/* V81.4: responsive image results with readable actions */
+.image-download-results{grid-template-columns:repeat(auto-fit,minmax(min(100%,160px),1fr))!important;width:100%;min-width:0}
+.image-result-card{width:100%;min-width:0;max-width:100%;box-sizing:border-box}
+.image-result-preview,.image-result-preview img{display:block;width:100%;max-width:100%;box-sizing:border-box}
+.image-result-actions{display:grid!important;grid-template-columns:minmax(0,1fr)!important;width:100%;min-width:0}
+.image-result-actions a{display:flex!important;width:100%!important;min-width:0!important;max-width:100%!important;box-sizing:border-box!important;white-space:normal!important;overflow-wrap:anywhere!important;word-break:normal!important;writing-mode:horizontal-tb!important;text-align:center;line-height:1.35}
