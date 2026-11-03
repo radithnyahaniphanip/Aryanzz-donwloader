@@ -413,52 +413,6 @@ async function verifySocialSearchResult(result,requestUrl){
     return {...result,title:result.title||info.title,mediaTitle:info.title||"",thumbnail:info.thumbnail||null,duration:info.duration||null,verified:true,downloadable:true,mediaMode:playable.mode,extension:mediaData.extension,mediaType:mediaData.mimeType};
   }catch{return null}
 }
-function socialSearchCandidateAllowed(platform,rawUrl){
-  const link=safePublicMediaUrl(rawUrl);if(!link)return null;
-  if(!socialSearchDomains(platform).some(domain=>link.hostname===domain||link.hostname.endsWith("."+domain)))return null;
-  if(platform==="instagram"&&!/(?:^|\/)(?:p|reel|tv|share)\//i.test(link.pathname))return null;
-  if(platform==="tiktok"&&!(/\/(?:video|photo)\//i.test(link.pathname)||((link.hostname==="vm.tiktok.com"||link.hostname==="vt.tiktok.com")&&link.pathname.length>1)||/\/(?:t|v)\//i.test(link.pathname)))return null;
-  if(platform==="pinterest"&&!/\/pin\//i.test(link.pathname))return null;
-  return link;
-}
-function parseBingSocialCandidates(html,platform){
-  const out=[],seen=new Set();
-  for(const block of String(html||"").matchAll(/<li\b[^>]*class=["'][^"']*b_algo[^"']*["'][^>]*>[\s\S]*?<\/li>/gi)){
-    const anchor=block[0].match(/<h2\b[^>]*>[\s\S]*?<a\b([^>]*)>([\s\S]*?)<\/a>/i);
-    if(!anchor)continue;
-    const href=anchor[1].match(/\bhref=["']([^"']+)["']/i)?.[1];if(!href)continue;
-    let url;try{url=new URL(decodeSearchHtml(href))}catch{continue}
-    const safe=socialSearchCandidateAllowed(platform,url.href);if(!safe||seen.has(safe.href))continue;
-    const title=decodeSearchHtml(anchor[2].replace(/<[^>]+>/g," ")).trim();if(!title)continue;
-    const snippet=decodeSearchHtml((block[0].match(/<p\b[^>]*>([\s\S]*?)<\/p>/i)?.[1]||"").replace(/<[^>]+>/g," ")).trim();
-    seen.add(safe.href);out.push({title,url:safe.href,snippet,searchEngine:"Bing"});
-    if(out.length>=12)break;
-  }
-  return out;
-}
-function socialSearchQueryVariants(query,normalized){
-  const variants=[query,normalized];
-  if(!/\bvideo\b/i.test(query))variants.push(query+" video");
-  if(!/\bgreenscreen\b/i.test(query)&&/\bgreen screen\b/i.test(normalized))variants.push("greenscreen "+query.replace(/\bgreen\s*screen\b/i,"").trim());
-  return [...new Set(variants.map(value=>String(value||"").replace(/\s+/g," ").trim()).filter(Boolean))].slice(0,3);
-}
-function parseGoogleSocialCandidates(html,platform){
-  const out=[],seen=new Set();
-  for(const match of String(html||"").matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/gi)){
-    const attrs=match[1]||"",raw=attrs.match(/\bhref=["']([^"']+)["']/i)?.[1];if(!raw)continue;
-    let url;try{url=new URL(decodeSearchHtml(raw),"https://www.google.com")}catch{continue}
-    if(url.hostname==="www.google.com"||url.hostname==="google.com"){
-      const target=url.searchParams.get("q")||url.searchParams.get("url");if(target){try{url=new URL(target)}catch{continue}}
-    }
-    const safe=socialSearchCandidateAllowed(platform,url.href);if(!safe||seen.has(safe.href))continue;
-    const titleMatch=match[2].match(/<h3\b[^>]*>([\s\S]*?)<\/h3>/i);
-    const title=decodeSearchHtml((titleMatch?.[1]||match[2]).replace(/<[^>]+>/g," ")).trim();
-    if(!title||title.length<3)continue;
-    seen.add(safe.href);out.push({title,url:safe.href,snippet:"",searchEngine:"Google"});
-    if(out.length>=12)break;
-  }
-  return out;
-}
 async function searchSocial(request){
   let body;try{body=await request.json()}catch{return json({error:"Body JSON tidak valid."},400)}
   const platform=String(body?.platform||"").toLowerCase(),query=String(body?.query||"").replace(/\s+/g," ").trim();
