@@ -731,7 +731,7 @@ async function resolveSocialImagePost(rawUrl,requestUrl){
   ];
   const page=await tasks[1];
   await tasks[0];
-  const rawCandidates=[...providerImages.map(item=>({...item,url:item.url,source:"provider",type:item.type||item.kind||item.media_type||"image",mime_type:item.mime_type||item.mime||item.content_type||"",width:item.width||item.w||0,height:item.height||item.h||0,ext:item.ext||item.extension||""})),...(page?.images||[]).map(item=>({...item,type:"image"}))];
+  const rawCandidates=[...(page?.images||[]).map(item=>({...item,type:"image",source:item.source||"post-page"})),...providerImages.map(item=>({...item,url:item.url,source:"provider",type:item.type||item.kind||item.media_type||"image",mime_type:item.mime_type||item.mime||item.content_type||"",width:item.width||item.w||0,height:item.height||item.h||0,ext:item.ext||item.extension||""}))];
   const seen=new Set(),images=[];
   for(const item of rawCandidates){
     const safe=safePublicMediaUrl(item.url);if(!safe||seen.has(safe.href))continue;
@@ -770,6 +770,7 @@ async function socialImageInfo(request){
     return json({ok:true,...post});
   }catch(error){return json({error:"Gagal mengambil gambar postingan: "+String(error?.message||error).slice(0,150)},502)}
 }
+function socialImagePlatformKey(raw,fallback){const key=freePlatformKey(raw)||fallback;return key==="twitter"?"x":key;}
 function socialImageSearchDomainsMatch(raw,platform){
   const safe=safePublicMediaUrl(raw);if(!safe)return null;
   const domains=socialSearchDomains(platform);
@@ -784,7 +785,7 @@ function parseBingSocialImageResults(html,platform,requestUrl,query){
     const source=socialImageSearchDomainsMatch(meta.purl||meta.surl||meta.url||"",platform);
     const image=safePublicMediaUrl(String(meta.murl||meta.mediaUrl||meta.turl||"").replace(/&amp;/g,"&"));
     if(!source||!image)continue;
-    const resultPlatform=freePlatformKey(source.href)||platform;
+    const resultPlatform=socialImagePlatformKey(source.href,platform);
     if(resultPlatform==="pinterest"&&!/\/pin\//i.test(source.pathname))continue;
     if(resultPlatform==="tiktok"&&!/(?:\/photo\/|\/video\/)/i.test(source.pathname))continue;
     if(resultPlatform==="instagram"&&!/(?:\/p\/|\/reel\/|\/tv\/|\/share\/)/i.test(source.pathname))continue;
@@ -794,7 +795,7 @@ function parseBingSocialImageResults(html,platform,requestUrl,query){
     const index=results.length,ext=imageExtensionFromUrl(image.href)||"jpg";
     const filename=imageSafeFilename(title,index,ext);
     results.push({
-      title,platform:freePlatformKey(source.href)||platform,sourceUrl:source.href,url:image.href,
+      title,platform:resultPlatform,sourceUrl:source.href,url:image.href,
       previewUrl:socialImageProxyUrl(image.href,requestUrl,filename,false,source.href),
       downloadUrl:socialImageProxyUrl(image.href,requestUrl,filename,true,source.href),
       filename,width:Number(meta.w||meta.width)||null,height:Number(meta.h||meta.height)||null,
@@ -818,7 +819,7 @@ function parseSocialImageSearchLinks(html,platform,seen,limit=18){
     if(resultPlatform==="instagram"&&!/(?:\/p\/|\/reel\/|\/tv\/|\/share\/)/i.test(link.pathname))continue;
     const href=link.href.split("#")[0];if(seen.has(href))continue;seen.add(href);
     const title=decodeSearchHtml(match[2]);if(!title)continue;
-    out.push({title,url:href,platform:freePlatformKey(href)||platform});if(out.length>=limit)break;
+    out.push({title,url:href,platform:socialImagePlatformKey(href,platform)});if(out.length>=limit)break;
   }
   return out;
 }
@@ -833,41 +834,57 @@ async function socialImageSearch(request){
     const searchPlatforms=platform==="all"
       ?["pinterest","tiktok","instagram","facebook","x","reddit","threads","snackvideo","capcut","youtube","vimeo","soundcloud"]
       :[platform];
+    const fetchBing=async(searchTerm,scope)=>{
+      const url=new URL("https://www.bing.com/images/search");
+      url.searchParams.set("q",searchTerm);url.searchParams.set("form","HDRSC3");
+      try{
+        const response=await fetch(url.href,{headers:{accept:"text/html,application/xhtml+xml","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/130.0.0.0 Safari/537.36"},signal:AbortSignal.timeout(12000),cache:"no-store"});
+        return response.ok?parseBingSocialImageResults(await response.text(),scope,request.url,query):[];
+      }catch{return []}
+    };
     const buckets=await Promise.all(searchPlatforms.map(async key=>{
       const platformDomains=socialSearchDomains(key),site=platformDomains.map(domain=>"site:"+domain).join(" OR ");
-      const searchTerm=site+" "+query;
-      const bingUrl=new URL("https://www.bing.com/images/search");
-      bingUrl.searchParams.set("q",searchTerm);
-      bingUrl.searchParams.set("form","HDRSC3");
-      try{
-        const bing=await fetch(bingUrl.href,{headers:{accept:"text/html,application/xhtml+xml","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/130.0.0.0 Safari/537.36"},signal:AbortSignal.timeout(12000),cache:"no-store"});
-        if(!bing.ok)return {platform:key,results:[]};
-        return {platform:key,results:parseBingSocialImageResults(await bing.text(),key,request.url,query)};
-      }catch{return {platform:key,results:[]}}
+      return {platform:key,results:await fetchBing(site+" "+query,key)};
     }));
-    const results=[],seenImages=new Set();
+    if(platform==="all"){
+      const broad=await fetchBing(query,"all");
+      for(const item of broad){
+        const key=item.platform||"";
+        const bucket=buckets.find(entry=>entry.platform===key);
+        if(bucket&&!bucket.results.some(existing=>existing.url===item.url))bucket.results.unshift(item);
+      }
+    }
+    const results=[],seenImages=new Set(),platformCounts={};
+    const maxPerPlatform=platform==="all"?4:19;
     if(platform==="all"){
       for(let round=0;results.length<19;round++){
         let added=false;
         for(const bucket of buckets){
-          const item=bucket.results[round];
-          if(!item||seenImages.has(item.url))continue;
-          seenImages.add(item.url);results.push(item);added=true;
+          const item=bucket.results[round];if(!item)continue;
+          const key=item.platform||bucket.platform;
+          if((platformCounts[key]||0)>=maxPerPlatform||seenImages.has(item.url))continue;
+          seenImages.add(item.url);results.push(item);platformCounts[key]=(platformCounts[key]||0)+1;added=true;
           if(results.length>=19)break;
         }
         if(!added)break;
       }
     }else{
-      for(const item of buckets[0]?.results||[]){if(seenImages.has(item.url))continue;seenImages.add(item.url);results.push(item);if(results.length>=19)break}
+      for(const item of buckets[0]?.results||[]){
+        if(seenImages.has(item.url))continue;
+        seenImages.add(item.url);results.push(item);platformCounts[item.platform||platform]=(platformCounts[item.platform||platform]||0)+1;
+        if(results.length>=19)break;
+      }
     }
     let candidates=[];
-    if(results.length<19){
+    const distinctPlatforms=Object.keys(platformCounts).length;
+    const needsFallback=results.length<19||(platform==="all"&&distinctPlatforms<5);
+    if(needsFallback){
       const allDomains=socialSearchDomains(platform),site=allDomains.map(domain=>"site:"+domain).join(" OR ");
       const searchTerm=platform==="all"?"("+site+") "+query:site+" "+query;
       const ddgQueries=[searchTerm,searchTerm+" (image OR photo OR meme OR gambar OR foto OR pin)"];
       const pages=await Promise.all(ddgQueries.map(async term=>{
         const url=new URL("https://html.duckduckgo.com/html/");url.searchParams.set("q",term);
-        try{const response=await fetch(url.href,{headers:{accept:"text/html","user-agent":"Mozilla/5.0 (compatible; ARYANZZ/81.3)"},signal:AbortSignal.timeout(11000),cache:"no-store"});return response.ok?await response.text():""}catch{return ""}
+        try{const response=await fetch(url.href,{headers:{accept:"text/html","user-agent":"Mozilla/5.0 (compatible; ARYANZZ/81.4)"},signal:AbortSignal.timeout(11000),cache:"no-store"});return response.ok?await response.text():""}catch{return ""}
       }));
       const seenPosts=new Set();
       for(const page of pages)candidates.push(...parseSocialImageSearchLinks(page,platform,seenPosts,18-candidates.length));
@@ -875,15 +892,18 @@ async function socialImageSearch(request){
       for(const entry of posts.filter(Boolean)){
         for(const image of entry.post.images||[]){
           if(results.length>=19)break;
-          const imageUrl=String(image.url||"");if(seenImages.has(imageUrl))continue;seenImages.add(imageUrl);
-          results.push({...image,title:entry.post.title==="Postingan gambar"?entry.item.title:entry.post.title,platform:entry.post.platform||entry.item.platform||platform,sourceUrl:entry.post.url||entry.item.url,verified:true,searchProvider:"Public post metadata"});
+          const imageUrl=String(image.url||""),key=socialImagePlatformKey(entry.post.url||entry.item.url,entry.post.platform||entry.item.platform||platform);
+          if(seenImages.has(imageUrl)||(platform==="all"&&(platformCounts[key]||0)>=maxPerPlatform))continue;
+          seenImages.add(imageUrl);
+          results.push({...image,title:entry.post.title==="Postingan gambar"?entry.item.title:entry.post.title,platform:key,sourceUrl:entry.post.url||entry.item.url,verified:true,searchProvider:"Public post metadata"});
+          platformCounts[key]=(platformCounts[key]||0)+1;
         }
         if(results.length>=19)break;
       }
     }
     const grouped=results.slice(0,19).map(item=>({title:item.title||query,sourceUrl:item.sourceUrl,platform:item.platform||platform,verified:!!item.verified,images:[item]}));
-    const platformCounts=grouped.reduce((counts,item)=>{const key=item.platform||"other";counts[key]=(counts[key]||0)+1;return counts}, {});
-    return json({ok:true,platform,query,results:grouped,imageCount:grouped.length,verifiedCount:grouped.length,platformCounts,unavailableCount:Math.max(0,candidates.length-grouped.length),searchProvider:"Bing Images + public posts"});
+    const counts=grouped.reduce((out,item)=>{const key=socialImagePlatformKey(item.sourceUrl,item.platform||"other");out[key]=(out[key]||0)+1;return out},{});
+    return json({ok:true,platform,query,results:grouped,imageCount:grouped.length,verifiedCount:grouped.length,platformCounts:counts,unavailableCount:Math.max(0,candidates.length-grouped.length),searchProvider:"Bing Images + public social posts"});
   }catch(error){return json({error:"Pencarian gambar gagal dijangkau. "+String(error?.message||error).slice(0,120)},502)}
 }
 async function socialImageFile(request){
