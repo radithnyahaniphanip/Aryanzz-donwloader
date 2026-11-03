@@ -74,3 +74,11 @@ body[data-theme="light"] .v674-search-result h3{color:#1b2440}
 @media(min-width:700px){.v674-search-results .aryanzz-inline-image-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 
 .v674-search-type-row{margin:0 0 9px;display:flex;align-items:center}.v674-search-type-row .field{width:100%;max-width:260px;min-height:46px;border-radius:13px;background:#080e1b;border-color:#354365;color:#edf4ff;padding:11px 14px}
+/* V88.12 active security status indicator */
+.v674-top-actions{display:flex;align-items:center;gap:9px}
+.v674-security-indicator{display:inline-flex;align-items:center;gap:6px;padding:6px 9px;border:1px solid #334155;border-radius:999px;color:#94a3b8;font-size:10px;font-weight:800;white-space:nowrap;background:#0b1424}
+.v674-security-indicator i{width:7px;height:7px;border-radius:50%;background:#f59e0b;box-shadow:0 0 8px currentColor}
+.v674-security-indicator.is-active{border-color:#166534;color:#86efac;background:#052e1a}
+.v674-security-indicator.is-active i{background:#22c55e}
+.v674-security-indicator.is-warning{border-color:#92400e;color:#fbbf24;background:#422006}
+@media(max-width:420px){.v674-security-indicator{padding:6px 7px;font-size:9px}.v674-top-actions{gap:5px}}
