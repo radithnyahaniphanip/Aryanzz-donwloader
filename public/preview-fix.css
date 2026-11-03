@@ -1,0 +1,9 @@
+/* ARYANZZ preview refinement: preserve intrinsic video geometry and use custom controls */
+.ary-video-preview-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;width:100%;max-width:100%;margin:14px auto 8px;padding:12px;border:1px solid #263d60;border-radius:16px;background:#050a13;overflow:hidden}
+.ary-video-preview-wrap .v737-media-preview{display:block;flex:0 1 auto;width:auto;max-width:100%;height:auto;max-height:70svh;object-fit:contain;object-position:center;background:#000;border-radius:12px}
+.ary-video-controls{display:flex;align-items:center;gap:10px;width:100%;max-width:720px}
+.ary-video-controls button{flex:0 0 auto;min-width:78px;padding:9px 12px;border-radius:10px}
+.ary-video-controls .ary-video-seek{flex:1 1 auto;min-width:0;width:100%;accent-color:#43cde2}
+.ary-video-controls small{flex:0 0 auto;min-width:78px;text-align:right;font-variant-numeric:tabular-nums}
+.v737-media-preview::-webkit-media-controls-enclosure{display:none!important}
+@media(max-width:420px){.ary-video-preview-wrap{padding:8px}.ary-video-controls{gap:7px}.ary-video-controls button{min-width:68px;padding:8px 9px}.ary-video-controls small{min-width:68px;font-size:10px}}
