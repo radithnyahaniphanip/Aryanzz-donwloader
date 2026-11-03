@@ -131,11 +131,11 @@ jobs:
           }
           console.log("V82.4 SEO verified: XML + plain-text sitemap, robots and homepage all return HTTP 200 to Googlebot user-agent.");
 
-          for (const path of ["/editor.js?v=65.0", "/editor-pro.css?v=65.0", "/music-recognition.js?v=71.0", "/music-recognition.css?v=71.0", "/v674.js?v=88.3", "/v674.css?v=81.4", "/v677.js?v=67.7", "/v677.css?v=67.7", "/v680.js?v=71.0", "/v680.css?v=71.0", "/v690.css?v=71.0", "/downloader.js?v=88.3", "/downloader.css?v=88.3", "/v59.js?v=59.5", "/v59.css?v=59.5", "/audio-studio.js?v=80.0", "/audio-studio.css?v=80.0", "/image-studio.js?v=81.4", "/image-studio.css?v=81.4", "/robots.txt", "/sitemap.xml", "/sitemap.txt", "/favicon.svg", "/og-cover.svg"]) {
+          for (const path of ["/editor.js?v=65.0", "/editor-pro.css?v=65.0", "/music-recognition.js?v=71.0", "/music-recognition.css?v=71.0", "/v674.js?v=88.13", "/v674.css?v=81.4", "/v677.js?v=67.7", "/v677.css?v=67.7", "/v680.js?v=71.0", "/v680.css?v=71.0", "/v690.css?v=71.0", "/downloader.js?v=88.8", "/downloader.css?v=88.7", "/v59.js?v=59.5", "/v59.css?v=59.5", "/audio-studio.js?v=80.0", "/audio-studio.css?v=80.0", "/image-studio.js?v=81.4", "/image-studio.css?v=81.4", "/robots.txt", "/sitemap.xml", "/sitemap.txt", "/favicon.svg", "/og-cover.svg"]) {
             const response = await fetch(base + path, { cache: "no-store" });
             if (!response.ok) throw new Error("Static asset unavailable: " + path + " HTTP " + response.status);
           }
-          const downloaderResponse = await fetch(base + "/downloader.js?v=88.3", { cache: "no-store" });
+          const downloaderResponse = await fetch(base + "/downloader.js?v=88.8", { cache: "no-store" });
           const downloaderSource = await downloaderResponse.text();
           if (!downloaderSource.includes("Provider komunitas menolak stream") || !downloaderSource.includes('postJson("/api/info",{url})')) {
             throw new Error("Live YouTube downloader is missing its public-free-provider fallback after 403/429.");
@@ -162,7 +162,7 @@ jobs:
           if (!downloaderSource.includes("youtube-engine-status") || !downloaderSource.includes("youtube-nocookie.com/embed/") || !downloaderSource.includes("const downloadInfo={...info,outputName:") || !downloaderSource.includes("ffmpegUnavailable&&mode===\"video\"&&selected.videoOnly") || !downloaderSource.includes("function updateDownloadProgress") || !downloaderSource.includes("const exactProgressive=") || !downloaderSource.includes("Tahap 2/3 · Audio") || !downloaderSource.includes("fetchYoutubeTrackRanges") || !downloaderSource.includes("indexedDB.open(\"aryanzz-download-resume\"") || !downloaderSource.includes("Maksimal · 5 jalur") || !downloaderSource.includes("const chunkSize=1024*1024") || !downloaderSource.includes("inFlight+=result.value.byteLength") || !downloaderSource.includes("probeYoutubeTrack") || !downloaderSource.includes("await ffmpeg.writeFile(inputVideo,videoBytes);videoBytes=null;") || !downloaderSource.includes("/api/youtube/hybrid/thumbnail") || !downloaderSource.includes("?local=true") || !downloaderSource.includes("probe=1") || !downloaderSource.includes("diagnostics.push({provider,instance,error:") || !downloaderSource.includes("pipedInstances.slice(0,20)") || !downloaderSource.includes("speedLabel.hidden=!isYouTube") || !downloaderSource.includes("/api/youtube/hybrid/browser-file?") || !downloaderSource.includes("navigator.serviceWorker?.controller") || !downloaderSource.includes("function youtubeQualityEstimate") || !downloaderSource.includes("details.append(thumbAction)") || !downloaderSource.includes("async function refreshYoutubeProviderInfo") || !downloaderSource.includes("const [downloadedVideo,readyFfmpeg]=await Promise.all([") || downloaderSource.includes('make("img","youtube-thumbnail")')) {
             throw new Error("Live downloader is missing the V73.7 progressive MP4 or progress/ETA improvements.");
           }
-          const downloaderCssResponse = await fetch(base + "/downloader.css?v=88.3", { cache: "no-store" });
+          const downloaderCssResponse = await fetch(base + "/downloader.css?v=88.7", { cache: "no-store" });
           const downloaderCssSource = await downloaderCssResponse.text();
           if (!downloaderCssResponse.ok || !downloaderCssSource.includes(".youtube-result [hidden]{display:none!important}") || !downloaderCssSource.includes("aryanzzDownloadSweep") || downloaderCssSource.includes("position:absolute")) {
             throw new Error("Live downloader CSS is missing hidden-control or animated-progress fixes.");
@@ -183,7 +183,7 @@ jobs:
           if (!downloaderSource.includes("available.map(value=>[value,value+\"p · tersedia\"])") || !downloaderSource.includes("Persiapan 100% · ketuk tombol") || !downloaderSource.includes("Kesiapan tautan unduhan")) {
             throw new Error("V81.4 social quality selector or honest link-ready progress is missing.");
           }
-          if (!pageResponse.ok || !pageSource.includes("V88.3 · GRATIS") || !pageSource.includes('id="imageTools"') || !pageSource.includes('src="/image-studio.js?v=81.4"') || !pageSource.includes("restoreAutoBackup") || !pageSource.includes("audioStudio") || !pageSource.includes("profileMotionToggle") || !pageSource.includes("Kontrol banner profil") || !pageSource.includes("audioStudioTempo") || !pageSource.includes("audioStudioTitle")) {
+          if (!pageResponse.ok || !pageSource.includes("V88.13 · GRATIS") || !pageSource.includes('id="imageTools"') || !pageSource.includes('src="/image-studio.js?v=81.4"') || !pageSource.includes("restoreAutoBackup") || !pageSource.includes("audioStudio") || !pageSource.includes("profileMotionToggle") || !pageSource.includes("Kontrol banner profil") || !pageSource.includes("audioStudioTempo") || !pageSource.includes("audioStudioTitle")) {
             throw new Error("V74.0 page, profile backup, or Audio Studio markup is not live.");
           }
           console.log("V88.3 page, Audio Studio, profile backup, and creative assets are available.");
