@@ -718,7 +718,7 @@ async function resolveSocialImagePost(rawUrl,requestUrl,options={}){
   const providerUrl=FREE_MEDIA_API+"/api/download/"+key+"?url="+encodeURIComponent(rawUrl);
   const includeProvider=options.includeProvider!==false;
   const tasks=[
-    includeProvider?fetch(providerUrl,{headers:{accept:"application/json"},signal:AbortSignal.timeout(14000),cache:"no-store"}).then(async response=>{
+    includeProvider?fetch(providerUrl,{headers:{accept:"application/json"},signal:AbortSignal.timeout(Number(options.providerTimeoutMs)||14000),cache:"no-store"}).then(async response=>{
       if(!response.ok)throw new Error("Provider gambar HTTP "+response.status);
       const data=await response.json().catch(()=>({}));
       if(data?.success===false)throw new Error("Provider tidak mendukung konten gambar ini.");
@@ -902,7 +902,7 @@ async function socialImageSearch(request){
       }));
       const seenPosts=new Set();
       for(const page of pages)candidates.push(...parseSocialImageSearchLinks(page,platform,seenPosts,18-candidates.length));
-      const posts=await Promise.all(candidates.slice(0,12).map(item=>resolveSocialImagePost(item.url,request.url,{timeoutMs:10000}).then(post=>post?{item,post}:null).catch(()=>null)));
+      const posts=await Promise.all(candidates.slice(0,12).map(item=>resolveSocialImagePost(item.url,request.url,{timeoutMs:8000,providerTimeoutMs:9000}).then(post=>post?{item,post}:null).catch(()=>null)));
       for(const entry of posts.filter(Boolean)){
         for(const image of entry.post.images||[]){
           if(results.length>=19)break;
