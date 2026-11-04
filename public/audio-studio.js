@@ -43,8 +43,9 @@
     if(cancel)cancel.hidden=!value;
     const previewConvert=$("audioStudioPreviewConvert");if(previewConvert)previewConvert.disabled=value;
     fileInput.disabled=value;
-    const bitrate=$("audioStudioBitrate"),name=$("audioStudioName"),start=$("audioStudioStart"),end=$("audioStudioEnd");
-    if(bitrate)bitrate.disabled=value;if(name)name.disabled=value;if(start)start.disabled=value;if(end)end.disabled=value;
+    const bitrate=$("audioStudioBitrate"),name=$("audioStudioName"),start=$("audioStudioStart"),end=$("audioStudioEnd"),format=$("audioStudioFormat"),volume=$("audioStudioVolume");
+    if(bitrate)bitrate.disabled=value;if(name)name.disabled=value;if(start)start.disabled=value;if(end)end.disabled=value;if(format)format.disabled=value;if(volume)volume.disabled=value;
+    if(!value&&typeof syncAudioOptions==="function")syncAudioOptions();
   }
   function updateFileMeta(extra="") {
     const meta=$("audioStudioFileMeta");
