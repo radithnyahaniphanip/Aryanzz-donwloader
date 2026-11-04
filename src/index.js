@@ -414,7 +414,7 @@ function socialSearchQueryVariants(query){
     add(normalized+" video",normalized+" clips",normalized+" shorts",normalized+" tutorial");
   }
   const seen=new Set();
-  return variants.map(value=>value.replace(/\\s+/g," ").trim()).filter(value=>value.length>=2&&!seen.has(value.toLowerCase())&&seen.add(value.toLowerCase())).slice(0,12);
+  return variants.map(value=>value.replace(/\s+/g," ").trim()).filter(value=>value.length>=2&&!seen.has(value.toLowerCase())&&seen.add(value.toLowerCase())).slice(0,12);
 }
 function socialSearchUrl(platform,query){
   const domains=socialSearchDomains(platform);if(!domains.length)return null;
