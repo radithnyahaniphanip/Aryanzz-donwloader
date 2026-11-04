@@ -1,5 +1,5 @@
 const base=(process.env.WORKER_URL||"https://aryanzz-donwloader.radithnyahaniphanip.workers.dev").replace(/\/$/,"");
-const sourceUrl="https://www.instagram.com/p/Dek72MYE141/";
+const sourceUrl="https://www.instagram.com/p/Dek72MYE141/?xtok=OWdvNjR4dmZscnlx";
 const report={test:"user-supplied Instagram post image extraction",sourceUrl,status:null,title:null,platform:null,imageCount:0,previewStatus:null,previewMime:null,previewDisposition:null,signatureValid:false,downloadUrlAvailable:false,error:null};
 try{
   const endpoint=new URL("/api/image/extract",base);endpoint.searchParams.set("url",sourceUrl);
