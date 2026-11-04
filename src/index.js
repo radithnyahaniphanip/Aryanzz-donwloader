@@ -198,10 +198,14 @@ async function snackVideoNativePageFallback(rawUrl,requestUrl){
   const canonical=decoded.match(/<link[^>]+rel=["']canonical["'][^>]+href=["']([^"']+)["']/i);
   const title=String(ogTitle?.[1]||titleMatch?.[1]||"Video SnackVideo").replace(/\s*[-|]\s*SnackVideo.*$/i,"").slice(0,300);
   const thumbnail=String(ogImage?.[1]||"");
+  const durationMatch=decoded.match(/"(?:duration|durationSeconds|duration_seconds|videoDuration|video_duration|durationMs|duration_ms)"\s*:\s*(\d+(?:\.\d+)?)/i)||decoded.match(/<meta[^>]+(?:property|name)=["']video:duration["'][^>]+content=["'](\d+(?:\.\d+)?)["']/i);
+  let duration=Number(durationMatch?.[1]||0)||null;
+  if(duration&&/(?:durationMs|duration_ms)/i.test(durationMatch?.[0]||""))duration/=1000;
+  if(duration&&duration>86400)duration/=1000;
   const unique=[...new Set(candidates)];
   if(!unique.length)throw new Error("Halaman publik berhasil dibuka, tetapi URL stream MP4 tidak ditemukan pada HTML.");
   const media=unique.slice(0,12).map((url,index)=>({type:"video",kind:"video",label:"MP4"+(index?" alternatif "+(index+1):""),url}));
-  const normalized=freeProviderMediaInfo({normalized:{title,thumbnail,media}},rawUrl,requestUrl);
+  const normalized=freeProviderMediaInfo({normalized:{title,thumbnail,duration,media}},rawUrl,requestUrl);
   if(!normalized)throw new Error("Stream dari halaman SnackVideo tidak lolos validasi media.");
   normalized.providerName="SnackVideo native page fallback";
   normalized.provider="Direct public page";
@@ -462,20 +466,28 @@ async function proxyPlatform(request,env,path){
 }
 async function platformStatus(env){
   const platforms=[
-    {id:"youtube",domains:["youtube.com","youtu.be"],pasteLink:true,titleSearch:true,preview:"hybrid",mediaModes:["video","audio"],mp4:"hybrid-provider-dependent"},
+    {id:"youtube",domains:["youtube.com","youtu.be"],pasteLink:true,titleSearch:true,preview:"youtube-embed-and-hybrid",mediaModes:["video","audio"],mp4:"hybrid-provider-dependent"},
     {id:"tiktok",domains:["tiktok.com","vm.tiktok.com","vt.tiktok.com"],pasteLink:true,titleSearch:true,preview:"range-proxy",mediaModes:["video"],mp4:"provider-dependent"},
-    {id:"instagram",domains:["instagram.com","instagr.am"],pasteLink:true,titleSearch:true,preview:"range-proxy",mediaModes:["video"],mp4:"provider-dependent"},
-    {id:"snackvideo",domains:["snackvideo.com"],pasteLink:true,titleSearch:true,preview:"range-proxy",mediaModes:["video"],mp4:"provider-dependent"},
-    {id:"capcut",domains:["capcut.com"],pasteLink:true,titleSearch:true,preview:"range-proxy",mediaModes:["video"],mp4:"provider-dependent"},
-    {id:"pinterest",domains:["pinterest.com","pin.it"],pasteLink:true,titleSearch:true,preview:"range-proxy",mediaModes:["video"],mp4:"provider-dependent"},
-    {id:"facebook",domains:["facebook.com","fb.watch"],pasteLink:true,titleSearch:true,preview:"range-proxy",mediaModes:["video"],mp4:"provider-dependent"},
-    {id:"x",domains:["x.com","twitter.com"],pasteLink:true,titleSearch:true,preview:"range-proxy",mediaModes:["video"],mp4:"provider-dependent"},
-    {id:"reddit",domains:["reddit.com","redd.it","v.redd.it"],pasteLink:true,titleSearch:true,preview:"range-proxy",mediaModes:["video","audio"],mp4:"provider-dependent"},
+    {id:"instagram",domains:["instagram.com","instagr.am"],pasteLink:true,titleSearch:true,preview:"range-proxy",mediaModes:["video","image"],mp4:"provider-dependent"},
+    {id:"snackvideo",domains:["snackvideo.com"],pasteLink:true,titleSearch:true,preview:"range-proxy",mediaModes:["video","image"],mp4:"provider-dependent"},
+    {id:"capcut",domains:["capcut.com"],pasteLink:true,titleSearch:true,preview:"range-proxy",mediaModes:["video","image"],mp4:"provider-dependent"},
+    {id:"pinterest",domains:["pinterest.com","pin.it"],pasteLink:true,titleSearch:true,preview:"range-proxy",mediaModes:["video","image"],mp4:"provider-dependent"},
+    {id:"facebook",domains:["facebook.com","fb.watch"],pasteLink:true,titleSearch:true,preview:"range-proxy",mediaModes:["video","image"],mp4:"provider-dependent"},
+    {id:"x",domains:["x.com","twitter.com"],pasteLink:true,titleSearch:true,preview:"range-proxy",mediaModes:["video","image"],mp4:"provider-dependent"},
+    {id:"reddit",domains:["reddit.com","redd.it","v.redd.it"],pasteLink:true,titleSearch:true,preview:"range-proxy",mediaModes:["video","audio","image"],mp4:"provider-dependent"},
     {id:"vimeo",domains:["vimeo.com"],pasteLink:true,titleSearch:true,preview:"range-proxy",mediaModes:["video"],mp4:"provider-dependent"},
-    {id:"threads",domains:["threads.net"],pasteLink:true,titleSearch:true,preview:"range-proxy",mediaModes:["video"],mp4:"provider-dependent"},
-    {id:"soundcloud",domains:["soundcloud.com"],pasteLink:true,titleSearch:true,preview:"range-proxy",mediaModes:["audio"],mp4:"not-applicable"}
+    {id:"threads",domains:["threads.net"],pasteLink:true,titleSearch:true,preview:"range-proxy",mediaModes:["video","image"],mp4:"provider-dependent"},
+    {id:"soundcloud",domains:["soundcloud.com"],pasteLink:true,titleSearch:true,preview:"audio-range-proxy",mediaModes:["audio"],mp4:"not-applicable"},
+    {id:"tiktoklite",domains:["tiktok.com","vm.tiktok.com","vt.tiktok.com"],aliasOf:"tiktok",pasteLink:true,titleSearch:true,preview:"range-proxy",mediaModes:["video"],mp4:"provider-dependent"},
+    {id:"facebooklite",domains:["facebook.com","fb.watch"],aliasOf:"facebook",pasteLink:true,titleSearch:true,preview:"range-proxy",mediaModes:["video","image"],mp4:"provider-dependent"},
+    {id:"snapchat",domains:["snapchat.com"],pasteLink:true,titleSearch:true,preview:"range-proxy",mediaModes:["video","image"],mp4:"provider-dependent"},
+    {id:"idnapp",domains:["idntimes.com"],pasteLink:true,titleSearch:true,preview:"range-proxy",mediaModes:["video","image"],mp4:"provider-dependent"},
+    {id:"instagramlite",domains:["instagram.com","instagr.am"],aliasOf:"instagram",pasteLink:true,titleSearch:true,preview:"range-proxy",mediaModes:["video","image"],mp4:"provider-dependent"},
+    {id:"linkedin",domains:["linkedin.com"],pasteLink:true,titleSearch:true,preview:"range-proxy",mediaModes:["video","image"],mp4:"provider-dependent"},
+    {id:"wechat",domains:["wechat.com","weixin.qq.com"],pasteLink:true,titleSearch:true,preview:"range-proxy",mediaModes:["video","image"],mp4:"provider-dependent"},
+    {id:"kakaotalk",domains:["kakao.com"],pasteLink:true,titleSearch:true,preview:"range-proxy",mediaModes:["video","image"],mp4:"provider-dependent"}
   ];
-  return json({ok:true,configured:false,backend:"public-community-api",mode:"zero-server",engine:"Cloudflare Worker + public free community extractor",platforms,liveAvailability:"Jalur tiap platform tersedia; hasil nyata tetap bergantung pada provider, visibilitas konten, dan format yang disediakan.",message:"12 platform dikenali untuk tempel tautan atau pencarian judul. Video hanya ditawarkan sebagai MP4 jika provider benar-benar menyediakan MP4 yang valid; SoundCloud diperlakukan sebagai audio, bukan MP4. Konten privat, tautan kedaluwarsa, dan file yang tidak diekspos oleh sumber tidak dapat diekstrak."});
+  return json({ok:true,configured:false,backend:"public-community-api",mode:"zero-server",engine:"Cloudflare Worker + public free community extractor",platformCount:19,platforms,liveAvailability:"Semua 19 pilihan platform dikenali oleh routing dan pencarian; keberhasilan ekstraksi media aktual bergantung pada provider, visibilitas konten, dan format yang disediakan.",message:"19 pilihan platform terdaftar. Lite menggunakan jalur media platform induknya dengan pemetaan alias. MP4 hanya tersedia bila provider benar-benar memberikan stream MP4 valid; SoundCloud adalah audio. Konten privat, tautan kedaluwarsa, atau media yang tidak diekspos sumber tidak dapat diekstrak."});
 }
 function decodeSearchHtml(value){
   return String(value||"").replace(/<[^>]*>/g,"").replace(/&amp;/g,"&").replace(/&quot;/g,'"').replace(/&#39;|&#x27;/gi,"'").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&nbsp;/g," ").replace(/&#(\d+);/g,(_,n)=>String.fromCodePoint(Number(n))).replace(/&#x([0-9a-f]+);/gi,(_,n)=>String.fromCodePoint(parseInt(n,16))).replace(/\s+/g," ").trim();
