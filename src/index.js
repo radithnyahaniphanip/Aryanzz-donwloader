@@ -1937,6 +1937,88 @@ async function bypassSflLink(request){
 }
 const SFL_BYPASS_BUCKETS=new Map();
 
+
+const AUTH_PBKDF2_ITERATIONS=600000;
+const AUTH_SESSION_SECONDS=60*60*24*30;
+function authDb(env){return env&&env.DB&&typeof env.DB.prepare==="function"?env.DB:null;}
+function authCookie(request){const raw=request.headers.get("cookie")||"";for(const part of raw.split(";")){const [k,...v]=part.trim().split("=");if(k==="aryanzz_session")return v.join("=");}return "";}
+function authHex(bytes){return Array.from(new Uint8Array(bytes),b=>b.toString(16).padStart(2,"0")).join("");}
+function authRandomHex(size){const bytes=new Uint8Array(size);crypto.getRandomValues(bytes);return authHex(bytes);}
+function authAccountId(){const alphabet="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";const bytes=new Uint8Array(10);crypto.getRandomValues(bytes);return "ARY-"+Array.from(bytes,b=>alphabet[b%alphabet.length]).join("");}
+async function authDigest(value){return authHex(await crypto.subtle.digest("SHA-256",new TextEncoder().encode(value)));}
+async function authPasswordHash(password,saltHex){
+ const salt=Uint8Array.from(saltHex.match(/.{2}/g)||[],x=>parseInt(x,16));
+ const material=await crypto.subtle.importKey("raw",new TextEncoder().encode(password),"PBKDF2",false,["deriveBits"]);
+ const bits=await crypto.subtle.deriveBits({name:"PBKDF2",hash:"SHA-256",salt,iterations:AUTH_PBKDF2_ITERATIONS},material,256);
+ return authHex(bits);
+}
+function authPasswordValid(password){
+ return typeof password==="string"&&password.length>=12&&password.length<=128&&/[a-z]/.test(password)&&/[A-Z]/.test(password)&&/[0-9]/.test(password)&&/[^A-Za-z0-9]/.test(password);
+}
+function authCookieHeader(token,maxAge=AUTH_SESSION_SECONDS){
+ return "aryanzz_session="+token+"; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age="+maxAge;
+}
+function authResponse(data,status=200,headers={}){
+ const h=new Headers(headers);h.set("content-type","application/json; charset=utf-8");h.set("cache-control","no-store");return new Response(JSON.stringify(data),{status,headers:h});
+}
+async function authRegister(request,env){
+ const db=authDb(env);if(!db)return authResponse({ok:false,error:"Database akun belum dihubungkan. Registrasi belum diaktifkan."},503);
+ let body;try{body=await request.json()}catch{return authResponse({ok:false,error:"Data registrasi tidak valid."},400);}
+ const fullName=String(body.fullName||"").trim().replace(/\s+/g," ");
+ const email=String(body.email||"").trim().toLowerCase();
+ const password=String(body.password||"");
+ const redeemCode=String(body.redeemCode||"").trim().slice(0,64)||null;
+ if(fullName.length<2||fullName.length>80)return authResponse({ok:false,error:"Nama lengkap harus berisi 2–80 karakter."},400);
+ if(email.length>254||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return authResponse({ok:false,error:"Masukkan alamat email yang valid."},400);
+ if(!authPasswordValid(password))return authResponse({ok:false,error:"Password minimal 12 karakter dan wajib memuat huruf besar, huruf kecil, angka, serta simbol."},400);
+ const salt=authRandomHex(16),passwordHash=await authPasswordHash(password,salt),token=authRandomHex(32),tokenHash=await authDigest(token),now=Math.floor(Date.now()/1000),expires=now+AUTH_SESSION_SECONDS;
+ let accountId="";
+ try{
+  for(let i=0;i<4;i++){const candidate=authAccountId();const exists=await db.prepare("SELECT id FROM users WHERE id=? LIMIT 1").bind(candidate).first();if(!exists){accountId=candidate;break;}}
+  if(!accountId)return authResponse({ok:false,error:"Gagal membuat ID akun. Coba lagi."},503);
+  await db.batch([
+   db.prepare("INSERT INTO users (id,full_name,email,password_hash,password_salt,password_iterations,redeem_code,created_at) VALUES (?,?,?,?,?,?,?,?)").bind(accountId,fullName,email,passwordHash,salt,AUTH_PBKDF2_ITERATIONS,redeemCode,now),
+   db.prepare("INSERT INTO auth_sessions (token_hash,user_id,created_at,expires_at) VALUES (?,?,?,?)").bind(tokenHash,accountId,now,expires)
+  ]);
+ }catch(error){
+  const msg=String(error&&error.message||"");
+  if(/unique|constraint/i.test(msg))return authResponse({ok:false,error:"Email ini sudah terdaftar. Silakan masuk."},409);
+  console.error("[ARYANZZ_AUTH] register failed",error instanceof Error?error.name:"unknown");
+  return authResponse({ok:false,error:"Registrasi gagal diproses. Coba lagi nanti."},500);
+ }
+ const response=authResponse({ok:true,user:{id:accountId,fullName,email,createdAt:now}});
+ response.headers.set("set-cookie",authCookieHeader(token));return response;
+}
+async function authLogin(request,env){
+ const db=authDb(env);if(!db)return authResponse({ok:false,error:"Database akun belum dihubungkan."},503);
+ let body;try{body=await request.json()}catch{return authResponse({ok:false,error:"Data masuk tidak valid."},400);}
+ const email=String(body.email||"").trim().toLowerCase(),password=String(body.password||"");
+ if(!email||!password||email.length>254||password.length>128)return authResponse({ok:false,error:"Email atau password tidak cocok."},401);
+ const user=await db.prepare("SELECT id,full_name,email,password_hash,password_salt,password_iterations,created_at FROM users WHERE email=? LIMIT 1").bind(email).first();
+ if(!user)return authResponse({ok:false,error:"Email atau password tidak cocok."},401);
+ const iterations=Number(user.password_iterations)||AUTH_PBKDF2_ITERATIONS;
+ if(iterations!==AUTH_PBKDF2_ITERATIONS)return authResponse({ok:false,error:"Akun memerlukan pemulihan keamanan. Hubungi dukungan."},423);
+ const hash=await authPasswordHash(password,user.password_salt);
+ let diff=0;const a=String(user.password_hash),b=String(hash);for(let i=0;i<Math.max(a.length,b.length);i++)diff|=(a.charCodeAt(i)||0)^(b.charCodeAt(i)||0);
+ if(diff!==0)return authResponse({ok:false,error:"Email atau password tidak cocok."},401);
+ const token=authRandomHex(32),tokenHash=await authDigest(token),now=Math.floor(Date.now()/1000),expires=now+AUTH_SESSION_SECONDS;
+ await db.prepare("INSERT INTO auth_sessions (token_hash,user_id,created_at,expires_at) VALUES (?,?,?,?)").bind(tokenHash,user.id,now,expires).run();
+ const response=authResponse({ok:true,user:{id:user.id,fullName:user.full_name,email:user.email,createdAt:user.created_at}});
+ response.headers.set("set-cookie",authCookieHeader(token));return response;
+}
+async function authMe(request,env){
+ const db=authDb(env);if(!db)return authResponse({ok:true,enabled:false,user:null});
+ const token=authCookie(request);if(!token)return authResponse({ok:true,enabled:true,user:null});
+ const hash=await authDigest(token),now=Math.floor(Date.now()/1000);
+ const user=await db.prepare("SELECT u.id,u.full_name,u.email,u.created_at FROM auth_sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=? AND s.expires_at>? LIMIT 1").bind(hash,now).first();
+ if(!user)return authResponse({ok:true,enabled:true,user:null},{});
+ return authResponse({ok:true,enabled:true,user:{id:user.id,fullName:user.full_name,email:user.email,createdAt:user.created_at}});
+}
+async function authLogout(request,env){
+ const db=authDb(env),token=authCookie(request);if(db&&token){const hash=await authDigest(token);await db.prepare("DELETE FROM auth_sessions WHERE token_hash=?").bind(hash).run();}
+ const response=authResponse({ok:true});response.headers.set("set-cookie",authCookieHeader("",0));return response;
+}
+
 const workerHandler = {async fetch(request,env){
   const url=new URL(request.url);
   // Serve crawler files explicitly so Google receives deterministic XML/plain-text MIME types.
@@ -1953,6 +2035,11 @@ const workerHandler = {async fetch(request,env){
     return new Response(robots,{status:200,headers:{"content-type":"text/plain; charset=utf-8","cache-control":"public, max-age=3600","x-content-type-options":"nosniff"}});
   }
   if(request.method==="OPTIONS"&&url.pathname.startsWith("/api/"))return new Response(null,{status:204,headers:{"access-control-allow-origin":url.origin,"access-control-allow-methods":"GET,POST,OPTIONS","access-control-allow-headers":"Content-Type"}});
+  if(url.pathname==="/api/auth/config"&&request.method==="GET")return authResponse({ok:true,enabled:!!authDb(env)});
+  if(url.pathname==="/api/auth/me"&&request.method==="GET")return authMe(request,env);
+  if(url.pathname==="/api/auth/register"&&request.method==="POST")return authRegister(request,env);
+  if(url.pathname==="/api/auth/login"&&request.method==="POST")return authLogin(request,env);
+  if(url.pathname==="/api/auth/logout"&&request.method==="POST")return authLogout(request,env);
   if(url.pathname==="/api/link-bypass"&&request.method==="GET")return bypassSflLink(request);
   if(url.pathname==="/api/music/scan-video"&&request.method==="POST")return recognizeMusicVideo(request,env);
   if(url.pathname==="/api/music/status"&&request.method==="GET")return musicStatus(env);
@@ -1986,6 +2073,8 @@ const workerHandler = {async fetch(request,env){
 const SECURITY_BUCKETS=new Map();
 const SECURITY_EVENTS={blockedOrigin:0,rateLimited:0,oversizedRequest:0,blockedMethod:0};
 const SECURITY_LIMITS=[
+  {match:/^\/api\/auth\/(?:register|login)$/,limit:8},
+  {match:/^\/api\/auth\/(?:me|logout)$/,limit:30},
   {match:/^\/api\/(?:social\/search|social\/image-search|image\/search|search)$/,limit:18},
   {match:/^\/api\/(?:social-file|image\/file|social-image-file|direct-file)$/,limit:90},
   {match:/^\/api\//,limit:90}
