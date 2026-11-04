@@ -176,7 +176,7 @@ async function loadPlatformCatalog(){
    try{const host=new URL(raw).hostname.toLowerCase().replace(/^www\./,"");const found=platformCatalog.find(platform=>(platform.domains||[]).some(domain=>host===domain||host.endsWith("."+domain)));return found?.aliasOf||found?.id||null}catch{return null}
   };
   window.aryanzzPlatformNameForId=id=>platforms[id]?.name||platformCatalog.find(platform=>platform.id===id)?.name||id;
-  renderPlatformPage(1);updateSearchHelp();
+  renderPlatformPage(1);setPlatform(selected);
  }catch(error){if(platformPager)platformPager.hidden=true;console.warn("ARYANZZ platform catalogue:",error)}
 }
 platformPrev?.addEventListener("click",()=>renderPlatformPage(platformPage-1));
