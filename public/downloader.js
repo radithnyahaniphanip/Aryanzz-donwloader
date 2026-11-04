@@ -1301,10 +1301,13 @@ function socialNetworkPlan(selected=0){
       const isTikTokPlatform=selectedPlatform==="tiktok"||selectedPlatform==="tiktoklite";
       const isTikTokPhotoPost=isTikTokPlatform&&/\/photo\//i.test(url.pathname);
       const isYouTubePhotoPost=isYouTube&&/\/(?:post|community)\//i.test(url.pathname);
+      const isPhotoRoute=/\/(?:photo|photos|image|images|album|gallery|pin)\//i.test(url.pathname);
+      const isExplicitVideoRoute=/\/(?:video|reel|reels|watch|shorts|live|clip)\//i.test(url.pathname);
       const catalogPlatform=(window.ARYANZZ_PLATFORM_CATALOG||[]).find(platform=>platform.id===selectedPlatform);
-      const shouldTryImageExtraction=isTikTokPhotoPost||isYouTubePhotoPost||(!isYouTube&&selectedPlatform!=="soundcloud"&&!isTikTokPlatform&&(catalogPlatform?.mediaModes?.includes("image")||(catalogPlatform?.providerKey==="aio"&&(catalogPlatform?.mediaModes||[]).some(mode=>mode!=="audio"))));
+      const shouldTryImageExtraction=isTikTokPhotoPost||isYouTubePhotoPost||isPhotoRoute||(!isYouTube&&!isExplicitVideoRoute&&selectedPlatform!=="soundcloud"&&!isTikTokPlatform&&catalogPlatform?.mediaModes?.includes("image"));
+      const imageCheckTimeout=(isTikTokPhotoPost||isYouTubePhotoPost||isPhotoRoute)?22000:6500;
       const imageExtractionPromise=shouldTryImageExtraction
-        ?fetch("/api/image/extract?url="+encodeURIComponent(url.href),{cache:"no-store"}).then(async response=>({ok:response.ok,data:await response.json().catch(()=>({}))})).catch(error=>({ok:false,data:{error:String(error?.message||error)}}))
+        ?fetch("/api/image/extract?url="+encodeURIComponent(url.href),{cache:"no-store",signal:AbortSignal.timeout(imageCheckTimeout)}).then(async response=>({ok:response.ok,data:await response.json().catch(()=>({}))})).catch(error=>({ok:false,data:{error:String(error?.message||error)}}))
         :Promise.resolve(null);
       let info;
       try{
