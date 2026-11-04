@@ -47,7 +47,7 @@ const checks = [
   ["Smart Queue UI is integrated into the shared tools panel", html.includes('id="queue"') && html.includes('id="queueUrls"') && html.includes('id="queueCounts"')],
   ["Smart Queue validates and deduplicates URL entries", queueJs.includes("new URL(raw)") && queueJs.includes("duplicates++") && queueJs.includes("MAX_ITEMS=100")],
   ["Smart Queue persists queue items locally", queueJs.includes("localStorage.setItem(KEY") && queueJs.includes("localStorage.getItem(KEY")],
-  ["Smart Queue hands active links to the existing downloader", queueJs.includes('getElementById("url")') && queueJs.includes('getElementById("analyze")') && queueJs.includes("analyze.click()")],
+  ["Smart Queue hands active links to the existing downloader", queueJs.includes('$("url")') && queueJs.includes('$("analyze")') && queueJs.includes("analyze.click()")],
   ["Smart Queue supports completion, failure, skip, retry and pause", queueJs.includes('mark(item.id,"done")') && queueJs.includes('mark(item.id,"failed")') && queueJs.includes('mark(item.id,"skipped")') && queueJs.includes("queuePause")],
   ["Smart Queue mobile stylesheet is wired and cached", html.includes("/download-queue.css?v=91.0") && queueCss.includes("@media(max-width:420px)") && sw.includes("/download-queue.css?v=91.0")],
   ["Smart Queue script is wired and cached", html.includes("/download-queue.js?v=91.0") && sw.includes("/download-queue.js?v=91.0")],
