@@ -158,6 +158,16 @@ mediaItems=Array.isArray(data.results)?data.results:[];
 if(!mediaItems.length)throw new Error("Belum ada sumber musik atau video yang cocok dari "+target.name+". Coba variasi kata kunci lain.");
 }
 render(mediaItems,target,q,unavailable,imageItems);
+const resultCards=[...results.querySelectorAll(".v674-search-result,.v674-audio-inline-result,.aryanzz-inline-image-card")];
+const pager=document.createElement("div");pager.className="v674-pagination";
+const size=document.createElement("select");size.className="field";size.setAttribute("aria-label","Jumlah hasil per halaman");
+[10,50,100,500].forEach(n=>{const o=document.createElement("option");o.value=String(n);o.textContent=n+" hasil/halaman";o.selected=n===pageSize;size.append(o)});
+const status=document.createElement("span");status.className="v674-title-help";
+const prev=document.createElement("button");prev.type="button";prev.className="tag";prev.textContent="‹ Sebelumnya";
+const next=document.createElement("button");next.type="button";next.className="primary";next.textContent="Berikutnya ›";
+const updatePage=()=>{const pages=Math.max(1,Math.ceil(resultCards.length/pageSize));currentPage=Math.min(currentPage,pages);resultCards.forEach((card,i)=>{card.hidden=i<(currentPage-1)*pageSize||i>=currentPage*pageSize});status.textContent="Halaman "+currentPage+" dari "+pages+" · "+resultCards.length+" hasil ditemukan";prev.disabled=currentPage<=1;next.disabled=currentPage>=pages};
+size.onchange=()=>{pageSize=Number(size.value);currentPage=1;updatePage()};prev.onclick=()=>{currentPage--;updatePage()};next.onclick=()=>{currentPage++;updatePage()};
+pager.append(prev,status,size,next);results.append(pager);updatePage();
 }catch(error){
 if(error?.name==="AbortError")return;
 results.replaceChildren();
