@@ -1176,7 +1176,8 @@
       const selectedPlatform=aliases[selectedRaw]||selectedRaw;
       const selectedNames={youtube:"YouTube",tiktok:"TikTok",instagram:"Instagram",snackvideo:"SnackVideo",capcut:"CapCut",pinterest:"Pinterest",facebook:"Facebook",x:"X",reddit:"Reddit",vimeo:"Vimeo",threads:"Threads",soundcloud:"SoundCloud",snapchat:"Snapchat",idnapp:"IDN App",linkedin:"LinkedIn",wechat:"WeChat",kakaotalk:"KakaoTalk"};
       const expectedName=selectedNames[selectedPlatform]||"";
-      const detectedKey=detectedPlatform==="Direct Media URL"?"":detectedPlatform.toLowerCase();
+      const detectedAliases={"idn app":"idnapp"};
+      const detectedKey=detectedPlatform==="Direct Media URL"?"":(detectedAliases[detectedPlatform.toLowerCase()]||detectedPlatform.toLowerCase());
       if(!expectedName||detectedKey!==selectedPlatform){
         const expectedLabel=expectedName||"satu platform khusus";
         const message=detectedPlatform==="Direct Media URL"
