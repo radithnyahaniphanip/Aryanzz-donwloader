@@ -583,6 +583,8 @@ body{background-color:var(--ary-app-bg)}
   <div class="audio-studio-fields">
     <label class="audio-control"><span>Nama file MP3</span><input id="audioStudioName" class="field" maxlength="90" placeholder="aryanzz-audio"></label>
     <label class="audio-control"><span>Kualitas audio</span><select id="audioStudioBitrate" class="field"><option value="128">128 kbps · Hemat</option><option value="192" selected>192 kbps · Seimbang</option><option value="256">256 kbps · Tinggi</option><option value="320">320 kbps · Maksimum</option></select></label>
+    <label class="audio-control"><span>Format hasil</span><select id="audioStudioFormat" class="field"><option value="mp3" selected>MP3 · Universal</option><option value="wav">WAV · Lossless PCM</option><option value="aac">AAC · Efisien</option><option value="flac">FLAC · Lossless</option></select></label>
+    <label class="audio-control"><span>Volume hasil <output id="audioStudioVolumeValue">100%</output></span><input id="audioStudioVolume" class="field" type="range" min="50" max="150" step="5" value="100"></label>
   </div>
   <div class="audio-studio-fields audio-trim-fields">
     <label class="audio-control"><span>Mulai dari (detik, opsional)</span><input id="audioStudioStart" class="field" type="number" min="0" step="0.1" inputmode="decimal" placeholder="0"></label>
