@@ -279,7 +279,7 @@ body{background-color:var(--ary-app-bg)}
 <button class="tool" data-panel="gradientStudio" data-category="creative"><div class="ico">◈</div><b>Gradient Studio</b><small>Buat gradasi warna, salin CSS, dan ekspor PNG.</small><span class="v674-tool-category">CREATIVE</span></button>
 <button class="tool" data-panel="fileHash" data-category="utility"><div class="ico">⌗</div><b>File Hash Checker</b><small>Periksa fingerprint SHA-256/384/512 secara lokal.</small><span class="v674-tool-category">UTILITY</span></button>
 <button class="tool" data-panel="colorStudio" data-category="creative"><div class="ico">◈</div><b>Color Studio</b><small>Eksplorasi palet, gradasi, dan warna unik.</small><span class="v674-tool-category">CREATIVE</span></button>
-<button class="tool" data-panel="profile" data-category="personal"><div class="ico">◉</div><b>My Profile</b><small>Profil, tema, dan backup data.</small><span class="v674-tool-category">PERSONAL</span></button>
+<button class="tool" data-panel="profile" data-category="personal"><div class="ico">◉</div><b>My Profile</b><small>Profil, ID akun, dan data pribadi.</small><span class="v674-tool-category">PERSONAL</span></button>
 <button class="tool" data-panel="owner" data-category="personal"><div class="ico">♛</div><b>Owner Profile</b><small>Profil kreator dan tautan sosial.</small><span class="v674-tool-category">PERSONAL</span></button>
 <button class="tool" data-panel="about" data-category="personal"><div class="ico">✧</div><b>About ARYANZZ</b><small>Versi, fitur, privasi, dan roadmap.</small><span class="v674-tool-category">PERSONAL</span></button>
 <button class="tool" data-panel="help" data-category="personal"><div class="ico">?</div><b>Pusat Bantuan</b><small>Panduan fitur dan batas layanan.</small><span class="v674-tool-category">PERSONAL</span></button>
@@ -504,8 +504,8 @@ body{background-color:var(--ary-app-bg)}
     <article><b>Image Studio</b><p>Siapkan gambar, ubah rasio, dan gunakan alat pengolahan gambar yang tersedia.</p></article>
     <article><b>Alat kreatif</b><p>Gunakan berbagai utilitas dan alat kreatif dari Pusat Alat sesuai kebutuhan.</p></article>
     <article><b>Pustaka pribadi</b><p>Lihat riwayat dan favorit yang tersimpan di browser pada perangkat ini.</p></article>
-    <article><b>Profil & personalisasi</b><p>Atur tampilan, warna, latar, animasi, dan cadangan data lokal.</p></article>
-    <article><b>Pengalaman lintas perangkat</b><p>Antarmuka dirancang responsif untuk ponsel, tablet, dan komputer. Data lokal tidak otomatis tersinkron antarperangkat.</p></article>
+    <article><b>Profil & personalisasi</b><p>Kelola identitas profil, foto, banner, dan data yang tersimpan di perangkat.</p></article>
+    
   </div></section>
   <section class="ary-editorial-section"><span class="ary-editorial-number">03 / CARA MEMULAI</span><h3>Gunakan ARYANZZ dalam beberapa langkah</h3><ol class="ary-about-steps"><li><b>Buka Beranda</b><span>Pilih apakah ingin menempel tautan atau mencari judul.</span></li><li><b>Pilih platform dan masukkan tautan</b><span>Pastikan tautan dapat diakses dan kontennya memang boleh kamu simpan.</span></li><li><b>Periksa hasil yang tersedia</b><span>Format dan kualitas bergantung pada sumber serta dukungan layanan.</span></li><li><b>Simpan hasil ke perangkat</b><span>Ikuti petunjuk unduhan dari browser dan periksa folder unduhan.</span></li><li><b>Jelajahi Pusat Alat</b><span>Buka fitur lain dari menu Alat, lalu gunakan Pustaka untuk melihat data lokal.</span></li></ol></section>
   <section class="ary-editorial-section"><span class="ary-editorial-number">04 / MANFAAT</span><h3>Dibuat agar aktivitas digital lebih praktis</h3><ul class="ary-about-benefits"><li>Mengurangi kebutuhan berpindah-pindah halaman untuk alat yang tersedia.</li><li>Memberi akses cepat melalui satu antarmuka yang menyesuaikan ukuran layar.</li><li>Menyediakan pengaturan visual agar pengalaman penggunaan terasa lebih nyaman.</li><li>Mengumpulkan riwayat dan favorit secara lokal agar mudah ditemukan kembali.</li><li>Mengutamakan akses langsung tanpa kewajiban membuat akun.</li></ul></section>
@@ -801,7 +801,7 @@ body{background-color:var(--ary-app-bg)}
   </div>
   <section class="v25-profile-card v25-backup-card">
     <div class="v25-section-heading"><div><span class="v25-kicker">YOUR DATA</span><h3>Backup & pemulihan</h3></div><span class="v25-heading-icon">⬡</span></div>
-    <p class="v25-muted">Ekspor profil, tema, riwayat, dan favorit untuk dipindahkan atau dipulihkan di perangkat lain.</p>
+    <p class="v25-muted">Ekspor profil, riwayat, dan favorit untuk dipindahkan atau dipulihkan di perangkat lain.</p>
     <div class="v25-backup-actions"><button class="tag" id="exportData" type="button">↓ Ekspor backup</button><label class="tag v25-import-label">↑ Pulihkan backup<input id="importData" type="file" accept="application/json" hidden></label><button class="tag" id="restoreAutoBackup" type="button">↺ Pulihkan cadangan otomatis</button></div>
     <small class="v25-privacy-note">Auto-save dan cadangan otomatis tersimpan di browser perangkat ini. Ekspor file backup untuk memindahkan data ke perangkat lain; penyimpanan browser yang dihapus akan menghapus cadangan lokal.</small>
   </section>
@@ -823,7 +823,7 @@ body{background-color:var(--ary-app-bg)}
     <header class="owner-topbar">
       <button class="owner-menu-mark" type="button" data-panel="allTools" aria-label="Buka semua tools">☰</button>
       <div class="owner-wordmark">ARYANZZ <small>Creator Space</small></div>
-      <div class="owner-top-actions"><button type="button" data-panel="history" aria-label="Buka riwayat unduhan">◷</button><button type="button" data-panel="profile" aria-label="Buka personalisasi profil">✦</button></div>
+      <div class="owner-top-actions"><button type="button" data-panel="history" aria-label="Buka riwayat unduhan">◷</button><button type="button" data-panel="profile" aria-label="Buka profil ARYANZZ">✦</button></div>
     </header>
     <article class="owner-profile-card">
       <div class="owner-cover" id="ownerCover">
