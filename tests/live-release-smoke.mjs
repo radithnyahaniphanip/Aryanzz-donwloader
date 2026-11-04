@@ -40,10 +40,15 @@ const uploadResult=await speedUpload.json();
 assert.equal(uploadResult?.ok,true);
 assert.equal(uploadResult?.received,uploadBytes);
 
-const homeResponse=await request("/");
-assert.equal(homeResponse.status,200);
-const html=await homeResponse.text();
-assert.ok(html.includes("V"+version+" · GRATIS"),"Label homepage tidak cocok dengan versi Worker");
+let html="",homepageReady=false,lastHomepageStatus=0;
+for(let attempt=0;attempt<15;attempt++){
+  const homeResponse=await request("/");
+  lastHomepageStatus=homeResponse.status;
+  if(homeResponse.ok)html=await homeResponse.text();
+  if(homeResponse.ok&&html.includes("V"+version+" · GRATIS")){homepageReady=true;break;}
+  await new Promise(resolve=>setTimeout(resolve,2000));
+}
+assert.ok(homepageReady,"Homepage belum menyajikan versi "+version+" setelah menunggu propagasi aset; status HTTP "+lastHomepageStatus);
 for(const marker of [
   "/speed-test.js?v=94.6",
   'id="networkProfile"',
