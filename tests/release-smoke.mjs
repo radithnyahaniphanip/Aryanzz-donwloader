@@ -34,7 +34,7 @@ const checks = [
   ["V93.0 Link Bypass panel stylesheet is wired",html.includes('/link-bypass.css?v=93.0')&&linkBypassCss.includes(".v93-bypass-hero")&&linkBypassCss.includes("@media(max-width:680px)")],
   ["V93.0 restores original home layout while keeping Link Bypass mobile responsive",!html.includes('class="v93-popular-grid"')&&linkBypassCss.includes("@media(max-width:680px)")&&linkBypassCss.includes(".v93-bypass-panel")],
   ["V93.0 restores original Profile Studio layout",!profileJs.includes("consolidateProfileSettings")&&!html.includes('class="v93-profile-links"')],
-  ["V93.3 Learning Center assets are loaded", html.includes("/learning-center.js?v=93.3") && html.includes("/learning-center.css?v=93.3")],
+  ["V93.3 Learning Center assets are loaded", html.includes("/learning-center.js?v=93.3") && html.includes("/learning-center.css?v=93.3") && ["linkBypass","mediaStudio","queue","heart","editor","musicFinder","audioStudio","imageTools","pdfTools","qrTools","fileHash","colorStudio","speed","checker"].every(id => read("../public/learning-center.js").includes(id))],
   ["V93.0 keeps every workspace panel inside the shared tools container", html.indexOf('<section id="toolsArea">') < html.indexOf('id="speed"') && html.indexOf('id="help"') < html.indexOf('id="owner"') && !html.includes('← Kembali ke Home</button></div><div class="panel card editor-panel"')],
 
   ["V93.0 HTML contains no duplicate element IDs", duplicateIds.length === 0],
