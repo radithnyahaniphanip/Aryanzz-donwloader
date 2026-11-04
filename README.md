@@ -1,8 +1,8 @@
-# ARYANZZ V93.0 — Mobile-first unified creator workspace
+# ARYANZZ V94.0 — Local accounts, Color Studio & unified creator workspace
 
 Production website: https://aryanzz-donwloader.radithnyahaniphanip.workers.dev/
 
-ARYANZZ is a mobile-first creator workspace hosted on Cloudflare Workers. V93.0 adds a compact two-column mobile tools experience, a four-column desktop tools layout, a dedicated popular-tools area, consolidated Profile settings, cleaner original aurora banner styling, persistent About and Help entry points, and a guarded SFL shortlink resolver. The Link Bypass only follows public HTTPS redirects from supported SFL domains; it does not solve CAPTCHA, login, or required verification. V73.0 improves mobile download checkpoints, Chrome background-resume support for direct files, adaptive MP4 progress, speed modes, and thumbnail actions. No Cobalt, Docker Desktop, private extraction server, or paid downloader provider is required.
+ARYANZZ is a mobile-first creator workspace hosted on Cloudflare Workers. V94.0 adds a compact two-column mobile tools experience, a four-column desktop tools layout, a dedicated popular-tools area, consolidated Profile settings, cleaner original aurora banner styling, persistent About and Help entry points, and a guarded SFL shortlink resolver. The Link Bypass only follows public HTTPS redirects from supported SFL domains; it does not solve CAPTCHA, login, or required verification. V73.0 improves mobile download checkpoints, Chrome background-resume support for direct files, adaptive MP4 progress, speed modes, and thumbnail actions. No Cobalt, Docker Desktop, private extraction server, or paid downloader provider is required.
 
 ## V65.0 release scope
 
@@ -370,3 +370,13 @@ The older `/api/youtube/*` SaveNow endpoints remain in the Worker for backward c
 - YouTube metadata preview remains available via oEmbed. When no free extractor is configured, format choices are visible but the Download button is disabled with an honest explanation.
 - TikTok extraction/community routing is paused in this release to focus on YouTube and direct media files.
 - Formats offered by the UI are not a guarantee of source availability; actual resolutions depend on the extractor and source.
+
+
+## V94.0 — Local Account & Color Studio
+
+- Adds a local-only account registration and login gate. The gate is visible by default, so the site stays locked if the account script fails to load; a valid local session is required to dismiss it.
+- Accounts, local PBKDF2 password hashes, random account IDs and login sessions are stored only in the current browser's local storage.
+- No Cloudflare D1, Supabase, remote auth API, or paid database is required.
+- Removes unused D1 authentication endpoints and migration. This local mode does not synchronize accounts between devices and browser site-data deletion can erase accounts.
+- Adds a global minimalist Color Studio and removes legacy profile personalization controls.
+- Changes the Developer profile title and enables editing social links.
