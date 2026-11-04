@@ -268,7 +268,11 @@
     const file=selectedFile;
     cancelled=false;controller=new AbortController();busy(true);
     $("audioStudioResult").hidden=true;progress(1);status("Menyiapkan konversi…");
-    const inputName="aryanzz-input.mp4",outputName="aryanzz-audio.mp3";
+    const inputName="aryanzz-input.mp4";
+    const format=$("audioStudioFormat")?.value||"mp3";
+    const extension=({mp3:"mp3",wav:"wav",aac:"aac",flac:"flac"})[format]||"mp3";
+    const mime=({mp3:"audio/mpeg",wav:"audio/wav",aac:"audio/aac",flac:"audio/flac"})[format]||"audio/mpeg";
+    const outputName="aryanzz-audio."+extension;
     let engine=null;
     try {
       engine=await loadEngine(controller.signal);
@@ -285,11 +289,20 @@
       const endSeconds=endValue===""?0:Number(endValue);
       if(!Number.isFinite(startSeconds)||startSeconds<0)throw new Error("Waktu mulai harus berupa angka 0 atau lebih.");
       if(endValue!==""&&(!Number.isFinite(endSeconds)||endSeconds<=startSeconds))throw new Error("Waktu akhir harus lebih besar daripada waktu mulai.");
+      const volume=Number($("audioStudioVolume")?.value||100)/100;
+      if(!Number.isFinite(volume)||volume<0.5||volume>1.5)throw new Error("Volume hasil harus antara 50% sampai 150%.");
       const ffmpegArgs=[];
       if(startSeconds>0)ffmpegArgs.push("-ss",String(startSeconds));
       ffmpegArgs.push("-i",inputName);
       if(endValue!=="")ffmpegArgs.push("-t",String(endSeconds-startSeconds));
-      ffmpegArgs.push("-map","0:a:0","-vn","-c:a","libmp3lame","-b:a",bitrate+"k","-ar","44100","-id3v2_version","3","-y",outputName);
+      ffmpegArgs.push("-map","0:a:0","-vn");
+      if(Math.abs(volume-1)>0.001)ffmpegArgs.push("-af","volume="+volume.toFixed(2));
+      if(format==="mp3")ffmpegArgs.push("-c:a","libmp3lame","-b:a",bitrate+"k","-ar","44100","-id3v2_version","3");
+      else if(format==="wav")ffmpegArgs.push("-c:a","pcm_s16le","-ar","44100");
+      else if(format==="aac")ffmpegArgs.push("-c:a","aac","-b:a",bitrate+"k","-f","adts");
+      else if(format==="flac")ffmpegArgs.push("-c:a","flac","-compression_level","5");
+      else throw new Error("Format hasil tidak didukung.");
+      ffmpegArgs.push("-y",outputName);
       const logHandler=event=>{
         const line=String(event?.message||"");
         const match=line.match(/Duration:\s*(\d{2}:\d{2}:\d{2}(?:\.\d+)?)/);
@@ -297,7 +310,7 @@
       };
       const progressHandler=event=>{
         const n=Number(event?.progress);
-        if(Number.isFinite(n)){progress(22+Math.max(0,Math.min(1,n))*75);status("Mengonversi MP4 ke MP3 · "+Math.round(n*100)+"%");}
+        if(Number.isFinite(n)){progress(22+Math.max(0,Math.min(1,n))*75);status("Mengonversi MP4 ke "+format.toUpperCase()+" · "+Math.round(n*100)+"%");}
       };
       engine.on("log",logHandler);engine.on("progress",progressHandler);
       try {
@@ -307,9 +320,9 @@
       if(cancelled||controller.signal.aborted)throw new Error("Proses dibatalkan.");
       const output=await engine.readFile(outputName);
       if(!output||output.length<1024)throw new Error("Hasil MP3 kosong. Pastikan video memiliki suara.");
-      const filename=safeName($("audioStudioName").value||file.name)+".mp3";
-      showResult(new Blob([output],{type:"audio/mpeg"}),filename);
-      progress(100,"done");status("Selesai! Putar pratinjau audio atau unduh file MP3.");
+      const filename=safeName($("audioStudioName").value||file.name)+"."+extension;
+      showResult(new Blob([output],{type:mime}),filename);
+      progress(100,"done");status("Selesai! Putar pratinjau audio atau unduh file "+extension.toUpperCase()+".");
     } catch(error) {
       const message=cancelled||controller?.signal.aborted?"Proses dibatalkan.":String(error?.message||error).slice(0,240);
       progress(0,cancelled?"idle":"failed");status(message);
@@ -318,6 +331,16 @@
       controller=null;cancelled=false;busy(false);
     }
   }
+  const formatSelect=$("audioStudioFormat"),bitrateSelect=$("audioStudioBitrate"),volumeSlider=$("audioStudioVolume"),volumeValue=$("audioStudioVolumeValue");
+  function syncAudioOptions(){
+    const format=formatSelect?.value||"mp3";
+    if(bitrateSelect)bitrateSelect.disabled=running||format==="wav"||format==="flac";
+    if(bitrateSelect?.parentElement)bitrateSelect.parentElement.style.opacity=(format==="wav"||format==="flac")?".55":"1";
+    if(volumeValue&&volumeSlider)volumeValue.textContent=volumeSlider.value+"%";
+  }
+  formatSelect?.addEventListener("change",syncAudioOptions);
+  volumeSlider?.addEventListener("input",syncAudioOptions);
+  syncAudioOptions();
   fileInput.addEventListener("change",()=>selectFile(fileInput.files?.[0]));
   $("audioStudioConvert").addEventListener("click",convert);
   $("audioStudioPreviewConvert")?.addEventListener("click",makeCompatiblePreview);
