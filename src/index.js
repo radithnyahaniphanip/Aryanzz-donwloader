@@ -263,7 +263,25 @@ async function freePublicMediaInfo(rawUrl,requestUrl){
     const data=await response.json().catch(()=>({}));
     if(response.ok&&data?.success!==false){
       const normalized=freeProviderMediaInfo(data,canonicalUrl,requestUrl);
-      if(normalized)return json({...normalized,canonicalUrl:canonicalUrl!==rawUrl?canonicalUrl:undefined});
+      if(normalized){
+        if(key==="tiktok"){
+          try{
+            const fallback=await tikwmFallbackMediaInfo(canonicalUrl,requestUrl);
+            const seen=new Set(),combined=[];
+            for(const item of [...(fallback.formats||[]),...(normalized.formats||[])]){
+              const identity=String(item?.downloadUrl||item?.url||"")+"|"+String(item?.mode||"");
+              if(!item?.downloadUrl||seen.has(identity))continue;
+              seen.add(identity);combined.push(item);
+            }
+            if(combined.length)normalized.formats=combined;
+            normalized.fallbackUsed=true;
+            normalized.providerName=[fallback.providerName,normalized.providerName].filter(Boolean).join(" + ");
+            normalized.title=normalized.title||fallback.title;
+            normalized.duration=Number(normalized.duration)||Number(fallback.duration)||null;
+          }catch(error){normalized.fallbackDiagnostic=String(error?.message||error).slice(0,180)}
+        }
+        return json({...normalized,canonicalUrl:canonicalUrl!==rawUrl?canonicalUrl:undefined});
+      }
       primaryError="Provider utama tidak mengembalikan stream video/audio yang valid.";
     }else{
       const detail=data?.error?.message||data?.error||"HTTP "+response.status;
