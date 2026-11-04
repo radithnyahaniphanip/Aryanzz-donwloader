@@ -1,6 +1,6 @@
 const base=(process.env.WORKER_URL||"https://aryanzz-donwloader.radithnyahaniphanip.workers.dev").replace(/\/$/,"");
 const tiktok="https://vt.tiktok.com/ZSPNASKHN/";
-const instagram="https://www.instagram.com/p/Dek72MYE141/";
+const instagram="https://www.instagram.com/p/Dek72MYE141/?xtok=OWdvNjR4dmZscnlx";
 const probes=[
   ["TikWM",async()=>{const u=new URL("https://www.tikwm.com/api/");u.searchParams.set("url",tiktok);u.searchParams.set("hd","1");const r=await fetch(u.href,{headers:{accept:"application/json","user-agent":"Mozilla/5.0"},signal:AbortSignal.timeout(12000)});const j=await r.json().catch(()=>({}));return {status:r.status,code:j.code,msg:j.msg,dataKeys:Object.keys(j.data||{}),hasPlay:!!(j.data?.play||j.data?.hdplay),imageCount:Array.isArray(j.data?.images)?j.data.images.length:0};}],
   ["BTCH TikTok",async()=>{const u="https://btch-downloader-api-green.vercel.app/api/download/tiktok?url="+encodeURIComponent(tiktok);const r=await fetch(u,{headers:{accept:"application/json"},signal:AbortSignal.timeout(12000)});const j=await r.json().catch(()=>({}));return {status:r.status,success:j.success,keys:Object.keys(j||{}),error:String(j.error?.message||j.error||"").slice(0,100)};}],
