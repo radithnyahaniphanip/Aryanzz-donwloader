@@ -25,6 +25,7 @@ const ownerJs=file("../public/owner.js");
 const ownerCss=file("../public/owner.css");
 const audioStudioJs=file("../public/audio-studio.js");
 const audioStudioCss=file("../public/audio-studio.css");
+const ffmpegBootstrap=file("../public/ffmpeg-worker-bootstrap.js");
 const imageStudioJs=file("../public/image-studio.js");
 const imageStudioCss=file("../public/image-studio.css");
 const manifest=JSON.parse(file("../public/manifest.webmanifest"));
@@ -193,6 +194,11 @@ const checks=[
   ["V67.9 direct media whitelist includes common formats",workerSource.includes('"mkv"')&&workerSource.includes('"avi"')&&workerSource.includes('"aiff"')&&workerSource.includes('"opus"')],
   ["V73.7 Gradient Studio controls are wired",html.includes('id="gradientStudio"')&&html.includes('id="gradientRandom"')&&html.includes('id="gradientPng"')&&file("../public/v680.js").includes("function renderGradient")],
   ["V73.7 File Hash Checker uses local Web Crypto",html.includes('id="fileHash"')&&html.includes('id="hashCompute"')&&file("../public/v680.js").includes("crypto.subtle.digest")],
+  ["V92.1 Audio Studio uses the shared official FFmpeg worker bootstrap instead of the legacy custom worker",audioStudioJs.includes('ffmpeg-worker-bootstrap.js?v=92.1')&&!audioStudioJs.includes('ffmpeg-worker-local.js?v=92.0')&&ffmpegBootstrap.includes('@ffmpeg/ffmpeg@0.12.10/dist/esm/worker.js')],
+  ["V92.1 Audio Studio retries both FFmpeg core CDNs with a fresh worker and bounded timeout",audioStudioJs.includes('for(let index=0;index<CORE_BASES.length;index++)')&&audioStudioJs.includes('coreURL:base+"/ffmpeg-core.js"')&&audioStudioJs.includes('wasmURL:base+"/ffmpeg-core.wasm"')&&audioStudioJs.includes('instance.terminate()')&&audioStudioJs.includes('LOAD_TIMEOUT_MS = 75000')],
+  ["V92.1 FFmpeg asset fetch timeout is idle-based and resets as chunks arrive",audioStudioJs.includes('const armIdleTimeout=()=>')&&audioStudioJs.includes('armIdleTimeout();')&&audioStudioJs.includes('if(timeout.signal.aborted)throw new Error("Koneksi CDN tidak mengirim data selama 45 detik.')],
+  ["V92.1 adaptive YouTube MP4 assembly uses the refreshed worker bootstrap",downloader.includes('ffmpeg-worker-bootstrap.js?v=92.1')],
+  ["V92.1 Audio Studio script and service-worker cache are refreshed together",html.includes('/audio-studio.js?v=92.1')&&html.includes('/sw.js?v=92.1')&&sw.includes('aryanzz-v92-2')&&sw.includes('/audio-studio.js?v=92.1')&&sw.includes('/ffmpeg-worker-bootstrap.js?v=92.1')],
   ["V74.0 Audio Studio is reachable from the tools grid",html.includes('id="audioStudio"')&&html.includes('data-panel="audioStudio"')&&html.includes('/audio-studio.js?v=80.0')&&html.includes('/audio-studio.css?v=80.0')],
   ["V74.0 local MP4/audio to MP3 conversion supports pitch, volume, and 10-band EQ",audioStudioJs.includes("libmp3lame")&&audioStudioJs.includes("asetrate=44100*")&&audioStudioJs.includes("equalizer=f=")&&audioStudioJs.includes("alimiter=limit=0.95")&&html.includes('id="audioStudioEq"')],
   ["V74.0 audio conversion has cancellation, progress, safe filename, and size guard",audioStudioJs.includes("audioStudioCancel")&&audioStudioJs.includes('setProgress(100, "done")')&&audioStudioJs.includes("MAX_FILE_BYTES")&&audioStudioJs.includes('safeName($("audioStudioName").value)')&&audioStudioCss.includes(".audio-progress-track")],
