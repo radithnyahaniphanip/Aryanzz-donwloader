@@ -16,7 +16,7 @@ const titleSearchStart = html.indexOf('<select id="titleSearchType"');
 const titleSearchEnd = html.indexOf("</select>", titleSearchStart);
 const titleSearchMarkup = titleSearchStart >= 0 && titleSearchEnd >= 0 ? html.slice(titleSearchStart, titleSearchEnd) : "";
 const bootstrap = read("../public/ffmpeg-worker-bootstrap.js");
-const htmlAssetRefs = [...html.matchAll(/(?:src|href)="(\\/[^"]+\\.(?:js|css)(?:\\?[^"]*)?)"/g)].map(match => match[1]);
+const htmlAssetRefs = [...html.matchAll(/\b(?:src|href)="([^"]+\.(?:js|css)(?:\?[^"]*)?)"/g)].map(match => match[1]).filter(ref => ref.startsWith("/"));
 const downloaderJs = read("../public/downloader.js");
 const profileJs = read("../public/v25.js");
 const ownerJs = read("../public/owner.js");
