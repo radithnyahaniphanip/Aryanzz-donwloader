@@ -30,9 +30,21 @@ function add(id,d){
  root.prepend(el);
  const canvas=el.querySelector("canvas"),ctx=canvas.getContext("2d"),stage=el.querySelector(".lc-stage"),overlay=el.querySelector(".lc-player-overlay"),play=el.querySelector(".lc-play"),bar=el.querySelector(".lc-progress-fill"),track=el.querySelector(".lc-progress"),time=el.querySelector(".lc-time"),prev=el.querySelector(".lc-prev"),next=el.querySelector(".lc-next"),audio=el.querySelector(".lc-audio"),voiceNote=el.querySelector(".lc-voice-note"),sceneTitle=el.querySelector(".lc-scene-copy h4"),sceneCopy=el.querySelector(".lc-scene-copy p"),sceneNumber=el.querySelector(".lc-scene-number"),ratios=[...el.querySelectorAll("[data-r]")];
  let ratio="16:9",index=0,playing=false,muted=false,voice=null,voiceAvailable=false,raf=0,startedAt=0,elapsedBefore=0,sceneStarted=0,sceneTimer=0,sceneElapsed=0,actualSceneDurations=[],totalEstimate=0;
- const sceneData=d.scenes.map((s,i)=>({tag:s[0],title:s[0],copy:s[1],voice:(i+1)+". "+s[0]+". "+s[1]}));
- const estimateScene=s=>Math.max(4.5,Math.min(13,(s.voice.length/13)+1.4));
- const estimates=sceneData.map(estimateScene);totalEstimate=estimates.reduce((a,b)=>a+b,0);
+ const makeNarration=(heading,body)=>heading+". "+body;
+ const splitSteps=(items)=>{
+  const midpoint=Math.ceil(items.length/2);
+  return [items.slice(0,midpoint),items.slice(midpoint)];
+ };
+ const [firstSteps,lastSteps]=splitSteps(d.steps||[]);
+ const sceneData=[
+  {tag:"PENGENALAN",title:"Apa itu "+d.title+"?",copy:d.desc,voice:makeNarration("Mari kenali "+d.title,d.desc),demoTitle:"PENGENALAN ALAT",demoLines:[d.title,d.desc]},
+  {tag:"TUJUAN",title:"Apa tujuan alat ini?",copy:d.purpose,voice:makeNarration("Tujuan penggunaan",d.purpose),demoTitle:"KAPAN DIGUNAKAN?",demoLines:[d.purpose]},
+  {tag:"CARA KERJA",title:"Bagaimana cara kerjanya?",copy:d.how,voice:makeNarration("Cara kerja sistem",d.how),demoTitle:"PROSES DI BALIK LAYAR",demoLines:[d.how]},
+  {tag:"PANDUAN LANGKAH 1",title:"Mulai menggunakan alat",copy:firstSteps.map((x,i)=>(i+1)+". "+x).join(" "),voice:makeNarration("Langkah penggunaan pertama",firstSteps.map((x,i)=>"Langkah "+(i+1)+". "+x).join(" ")),demoTitle:"IKUTI LANGKAH INI",demoLines:firstSteps.map((x,i)=>(i+1)+". "+x)},
+  {tag:"PANDUAN LANGKAH 2",title:"Lanjutkan prosesnya",copy:lastSteps.length?lastSteps.map((x,i)=>(i+firstSteps.length+1)+". "+x).join(" "):"Semua langkah utama sudah dilakukan. Periksa hasil yang ditampilkan alat.",voice:makeNarration("Langkah berikutnya",lastSteps.length?lastSteps.map((x,i)=>"Langkah "+(i+firstSteps.length+1)+". "+x).join(" "):"Periksa hasil yang ditampilkan alat."),demoTitle:"LANJUTKAN PROSES",demoLines:lastSteps.length?lastSteps.map((x,i)=>(i+firstSteps.length+1)+". "+x):["Periksa hasil pada layar alat."]},
+  {tag:"HASIL DAN TIPS",title:"Periksa hasil dan pahami batasnya",copy:d.tip,voice:makeNarration("Hasil dan tips penting",d.tip),demoTitle:"SEBELUM SELESAI",demoLines:[d.tip]}
+ ];
+ const estimates=sceneData.map(s=>Math.max(7,Math.min(18,(s.voice.length/11)+2.5)));
  function chooseVoice(){
   if(!("speechSynthesis"in window))return null;
   const voices=window.speechSynthesis.getVoices()||[];
@@ -56,16 +68,24 @@ function add(id,d){
  function roundRect(x,y,w,h,r,fill,stroke){ctx.beginPath();ctx.roundRect(x,y,w,h,r);if(fill){ctx.fillStyle=fill;ctx.fill();}if(stroke){ctx.strokeStyle=stroke;ctx.stroke();}}
  function wrap(txt,x,y,max,line,font,color){ctx.font=font;ctx.fillStyle=color;let row="";for(const word of String(txt).split(/\s+/)){const t=row?row+" "+word:word;if(ctx.measureText(t).width>max&&row){ctx.fillText(row,x,y);row=word;y+=line;}else row=t;}if(row)ctx.fillText(row,x,y);return y;}
  function drawDemo(w,h){
-  const compact=ratio==="9:16",pad=w*(compact?.09:.07),boxW=w-pad*2,boxH=h*(compact?.34:.32),boxY=h*(compact?.49:.48),sc=sceneData[index];
-  roundRect(pad,boxY,boxW,boxH,Math.min(26,w*.018),"rgba(255,255,255,.095)","rgba(255,255,255,.25)");
-  const x=pad+w*.035,y=boxY+h*.045,innerW=boxW-w*.07;
-  ctx.fillStyle="#a9d8ff";ctx.font="800 "+Math.round(w*.022)+"px system-ui";ctx.fillText(d.title.toUpperCase(),x,y+Math.round(w*.028));
-  const labels={
-   speed:["PING","DOWNLOAD","UPLOAD","JITTER"],website:["URL WEBSITE","STATUS PEMERIKSAAN","DOMAIN"],bypass:["LINK SFL","PERIKSA TUJUAN","DOMAIN TUJUAN"],camera:["IZIN KAMERA","PREVIEW LANGSUNG","HENTIKAN"],install:["BROWSER","INSTALL APLIKASI","LAYAR UTAMA"],members:["STATUS ANGGOTA","PENGUNJUNG","DATA TERSEDIA"],media:["VIDEO","AUDIO","GAMBAR","FAVORIT"],queue:["DAFTAR TAUTAN","ANTREAN","MULAI"],editor:["KLIP VIDEO","TIMELINE","AUDIO / SUBTITLE","EKSPOR"],music:["SUMBER AUDIO","KENALI LAGU","HASIL ARTIS"],converter:["PILIH VIDEO","PREVIEW & DURASI","KONVERSI MP3"],image:["EDITOR GAMBAR","RASIO","PREVIEW","EKSPOR"],pdf:["GAMBAR / TEKS","CETAK","SIMPAN PDF"],qr:["TEKS / URL","GENERATE QR","UNDUH PNG"],password:["PANJANG PASSWORD","GENERATE","SALIN"],gradient:["JENIS GRADASI","WARNA","PREVIEW CSS"],hash:["PILIH FILE","SHA-256","FINGERPRINT"],color:["PRESET TEMA","WARNA AKSEN","PREVIEW"]
-  }[d.kind]||["PILIH","PROSES","HASIL"];
-  const gap=h*(compact?.048:.052),startY=y+h*.10;
-  labels.forEach((label,i)=>{const yy=startY+i*gap;if(yy>boxY+boxH-h*.045)return;roundRect(x,yy,innerW,h*.037,Math.min(12,w*.008),"rgba(7,18,38,.78)","rgba(153,197,244,.16)");ctx.fillStyle="#eaf4ff";ctx.font="700 "+Math.round(w*.018)+"px system-ui";ctx.fillText(label,x+w*.018,yy+h*.026);});
-  ctx.fillStyle="#b8cde8";ctx.font="600 "+Math.round(w*.016)+"px system-ui";ctx.fillText("DEMO ILUSTRASI · "+String(index+1).padStart(2,"0")+"/05",x,boxY+boxH-h*.018);
+  const compact=ratio==="9:16",pad=w*(compact?.075:.07),boxW=w-pad*2,boxY=h*(compact?.55:.53),boxH=h*(compact?.30:.31),sc=sceneData[index];
+  roundRect(pad,boxY,boxW,boxH,Math.min(26,w*.018),"rgba(255,255,255,.075)","rgba(190,211,229,.25)");
+  const x=pad+w*.035,innerW=boxW-w*.07;
+  ctx.fillStyle="#9bd4c9";ctx.font="900 "+Math.round(w*.021)+"px system-ui";
+  ctx.fillText(String(sc.demoTitle||"PANDUAN").toUpperCase(),x,boxY+h*.055);
+  let yy=boxY+h*.11;
+  const lineH=h*(compact?.047:.052);
+  (sc.demoLines||[]).slice(0,4).forEach((line,i)=>{
+   const cardH=Math.max(lineH*1.65,h*.065);
+   roundRect(x,yy,innerW,cardH,Math.min(12,w*.009),"rgba(7,18,38,.72)","rgba(153,197,244,.16)");
+   ctx.fillStyle="#eaf4ff";ctx.font="600 "+Math.round(w*(compact?.023:.022))+"px system-ui";
+   const words=String(line).split(/\\s+/);let row="",textY=yy+cardH*.42,lines=0;
+   for(const word of words){const candidate=row?row+" "+word:word;if(ctx.measureText(candidate).width>innerW-w*.045&&row){ctx.fillText(row,x+w*.022,textY);row=word;textY+=lineH*.56;lines++;}else row=candidate;}
+   if(row)ctx.fillText(row,x+w*.022,textY);
+   yy+=cardH+h*.018;
+  });
+  ctx.fillStyle="#b8cde8";ctx.font="700 "+Math.round(w*.016)+"px system-ui";
+  ctx.fillText("ADEGAN "+(index+1)+" / "+sceneData.length,x,boxY+boxH-h*.025);
  }
  function paint(){
   const w=canvas.width,h=canvas.height,compact=ratio==="9:16",pad=w*(compact?.09:.075),sc=sceneData[index],bg=ctx.createLinearGradient(0,0,w,h);
@@ -76,7 +96,7 @@ function add(id,d){
   const copyTop=Math.max(h*(compact?.37:.36),titleBottom+h*(compact?.075:.065));
   wrap(sc.copy,pad,copyTop,w-pad*2,h*.046,"500 "+Math.round(w*(compact?.027:.026))+"px system-ui","#d6e4f4");
   drawDemo(w,h);
-  ctx.fillStyle="#dbe8f5";ctx.font="700 "+Math.round(w*.018)+"px system-ui";ctx.fillText("BAGIAN "+(index+1)+" DARI "+sceneData.length,pad,h*.94);
+  ctx.fillStyle="#dbe8f5";ctx.font="700 "+Math.round(w*.018)+"px system-ui";ctx.fillText("ADEGAN "+(index+1)+" DARI "+sceneData.length,pad,h*.96);
   sceneNumber.textContent="BAGIAN "+(index+1)+" DARI "+sceneData.length;sceneTitle.textContent=sc.title;sceneCopy.textContent=sc.copy;
   prev.disabled=index===0;next.disabled=index===sceneData.length-1;
  }
