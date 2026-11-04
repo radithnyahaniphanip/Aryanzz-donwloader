@@ -1062,10 +1062,14 @@ function providerImageCandidates(data){
   return output;
 }
 async function resolveSocialImagePost(rawUrl,requestUrl,options={}){
-  const key=freePlatformKey(rawUrl);if(!key)return null;
+  const providerKey=freePlatformKey(rawUrl);
+  const key=platformIdForUrl(rawUrl)||providerKey;
+  if(!key)return null;
   let providerTitle="",providerImages=[];
-  const providerUrl=FREE_MEDIA_API+"/api/download/"+key+"?url="+encodeURIComponent(rawUrl);
-  const includeProvider=options.includeProvider!==false;
+  const providerUrl=FREE_MEDIA_API+"/api/download/"+(providerKey||key)+"?url="+encodeURIComponent(rawUrl);
+  // Experimental catalogue entries still get safe public-page metadata extraction;
+  // only established provider keys are sent to the community extractor API.
+  const includeProvider=options.includeProvider!==false&&providerKey!=="aio";
   const tasks=[
     includeProvider?fetch(providerUrl,{headers:{accept:"application/json"},signal:AbortSignal.timeout(Number(options.providerTimeoutMs)||14000),cache:"no-store"}).then(async response=>{
       if(!response.ok)throw new Error("Provider gambar HTTP "+response.status);
@@ -1107,7 +1111,7 @@ async function resolveSocialImagePost(rawUrl,requestUrl,options={}){
   const title=providerTitle||decodeSearchHtml((page?.html||"").match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1]||"Postingan gambar").slice(0,240);
   const canonicalSourceUrl=page?.url||rawUrl;
   for(const image of images){image.sourceUrl=canonicalSourceUrl;image.previewUrl=socialImageProxyUrl(image.url,requestUrl,image.filename,false,canonicalSourceUrl);image.downloadUrl=socialImageProxyUrl(image.url,requestUrl,image.filename,true,canonicalSourceUrl)}
-  return {title,url:canonicalSourceUrl,platform:key,verified:true,images};
+  return {title,url:canonicalSourceUrl,platform:key,provider:providerKey==="aio"?"public-page-metadata":"provider-and-public-page",verified:true,images};
 }
 async function socialImageInfo(request){
   let body;try{body=await request.json()}catch{return json({error:"Body JSON tidak valid."},400)}
