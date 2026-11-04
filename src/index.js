@@ -936,9 +936,9 @@ function collectImageUrls(value,output,depth=0,forceImage=false){
   }
   if(Array.isArray(value)){for(const item of value.slice(0,80))collectImageUrls(item,output,depth+1,forceImage);return}
   if(typeof value==="object"){
-    for(const key of ["url","urlList","url_list","contentUrl","image","images","photo","photos","picture","pictures","src","displayImage","display_image","display_url","download_url","image_url","original","large","thumbnail_src","media_url","media_url_https","originCover","origin_cover","cover"]){
+    for(const key of ["url","urlList","url_list","contentUrl","image","images","photo","photos","picture","pictures","src","displayImage","display_image","display_url","download_url","image_url","original","large","thumbnail_src","media_url","media_url_https","originCover","origin_cover","cover","imagePost","image_post","photoPost","photo_post","carousel","gallery","itemInfo","item_info","itemStruct","item_struct","itemModule","item_module","itemList","item_list","data","props","pageProps","result","results","post","postInfo","post_info","aweme_detail","awemeDetail","videoDetail","video_detail","__DEFAULT_SCOPE__"]){
       const normalizedKey=key.toLowerCase();
-      if(value[key]!==undefined)collectImageUrls(value[key],output,depth+1,["image","images","photo","photos","picture","pictures","image_url","displayimage","display_image","urllist","url_list","origincover","origin_cover"].includes(normalizedKey)||forceImage);
+      if(value[key]!==undefined)collectImageUrls(value[key],output,depth+1,["image","images","photo","photos","picture","pictures","image_url","displayimage","display_image","urllist","url_list","origincover","origin_cover","imagepost","image_post","photopost","photo_post","carousel","gallery"].includes(normalizedKey)||forceImage);
     }
   }
 }
