@@ -63,3 +63,8 @@ body[data-motion=off] .audio-file-drop,body[data-motion=off] .audio-progress-tra
 
 .audio-control input[type=range]{width:100%;accent-color:#39c9dc;cursor:pointer;padding:8px 0}
 .audio-control output{color:#80e3eb;font-size:10px;font-variant-numeric:tabular-nums;margin-left:6px}
+
+.audio-diagnostics-result{margin:10px 0;padding:11px 12px;border:1px solid #31536c;border-radius:12px;background:#0a1b29;color:#aee7ec;font-size:11px;line-height:1.65;overflow-wrap:anywhere}
+.audio-studio-actions{display:flex;gap:8px;flex-wrap:wrap}
+.audio-studio-actions>*{flex:1;min-width:125px}
+@media(max-width:420px){.audio-studio-actions{display:grid;grid-template-columns:1fr 1fr}.audio-studio-actions #audioStudioConvert{grid-column:1/-1}}
