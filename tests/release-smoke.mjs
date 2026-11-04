@@ -13,6 +13,7 @@ const mediaStudioCss = read("../public/media-studio.css");
 const queueJs = read("../public/download-queue.js");
 const queueCss = read("../public/download-queue.css");
 const advancedJs = read("../public/advanced.js");
+const v15Js = read("../public/v15.js");
 const profileJs = read("../public/v25.js");
 const titleSearchStart = html.indexOf('<select id="titleSearchType"');
 const titleSearchEnd = html.indexOf("</select>", titleSearchStart);
@@ -22,7 +23,15 @@ const htmlAssetRefs = [...html.matchAll(/\b(?:src|href)="([^"]+\.(?:js|css)(?:\?
 const downloaderJs = read("../public/downloader.js");
 const ownerJs = read("../public/owner.js");
 
+const idCounts = new Map();
+for (const match of html.matchAll(/\\bid=["']([^"']+)["']/g)) idCounts.set(match[1], (idCounts.get(match[1]) || 0) + 1);
+const duplicateIds = [...idCounts].filter(([, count]) => count > 1).map(([id]) => id);
+
 const checks = [
+  ["V92.5 HTML contains no duplicate element IDs", duplicateIds.length === 0],
+  ["Downloader analysis has one controller; legacy Tools does not attach a competing click handler", !advancedJs.includes("analyze.onclick") && !advancedJs.includes("function inspect(url)") && !advancedJs.includes("/api/info") && downloaderJs.includes('button.addEventListener("click"')],
+  ["Smart Queue has one controller; legacy Tools does not bind queue actions", !advancedJs.includes("queueAdd") && !advancedJs.includes("queueRun") && !advancedJs.includes("queueClear") && queueJs.includes("queueAdd")],
+  ["Library rendering and clear actions are owned by the current V15 library module", !advancedJs.includes("historyList") && !advancedJs.includes("favoriteList") && !advancedJs.includes("clearHistoryV2") && v15Js.includes("setupLibrary()")],
   ["Profile Studio is the single owner of profile photo, banner, background and bio handlers", !advancedJs.includes("profilePhoto") && !advancedJs.includes("profileBanner") && !advancedJs.includes("profileSave") && profileJs.includes('storeImage("profileBanner"') && profileJs.includes('storeImage("profilePhoto"') && profileJs.includes("setupProfilePreview()")],
   ["Profile backup actions are not duplicated by legacy Tools code", !advancedJs.includes("exportData") && !advancedJs.includes("importData") && profileJs.includes("setupBackupActions()")],
   ["ALL platform option is removed", !html.includes('data-platform="all"') && !searchJs.includes('all:{name:"Semua platform"')],
@@ -39,7 +48,7 @@ const checks = [
   ["V92.4 platform-link FFmpeg loader retries both module CDNs", downloaderJs.includes('https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js') && downloaderJs.includes('https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js')],
   ["V92.4 platform-link FFmpeg loader retries both core CDNs with a fresh instance", downloaderJs.includes('for(let index=0;index<coreBases.length;index++)') && downloaderJs.includes('coreURL,wasmURL,classWorkerURL:workerUrl') && downloaderJs.includes('ffmpeg?.terminate()')],
   ["V92.4 platform-link FFmpeg component timeout resets while chunks arrive", downloaderJs.includes("const resetIdle=()=>") && downloaderJs.includes("resetIdle();") && downloaderJs.includes("controller.abort(),45000")],
-  ["V92.4 downloader asset and PWA cache are refreshed", html.includes('/downloader.js?v=92.2') && sw.includes('/downloader.js?v=92.2') && sw.includes('/ffmpeg-worker-bootstrap.js?v=92.2') && sw.includes('aryanzz-v92-6')],
+  ["V92.4 downloader asset and PWA cache are refreshed", html.includes('/downloader.js?v=92.2') && sw.includes('/downloader.js?v=92.2') && sw.includes('/ffmpeg-worker-bootstrap.js?v=92.2') && sw.includes('aryanzz-v92-7')],
   ["Profile Studio and Owner page share the same V25 profile and design stores", ownerJs.includes('aryanzz.profile.info.v25') && ownerJs.includes('aryanzz.profile.design.v25') && profileJs.includes('const PROFILE_KEY="aryanzz.profile.info.v25"')],
   ["Owner profile displays the Profile Studio avatar and banner assets", ownerJs.includes('validImage(design.avatar)') && ownerJs.includes('validImage(design.banner)') && ownerJs.includes('$("ownerAvatar")')],
   ["Owner profile updates once when profile assets change", (ownerJs.match(/aryanzz:profile-assets-updated/g)||[]).length===1],
@@ -53,12 +62,12 @@ const checks = [
   ["Converter uses a same-origin local FFmpeg worker", converterJs.includes("ffmpeg-worker-bootstrap.js?v=92.1")],
   ["Local worker loads primary and fallback single-thread cores", converterJs.includes("for(let index=0;index<CORE_BASES.length;index++)") && converterJs.includes("instance.terminate()") && converterJs.includes("coreURL:base+\"/ffmpeg-core.js\"")],
   ["Worker CSP permits blob fetch for local WASM resources", worker.includes("connect-src") && worker.includes("wss: blob:;")],
-  ["Homepage release label is V92.4", html.includes("V92.4 · GRATIS")],
-  ["Worker health reports V92.4", worker.includes('version:"92.4"')],
+  ["Homepage release label is V92.4", html.includes("V92.5 · GRATIS")],
+  ["Worker health reports V92.4", worker.includes('version:"92.5"')],
   ["Homepage loads the shared V89 shell stylesheet", html.includes("/v89.css?v=90.0")],
   ["Every homepage JS and CSS asset is included in the active PWA shell cache", htmlAssetRefs.length>0 && htmlAssetRefs.every(ref=>sw.includes('"'+ref+'"'))],
-  ["PWA cache namespace is V92.4", sw.includes('const CACHE="aryanzz-v92-6"')],
-  ["PWA cache includes homepage, converter and Media Studio", sw.includes("/?v=92.4") && sw.includes("/audio-studio.js?v=92.1") && sw.includes("/audio-studio.css?v=92.0") && sw.includes("/media-studio.js?v=92.0") && sw.includes("/media-studio.css?v=92.0")],
+  ["PWA cache namespace is V92.4", sw.includes('const CACHE="aryanzz-v92-7"')],
+  ["PWA cache includes homepage, converter and Media Studio", sw.includes("/?v=92.5") && sw.includes("/audio-studio.js?v=92.1") && sw.includes("/audio-studio.css?v=92.0") && sw.includes("/media-studio.js?v=92.0") && sw.includes("/media-studio.css?v=92.0")],
 
   ["Converter Pro includes optional audio trim controls", html.includes('id="audioStudioStart"') && html.includes('id="audioStudioEnd"') && converterJs.includes('ffmpegArgs.push("-t"')],
   ["Converter Pro supports MP3 WAV AAC and FLAC output", ["mp3","wav","aac","flac"].every(format => html.includes('value="'+format+'"')) && converterJs.includes("libmp3lame") && converterJs.includes("pcm_s16le") && converterJs.includes('format==="aac"') && converterJs.includes('format==="flac"')],
@@ -105,4 +114,4 @@ for (const [name, ok] of checks) {
   assert.ok(ok, name + " failed");
   console.log("✔ " + name);
 }
-console.log("\nARYANZZ V92.4 platform downloader release smoke tests passed.");
+console.log("\nARYANZZ V92.5 full workspace audit release smoke tests passed.");
