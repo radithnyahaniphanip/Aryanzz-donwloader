@@ -1077,7 +1077,7 @@ $('analyze').onclick=async()=>{
  }
  const ext=extOf(u);
  if(detected==="youtube"){showYouTubeDownloader(u);return}
- if(detected){await showUniversalPlatformDownloader(u,detected);return}
+ if(detected){await showUniversalPlatformDownloader(u,normalizedChosen);return}
  if(ext){const p=document.createElement("p");p.className="warning";p.textContent="GAGAL — tautan file langsung bukan tautan asli "+aryPlatformLabel(normalizedChosen)+". Gunakan AI Search untuk pencarian lintas platform.";out.append(p);return}
  if(API){
   out.textContent='Memeriksa tautan ke backend…';
