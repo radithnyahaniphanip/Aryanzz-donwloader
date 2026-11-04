@@ -1889,7 +1889,7 @@ const SFL_BYPASS_HOSTS=new Set(["sf1.gl","sfl.gl","sflink.io"]);
 function safeBypassUrl(raw){
   let u;try{u=new URL(raw)}catch{return null}
   const h=u.hostname.toLowerCase().replace(/^\[|\]$/g,"");
-  if(!["https:","http:"].includes(u.protocol)||u.username||u.password||u.port)return null;
+  if(u.protocol!=="https:"||u.username||u.password||u.port)return null;
   if(h==="localhost"||h.endsWith(".localhost")||h.endsWith(".local")||h==="::"||h==="::1"||/^127\./.test(h)||/^10\./.test(h)||/^192\.168\./.test(h)||/^169\.254\./.test(h)||/^172\.(1[6-9]|2\d|3[01])\./.test(h)||/^fc[0-9a-f]{2}:/i.test(h)||/^fd[0-9a-f]{2}:/i.test(h)||/^fe80:/i.test(h))return null;
   return u;
 }
