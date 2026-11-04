@@ -1015,17 +1015,17 @@ function showPlatformGuide(u,platform){
 window.showYouTubeDownloader=showYouTubeDownloader;window.showPlatformGuide=showPlatformGuide;
 function aryPlatformForUrl(raw){
  try{
-  const host=new URL(raw).hostname.toLowerCase().replace(/^www\\./,"");
+  const host=new URL(raw).hostname.toLowerCase().replace(/^www\./,"");
   const rules=[
-   [/^(?:youtube\\.com|youtu\\.be|youtube-nocookie\\.com)$/, "youtube"],
-   [/(?:^|\\.)tiktok\\.com$/, "tiktok"],[/(?:^|\\.)instagram\\.com$|^instagr\\.am$/, "instagram"],
-   [/(?:^|\\.)snackvideo\\.com$/, "snackvideo"],[/(?:^|\\.)capcut\\.com$/, "capcut"],
-   [/(?:^|\\.)pinterest\\.com$|^pin\\.it$/, "pinterest"],[/(?:^|\\.)facebook\\.com$|^fb\\.watch$/, "facebook"],
-   [/(?:^|\\.)(?:x\\.com|twitter\\.com)$/, "x"],[/(?:^|\\.)reddit\\.com$|^redd\\.it$|^v\\.redd\\.it$/, "reddit"],
-   [/(?:^|\\.)vimeo\\.com$/, "vimeo"],[/(?:^|\\.)threads\\.net$/, "threads"],
-   [/(?:^|\\.)soundcloud\\.com$/, "soundcloud"],[/(?:^|\\.)snapchat\\.com$/, "snapchat"],
-   [/(?:^|\\.)idntimes\\.com$/, "idnapp"],[/(?:^|\\.)linkedin\\.com$/, "linkedin"],
-   [/(?:^|\\.)(?:wechat\\.com|weixin\\.qq\\.com)$/, "wechat"],[/(?:^|\\.)kakao\\.com$/, "kakaotalk"]
+   [/^(?:youtube\.com|youtu\.be|youtube-nocookie\.com)$/, "youtube"],
+   [/(?:^|\.)tiktok\.com$/, "tiktok"],[/(?:^|\.)instagram\.com$|^instagr\.am$/, "instagram"],
+   [/(?:^|\.)snackvideo\.com$/, "snackvideo"],[/(?:^|\.)capcut\.com$/, "capcut"],
+   [/(?:^|\.)pinterest\.com$|^pin\.it$/, "pinterest"],[/(?:^|\.)facebook\.com$|^fb\.watch$/, "facebook"],
+   [/(?:^|\.)(?:x\.com|twitter\.com)$/, "x"],[/(?:^|\.)reddit\.com$|^redd\.it$|^v\.redd\.it$/, "reddit"],
+   [/(?:^|\.)vimeo\.com$/, "vimeo"],[/(?:^|\.)threads\.net$/, "threads"],
+   [/(?:^|\.)soundcloud\.com$/, "soundcloud"],[/(?:^|\.)snapchat\.com$/, "snapchat"],
+   [/(?:^|\.)idntimes\.com$/, "idnapp"],[/(?:^|\.)linkedin\.com$/, "linkedin"],
+   [/(?:^|\.)(?:wechat\.com|weixin\.qq\.com)$/, "wechat"],[/(?:^|\.)kakao\.com$/, "kakaotalk"]
   ];
   return rules.find(([pattern])=>pattern.test(host))?.[1]||null;
  }catch{return null}
