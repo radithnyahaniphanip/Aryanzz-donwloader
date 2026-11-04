@@ -936,7 +936,7 @@ function collectImageUrls(value,output,depth=0,forceImage=false){
   }
   if(Array.isArray(value)){for(const item of value.slice(0,80))collectImageUrls(item,output,depth+1,forceImage);return}
   if(typeof value==="object"){
-    for(const key of ["url","urlList","url_list","contentUrl","image","images","photo","photos","picture","pictures","src","displayImage","display_image","imageURL","image_urls","display_url","download_url","image_url","original","large","thumbnail_src","media_url","media_url_https","originCover","origin_cover","cover","imagePost","image_post","photoPost","photo_post","carousel","gallery","itemInfo","item_info","itemStruct","item_struct","itemModule","item_module","itemList","item_list","data","props","pageProps","result","results","post","postInfo","post_info","aweme_detail","awemeDetail","videoDetail","video_detail","__DEFAULT_SCOPE__"]){
+    for(const key of ["url","urlList","url_list","contentUrl","image","images","photo","photos","picture","pictures","src","displayImage","display_image","imageURL","image_urls","display_url","download_url","image_url","original","large","thumbnail_src","media_url","media_url_https","originCover","origin_cover","cover","imagePost","image_post","photoPost","photo_post","carousel","gallery","itemInfo","item_info","itemStruct","item_struct","itemModule","item_module","itemList","item_list","data","props","pageProps","result","results","post","postInfo","post_info","webapp.video-detail","aweme_detail","awemeDetail","videoDetail","video_detail","__DEFAULT_SCOPE__"]){
       const normalizedKey=key.toLowerCase();
       if(value[key]!==undefined)collectImageUrls(value[key],output,depth+1,["image","images","photo","photos","picture","pictures","image_url","displayimage","display_image","imageurl","image_urls","urllist","url_list","origincover","origin_cover","imagepost","image_post","photopost","photo_post","carousel","gallery"].includes(normalizedKey)||forceImage);
     }
@@ -1039,7 +1039,12 @@ function providerImageCandidates(data){
     for(const item of list.slice(0,80)){
       if(typeof item==="string"){if(assumeImage)output.push({url:item,type:"image"});continue}
       if(!item||typeof item!=="object")continue;
-      const url=item.url||item.image_url||item.download_url||item.src||item.display_url||item.media_url||item.media_url_https;
+      let url=item.url||item.image_url||item.download_url||item.src||item.display_url||item.media_url||item.media_url_https;
+      if(!url&&assumeImage){
+        const nested=[];collectImageUrls(item,nested,0,true);
+        for(const candidate of nested)output.push({...item,url:candidate,type:"image"});
+        continue;
+      }
       const ext=String(item.ext||item.extension||imageExtensionFromUrl(url||"")).toLowerCase();
       const mime=String(item.mime_type||item.mime||item.content_type||"").toLowerCase();
       const explicit=String(item.type||item.kind||item.media_type||"").toLowerCase();
@@ -1048,7 +1053,7 @@ function providerImageCandidates(data){
       output.push({...item,url,type:isVideo?"video":inferred?"image":explicit});
     }
   };
-  for(const list of [n.images,n.photos,n.pictures,n.gallery,r.images,r.photos,r.pictures,r.gallery,n.carousel,r.carousel])add(list,true);
+  for(const list of [n.images,n.photos,n.pictures,n.gallery,n.image_urls,n.photo_images,r.images,r.photos,r.pictures,r.gallery,r.image_urls,r.photo_images,n.carousel,r.carousel,n.imagePost?.images,r.imagePost?.images,n.photoPost?.images,r.photoPost?.images])add(list,true);
   for(const list of [n.media,r.media])add(list,false);
   for(const item of [n.image,n.image_url,n.imageUrl,n.photo,n.photo_url,r.image,r.image_url,r.imageUrl,r.photo,r.photo_url]){
     if(typeof item==="string")output.push({url:item,type:"image"});
