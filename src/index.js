@@ -610,19 +610,26 @@ async function searchSocial(request){
         for(const item of direct.items){if(!seen.has(item.url)){seen.add(item.url);candidates.push(item)}}
       }
     }
-    if((platform==="all"||platform==="youtube")&&desiredMode==="audio"){
-      const youtubePages=await Promise.all(variants.slice(0,Math.min(8,variants.length)).map(term=>hybridYouTubeSearch(term)));
-      for(const page of youtubePages)for(const item of page?.results||[]){
+    if(platform==="all"||platform==="youtube"){
+      // Search YouTube independently: one combined site: query across 19 domains is not a reliable YouTube search.
+      const youtubeTerms=[query,query+" lagu",query+" song",query+" official audio",query+" DJ remix",...variants]
+        .map(value=>String(value||"").replace(/\\s+/g," ").trim())
+        .filter((value,index,array)=>value.length>=2&&array.indexOf(value)===index).slice(0,5);
+      const hybridPages=await Promise.all(youtubeTerms.slice(0,3).map(term=>hybridYouTubeSearch(term)));
+      for(const page of hybridPages)for(const item of page?.results||[]){
         if(!seen.has(item.url)){seen.add(item.url);candidates.push({...item,platform:"youtube",snippet:item.channel||"YouTube video",searchProvider:item.provider||"YouTube public search"});}
       }
-    }
-    if(platform==="all"&&desiredMode!=="audio"){
-      const youtubePages=await Promise.all(variants.slice(0,5).map(term=>hybridYouTubeSearch(term)));
-      for(const page of youtubePages)for(const item of page?.results||[]){
-        if(!seen.has(item.url)){seen.add(item.url);candidates.push({...item,platform:"youtube",snippet:item.channel||"YouTube video",searchProvider:item.provider||"YouTube public search"});}
+      // Community Piped/Invidious instances can be unavailable; always use the free public search fallback too.
+      const directYoutube=await freeYouTubeSearchItems(query,youtubeTerms);
+      for(const item of directYoutube){
+        if(!seen.has(item.url)){seen.add(item.url);candidates.push({...item,platform:"youtube",snippet:item.channel||"YouTube video",searchProvider:item.searchProvider||"YouTube public search"});}
       }
     }
-    const relevantCandidates=candidates.filter(item=>publicSearchRelevance(query,item.title+" "+item.snippet)>=0.25);
+    const relevantCandidates=candidates.filter(item=>{
+      const score=publicSearchRelevance(query,item.title+" "+item.snippet);
+      // YouTube titles often omit generic words such as "lagu", "official", or "DJ"; preserve strong title matches.
+      return score>=0.25||(item.platform==="youtube"&&score>=0.16);
+    });
     const orderedCandidates=platform==="all"?(()=>{const buckets=new Map();for(const item of relevantCandidates){const key=freePlatformKey(item.url)||"other";if(!buckets.has(key))buckets.set(key,[]);buckets.get(key).push(item)}const out=[];for(let round=0;round<12;round++)for(const list of buckets.values())if(list[round])out.push(list[round]);return out})():relevantCandidates;
     const verificationLimit=12;const verificationCandidates=orderedCandidates.slice(0,verificationLimit);const checked=await Promise.all(verificationCandidates.map(item=>verifySocialSearchResult(item,request.url,desiredMode)));const searchOnlyRemainder=orderedCandidates.slice(verificationLimit,500).map(item=>({...item,platform:freePlatformKey(item.url)||item.platform||"unknown",verified:false,downloadable:false,searchOnly:true,mediaMode:desiredMode==="audio"?"audio":"video",channel:desiredMode==="audio"?"Sumber video · audio MP3 diproses saat dipilih":"Hasil publik · unduhan belum diverifikasi"}));
     const results=[...checked.filter(Boolean),...searchOnlyRemainder].slice(0,500);
@@ -1601,21 +1608,25 @@ async function hybridYouTubeSearch(query){
   });
   try{return await Promise.any(attempts);}catch{return null;}
 }
-async function freeYouTubeSearch(query,queryVariants=null){
+async function freeYouTubeSearchItems(query,queryVariants=null){
   const variants=Array.isArray(queryVariants)&&queryVariants.length?queryVariants:[query];
   const responses=await Promise.all(variants.slice(0,5).map(async term=>{
-    const endpoint=FREE_MEDIA_API+"/api/download/youtube-search?query="+encodeURIComponent(term)+"&limit=8";
+    const endpoint=FREE_MEDIA_API+"/api/download/youtube-search?query="+encodeURIComponent(term)+"&limit=12";
     try{
       const response=await fetch(endpoint,{headers:{accept:"application/json"},signal:AbortSignal.timeout(18000),cache:"no-store"});
       if(!response.ok)return [];
       const data=await response.json().catch(()=>({}));
       if(data?.success===false)return [];
       const items=Array.isArray(data?.normalized?.items)?data.normalized.items:Array.isArray(data?.result)?data.result:[];
-      return items.map(item=>({title:String(item?.title||item?.name||"Video tanpa judul").slice(0,220),url:String(item?.url||item?.webpage_url||item?.link||""),thumbnail:String(item?.thumbnail||item?.thumbnail_url||""),channel:String(item?.author||item?.channel||item?.uploader||""),duration:Number(item?.duration)||null})).filter(item=>item.title&&isYouTubeUrl(item.url));
+      return items.map(item=>({title:String(item?.title||item?.name||"Video tanpa judul").slice(0,220),url:String(item?.url||item?.webpage_url||item?.link||""),thumbnail:String(item?.thumbnail||item?.thumbnail_url||""),channel:String(item?.author||item?.channel||item?.uploader||""),duration:Number(item?.duration)||null,platform:"youtube",searchProvider:"YouTube public search"})).filter(item=>item.title&&isYouTubeUrl(item.url));
     }catch{return []}
   }));
   const seen=new Set(),results=[];
   for(const list of responses)for(const item of list)if(!seen.has(item.url)){seen.add(item.url);results.push(item)}
+  return results;
+}
+async function freeYouTubeSearch(query,queryVariants=null){
+  const results=await freeYouTubeSearchItems(query,queryVariants);
   if(!results.length)return json({error:"Pencarian YouTube gratis belum menemukan hasil yang dapat diakses. Coba kata kunci lain atau buka pencarian YouTube langsung."},502);
   return json({ok:true,query,results:results.slice(0,20),provider:"Public API · pencarian kata kunci terkait"});
 }
