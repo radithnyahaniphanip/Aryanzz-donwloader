@@ -260,9 +260,40 @@
     });
   }
 
+  function consolidateProfileSettings(){
+    const profile=$("profile"),layout=profile?.querySelector(".v25-profile-layout");
+    if(!profile||!layout||profile.querySelector(".v93-profile-settings"))return;
+    const appearance=layout.querySelectorAll(":scope > .v25-profile-card")[1];
+    const motion=profile.querySelector(".v75-motion-card");
+    const backup=profile.querySelector(".v25-backup-card");
+    const device=profile.querySelector(".v25-device-card");
+    const groups=[
+      {title:"Tampilan & background",node:appearance},
+      {title:"Animasi & pengalaman",node:motion},
+      {title:"Backup & pemulihan",node:backup},
+      {title:"Perangkat & privasi",node:device}
+    ].filter(item=>item.node);
+    if(!groups.length)return;
+    const outer=document.createElement("details");
+    outer.className="v93-profile-settings";
+    const summary=document.createElement("summary");
+    summary.textContent="Pengaturan profil";
+    outer.append(summary);
+    groups.forEach((item,index)=>{
+      const group=document.createElement("details");
+      group.className="v93-profile-setting-group";
+      const label=document.createElement("summary");
+      label.textContent=item.title;
+      group.append(label,item.node);
+      if(index===0)group.open=false;
+      outer.append(group);
+    });
+    layout.after(outer);
+  }
+
   function init(){
     if(!$("profile"))return;
-    installAutoSaveObserver();applyDesign();initDeviceHistory();
+    installAutoSaveObserver();consolidateProfileSettings();applyDesign();initDeviceHistory();
     storeImage("profileBanner","banner",1500,520,.78,"Banner");
     storeImage("profileBackground","background",1600,1000,.72,"Background");
     storeImage("profilePhoto","avatar",520,520,.8,"Foto profil");
