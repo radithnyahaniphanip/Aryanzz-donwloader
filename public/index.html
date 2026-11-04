@@ -1017,7 +1017,7 @@ function aryPlatformForUrl(raw){
  try{
   const host=new URL(raw).hostname.toLowerCase().replace(/^www\./,"");
   const rules=[
-   [/^(?:youtube\.com|youtu\.be|youtube-nocookie\.com)$/, "youtube"],
+   [/^(?:youtube\.com|m\.youtube\.com|music\.youtube\.com|youtu\.be|www\.youtu\.be|youtube-nocookie\.com|www\.youtube-nocookie\.com)$/, "youtube"],
    [/(?:^|\.)tiktok\.com$/, "tiktok"],[/(?:^|\.)instagram\.com$|^instagr\.am$/, "instagram"],
    [/(?:^|\.)snackvideo\.com$/, "snackvideo"],[/(?:^|\.)capcut\.com$/, "capcut"],
    [/(?:^|\.)pinterest\.com$|^pin\.it$/, "pinterest"],[/(?:^|\.)facebook\.com$|^fb\.watch$/, "facebook"],
@@ -1030,14 +1030,14 @@ function aryPlatformForUrl(raw){
   return rules.find(([pattern])=>pattern.test(host))?.[1]||null;
  }catch{return null}
 }
-function arySelectedPlatform(){return document.querySelector("#platformPicker [data-platform].active")?.dataset.platform||"all"}
+function arySelectedPlatform(){const state=window.aryanzzSelectedPlatform?.();if(state)return state;return document.querySelector("#platformPicker")?.getAttribute("data-selected-platform")||document.querySelector("#platformPicker [data-platform].active")?.dataset.platform||"youtube"}
 function aryPlatformLabel(id){return ({youtube:"YouTube",tiktok:"TikTok",instagram:"Instagram",snackvideo:"SnackVideo",capcut:"CapCut",pinterest:"Pinterest",facebook:"Facebook",x:"X",reddit:"Reddit",vimeo:"Vimeo",threads:"Threads",soundcloud:"SoundCloud",snapchat:"Snapchat",idnapp:"IDN App",linkedin:"LinkedIn",wechat:"WeChat",kakaotalk:"KakaoTalk"})[id]||id}
 async function showUniversalPlatformDownloader(u,platform){
  const out=$("downloadResult");out.hidden=false;out.replaceChildren();
  const heading=document.createElement("b");heading.textContent=aryPlatformLabel(platform)+" terdeteksi";
  const status=document.createElement("p");status.className="muted";status.textContent="Memeriksa tautan dan format media yang benar-benar tersedia…";out.append(heading,status);
  try{
-  const response=await fetch(API+"/api/platform/info",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({url:u.href})});
+  const response=await fetch(API+"/api/platform/info",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({url:u.href,expectedPlatform:platform})});
   const data=await response.json().catch(()=>({}));
   if(!response.ok||!data.ok)throw new Error(data.error||"Tautan tidak dapat diproses.");
   status.textContent=(data.title||"Media ditemukan")+" · "+aryPlatformLabel(data.platform||platform)+" · "+(data.formats?.length||0)+" format tersedia.";
@@ -1062,16 +1062,23 @@ $('analyze').onclick=async()=>{
  const detected=aryPlatformForUrl(u.href),chosen=arySelectedPlatform();
  const aliases={tiktoklite:"tiktok",instagramlite:"instagram",facebooklite:"facebook"};
  const normalizedChosen=aliases[chosen]||chosen;
- if(detected&&chosen!=="all"&&normalizedChosen!==detected){
+ const isLinkMode=!$("linkModePanel")?.hidden;
+ if(isLinkMode&&chosen==="all"){
+  const p=document.createElement("p");p.className="warning";p.textContent="Pilih satu platform khusus terlebih dahulu. Mode Semua 19 hanya tersedia untuk AI Search lintas platform.";out.append(p);return;
+ }
+ if(isLinkMode&&(!detected||normalizedChosen!==detected)){
   const b=document.createElement("b"),p=document.createElement("p");
-  b.textContent="Platform tautan tidak sesuai.";
-  p.className="warning";p.textContent="Kamu memilih "+aryPlatformLabel(normalizedChosen)+", tetapi tautan ini berasal dari "+aryPlatformLabel(detected)+". Pilih "+aryPlatformLabel(detected)+" terlebih dahulu, atau pilih Semua 19 Platform.";
+  b.textContent="GAGAL — PLATFORM TIDAK SESUAI";
+  p.className="warning";
+  p.textContent=detected
+   ?"Kamu memilih "+aryPlatformLabel(normalizedChosen)+", tetapi tautan berasal dari "+aryPlatformLabel(detected)+". Tautan ditolak. Pilih "+aryPlatformLabel(detected)+" untuk memprosesnya."
+   :"Domain tautan tidak dikenali sebagai "+aryPlatformLabel(normalizedChosen)+". Tautan ditolak. Tempel tautan asli dari platform yang dipilih.";
   out.append(b,p);return;
  }
  const ext=extOf(u);
  if(detected==="youtube"){showYouTubeDownloader(u);return}
  if(detected){await showUniversalPlatformDownloader(u,detected);return}
- if(ext){if(chosen!=="all"){const p=document.createElement("p");p.className="warning";p.textContent="Domain tautan file langsung tidak menunjukkan asal platform. Pilih Semua 19 Platform untuk memproses tautan umum, atau tempel tautan asli dari "+aryPlatformLabel(normalizedChosen)+".";out.append(p);return}showDirectMedia(u);return}
+ if(ext){const p=document.createElement("p");p.className="warning";p.textContent="GAGAL — tautan file langsung bukan tautan asli "+aryPlatformLabel(normalizedChosen)+". Gunakan AI Search untuk pencarian lintas platform.";out.append(p);return}
  if(API){
   out.textContent='Memeriksa tautan ke backend…';
   try{const r=await fetch(API+'/api/info',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:raw})});const d=await r.json();if(!r.ok)throw Error(d.error||'Gagal memeriksa link');activeUrl=raw;out.textContent='Media terdeteksi: '+(d.title||'Media')+'. Pilih format berikut.';const mode=document.createElement('select');mode.id='mode';mode.className='field';['video','audio'].forEach(v=>{const op=document.createElement('option');op.value=v;op.textContent=v==='video'?'Video':'Audio';mode.append(op)});const b=document.createElement('button');b.className='primary';b.textContent='Unduh media';b.onclick=downloadExtracted;out.append(document.createElement('br'),mode,b);return}catch(e){out.textContent='Backend belum tersedia: '+e.message}
