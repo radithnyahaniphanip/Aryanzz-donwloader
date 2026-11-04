@@ -5,11 +5,13 @@ import { resolve } from "node:path";
 const root = process.cwd();
 const packageJson = JSON.parse(readFileSync(resolve(root, "package.json"), "utf8"));
 const major = Number(String(packageJson.version || "94.0.0").split(".")[0]) || 94;
-let build = 1;
-try {
-  build = Number(execFileSync("git", ["rev-list", "--count", "HEAD"], { encoding: "utf8" }).trim()) || 1;
-} catch {
-  build = Number(process.env.CF_BUILD_NUMBER || process.env.GITHUB_RUN_NUMBER || 1) || 1;
+let build = Number(process.env.GITHUB_RUN_NUMBER || process.env.CF_BUILD_NUMBER || 0) || 0;
+if (!build) {
+  try {
+    build = Number(execFileSync("git", ["rev-list", "--count", "HEAD"], { encoding: "utf8" }).trim()) || 1;
+  } catch {
+    build = 1;
+  }
 }
 const version = major + "." + build;
 const commit = (() => {
