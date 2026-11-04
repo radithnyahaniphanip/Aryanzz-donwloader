@@ -198,7 +198,14 @@
   }
   function collectAppStorage(){
     const data={};
-    for(let i=0;i<localStorage.length;i++){const key=localStorage.key(i);if(key&&((key.startsWith("aryanzz.")&&!key.startsWith("aryanzz.autosave."))||key==="aryanzz-download-history-v1")){const value=localStorage.getItem(key);if(value!==null)data[key]=value;}}
+    try{
+      for(let i=0;i<localStorage.length;i++){
+        const key=localStorage.key(i);
+        if(key&&((key.startsWith("aryanzz.")&&!key.startsWith("aryanzz.autosave."))||key==="aryanzz-download-history-v1")){
+          const value=localStorage.getItem(key);if(value!==null)data[key]=value;
+        }
+      }
+    }catch{}
     return data;
   }
   async function writeAutoSnapshot(){
@@ -244,10 +251,12 @@
       const snapshot=await readAutoSnapshot();
       if(!snapshot?.data){toast("Belum ada cadangan otomatis yang tersimpan.");return;}
       if(!window.confirm("Pulihkan cadangan otomatis terakhir dari browser ini? Data ARYANZZ saat ini akan diganti."))return;
-      const allowed=Object.entries(snapshot.data).filter(([key,value])=>(key.startsWith("aryanzz.")||key==="aryanzz-download-history-v1")&&typeof value==="string");
-      for(let i=localStorage.length-1;i>=0;i--){const key=localStorage.key(i);if((key?.startsWith("aryanzz.")||key==="aryanzz-download-history-v1")&&!allowed.some(([savedKey])=>savedKey===key))localStorage.removeItem(key);}
-      allowed.forEach(([key,value])=>localStorage.setItem(key,value));
-      toast("Cadangan otomatis dipulihkan. Memuat ulang…");setTimeout(()=>location.reload(),650);
+      try{
+        const allowed=Object.entries(snapshot.data).filter(([key,value])=>(key.startsWith("aryanzz.")||key==="aryanzz-download-history-v1")&&typeof value==="string");
+        for(let i=localStorage.length-1;i>=0;i--){const key=localStorage.key(i);if((key?.startsWith("aryanzz.")||key==="aryanzz-download-history-v1")&&!allowed.some(([savedKey])=>savedKey===key))localStorage.removeItem(key);}
+        allowed.forEach(([key,value])=>localStorage.setItem(key,value));
+        toast("Cadangan otomatis dipulihkan. Memuat ulang…");setTimeout(()=>location.reload(),650);
+      }catch{toast("Cadangan ditemukan, tetapi penyimpanan browser menolak pemulihan. Kosongkan ruang lalu coba lagi.");}
     });
   }
 
