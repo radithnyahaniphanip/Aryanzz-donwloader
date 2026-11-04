@@ -583,6 +583,11 @@ body{background-color:var(--ary-app-bg)}
     <label class="audio-control"><span>Nama file MP3</span><input id="audioStudioName" class="field" maxlength="90" placeholder="aryanzz-audio"></label>
     <label class="audio-control"><span>Kualitas audio</span><select id="audioStudioBitrate" class="field"><option value="128">128 kbps · Hemat</option><option value="192" selected>192 kbps · Seimbang</option><option value="256">256 kbps · Tinggi</option><option value="320">320 kbps · Maksimum</option></select></label>
   </div>
+  <div class="audio-studio-fields audio-trim-fields">
+    <label class="audio-control"><span>Mulai dari (detik, opsional)</span><input id="audioStudioStart" class="field" type="number" min="0" step="0.1" inputmode="decimal" placeholder="0"></label>
+    <label class="audio-control"><span>Akhiri pada (detik, opsional)</span><input id="audioStudioEnd" class="field" type="number" min="0" step="0.1" inputmode="decimal" placeholder="Durasi penuh"></label>
+  </div>
+  <p class="audio-trim-note">Kosongkan kedua kolom untuk mengonversi seluruh audio. Waktu dihitung dalam detik.</p>
   <div class="audio-studio-actions"><button class="primary" id="audioStudioConvert" type="button" disabled>Konversi ke MP3</button><button class="tag" id="audioStudioCancel" type="button" hidden>Batalkan</button></div>
   <div class="audio-progress-track" id="audioStudioProgressTrack" role="progressbar" aria-label="Progres konversi MP4 ke MP3" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="audioStudioProgressBar"></div></div>
   <p class="audio-studio-status" id="audioStudioStatus" role="status" aria-live="polite">Pilih video MP4 untuk memulai.</p>
