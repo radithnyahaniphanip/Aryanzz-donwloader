@@ -1410,11 +1410,11 @@
         else{mode.value="video";if(audioOption)audioOption.disabled=true}
         mode.disabled=true;
       }else{
-        const available = heights.length ? heights : (isYouTube?[]:(info.providerName==="Public API"?[]:[360,480,720,1080,1440,2160]));
+        const available = heights.length ? heights : (isYouTube||hasProviderDownloadFormats?[]:[360,480,720,1080,1440,2160]);
         const quickPool=progressiveHeights.length?progressiveHeights:(adaptiveHeights.length?adaptiveHeights:available);
         const quickHeight=quickPool.filter(height=>height<=480).sort((a,b)=>b-a)[0]||quickPool.filter(height=>height<=720).sort((a,b)=>b-a)[0]||quickPool.slice().sort((a,b)=>a-b)[0];
         if(hasProviderDownloadFormats&&!heights.length){
-          const original=make("option","","Kualitas asli · sumber");
+          const original=make("option","","Kualitas asli · ukuran diperiksa sebelum unduh");
           original.value="0";original.selected=true;quality.append(original);quality.disabled=true;qualityLabel.textContent="KUALITAS SUMBER";
         }else{
           const qualityOptions=isYouTube
