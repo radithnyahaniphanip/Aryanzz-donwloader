@@ -35,7 +35,7 @@ const checks = [
   ["Homepage release label is V91.0", html.includes("V91.0 · GRATIS")],
   ["Worker health reports V91.0", worker.includes('version:"91.0"')],
   ["Homepage loads the shared V89 shell stylesheet", html.includes("/v89.css?v=90.0")],
-  ["PWA cache namespace is V91.0", sw.includes('const CACHE="aryanzz-v91-1"')],
+  ["PWA cache namespace is V91.0", sw.includes('const CACHE="aryanzz-v91-2"')],
   ["PWA cache includes homepage, converter and Media Studio", sw.includes("/?v=91.0") && sw.includes("/audio-studio.js?v=91.0") && sw.includes("/audio-studio.css?v=91.0") && sw.includes("/media-studio.js?v=91.0") && sw.includes("/media-studio.css?v=91.0")],
 
   ["Converter Pro includes optional audio trim controls", html.includes('id="audioStudioStart"') && html.includes('id="audioStudioEnd"') && converterJs.includes('ffmpegArgs.push("-t"')],
