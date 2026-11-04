@@ -39,7 +39,7 @@
 .lc-player-controls{display:flex;align-items:center;gap:8px;margin-top:9px}
 .lc-player-controls button{border:1px solid rgba(125,166,240,.25);background:rgba(40,67,111,.5);color:#eef7ff;border-radius:9px;padding:6px 10px}
 .lc-progress{height:5px;flex:1;background:#ffffff25;border-radius:9px;overflow:hidden}
-.lc-progress-fill{height:100%;width:0;background:linear-gradient(90deg,#b45cf3,#16c7ed);transition:width .25s}
+.lc-progress-fill{height:100%;width:0;background:rgba(235,242,248,.72);transition:width .25s}
 .lc-time{font-size:9px;color:#b8c9e2;white-space:nowrap}
 .lc-player-controls button:disabled{opacity:.35}
 .lc-voice-note{font-size:9px;color:#90a8c8;margin:7px 0 0;line-height:1.4}
@@ -73,8 +73,8 @@
 .lc-cinema .lc-voice-note{font-size:10px;line-height:1.55;color:#9eafc1;margin:8px 0 14px}
 .lc-cinema .lc-scene-copy{padding:15px 16px;margin:0 0 12px;border-radius:13px;background:rgba(255,255,255,.045);border:1px solid rgba(190,211,229,.13)}
 .lc-cinema .lc-scene-number{display:block;color:#9bd4c9;font-size:9px;letter-spacing:1.2px;font-weight:900;margin-bottom:7px}
-.lc-cinema .lc-scene-copy h4{font-size:16px;line-height:1.4;margin:0 0 8px;letter-spacing:0}
-.lc-cinema .lc-scene-copy p{font-size:13px;line-height:1.75;color:#d0dbe6;margin:0;overflow-wrap:anywhere}
+.lc-cinema .lc-scene-copy h4{font-size:16px;line-height:1.5;margin:0 0 12px;letter-spacing:0;padding-bottom:2px}
+.lc-cinema .lc-scene-copy p{font-size:13px;line-height:1.85;color:#d0dbe6;margin:0;overflow-wrap:anywhere;white-space:normal}
 .lc-cinema .lc-details{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .lc-cinema .lc-details article{min-width:0;padding:13px 14px;border-radius:12px;background:rgba(255,255,255,.035);border:1px solid rgba(190,211,229,.12)}
 .lc-cinema .lc-details article>b{display:block;font-size:12px;line-height:1.4;margin:0 0 8px;color:#f0f5f9}
