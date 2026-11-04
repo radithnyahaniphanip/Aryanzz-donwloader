@@ -1,8 +1,8 @@
-# ARYANZZ V73.6 — Mobile-resilient media downloader
+# ARYANZZ V93.0 — Mobile-first unified creator workspace
 
 Production website: https://aryanzz-donwloader.radithnyahaniphanip.workers.dev/
 
-ARYANZZ is a mobile-first creator workspace hosted on Cloudflare Workers. V73.0 improves mobile download checkpoints, Chrome background-resume support for direct files, adaptive MP4 progress, speed modes, and thumbnail actions. No Cobalt, Docker Desktop, private extraction server, or paid downloader provider is required.
+ARYANZZ is a mobile-first creator workspace hosted on Cloudflare Workers. V93.0 adds a compact two-column mobile tools experience, a four-column desktop tools layout, a dedicated popular-tools area, consolidated Profile settings, cleaner original aurora banner styling, persistent About and Help entry points, and a guarded SFL shortlink resolver. The Link Bypass only follows public HTTPS redirects from supported SFL domains; it does not solve CAPTCHA, login, or required verification. V73.0 improves mobile download checkpoints, Chrome background-resume support for direct files, adaptive MP4 progress, speed modes, and thumbnail actions. No Cobalt, Docker Desktop, private extraction server, or paid downloader provider is required.
 
 ## V65.0 release scope
 
