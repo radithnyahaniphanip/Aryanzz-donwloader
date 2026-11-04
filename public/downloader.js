@@ -1248,62 +1248,88 @@ function socialNetworkPlan(selected=0){
       }
       const host=url.hostname.toLowerCase();
       const isYouTube=["youtube.com","www.youtube.com","m.youtube.com","music.youtube.com","youtu.be","www.youtu.be"].includes(host);
-      const info=isYouTube
-        ? await browserHybridYoutubeInfo(url.href)
-        : await postJson("/api/platform/info", {url:url.href,expectedPlatform:selectedPlatform});
-      if(runId!==analysisRunId)return;
+      const isTikTokPhotoPost=selectedPlatform==="tiktok"&&/\/photo\//i.test(url.pathname);
+      const catalogPlatform=(window.ARYANZZ_PLATFORM_CATALOG||[]).find(platform=>platform.id===selectedPlatform);
       const imageFirstPlatforms=new Set(["Pinterest","Instagram","Facebook","X","Reddit","Threads","TikTok","SnackVideo","CapCut"]);
-      const hasVideoFormat=(info.formats||[]).some(item=>item?.mode==="video"||item?.type==="video"||/^video\//i.test(String(item?.mimeType||item?.mime_type||""))||["mp4","m4v","webm","mov","avi","3gp"].includes(String(item?.ext||"").toLowerCase()));
-      if(!isYouTube&&imageFirstPlatforms.has(detectedPlatform)&&!hasVideoFormat){
-        try{
-          const imageResponse=await fetch("/api/image/extract?url="+encodeURIComponent(url.href),{cache:"no-store"});
-          const imageData=await imageResponse.json().catch(()=>({}));
-          if(runId!==analysisRunId)return;
-          const imageItems=Array.isArray(imageData.images)?imageData.images.slice(0,19):[];
-          if(imageResponse.ok&&imageData.ok&&imageItems.length){
-            box.replaceChildren();
-            box.append(make("b","youtube-title",imageData.title||("Gambar dari "+detectedPlatform)));
-            const grid=make("div","aryanzz-inline-image-grid");
-            imageItems.forEach((item,index)=>{
-              const previewUrl=safeUrl(item.previewUrl||item.downloadUrl);
-              const downloadUrl=safeUrl(item.downloadUrl||item.previewUrl);
-              if(!previewUrl||!downloadUrl||previewUrl.origin!==location.origin||downloadUrl.origin!==location.origin||!["/api/social-image-file","/api/image/file"].includes(previewUrl.pathname)||!["/api/social-image-file","/api/image/file"].includes(downloadUrl.pathname))return;
-              const card=make("article","aryanzz-inline-image-card");
-              const preview=make("a","aryanzz-inline-image-open");
-              preview.href=previewUrl.href;preview.target="_blank";preview.rel="noopener noreferrer";preview.setAttribute("aria-label","Lihat gambar "+(index+1));
-              const image=make("img","");image.loading="lazy";image.decoding="async";image.src=previewUrl.href;image.alt=item.title||"Gambar "+(index+1);
-              preview.append(image);
-              const actions=make("div","aryanzz-inline-image-actions");
-              const download=make("button","primary","↓ Unduh");
-              download.type="button";
-              download.addEventListener("click",async()=>{
-                download.disabled=true;download.textContent="Memeriksa gambar…";
-                try{
-                  const response=await fetch(downloadUrl.href,{cache:"no-store",credentials:"same-origin",signal:downloadTimeoutSignal(90000)});
-                  if(!response.ok){const failure=await response.json().catch(()=>({}));throw new Error(failure.error||"Unduhan gambar gagal (HTTP "+response.status+").");}
-                  const mime=String(response.headers.get("content-type")||"").split(";")[0].trim().toLowerCase();
-                  if(!mime.startsWith("image/")||mime==="image/svg+xml")throw new Error("Server tidak mengirim file gambar yang valid. Respons JSON/HTML ditolak agar tidak tersimpan sebagai gambar.");
-                  const blob=await response.blob();
-                  if(!blob.size)throw new Error("File gambar kosong.");
-                  const head=new Uint8Array(await blob.slice(0,16).arrayBuffer());
-                  const valid=(head[0]===0xff&&head[1]===0xd8&&head[2]===0xff)||(head[0]===0x89&&head[1]===0x50&&head[2]===0x4e&&head[3]===0x47)||(head[0]===0x47&&head[1]===0x49&&head[2]===0x46)||(head[0]===0x52&&head[1]===0x49&&head[2]===0x46&&head[8]===0x57&&head[9]===0x45&&head[10]===0x42&&head[11]===0x50)||(head[4]===0x66&&head[5]===0x74&&head[6]===0x79&&head[7]===0x70);
-                  if(!valid)throw new Error("Isi file tidak cocok dengan format gambar. File tidak disimpan.");
-                  await saveBrowserBlob(blob,item.filename||("aryanzz-image-"+(index+1)+".jpg"),card,"⬇ Simpan gambar");
-                  download.textContent="Gambar siap ✓";
-                }catch(error){download.textContent="Gagal · coba lagi";const note=make("small","warning",String(error.message||error));card.append(note);download.disabled=false;}
-              });
-              actions.append(download);
-              if(item.sourceUrl){const source=make("a","tag","Sumber ↗");source.href=item.sourceUrl;source.target="_blank";source.rel="noopener noreferrer";actions.append(source);}
-              card.append(preview,actions);grid.append(card);
-            });
-            if(grid.childElementCount){
-              box.append(grid,make("small","muted",grid.childElementCount+" gambar ditemukan · pilih gambar untuk melihat atau unduh."));
-              return;
-            }
-          }
-        }catch{}
+      const shouldTryImageExtraction=!isYouTube&&selectedPlatform!=="soundcloud"&&(isTikTokPhotoPost||imageFirstPlatforms.has(detectedPlatform)||catalogPlatform?.mediaModes?.includes("image")||(catalogPlatform?.providerKey==="aio"&&(catalogPlatform?.mediaModes||[]).some(mode=>mode!=="audio")));
+      const imageExtractionPromise=shouldTryImageExtraction
+        ?fetch("/api/image/extract?url="+encodeURIComponent(url.href),{cache:"no-store"}).then(async response=>({ok:response.ok,data:await response.json().catch(()=>({}))})).catch(error=>({ok:false,data:{error:String(error?.message||error)}}))
+        :Promise.resolve(null);
+      let info;
+      try{
+        info=isYouTube
+          ?await browserHybridYoutubeInfo(url.href)
+          :isTikTokPhotoPost
+            ?{ok:true,title:"TikTok Photo Mode",filename:"TikTok Photo Mode",type:"image",formats:[],extractor:"TikTok Photo Mode"}
+            :await postJson("/api/platform/info",{url:url.href,expectedPlatform:selectedPlatform});
+      }catch(error){
+        if(!shouldTryImageExtraction)throw error;
+        info={ok:false,error:String(error?.message||error),title:"",formats:[],type:"image"};
       }
-
+      if(runId!==analysisRunId)return;
+      const imageResult=shouldTryImageExtraction?await imageExtractionPromise:null;
+      if(runId!==analysisRunId)return;
+      const imageData=imageResult?.data||{};
+      const imageItems=Array.isArray(imageData.images)?imageData.images.slice(0,19):[];
+      const hasVideoFormat=(info.formats||[]).some(item=>item?.mode==="video"||item?.type==="video"||/^video\\//i.test(String(item?.mimeType||item?.mime_type||""))||["mp4","m4v","webm","mov","avi","3gp"].includes(String(item?.ext||"").toLowerCase()));
+      const hasAnyFormat=Array.isArray(info.formats)&&info.formats.length>0;
+      let imageGallery=null,imageGalleryNote=null;
+      if(imageResult?.ok&&imageData.ok&&imageItems.length){
+        const grid=make("div","aryanzz-inline-image-grid");
+        imageItems.forEach((item,index)=>{
+          const previewUrl=safeUrl(item.previewUrl||item.downloadUrl);
+          const downloadUrl=safeUrl(item.downloadUrl||item.previewUrl);
+          if(!previewUrl||!downloadUrl||previewUrl.origin!==location.origin||downloadUrl.origin!==location.origin||!["/api/social-image-file","/api/image/file"].includes(previewUrl.pathname)||!["/api/social-image-file","/api/image/file"].includes(downloadUrl.pathname))return;
+          const card=make("article","aryanzz-inline-image-card");
+          const preview=make("a","aryanzz-inline-image-open");
+          preview.href=previewUrl.href;preview.target="_blank";preview.rel="noopener noreferrer";preview.setAttribute("aria-label","Lihat gambar "+(index+1));
+          const image=make("img","");
+          image.loading="lazy";image.decoding="async";image.src=previewUrl.href;image.alt=item.title||"Gambar "+(index+1);
+          preview.append(image);
+          const actions=make("div","aryanzz-inline-image-actions");
+          const download=make("button","primary","↓ Unduh gambar");
+          download.type="button";
+          download.addEventListener("click",async()=>{
+            download.disabled=true;download.textContent="Memeriksa gambar…";
+            try{
+              const response=await fetch(downloadUrl.href,{cache:"no-store",credentials:"same-origin",signal:downloadTimeoutSignal(90000)});
+              if(!response.ok){const failure=await response.json().catch(()=>({}));throw new Error(failure.error||"Unduhan gambar gagal (HTTP "+response.status+").");}
+              const mime=String(response.headers.get("content-type")||"").split(";")[0].trim().toLowerCase();
+              if(!mime.startsWith("image/")||mime==="image/svg+xml")throw new Error("Server tidak mengirim file gambar yang valid. Respons JSON/HTML ditolak agar tidak tersimpan sebagai gambar.");
+              const blob=await response.blob();
+              if(!blob.size)throw new Error("File gambar kosong.");
+              const head=new Uint8Array(await blob.slice(0,16).arrayBuffer());
+              const valid=(head[0]===0xff&&head[1]===0xd8&&head[2]===0xff)||(head[0]===0x89&&head[1]===0x50&&head[2]===0x4e&&head[3]===0x47)||(head[0]===0x47&&head[1]===0x49&&head[2]===0x46)||(head[0]===0x52&&head[1]===0x49&&head[2]===0x46&&head[8]===0x57&&head[9]===0x45&&head[10]===0x42&&head[11]===0x50)||(head[4]===0x66&&head[5]===0x74&&head[6]===0x79&&head[7]===0x70);
+              if(!valid)throw new Error("Isi file tidak cocok dengan format gambar. File tidak disimpan.");
+              await saveBrowserBlob(blob,item.filename||("aryanzz-image-"+(index+1)+".jpg"),card,"⬇ Simpan gambar");
+              download.textContent="Gambar siap ✓";
+            }catch(error){
+              download.textContent="Gagal · coba lagi";
+              const note=make("small","warning",String(error.message||error));card.append(note);download.disabled=false;
+            }
+          });
+          actions.append(download);
+          if(item.sourceUrl){const source=make("a","tag","Sumber ↗");source.href=item.sourceUrl;source.target="_blank";source.rel="noopener noreferrer";actions.append(source);}
+          card.append(preview,actions);grid.append(card);
+        });
+        if(grid.childElementCount){
+          imageGallery=grid;
+          imageGalleryNote=make("small","muted",grid.childElementCount+" foto ditemukan · pilih foto untuk melihat atau mengunduh.");
+          if(!hasAnyFormat){
+            box.replaceChildren();
+            box.append(make("b","youtube-title",imageData.title||("Foto dari "+detectedPlatform)),imageGallery,imageGalleryNote);
+            return;
+          }
+        }
+      }
+      if(isTikTokPhotoPost&&!imageGallery){
+        box.replaceChildren(make("b","youtube-title","TikTok Photo Mode belum bisa dibaca"),make("p","warning",imageData.error||info.error||"Postingan foto ini tidak mengirim gambar publik yang dapat diambil. Pastikan tautan Photo Mode dapat dibuka tanpa login atau pembatasan."));
+        return;
+      }
+      if(!hasAnyFormat&&!imageGallery&&info.ok===false){
+        box.replaceChildren(make("b","youtube-title","Media belum dapat diambil"),make("p","warning",info.error||"Provider tidak mengirim file media yang dapat diunduh."));
+        return;
+      }
       box.replaceChildren();
       const header = make("div", "youtube-heading");
       const details = make("div", "youtube-details");
@@ -1325,6 +1351,7 @@ function socialNetworkPlan(selected=0){
       }
       header.append(details);
       box.append(header);
+      if(imageGallery){box.append(imageGallery,imageGalleryNote);}
       if(isYouTube){
         const videoId=url.hostname.toLowerCase().includes("youtu.be")
           ?url.pathname.split("/").filter(Boolean)[0]||""
