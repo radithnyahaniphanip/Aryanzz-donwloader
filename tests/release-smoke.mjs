@@ -41,6 +41,7 @@ const checks = [
   ["V94 registration UI includes requested fields and password visibility", html.includes('id="aryRegName"') && html.includes('id="aryRegEmail"') && html.includes('id="aryRegId"') && html.includes('id="aryRegRedeem"') && html.includes('id="aryRegEye"')],
   ["V94 auth assets are loaded and cached", html.includes("auth-gate.js?v=94.2") && html.includes("auth-gate.css?v=94.2") && read("../public/sw.js").includes("auth-gate.js?v=94.2")],
   ["V94 Color Studio replaces legacy palette with site-wide theme controls", html.includes('id="aryThemeAccent"') && html.includes('id="aryThemeApply"') && !html.includes("16.777.216 kombinasi warna") && !html.includes("Palet baru siap")],
+  ["V94 removes legacy personalization and theme labels from the profile UI", !html.toLowerCase().includes("personalisasi") && !html.includes("MOTION & EXPERIENCE") && !html.includes("16.777.216 kombinasi warna")],
   ["V94 profile removes Personalization and Motion & Experience sections", !html.includes("PERSONALIZATION</span>") && !html.includes("MOTION & EXPERIENCE") && html.includes('id="profileRandomId"') && html.includes('id="profileName"')],
   ["V94 Developer Website title and editable social links are visible", html.includes("DEVELOPER WEBSITE") && html.includes('<details open>') && html.includes('id="ownerLinksSave"')],
   ["V94 theme studio assets are loaded and cached", html.includes("theme-studio.js?v=94.1") && html.includes("theme-studio.css?v=94.1") && read("../public/sw.js").includes("theme-studio.js?v=94.1")],
