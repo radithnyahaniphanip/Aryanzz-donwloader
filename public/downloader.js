@@ -37,7 +37,9 @@
     } catch { return null; }
   }
   function platformName(url) {
-    const host = url.hostname.toLowerCase();
+    const host = url.hostname.toLowerCase().replace(/^www\\./,"");
+    const catalogItem=(window.ARYANZZ_PLATFORM_CATALOG||[]).find(platform=>(platform.domains||[]).some(domain=>host===domain||host.endsWith("."+domain)));
+    if(catalogItem)return catalogItem.name;
     const item = PLATFORM_NAMES.find(([domain]) => host === domain || host.endsWith("." + domain));
     return item ? item[1] : "Direct Media URL";
   }
@@ -1230,10 +1232,10 @@ function socialNetworkPlan(selected=0){
       const selectedRaw=String(window.aryanzzSelectedPlatform?.()||$("platformPicker")?.getAttribute("data-selected-platform")||$("platformPicker")?.querySelector("[data-platform].active")?.dataset.platform||"youtube").toLowerCase();
       const aliases={tiktoklite:"tiktok",instagramlite:"instagram",facebooklite:"facebook",twitter:"x"};
       const selectedPlatform=aliases[selectedRaw]||selectedRaw;
-      const selectedNames={youtube:"YouTube",tiktok:"TikTok",instagram:"Instagram",snackvideo:"SnackVideo",capcut:"CapCut",pinterest:"Pinterest",facebook:"Facebook",x:"X",reddit:"Reddit",vimeo:"Vimeo",threads:"Threads",soundcloud:"SoundCloud",snapchat:"Snapchat",idnapp:"IDN App",linkedin:"LinkedIn",wechat:"WeChat",kakaotalk:"KakaoTalk"};
-      const expectedName=selectedNames[selectedPlatform]||"";
+      const selectedNames=Object.fromEntries((window.ARYANZZ_PLATFORM_CATALOG||[]).map(platform=>[platform.id,platform.name]));
+      const expectedName=selectedNames[selectedPlatform]||window.aryanzzPlatformNameForId?.(selectedPlatform)||"";
       const detectedAliases={"idn app":"idnapp"};
-      const detectedKey=detectedPlatform==="Direct Media URL"?"":(detectedAliases[detectedPlatform.toLowerCase()]||detectedPlatform.toLowerCase());
+      const detectedKey=window.aryanzzPlatformForUrl?.(url.href)||(detectedPlatform==="Direct Media URL"?"":(detectedAliases[detectedPlatform.toLowerCase()]||detectedPlatform.toLowerCase()));
       if(!expectedName||detectedKey!==selectedPlatform){
         const expectedLabel=expectedName||"satu platform khusus";
         const message=detectedPlatform==="Direct Media URL"
