@@ -41,7 +41,7 @@ const checks=[
   ["V88.11 preview uses intrinsic aspect ratio and suppresses native browser download menu",downloader.includes('preview.controlsList="nodownload noplaybackrate"')&&downloader.includes('preview.videoWidth')&&downloader.includes('preview.style.aspectRatio=width+" / "+height')],
   ["V88.11 direct-file preview also detects native dimensions and hides browser download menu",html.includes("preview.videoWidth")&&html.includes("preview.controlsList='nodownload noplaybackrate'")&&html.includes("Pratinjau mengikuti rasio asli media.")],
   ["V88.11 media metadata no longer displays community-provider wording",downloader.includes('info.extractor || platformName(url)')&&!downloader.includes('info.extractor || info.source || platformName(url)')],
-  ["V88.11 compact result grid and matched All icon styling are present",downloaderCss.includes('.v674-search-results{display:grid')&&downloaderCss.includes('.v736-platform .v736-all-logo')&&html.includes('v736-logo v736-all-logo')],
+  ["V88.11 compact result grid remains and retired ALL platform icon styling is absent",downloaderCss.includes('.v674-search-results{display:grid')&&!downloaderCss.includes('.v736-all-logo')&&!html.includes('v736-all-logo')],
   ["V88.11 cache and frontend assets use refreshed version keys",sw.includes('aryanzz-v88-14')&&html.includes('v674.js?v=88.14')&&html.includes('downloader.js?v=88.8')],
 
   ["Green Screen search expands localized, meme, cat and video variants",workerSource.includes('normalized.replace(/greenscreen/ig,"green screen")')&&workerSource.includes('add("green screen video","green screen template","chroma key video"')&&workerSource.includes('add("cat meme","funny cat meme","meme kucing lucu","kucing meme video")')&&workerSource.includes("slice(0,12)") ],
