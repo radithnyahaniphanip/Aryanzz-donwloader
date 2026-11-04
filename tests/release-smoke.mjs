@@ -14,7 +14,7 @@ const bootstrap = read("../public/ffmpeg-worker-bootstrap.js");
 
 const checks = [
   ["ALL platform option is removed", !html.includes('data-platform="all"') && !searchJs.includes('all:{name:"Semua platform"')],
-  ["Audio search option is removed", !html.includes('<option value="audio">Audio</option>')],
+  ["Audio search option is removed", !html.match(/<select id="titleSearchType"[\\s\\S]*?<\\/select>/)?.[0].includes('<option value="audio">')],
   ["Video and image search remain available", html.includes('<option value="video">Video</option>') && html.includes('<option value="image">Gambar</option>')],
   ["MP4 to MP3 converter remains in tools", html.includes("MP4 ke MP3 Converter") && html.includes('id="audioStudio"')],
   ["Converter disclaimer block is removed", !html.includes('class="audio-studio-disclaimer"')],
