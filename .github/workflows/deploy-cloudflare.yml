@@ -1,4 +1,4 @@
-name: ARYANZZ — Validate and deploy V89.0
+name: ARYANZZ — Validate and deploy V90.0
 
 on:
   push:
@@ -16,7 +16,7 @@ concurrency:
 
 jobs:
   test:
-    name: Validate V89.0 release
+    name: Validate V90.0 release
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -33,8 +33,13 @@ jobs:
           node --check src/index.js
           node --check public/v674.js
           node --check public/downloader.js
+          node --check public/audio-studio.js
+          node --check public/ffmpeg-worker-bootstrap.js
+          node --check public/editor.js
+          node --check public/advanced.js
           node --check public/sw.js
           node --check tests/release-smoke.mjs
+          node --check tests/live-release-smoke.mjs
           node -e "const fs=require('fs');const h=fs.readFileSync('public/index.html','utf8');const s=h.indexOf('<script>')+8;const e=h.indexOf('</script>',s);if(s<8||e<s)throw Error('Inline script missing');new Function(h.slice(s,e));console.log('Inline script syntax OK')"
       - name: Run release smoke tests
         run: npm run test:release
@@ -43,7 +48,7 @@ jobs:
         run: npm test
 
   deploy:
-    name: Deploy V89.0 to Cloudflare Workers
+    name: Deploy V90.0 to Cloudflare Workers
     needs: test
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
