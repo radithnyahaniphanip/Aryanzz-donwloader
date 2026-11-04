@@ -1300,11 +1300,12 @@ function socialNetworkPlan(selected=0){
       const isYouTube=["youtube.com","www.youtube.com","m.youtube.com","music.youtube.com","youtu.be","www.youtu.be"].includes(host);
       const isTikTokPlatform=selectedPlatform==="tiktok"||selectedPlatform==="tiktoklite";
       const isTikTokPhotoPost=isTikTokPlatform&&/\/photo\//i.test(url.pathname);
+      const isTikTokShortLink=isTikTokPlatform&&/^(?:vt|vm)\.tiktok\.com$/i.test(host);
       const isYouTubePhotoPost=isYouTube&&/\/(?:post|community)\//i.test(url.pathname);
       const isPhotoRoute=/\/(?:photo|photos|image|images|album|gallery|pin)\//i.test(url.pathname);
       const isExplicitVideoRoute=/\/(?:video|reel|reels|watch|shorts|live|clip)\//i.test(url.pathname);
       const catalogPlatform=(window.ARYANZZ_PLATFORM_CATALOG||[]).find(platform=>platform.id===selectedPlatform);
-      const shouldTryImageExtraction=isTikTokPhotoPost||isYouTubePhotoPost||isPhotoRoute||(!isYouTube&&!isExplicitVideoRoute&&selectedPlatform!=="soundcloud"&&!isTikTokPlatform&&catalogPlatform?.mediaModes?.includes("image"));
+      const shouldTryImageExtraction=isTikTokPhotoPost||isTikTokShortLink||isYouTubePhotoPost||isPhotoRoute||(!isYouTube&&!isExplicitVideoRoute&&selectedPlatform!=="soundcloud"&&!isTikTokPlatform&&catalogPlatform?.mediaModes?.includes("image"));
       const isSocialImagePostRoute=/\/(?:p|post|posts|status|pin|photo|photos|image|images|album|gallery|share)\//i.test(url.pathname);
       const imageCheckTimeout=(isTikTokPhotoPost||isYouTubePhotoPost||isPhotoRoute||isSocialImagePostRoute)?22000:6500;
       const imageExtractionPromise=shouldTryImageExtraction
