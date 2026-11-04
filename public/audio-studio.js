@@ -335,6 +335,7 @@
   const formatSelect=$("audioStudioFormat"),bitrateSelect=$("audioStudioBitrate"),volumeSlider=$("audioStudioVolume"),volumeValue=$("audioStudioVolumeValue");
   function syncAudioOptions(){
     const format=formatSelect?.value||"mp3";
+    const convertButton=$("audioStudioConvert");if(convertButton)convertButton.textContent=running?"Memproses…":"Konversi ke "+format.toUpperCase();
     if(bitrateSelect)bitrateSelect.disabled=running||format==="wav"||format==="flac";
     if(bitrateSelect?.parentElement)bitrateSelect.parentElement.style.opacity=(format==="wav"||format==="flac")?".55":"1";
     if(volumeValue&&volumeSlider)volumeValue.textContent=volumeSlider.value+"%";
