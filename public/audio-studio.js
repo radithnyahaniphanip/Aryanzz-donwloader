@@ -16,7 +16,7 @@
     "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm",
     "https://unpkg.com/@ffmpeg/core@0.12.10/dist/esm"
   ];
-  const WORKER_URL = "/ffmpeg-worker-local.js?v=90.4";
+  const WORKER_URL = "/ffmpeg-worker-local.js?v=92.0";
   const LOAD_TIMEOUT_MS = 120000;
   const FETCH_TIMEOUT_MS = 45000;
 
