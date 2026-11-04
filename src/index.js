@@ -1968,7 +1968,7 @@ const workerHandler = {async fetch(request,env){
     if(declared>2097152)return json({ok:false,error:"Ukuran tes upload terlalu besar."},413);
     const body=await request.arrayBuffer();
     if(body.byteLength>2097152)return json({ok:false,error:"Ukuran tes upload terlalu besar."},413);
-    return json({ok:true,received:body.byteLength},{headers:{"cache-control":"no-store"}});
+    return json({ok:true,received:body.byteLength});
   }
   if(url.pathname==="/api/link-bypass"&&request.method==="GET")return bypassSflLink(request);
   if(url.pathname==="/api/music/scan-video"&&request.method==="POST")return recognizeMusicVideo(request,env);
