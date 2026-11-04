@@ -1046,7 +1046,11 @@ function canonicalSocialPostUrl(rawUrl,key){
     const u=new URL(rawUrl);
     if(key==="instagram"){
       const match=u.pathname.match(/^\/(p|reel|reels|tv)\/([^/]+)/i);
-      if(match)return "https://www.instagram.com/"+match[1].toLowerCase()+"/"+match[2]+"/";
+      if(match){
+        const canonical="https://www.instagram.com/"+match[1].toLowerCase()+"/"+match[2]+"/";
+        const shareToken=u.searchParams.get("xtok")||u.searchParams.get("igsh");
+        return shareToken?canonical+"?"+(u.searchParams.has("xtok")?"xtok":"igsh")+"="+encodeURIComponent(shareToken):canonical;
+      }
     }
     return u.href;
   }catch{return rawUrl}
@@ -1077,25 +1081,60 @@ async function fetchTikwmData(rawUrl,timeoutMs=10000){
     throw new Error("TikWM HTTP "+response.status+": "+String(payload?.msg||payload?.message||"respons tidak berisi data media").slice(0,100));
   return payload.data;
 }
-async function tikwmFallbackMediaInfo(rawUrl,requestUrl){
-  const data=await fetchTikwmData(rawUrl,10000),media=[],seen=new Set();
-  const add=(url,label,type,ext,mimeType)=>{
+function normalizeTikTokFallbackPayload(data,rawUrl,requestUrl,providerName){
+  const media=[],seen=new Set();
+  const add=(url,label,type,ext,mimeType,height=0)=>{
     if(typeof url!=="string"||!url.trim()||seen.has(url))return;
     const safe=safePublicMediaUrl(url);if(!safe)return;seen.add(safe.href);
-    media.push({type,kind:type,label,url:safe.href,ext,mimeType});
+    media.push({type,kind:type,label,url:safe.href,ext,mimeType,height:Number(height)||0});
   };
-  add(data.hdplay,"MP4 HD","video","mp4","video/mp4");
-  add(data.play,"MP4 tanpa watermark","video","mp4","video/mp4");
-  add(data.wmplay,"MP4 dengan watermark","video","mp4","video/mp4");
-  add(data.music,"Audio MP3","audio","mp3","audio/mpeg");
-  if(!media.some(item=>item.type==="video"))throw new Error("TikWM tidak memberikan stream video MP4.");
-  const normalized=freeProviderMediaInfo({normalized:{title:data.title||"Video TikTok",thumbnail:data.origin_cover||data.cover,duration:Number(data.duration)||0,media}},rawUrl,requestUrl);
-  if(!normalized)throw new Error("Stream TikWM tidak lolos normalisasi media.");
-  normalized.providerName="TikWM fallback";
-  normalized.provider="TikWM public API";
+  const downloads=Array.isArray(data?.downloads)?data.downloads:[];
+  for(const item of downloads){
+    const type=String(item?.type||item?.kind||"").toLowerCase();
+    const ext=String(item?.ext||item?.extension||(/mp3|audio/.test(type)?"mp3":"mp4")).toLowerCase();
+    const audio=ext==="mp3"||/mp3|audio/.test(type);
+    const quality=String(item?.quality||item?.label||type||ext);
+    const height=Number(quality.match(/(144|240|360|480|540|576|720|900|960|1080|1440|2160)p?/i)?.[1]||0);
+    add(item?.url||item?.download_url||item?.downloadUrl,quality,audio?"audio":"video",audio?"mp3":"mp4",audio?"audio/mpeg":"video/mp4",height);
+  }
+  add(data?.download_url||data?.video_url||data?.videoUrl,"MP4 tanpa watermark","video","mp4","video/mp4");
+  add(data?.author?.audio_url||data?.audio_url||data?.music_url,"Audio MP3","audio","mp3","audio/mpeg");
+  if(!media.some(item=>item.type==="video"))throw new Error(providerName+" tidak memberikan stream video MP4.");
+  const normalized=freeProviderMediaInfo({normalized:{title:data.title||data.desc||"Video TikTok",thumbnail:data.thumbnail||data.cover||data.origin_cover,duration:Number(data.duration||data.author?.duration)||0,media}},rawUrl,requestUrl);
+  if(!normalized)throw new Error("Stream "+providerName+" tidak lolos normalisasi media.");
+  normalized.providerName=providerName+" fallback";
+  normalized.provider=providerName+" public API";
   normalized.fallbackUsed=true;
-  normalized.author=data.author?.nickname||data.author?.unique_id||null;
+  normalized.author=data.author?.nickname||data.author?.username||data.author?.unique_id||data.author||null;
   return normalized;
+}
+async function tikwmFallbackMediaInfo(rawUrl,requestUrl){
+  const providers=[
+    {name:"Seekubo",run:async()=>{
+      const response=await fetch("https://tk.seekubo.com/api/v2/parse",{method:"POST",headers:{"content-type":"application/json",accept:"application/json"},body:JSON.stringify({url:rawUrl}),signal:AbortSignal.timeout(9000),cache:"no-store"});
+      const payload=await response.json().catch(()=>null);
+      if(!response.ok||!payload?.success||!payload.data)throw new Error("Seekubo HTTP "+response.status+": "+String(payload?.error?.message||payload?.error?.code||"no data").slice(0,90));
+      return payload.data;
+    }},
+    {name:"TDownV4",run:async()=>{
+      const endpoint=new URL("https://tdownv4.sl-bjs.workers.dev/");
+      endpoint.searchParams.set("down",rawUrl);
+      const response=await fetch(endpoint.href,{headers:{accept:"application/json"},signal:AbortSignal.timeout(9000),cache:"no-store"});
+      const payload=await response.json().catch(()=>null);
+      if(!response.ok||!payload||payload.content_type!=="video"||!payload.download_url)throw new Error("TDownV4 HTTP "+response.status+": "+String(payload?.error||"no video URL").slice(0,90));
+      return payload;
+    }},
+    {name:"TikWM",run:()=>fetchTikwmData(rawUrl,9000)}
+  ];
+  const results=await Promise.allSettled(providers.map(provider=>provider.run()));
+  const errors=[];
+  for(let i=0;i<results.length;i++){
+    const result=results[i];
+    if(result.status!=="fulfilled"){errors.push(providers[i].name+": "+String(result.reason?.message||result.reason).slice(0,110));continue;}
+    try{return normalizeTikTokFallbackPayload(result.value,rawUrl,requestUrl,providers[i].name)}
+    catch(error){errors.push(providers[i].name+": "+String(error?.message||error).slice(0,110));}
+  }
+  throw new Error(errors.join("; ").slice(0,300)||"Semua provider alternatif TikTok gagal.");
 }
 function providerImageCandidates(data){
   const output=[],n=data?.normalized||{},r=data?.result||{};
