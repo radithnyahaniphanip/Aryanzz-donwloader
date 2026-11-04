@@ -1107,6 +1107,15 @@ function normalizeTikTokFallbackPayload(data,rawUrl,requestUrl,providerName){
     media.push({type,kind:type,label,url:safe.href,ext,mimeType,height:Number(height)||0});
   };
   const downloads=Array.isArray(data?.downloads)?data.downloads:[];
+  const mediaGroups=Array.isArray(data?.media)?data.media:[];
+  for(const group of mediaGroups){
+    const groupType=String(group?.type||"").toLowerCase();
+    for(const variant of (Array.isArray(group?.variants)?group.variants:[])){
+      const audio=groupType==="audio"||String(variant?.container||variant?.ext||"").toLowerCase()==="mp3";
+      const quality=String(variant?.quality||variant?.label||variant?.container||"MP4");
+      add(variant?.url,quality,audio?"audio":"video",audio?"mp3":"mp4",audio?"audio/mpeg":"video/mp4",Number(variant?.height)||Number(quality.match(/(144|240|360|480|540|576|720|900|960|1080|1440|2160)p?/i)?.[1]||0));
+    }
+  }
   for(const item of downloads){
     const type=String(item?.type||item?.kind||"").toLowerCase();
     const ext=String(item?.ext||item?.extension||(/mp3|audio/.test(type)?"mp3":"mp4")).toLowerCase();
@@ -1131,6 +1140,14 @@ function normalizeTikTokFallbackPayload(data,rawUrl,requestUrl,providerName){
 }
 async function tikwmFallbackMediaInfo(rawUrl,requestUrl){
   const providers=[
+    {name:"DrummerDuck",run:async()=>{
+      const endpoint=new URL("https://download-tktk-video.drummerduck.com/api/extract");
+      endpoint.searchParams.set("url",rawUrl);
+      const response=await fetch(endpoint.href,{headers:{accept:"application/json"},signal:AbortSignal.timeout(9000),cache:"no-store"});
+      const payload=await response.json().catch(()=>null);
+      if(!response.ok||payload?.ok!==true||!payload.data)throw new Error("DrummerDuck HTTP "+response.status+": "+String(payload?.error?.message||payload?.error||"no media data").slice(0,90));
+      return payload.data;
+    }},
     {name:"Seekubo",run:async()=>{
       const response=await fetch("https://tk.seekubo.com/api/v2/parse",{method:"POST",headers:{"content-type":"application/json",accept:"application/json"},body:JSON.stringify({url:rawUrl}),signal:AbortSignal.timeout(9000),cache:"no-store"});
       const payload=await response.json().catch(()=>null);
@@ -1196,6 +1213,7 @@ async function resolveSocialImagePost(rawUrl,requestUrl,options={}){
   // Experimental catalogue entries still get safe public-page metadata extraction;
   // only established provider keys are sent to the community extractor API.
   const includeProvider=options.includeProvider!==false&&providerKey!=="aio";
+  let oembedImage=null;
   const tasks=[
     includeProvider?fetch(providerUrl,{headers:{accept:"application/json"},signal:AbortSignal.timeout(Number(options.providerTimeoutMs)||12000),cache:"no-store"}).then(async response=>{
       if(!response.ok)throw new Error("Provider gambar HTTP "+response.status);
@@ -1222,11 +1240,24 @@ async function resolveSocialImagePost(rawUrl,requestUrl,options={}){
     key==="tiktok"?fetchTikwmData(canonicalUrl,9000).then(data=>{
       providerTitle=providerTitle||String(data.title||"").slice(0,240);
       tikwmImages=providerImageCandidates({normalized:{images:data.images,photos:data.photos,gallery:data.gallery}});
-    }).catch(()=>{}):Promise.resolve()
+    }).catch(()=>{}):Promise.resolve(),
+    key==="instagram"?(async()=>{
+      try{
+        const endpoint=new URL("https://www.instagram.com/api/v1/oembed/");
+        endpoint.searchParams.set("url",canonicalUrl);
+        const response=await fetch(endpoint.href,{headers:{accept:"application/json","user-agent":"Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 Chrome/130.0.0.0 Mobile Safari/537.36"},signal:AbortSignal.timeout(9000),cache:"no-store"});
+        const data=await response.json().catch(()=>null);
+        const safe=safePublicMediaUrl(data?.thumbnail_url||"");
+        if(response.ok&&safe){
+          oembedImage={url:safe.href,type:"image",width:Number(data.thumbnail_width)||0,height:Number(data.thumbnail_height)||0,source:"instagram-oembed"};
+          providerTitle=providerTitle||String(data.title||"").slice(0,240);
+        }
+      }catch{}
+    })():Promise.resolve()
   ];
   const page=await tasks[1];
-  await Promise.all([tasks[0],tasks[2]]);
-  const rawCandidates=[...(page?.images||[]).map(item=>({...item,type:"image",source:item.source||"post-page"})),...providerImages.map(item=>({...item,url:item.url,source:"provider",type:item.type||item.kind||item.media_type||"image",mime_type:item.mime_type||item.mime||item.content_type||"",width:item.width||item.w||0,height:item.height||item.h||0,ext:item.ext||item.extension||""})),...tikwmImages.map(item=>({...item,url:item.url,source:"TikWM",type:"image"}))];
+  await Promise.all([tasks[0],tasks[2],tasks[3]]);
+  const rawCandidates=[...(page?.images||[]).map(item=>({...item,type:"image",source:item.source||"post-page"})),...providerImages.map(item=>({...item,url:item.url,source:"provider",type:item.type||item.kind||item.media_type||"image",mime_type:item.mime_type||item.mime||item.content_type||"",width:item.width||item.w||0,height:item.height||item.h||0,ext:item.ext||item.extension||""})),...(oembedImage?[oembedImage]:[]),...tikwmImages.map(item=>({...item,url:item.url,source:"TikWM",type:"image"}))];
   const seen=new Set(),images=[];
   for(const item of rawCandidates){
     const safe=safePublicMediaUrl(item.url);if(!safe||seen.has(safe.href))continue;
