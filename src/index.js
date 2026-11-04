@@ -237,6 +237,28 @@ async function snackVideoFallbackMediaInfo(rawUrl,requestUrl){
   throw new Error(errors.join(" | "));
 }
 
+function extractSocialVideoDuration(html){
+  const decoded=String(html||"").replaceAll("\\u0022",'"').replaceAll("\\u003A",":").replaceAll("\\u003a",":").replaceAll("\\u002F","/").replaceAll("\\/", "/").replaceAll("&quot;",'"');
+  const candidates=[];
+  const pattern=/"(durationMs|duration_ms|durationSeconds|duration_seconds|videoDuration|video_duration|lengthSeconds|length_seconds|duration)"\s*:\s*(\d+(?:\.\d+)?)/gi;
+  for(const match of decoded.matchAll(pattern)){
+    let seconds=Number(match[2]);
+    if(/ms/i.test(match[1])||seconds>86400)seconds/=1000;
+    if(seconds>0&&seconds<=86400)candidates.push(seconds);
+  }
+  const meta=decoded.match(/<meta[^>]+(?:property|name)=["']video:duration["'][^>]+content=["'](\d+(?:\.\d+)?)["']/i);
+  if(meta){const seconds=Number(meta[1]);if(seconds>0&&seconds<=86400)candidates.push(seconds);}
+  return candidates.find(seconds=>seconds>=1&&seconds<=3600)||candidates[0]||null;
+}
+async function enrichTikTokDuration(info,canonicalUrl){
+  if(!info||Number(info.duration)>0)return info;
+  try{
+    const page=await fetchSocialPostHtml(canonicalUrl,9000);
+    const duration=extractSocialVideoDuration(page.html);
+    if(duration)info.duration=duration;
+  }catch{}
+  return info;
+}
 async function freePublicMediaInfo(rawUrl,requestUrl){
   const key=freePlatformKey(rawUrl);
   if(!key)return json({error:"Platform belum didukung oleh provider gratis."},400);
@@ -294,6 +316,7 @@ async function freePublicMediaInfo(rawUrl,requestUrl){
             normalized.title=normalized.title||fallback.title;
             normalized.duration=Number(normalized.duration)||Number(fallback.duration)||null;
           }catch(error){normalized.fallbackDiagnostic=String(error?.message||error).slice(0,180)}
+          await enrichTikTokDuration(normalized,canonicalUrl);
         }
         return json({...normalized,canonicalUrl:canonicalUrl!==rawUrl?canonicalUrl:undefined});
       }
@@ -306,6 +329,7 @@ async function freePublicMediaInfo(rawUrl,requestUrl){
   if(key==="tiktok"){
     try{
       const fallback=await tikwmFallbackMediaInfo(canonicalUrl,requestUrl);
+      await enrichTikTokDuration(fallback,canonicalUrl);
       return json({...fallback,canonicalUrl:canonicalUrl!==rawUrl?canonicalUrl:undefined});
     }catch(error){
       primaryError+="; TikWM: "+String(error?.message||error).slice(0,140);
