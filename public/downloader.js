@@ -1234,7 +1234,8 @@
       const header = make("div", "youtube-heading");
       const details = make("div", "youtube-details");
       details.append(make("b", "youtube-title", info.title || info.filename || "Media siap diunduh"));
-      details.append(make("small", "muted", [info.extractor || platformName(url), duration(info.duration), info.size ? (info.size / 1048576).toFixed(1) + " MB" : ""].filter(Boolean).join(" · ")));
+      const mediaMetaLine=make("small","muted",[info.extractor||platformName(url),duration(info.duration),info.size?(info.size/1048576).toFixed(1)+" MB":""].filter(Boolean).join(" · "));
+      details.append(mediaMetaLine);
       if(isYouTube&&info.thumbnail){
         try{
           const imageUrl=new URL(info.thumbnail);
@@ -1265,7 +1266,7 @@
           previewWrap.append(frame);box.append(previewWrap);
         }
       }
-      if(info.providerName==="Public API"){
+      if(!isYouTube){
         const previewFormat=(info.formats||[]).find(item=>item.mode==="video"&&!item.videoOnly&&["mp4","m4v"].includes(item.ext)&&item.url)||(info.formats||[]).find(item=>item.mode==="video"&&item.url);
         if(previewFormat){
           const previewWrap=make("div","ary-video-preview-wrap");
@@ -1298,6 +1299,7 @@
            preview.addEventListener("loadedmetadata",()=>{
              applyIntrinsicRatio();
              const actual=Number(preview.duration),expected=Number(info.duration)||0;
+             if(Number.isFinite(actual)&&actual>0){const mm=Math.floor(actual/60),ss=Math.floor(actual%60);mediaMetaLine.textContent=[info.extractor||platformName(url),mm+":"+String(ss).padStart(2,"0"),info.size?(info.size/1048576).toFixed(1)+" MB":""].filter(Boolean).join(" · ");}
              if(expected>0&&Number.isFinite(actual)&&Math.abs(actual-expected)>Math.max(3,expected*0.12)){
                previewStatus.textContent+=" · Periksa durasi: sumber "+expected.toFixed(1)+" detik";
                previewStatus.className="warning";
