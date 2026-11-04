@@ -1955,6 +1955,21 @@ const workerHandler = {async fetch(request,env){
     return new Response(robots,{status:200,headers:{"content-type":"text/plain; charset=utf-8","cache-control":"public, max-age=3600","x-content-type-options":"nosniff"}});
   }
   if(request.method==="OPTIONS"&&url.pathname.startsWith("/api/"))return new Response(null,{status:204,headers:{"access-control-allow-origin":url.origin,"access-control-allow-methods":"GET,POST,OPTIONS","access-control-allow-headers":"Content-Type"}});
+  if(url.pathname==="/api/speedtest/ping"&&request.method==="GET")return new Response(null,{status:204,headers:{"cache-control":"no-store","timing-allow-origin":"*"}});
+  if(url.pathname==="/api/speedtest/download"&&request.method==="GET"){
+    const requested=Number(url.searchParams.get("bytes")||524288);
+    const bytes=Math.max(65536,Math.min(4194304,Number.isFinite(requested)?Math.floor(requested):524288));
+    const body=new Uint8Array(bytes);
+    for(let i=0;i<bytes;i++)body[i]=(i*31+17)&255;
+    return new Response(body,{status:200,headers:{"content-type":"application/octet-stream","content-length":String(bytes),"cache-control":"no-store, no-cache, must-revalidate","pragma":"no-cache","timing-allow-origin":"*","x-content-type-options":"nosniff"}});
+  }
+  if(url.pathname==="/api/speedtest/upload"&&request.method==="POST"){
+    const declared=Number(request.headers.get("content-length")||0);
+    if(declared>2097152)return json({ok:false,error:"Ukuran tes upload terlalu besar."},413);
+    const body=await request.arrayBuffer();
+    if(body.byteLength>2097152)return json({ok:false,error:"Ukuran tes upload terlalu besar."},413);
+    return json({ok:true,received:body.byteLength},{headers:{"cache-control":"no-store"}});
+  }
   if(url.pathname==="/api/link-bypass"&&request.method==="GET")return bypassSflLink(request);
   if(url.pathname==="/api/music/scan-video"&&request.method==="POST")return recognizeMusicVideo(request,env);
   if(url.pathname==="/api/music/status"&&request.method==="GET")return musicStatus(env);
