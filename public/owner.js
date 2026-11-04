@@ -30,7 +30,7 @@
   function linksRead() {
     const stored = safeRead(KEY, {});
     return Object.fromEntries(Object.keys(DEFAULTS).map(key => [
-      key, validLink(stored[key]) || DEFAULTS[key]
+      key, Object.prototype.hasOwnProperty.call(stored,key) ? validLink(stored[key]) : DEFAULTS[key]
     ]));
   }
   function renderLinks() {
