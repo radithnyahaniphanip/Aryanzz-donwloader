@@ -1,4 +1,4 @@
-# ARYANZZ V94.0 — Local accounts, Color Studio & unified creator workspace
+# ARYANZZ V94.15.0 — Local accounts, Color Studio & unified creator workspace
 
 Production website: https://aryanzz-donwloader.radithnyahaniphanip.workers.dev/
 
