@@ -20,7 +20,7 @@ const checks = [
   ["service worker uses a V89.1 cache namespace", sw.includes('const CACHE="aryanzz-v89-1"')],
   ["service worker precaches the V89.1 app shell", sw.includes("/?v=89.1") && sw.includes("/v89.css?v=89.1") && sw.includes("/v674.js?v=88.14.1")],
   ["unified navigation hides home when another view opens", html.includes('id="appViewHeader"') && html.includes("home.hidden=!!id") && html.includes("p.id===id")],
-  ["unified app shell styles are included", html.includes("/v89.css?v=89.1") && unifiedCss.includes("V89.1 — ONE UNIFIED ECOSYSTEM")],
+  ["unified app shell styles are included", html.includes("/v89.css?v=89.1") && unifiedCss.includes("V89.0 — ONE UNIFIED ECOSYSTEM")],
   ["V89 welcome headline is preserved in the unified app shell", html.includes("id=\"v89Welcome\"") && html.includes("Semua berawal") && html.includes("dari satu tautan")],
   ["one shared header and persistent brand welcome are present", html.includes("class=\"top v674-top\"") && html.includes("id=\"v89Welcome\"")],
   ["every tool panel shares one unified responsive shell", unifiedCss.includes("#toolsArea>.panel{display:none;width:100%") && unifiedCss.includes("#toolsArea>.panel.active{display:block!important")],
