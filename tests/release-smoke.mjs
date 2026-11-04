@@ -29,14 +29,14 @@ const checks = [
   ["MP4 duration fallback parser is present", converterJs.includes("parseMp4Duration") && converterJs.includes("recoverDuration")],
   ["Preview has unsupported-codec guidance", html.includes("audioStudioPreviewNote") && converterJs.includes("Codec video tidak didukung")],
   ["Preview can transcode unsupported video to H.264", html.includes("audioStudioPreviewConvert") && converterJs.includes("makeCompatiblePreview") && converterJs.includes("libx264")],
-  ["Converter uses a same-origin local FFmpeg worker", converterJs.includes("/ffmpeg-worker-local.js?v=90.4")],
+  ["Converter uses a same-origin local FFmpeg worker", converterJs.includes("/ffmpeg-worker-local.js?v=92.0")],
   ["Local worker loads primary and fallback single-thread cores", read("../public/ffmpeg-worker-local.js").includes("coreFallbackURL") && read("../public/ffmpeg-worker-local.js").includes("await import(item.js)")],
   ["Worker CSP permits blob fetch for local WASM resources", worker.includes("connect-src") && worker.includes("wss: blob:;")],
-  ["Homepage release label is V91.0", html.includes("V91.0 · GRATIS")],
-  ["Worker health reports V91.0", worker.includes('version:"91.0"')],
+  ["Homepage release label is V92.0", html.includes("V92.0 · GRATIS")],
+  ["Worker health reports V92.0", worker.includes('version:"92.0"')],
   ["Homepage loads the shared V89 shell stylesheet", html.includes("/v89.css?v=90.0")],
-  ["PWA cache namespace is V91.0", sw.includes('const CACHE="aryanzz-v91-2"')],
-  ["PWA cache includes homepage, converter and Media Studio", sw.includes("/?v=91.0") && sw.includes("/audio-studio.js?v=91.0") && sw.includes("/audio-studio.css?v=91.0") && sw.includes("/media-studio.js?v=91.0") && sw.includes("/media-studio.css?v=91.0")],
+  ["PWA cache namespace is V92.0", sw.includes('const CACHE="aryanzz-v92-1"')],
+  ["PWA cache includes homepage, converter and Media Studio", sw.includes("/?v=92.0") && sw.includes("/audio-studio.js?v=92.0") && sw.includes("/audio-studio.css?v=92.0") && sw.includes("/media-studio.js?v=92.0") && sw.includes("/media-studio.css?v=92.0")],
 
   ["Converter Pro includes optional audio trim controls", html.includes('id="audioStudioStart"') && html.includes('id="audioStudioEnd"') && converterJs.includes('ffmpegArgs.push("-t"')],
   ["Converter Pro supports MP3 WAV AAC and FLAC output", ["mp3","wav","aac","flac"].every(format => html.includes('value="'+format+'"')) && converterJs.includes("libmp3lame") && converterJs.includes("pcm_s16le") && converterJs.includes('format==="aac"') && converterJs.includes('format==="flac"')],
@@ -51,13 +51,13 @@ const checks = [
   ["Smart Queue persists queue items locally", queueJs.includes("localStorage.setItem(KEY") && queueJs.includes("localStorage.getItem(KEY")],
   ["Smart Queue hands active links to the existing downloader", queueJs.includes('$("url")') && queueJs.includes('$("analyze")') && queueJs.includes("analyze.click()")],
   ["Smart Queue supports completion, failure, skip, retry and pause", queueJs.includes('mark(item.id,"done")') && queueJs.includes('mark(item.id,"failed")') && queueJs.includes('mark(item.id,"skipped")') && queueJs.includes("queuePause")],
-  ["Smart Queue mobile stylesheet is wired and cached", html.includes("/download-queue.css?v=91.0") && queueCss.includes("@media(max-width:420px)") && sw.includes("/download-queue.css?v=91.0")],
-  ["Smart Queue script is wired and cached", html.includes("/download-queue.js?v=91.0") && sw.includes("/download-queue.js?v=91.0")],
+  ["Smart Queue mobile stylesheet is wired and cached", html.includes("/download-queue.css?v=92.0") && queueCss.includes("@media(max-width:420px)") && sw.includes("/download-queue.css?v=92.0")],
+  ["Smart Queue script is wired and cached", html.includes("/download-queue.js?v=92.0") && sw.includes("/download-queue.js?v=92.0")],
   ["Storage and performance dashboard uses Storage API", mediaStudioJs.includes("navigator.storage?.estimate") && mediaStudioJs.includes("navigator.storage?.persist")],
-  ["Media Studio responsive stylesheet is wired", html.includes("/media-studio.css?v=91.0") && mediaStudioCss.includes("@media(max-width:480px)")],
+  ["Media Studio responsive stylesheet is wired", html.includes("/media-studio.css?v=92.0") && mediaStudioCss.includes("@media(max-width:480px)")],
   ["PWA cache includes current search bundle", sw.includes("/v674.js?v=89.2")],
   ["Worker CSP permits FFmpeg WebAssembly and blob core loading", worker.includes("wasm-unsafe-eval") && worker.includes("https: blob:")],
-  ["Homepage loads the V91.0 converter runtime", html.includes("/audio-studio.js?v=91.0")],
+  ["Homepage loads the V92.0 converter runtime", html.includes("/audio-studio.js?v=92.0")],
   ["Unified navigation hides home when another view opens", html.includes('id="appViewHeader"') && html.includes("home.hidden=!!id") && html.includes("p.id===id")],
   ["Unified responsive app shell is loaded", html.includes("/v89.css?v=90.0") && unifiedCss.includes("V89.0 — ONE UNIFIED ECOSYSTEM")],
   ["Shared header and persistent welcome remain", html.includes('class="top v674-top"') && html.includes('id="v89Welcome"')],
@@ -72,4 +72,4 @@ for (const [name, ok] of checks) {
   assert.ok(ok, name + " failed");
   console.log("✔ " + name);
 }
-console.log("\nARYANZZ V91.0 release smoke tests passed.");
+console.log("\nARYANZZ V92.0 release smoke tests passed.");
