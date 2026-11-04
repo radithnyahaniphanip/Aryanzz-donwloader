@@ -1,4 +1,4 @@
-name: ARYANZZ — V92.5 validation
+name: ARYANZZ — V93.0 validation
 
 on:
   pull_request:
@@ -33,6 +33,7 @@ jobs:
           node --check public/music-recognition.js
           node --check public/downloader.js
           node --check public/audio-studio.js
+          node --check public/link-bypass.js
           node --check public/ffmpeg-worker-bootstrap.js
           node --check public/sw.js
           node --check public/editor.js
