@@ -55,7 +55,6 @@ function render(items,target,q,unavailableCount=0,imageItems=[]){
 results.replaceChildren();
 const mediaCount=Array.isArray(items)?items.length:0,images=Array.isArray(imageItems)?imageItems:[];
 if(!mediaCount&&!images.length)showFallback(target,q);
-const mediaGroups=new Map();
 (items||[]).forEach(item=>{
 if(searchType?.value==="audio"){
 const card=document.createElement("article");card.className="v674-audio-inline-result";
@@ -84,20 +83,9 @@ try{const audioUrl=new URL(item.previewUrl,location.origin);if(audioUrl.origin==
 pick.type="button";pick.className="primary";pick.textContent=item.searchOnly?"Buka di "+(platforms[item.platform]?.name||target.name) :searchType?.value==="audio"?"Buka unduhan audio":"Lihat & unduh";
 pick.addEventListener("click",()=>{if(item.searchOnly){window.open(item.url,"_blank","noopener,noreferrer");return}const input=$("url");if(!input)return;input.value=item.url;setMode("link");$("analyze")?.click();$("downloadResult")?.scrollIntoView({behavior:"smooth",block:"nearest"})});
 info.append(title,meta,snippet,pick);card.append(info);
-if(selected==="all"){
-const key=String(item.platform||"other").toLowerCase();
-let entry=mediaGroups.get(key);
-if(!entry){
-const group=document.createElement("section");group.className="v674-platform-result-group";
-const groupTitle=document.createElement("h3");groupTitle.textContent=platforms[key]?.name||key.toUpperCase();
-group.append(groupTitle);
-const list=document.createElement("div");list.className="v674-platform-result-list";group.append(list);
-entry={group,list};mediaGroups.set(key,entry);
-}
-entry.list.append(card);
-}else results.append(card);
+// Keep every platform result in one shared grid; platform identity stays on each card.
+results.append(card);
 });
-if(selected==="all")mediaGroups.forEach(value=>results.append(value.group));
 if(images.length){
 const section=document.createElement("section");section.className="v674-image-results";
 const head=document.createElement("div");head.className="v674-image-results-head";
