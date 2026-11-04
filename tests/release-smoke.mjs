@@ -29,7 +29,10 @@ const idCounts = new Map();
 for (const match of html.matchAll(/\bid=["']([^"']+)["']/g)) idCounts.set(match[1], (idCounts.get(match[1]) || 0) + 1);
 const duplicateIds = [...idCounts].filter(([, count]) => count > 1).map(([id]) => id);
 
+const learningCenter = read("../public/learning-center.js");
 const checks = [
+  ["V94 tutorials cover requested tools and members/visitors", ["linkBypass","mediaStudio","queue","editor","musicFinder","audioStudio","imageTools","pdfTools","fileHash","colorStudio","speed","checker","members"].every(id => learningCenter.includes(id+":"))],
+  ["V94 tutorials support vertical/horizontal preview and manual voice with soundtrack", learningCenter.includes('data-r="9:16"') && learningCenter.includes('data-r="16:9"') && learningCenter.includes('getUserMedia') && learningCenter.includes('mixVoiceAndMusic')],
   ["V93.0 Link Bypass panel and Worker resolver are wired",html.includes('id="linkBypass"')&&html.includes('/link-bypass.js?v=93.0')&&worker.includes('url.pathname==="/api/link-bypass"')&&linkBypassJs.includes('Periksa tujuan')],
   ["V93.0 Link Bypass panel stylesheet is wired",html.includes('/link-bypass.css?v=93.0')&&linkBypassCss.includes(".v93-bypass-hero")&&linkBypassCss.includes("@media(max-width:680px)")],
   ["V93.0 restores original home layout while keeping Link Bypass mobile responsive",!html.includes('class="v93-popular-grid"')&&linkBypassCss.includes("@media(max-width:680px)")&&linkBypassCss.includes(".v93-bypass-panel")],
