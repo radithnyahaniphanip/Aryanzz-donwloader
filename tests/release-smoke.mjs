@@ -63,7 +63,7 @@ const checks = [
   ["Library rendering and clear actions are owned by the current V15 library module", !advancedJs.includes("historyList") && !advancedJs.includes("favoriteList") && !advancedJs.includes("clearHistoryV2") && v15Js.includes("setupLibrary()")],
   ["Profile Studio is the single owner of profile photo, banner, background and bio handlers", !advancedJs.includes("profilePhoto") && !advancedJs.includes("profileBanner") && !advancedJs.includes("profileSave") && profileJs.includes('storeImage("profileBanner"') && profileJs.includes('storeImage("profilePhoto"') && profileJs.includes("setupProfilePreview()")],
   ["Profile backup actions are not duplicated by legacy Tools code", !advancedJs.includes("exportData") && !advancedJs.includes("importData") && profileJs.includes("setupBackupActions()")],
-  ["ALL platform option is removed", !html.includes('data-platform="all"') && !searchJs.includes('all:{name:"Semua platform"')],
+  ["ALL platform option is available for unified 19-platform search", html.includes('data-platform="all"') && html.includes("Semua 19") && searchJs.includes('let selected="all"')],
   ["Audio search option is removed", !titleSearchMarkup.includes('<option value="audio">')],
   ["Video and image search remain available", html.includes('<option value="video">Video</option>') && html.includes('<option value="image">Gambar</option>')],
   ["MP4 to MP3 converter remains in tools", html.includes("MP4 ke MP3 Converter") && html.includes('id="audioStudio"')],
