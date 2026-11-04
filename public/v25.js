@@ -9,8 +9,10 @@
   const AUTOSAVE_DB="aryanzz-auto-save-v74";
   const HISTORY_KEYS=["aryanzz.history.v2","aryanzz-download-history-v1"];
   const FAV_KEYS=["aryanzz.favorites.v2","aryanzz.favorites.v1"];
-  const read=(key,fallback)=>{try{return JSON.parse(localStorage.getItem(key)||JSON.stringify(fallback))}catch{return fallback}};
-  const write=(key,value)=>{try{localStorage.setItem(key,JSON.stringify(value));return true}catch{return false}};
+  const safeGet=(key,fallback="")=>{try{const value=localStorage.getItem(key);return value===null?fallback:value}catch{return fallback}};
+  const safeSet=(key,value)=>{try{localStorage.setItem(key,String(value));return true}catch{return false}};
+  const read=(key,fallback)=>{try{return JSON.parse(safeGet(key,JSON.stringify(fallback)))}catch{return fallback}};
+  const write=(key,value)=>{try{return safeSet(key,JSON.stringify(value))}catch{return false}};
   let toastTimer;
   function toast(message){
     let el=$("v25Toast");if(!el){el=document.createElement("div");el.id="v25Toast";el.className="v25-toast";el.setAttribute("role","status");el.setAttribute("aria-live","polite");document.body.append(el);}
@@ -49,12 +51,12 @@
   }
   function setSurface(name){
     const allowed=["aurora","ocean","nebula","midnight"],surface=allowed.includes(name)?name:"aurora";
-    document.body.dataset.surface=surface;localStorage.setItem(SURFACE_KEY,surface);
+    document.body.dataset.surface=surface;safeSet(SURFACE_KEY,surface);
     document.querySelectorAll("[data-surface]").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.surface===surface)));
   }
   function setupSurface(){
     document.querySelectorAll("[data-surface]").forEach(b=>b.addEventListener("click",()=>{setSurface(b.dataset.surface);toast("Background "+b.dataset.surface+" diterapkan.");}));
-    setSurface(localStorage.getItem(SURFACE_KEY)||"aurora");
+    setSurface(safeGet(SURFACE_KEY,"aurora"));
     $("clearProfileBackground")?.addEventListener("click",()=>{const d=readDesign();d.background="";if(!write(DESIGN_KEY,d)){toast("Background belum terhapus karena penyimpanan browser penuh.");return;}applyDesign();setSurface("aurora");toast("Background pribadi dihapus.");});
     $("clearProfileBanner")?.addEventListener("click",()=>{const d=readDesign();d.banner="";if(!write(DESIGN_KEY,d)){toast("Banner belum terhapus karena penyimpanan browser penuh.");return;}applyDesign();window.dispatchEvent(new Event("aryanzz:profile-assets-updated"));toast("Banner berhasil dihapus.");});
     $("clearProfilePhoto")?.addEventListener("click",()=>{const d=readDesign();d.avatar="";if(!write(DESIGN_KEY,d)){toast("Foto profil belum terhapus karena penyimpanan browser penuh.");return;}applyDesign();window.dispatchEvent(new Event("aryanzz:profile-assets-updated"));toast("Foto profil berhasil dihapus.");});
@@ -90,7 +92,7 @@
   function setupMotionToggle(){
     const input=$("profileMotionToggle"),statusEl=$("profileMotionStatus");
     const reduceMotion=!!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-    const saved=localStorage.getItem(MOTION_KEY);
+    const saved=safeGet(MOTION_KEY,"");
     const enabled=saved==="on"||(!reduceMotion&&saved!=="off");
     document.body.dataset.motion=enabled?"on":"off";
     if(input){
@@ -99,7 +101,7 @@
       input.addEventListener("change",()=>{
         const next=input.checked;
         document.body.dataset.motion=next?"on":"off";
-        try{localStorage.setItem(MOTION_KEY,next?"on":"off");}catch{}
+        safeSet(MOTION_KEY,next?"on":"off");
         if(statusEl)statusEl.textContent=next?"Animasi aktif sesuai pilihanmu.":"Animasi dinonaktifkan.";
         window.dispatchEvent(new Event("aryanzz:motion-changed"));
         if(next){setupReveal();setupPremiumEffects();document.body.classList.remove("v25-motion-pulse");void document.body.offsetWidth;document.body.classList.add("v25-motion-pulse");}else{document.querySelectorAll(".v25-profile-card,.v25-profile-stats>div").forEach(el=>{el.classList.remove("v25-reveal","v25-visible");el.style.transform="";});}
@@ -151,27 +153,28 @@
   }
   function initDeviceHistory(){
     const label=deviceLabel();
-    currentDeviceId=localStorage.getItem(DEVICE_ID_KEY)||("dev-"+(crypto.randomUUID?.()||Math.random().toString(36).slice(2)));
-    localStorage.setItem(DEVICE_ID_KEY,currentDeviceId);
+    currentDeviceId=safeGet(DEVICE_ID_KEY,"")||("dev-"+(window.crypto?.randomUUID?.()||Math.random().toString(36).slice(2)));
+    safeSet(DEVICE_ID_KEY,currentDeviceId);
     const old=read(DEVICE_KEY,[]);
     write(DEVICE_KEY,[{id:currentDeviceId,label,at:Date.now()},...(Array.isArray(old)?old.filter(x=>x.id!==currentDeviceId):[])].slice(0,15));
     if($("deviceCurrent"))$("deviceCurrent").textContent=label;
     renderDeviceHistory();
     const status=$("deviceLocationStatus"),saved=read("aryanzz.device.location.v26",null);
-    if(status)status.textContent=saved?"Lokasi terakhir: "+saved.latitude.toFixed(5)+", "+saved.longitude.toFixed(5)+" · "+localDate(saved.at):"Lokasi belum dibagikan.";
+    const validSavedLocation=saved&&Number.isFinite(Number(saved.latitude))&&Number.isFinite(Number(saved.longitude));
+    if(status)status.textContent=validSavedLocation?"Lokasi terakhir: "+Number(saved.latitude).toFixed(5)+", "+Number(saved.longitude).toFixed(5)+" · "+localDate(saved.at):"Lokasi belum dibagikan.";
     $("deviceGetLocation")?.addEventListener("click",()=>{
       if(!navigator.geolocation){if(status)status.textContent="Browser tidak mendukung lokasi.";return;}
       if(status)status.textContent="Meminta izin lokasi dari HP…";
       navigator.geolocation.getCurrentPosition(pos=>{
         const item={latitude:pos.coords.latitude,longitude:pos.coords.longitude,accuracy:Math.round(pos.coords.accuracy),at:Date.now()};
-        write("aryanzz.device.location.v26",item);
-        if(status)status.textContent="Lokasi tersimpan lokal: "+item.latitude.toFixed(5)+", "+item.longitude.toFixed(5)+" (akurasi ±"+item.accuracy+" m).";
+        const stored=safeSet("aryanzz.device.location.v26",JSON.stringify(item));
+        if(status)status.textContent=stored?"Lokasi tersimpan lokal: "+item.latitude.toFixed(5)+", "+item.longitude.toFixed(5)+" (akurasi ±"+item.accuracy+" m).":"Lokasi didapat, tetapi browser tidak dapat menyimpannya.";
         const link=$("deviceMapLink");if(link){link.href="https://www.google.com/maps?q="+item.latitude+","+item.longitude;link.hidden=false;}
         toast("Lokasi berhasil disimpan di browser ini.");
       },err=>{if(status)status.textContent=err.code===1?"Izin lokasi ditolak. Aktifkan izin lokasi Chrome.":"Lokasi tidak tersedia. Periksa GPS dan jaringan.";},{enableHighAccuracy:true,timeout:15000,maximumAge:60000});
     });
-    if(saved){const link=$("deviceMapLink");if(link){link.href="https://www.google.com/maps?q="+saved.latitude+","+saved.longitude;link.hidden=false;}}
-    $("deviceClearHistory")?.addEventListener("click",()=>{write(DEVICE_KEY,[]);renderDeviceHistory();toast("Riwayat perangkat dihapus.");});
+    if(validSavedLocation){const link=$("deviceMapLink");if(link){link.href="https://www.google.com/maps?q="+Number(saved.latitude)+","+Number(saved.longitude);link.hidden=false;}}
+    $("deviceClearHistory")?.addEventListener("click",()=>{if(!write(DEVICE_KEY,[])){toast("Riwayat tidak dapat dihapus karena penyimpanan browser tidak tersedia.");return;}renderDeviceHistory();toast("Riwayat perangkat dihapus.");});
   }
 
 
