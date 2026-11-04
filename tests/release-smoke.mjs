@@ -18,12 +18,14 @@ const checks = [
   ["Converter disclaimer block is removed", !html.includes('class="audio-studio-disclaimer"')],
   ["Converter has an initialization timeout", converterJs.includes("LOAD_TIMEOUT_MS")],
   ["FFmpeg worker bootstrap uses pinned package version", bootstrap.includes("@ffmpeg/ffmpeg@0.12.10/dist/esm/worker.js")],
-  ["Homepage release label is V90.0", html.includes("V90.0 · GRATIS")],
-  ["Worker health reports V90.0", worker.includes('version:"90.0"')],
+  ["Homepage release label is V90.0", html.includes("V90.1 · GRATIS")],
+  ["Worker health reports V90.0", worker.includes('version:"90.1"')],
   ["Homepage loads V90.0 app stylesheet", html.includes("/v89.css?v=90.0")],
-  ["PWA cache namespace is V90.0", sw.includes('const CACHE="aryanzz-v90-0"')],
-  ["PWA cache includes current homepage and converter", sw.includes("/?v=90.0") && sw.includes("/audio-studio.js?v=90.0") && sw.includes("/audio-studio.css?v=90.0")],
+  ["PWA cache namespace is V90.0", sw.includes('const CACHE="aryanzz-v90-1"')],
+  ["PWA cache includes current homepage and converter", sw.includes("/?v=90.1") && sw.includes("/audio-studio.js?v=90.1") && sw.includes("/audio-studio.css?v=90.0")],
   ["PWA cache includes current search bundle", sw.includes("/v674.js?v=89.2")],
+  ["Worker CSP permits FFmpeg WebAssembly and blob core loading", worker.includes("wasm-unsafe-eval") && worker.includes("https: blob:")],
+  ["Homepage loads the V90.1 converter runtime", html.includes("/audio-studio.js?v=90.1")],
   ["Unified navigation hides home when another view opens", html.includes('id="appViewHeader"') && html.includes("home.hidden=!!id") && html.includes("p.id===id")],
   ["Unified responsive app shell is loaded", html.includes("/v89.css?v=90.0") && unifiedCss.includes("V89.0 — ONE UNIFIED ECOSYSTEM")],
   ["Shared header and persistent welcome remain", html.includes('class="top v674-top"') && html.includes('id="v89Welcome"')],
@@ -38,4 +40,4 @@ for (const [name, ok] of checks) {
   assert.ok(ok, name + " failed");
   console.log("✔ " + name);
 }
-console.log("\nARYANZZ V90.0 release smoke tests passed.");
+console.log("\nARYANZZ V90.1 release smoke tests passed.");
