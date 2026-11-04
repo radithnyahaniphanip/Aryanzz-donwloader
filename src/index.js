@@ -165,6 +165,33 @@ async function platformMediaInfo(request){
   if(normalizedExpected!==key)return json({ok:false,error:"GAGAL — tautan "+key+" ditolak karena endpoint ini khusus untuk "+normalizedExpected+"."},400);
   return freePublicMediaInfo(parsed.href,request.url);
 }
+async function snackVideoFallbackMediaInfo(rawUrl,requestUrl){
+  const endpoint=new URL("https://backend1.tioo.eu.org/api/downloader/snackvideo");
+  endpoint.searchParams.set("url",rawUrl);
+  const response=await fetch(endpoint.href,{headers:{accept:"application/json"},signal:AbortSignal.timeout(14000),cache:"no-store"});
+  const data=await response.json().catch(()=>null);
+  if(!response.ok||!data||data.status===false||data.success===false)throw new Error("Provider alternatif SnackVideo menjawab HTTP "+response.status+".");
+  const root=data.result&&typeof data.result==="object"?data.result:data.data&&typeof data.data==="object"?data.data:data;
+  const links=Array.isArray(root.links)?root.links:Array.isArray(root.downloads)?root.downloads:[];
+  const candidates=[
+    root.videoUrl,root.video_url,root.download_url,root.downloadUrl,
+    root.result?.videoUrl,root.result?.video_url,root.result?.download_url,
+    ...links.map(item=>typeof item==="string"?item:item?.url||item?.videoUrl||item?.download_url)
+  ].filter(value=>typeof value==="string"&&value.trim());
+  const videoUrl=candidates.find(value=>safePublicMediaUrl(value));
+  if(!videoUrl)throw new Error("Provider alternatif merespons, tetapi tidak memberikan URL video publik.");
+  const title=String(root.title||root.caption||root.description||"Video SnackVideo").slice(0,300);
+  const thumbnail=String(root.thumbnail||root.cover||"");
+  const duration=Number(root.duration||0)||null;
+  const quality=String(root.quality||root.resolution||"MP4");
+  const media=[{type:"video",kind:"video",label:quality+" MP4",url:videoUrl,height:Number(String(quality).match(/(144|240|360|480|540|576|720|900|960|1080|1440|2160)/)?.[1]||0)||undefined}];
+  const normalized=freeProviderMediaInfo({normalized:{title,thumbnail,duration,media}},rawUrl,requestUrl);
+  if(!normalized)throw new Error("Stream dari provider alternatif belum lolos pemeriksaan format media.");
+  normalized.providerName="Tioo SnackVideo fallback";
+  normalized.provider="Free public fallback";
+  normalized.fallbackUsed=true;
+  return json(normalized);
+}
 async function freePublicMediaInfo(rawUrl,requestUrl){
   const key=freePlatformKey(rawUrl);
   if(!key)return json({error:"Platform belum didukung oleh provider gratis."},400);
@@ -184,17 +211,26 @@ async function freePublicMediaInfo(rawUrl,requestUrl){
     soundcloud:"SoundCloud diproses sebagai audio (MP3/M4A jika tersedia), bukan video MP4."
   };
   const endpoint=FREE_MEDIA_API+"/api/download/"+key+"?url="+encodeURIComponent(rawUrl);
+  let primaryError="";
   try{
-    const response=await fetch(endpoint,{headers:{accept:"application/json"},signal:AbortSignal.timeout(28000),cache:"no-store"});
+    const response=await fetch(endpoint,{headers:{accept:"application/json"},signal:AbortSignal.timeout(key==="snackvideo"?12000:28000),cache:"no-store"});
     const data=await response.json().catch(()=>({}));
-    if(!response.ok||data?.success===false){
-      const detail=data?.error?.message||data?.error||"Provider gratis menjawab HTTP "+response.status+".";
-      return json({error:label+" belum bisa diproses oleh provider gratis. "+String(detail).slice(0,180)+" "+(guidance[key]||"Periksa kembali tautan publik.")},response.status===429?429:502);
+    if(response.ok&&data?.success!==false){
+      const normalized=freeProviderMediaInfo(data,rawUrl,requestUrl);
+      if(normalized)return json(normalized);
+      primaryError="Provider utama tidak mengembalikan stream video/audio yang valid.";
+    }else{
+      const detail=data?.error?.message||data?.error||"HTTP "+response.status;
+      primaryError=String(detail).slice(0,140);
     }
-    const normalized=freeProviderMediaInfo(data,rawUrl,requestUrl);
-    if(!normalized)return json({error:label+" mengenali tautan, tetapi belum mengembalikan stream video/audio yang bisa diputar. "+(guidance[key]||"Gunakan tautan publik langsung.")},502);
-    return json(normalized);
-  }catch(error){return json({error:"Provider "+label+" sedang tidak dapat dijangkau. Coba lagi sebentar. Detail: "+String(error?.message||error).slice(0,120)},502)}
+  }catch(error){primaryError=String(error?.message||error).slice(0,140)}
+  if(key==="snackvideo"){
+    try{return await snackVideoFallbackMediaInfo(rawUrl,requestUrl)}
+    catch(error){
+      return json({error:"SnackVideo belum dapat diproses. Provider utama: "+(primaryError||"gagal")+"; provider alternatif: "+String(error?.message||error).slice(0,150)+". "+guidance[key],provider:"Fallback cascade",fallbackTried:true},502);
+    }
+  }
+  return json({error:label+" belum bisa diproses oleh provider gratis. "+(primaryError||"Provider tidak mengembalikan hasil.")+" "+(guidance[key]||"Periksa kembali tautan publik.")},502);
 }
 
 function mediaAsciiAt(bytes,offset,value){
