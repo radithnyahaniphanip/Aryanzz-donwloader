@@ -112,6 +112,13 @@ jobs:
         env:
           WORKER_URL: https://aryanzz-donwloader.radithnyahaniphanip.workers.dev
         run: node tests/live-instagram-image-link.mjs
+      - name: Diagnose TikWM and Instagram public embed fallbacks
+        if: success()
+        continue-on-error: true
+        timeout-minutes: 2
+        env:
+          WORKER_URL: https://aryanzz-donwloader.radithnyahaniphanip.workers.dev
+        run: node tests/live-provider-fallbacks.mjs
       - name: Optional manual diagnostic matrix for the 20 dedicated provider choices
         if: github.event_name == 'workflow_dispatch' && success()
         continue-on-error: true
