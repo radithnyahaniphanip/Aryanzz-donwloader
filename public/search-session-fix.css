@@ -4,3 +4,24 @@
 .v674-platform-result-list{display:grid;grid-template-columns:minmax(0,1fr);gap:10px}
 .v674-platform-result-group .v674-search-result{margin:0}
 @media(min-width:700px){.v674-platform-result-list{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+
+/* ARYANZZ Smart Search mobile repair — append guard and spacing */
+#titleModePanel{display:grid;gap:12px;min-width:0}
+#titleModePanel[hidden]{display:none!important}
+#titleModePanel .v674-search-type-row{margin:0;min-width:0}
+#titleModePanel .v674-search-type-row .field{width:100%;max-width:none;min-width:0}
+#titleModePanel .inputrow.v674-input-row{display:grid;grid-template-columns:minmax(0,1fr) 44px 92px;gap:8px;min-width:0}
+#titleModePanel .inputrow.v674-input-row>*{min-width:0;width:100%}
+#titleModePanel .inputrow.v674-input-row .field{min-height:48px;padding:11px 12px}
+#titleModePanel .inputrow.v674-input-row .primary{min-width:0;min-height:48px;padding:10px 8px}
+#titleSearchHelp{margin:0;padding:10px 12px;border:1px solid #2a4162;border-radius:12px;background:#0b1526;line-height:1.65;overflow-wrap:anywhere}
+#titleSearchResults{width:100%;min-width:0;overflow:hidden}
+.v674-platform-result-group{min-width:0;margin:12px 0;padding:12px;border:1px solid #304968;border-radius:15px;background:#0a1424}
+.v674-platform-result-group>h3{margin:0 0 10px;font-size:13px;line-height:1.4;color:#dceaff}
+.v674-platform-result-list{display:grid;grid-template-columns:minmax(0,1fr);gap:9px;min-width:0}
+.v674-platform-result-list>*{min-width:0}
+.v674-pagination{align-items:center;gap:9px}
+.v674-pagination>span{min-width:100%;line-height:1.5}
+@media(min-width:700px){.v674-platform-result-list{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:380px){#titleModePanel .inputrow.v674-input-row{grid-template-columns:minmax(0,1fr) 40px 76px;gap:6px}#titleModePanel .inputrow.v674-input-row .primary{font-size:12px}}
