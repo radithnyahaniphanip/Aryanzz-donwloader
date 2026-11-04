@@ -29,19 +29,32 @@ function add(id,d){
  el.innerHTML='<header class="lc-top"><div><span class="lc-kicker">ARYANZZ · PANDUAN ALAT</span><h3>Tutorial '+esc(d.title)+'</h3><p>Video panduan khusus untuk fungsi alat ini.</p></div><span class="lc-badge">PANDUAN</span></header><div class="lc-ratio" role="group" aria-label="Rasio video"><button type="button" data-r="16:9" class="active">16:9 Landscape</button><button type="button" data-r="9:16">9:16 Portrait</button></div><div class="lc-stage lc-player"><canvas aria-label="Video tutorial '+esc(d.title)+'"></canvas><div class="lc-player-overlay"><button class="lc-play" type="button" aria-label="Putar tutorial">▶</button><span>PUTAR TUTORIAL</span></div></div><div class="lc-player-controls"><button class="lc-prev" type="button" disabled aria-label="Adegan sebelumnya">‹</button><div class="lc-progress" role="progressbar" aria-label="Kemajuan tutorial" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="lc-progress-fill"></div></div><span class="lc-time" aria-live="off">00:00 / 00:00</span><button class="lc-next" type="button" aria-label="Adegan berikutnya">›</button><button class="lc-audio" type="button">Narasi: ON</button></div><p class="lc-voice-note" aria-live="polite">Memeriksa suara lokal non-Google di perangkat…</p><div class="lc-scene-copy" aria-live="polite"><span class="lc-scene-number">BAGIAN 1 DARI 5</span><h4></h4><p></p></div><div class="lc-details"><article><b>Tujuan penggunaan</b><p>'+esc(d.purpose)+'</p></article><article><b>Fungsi dan cara kerja</b><p>'+esc(d.how)+'</p></article><article><b>Langkah penggunaan</b><ol>'+d.steps.map(x=>"<li>"+esc(x)+"</li>").join("")+'</ol></article><article class="lc-tip"><b>Tips penting</b><p>'+esc(d.tip)+'</p></article></div>';
  root.prepend(el);
  const canvas=el.querySelector("canvas"),ctx=canvas.getContext("2d"),stage=el.querySelector(".lc-stage"),overlay=el.querySelector(".lc-player-overlay"),play=el.querySelector(".lc-play"),bar=el.querySelector(".lc-progress-fill"),track=el.querySelector(".lc-progress"),time=el.querySelector(".lc-time"),prev=el.querySelector(".lc-prev"),next=el.querySelector(".lc-next"),audio=el.querySelector(".lc-audio"),voiceNote=el.querySelector(".lc-voice-note"),sceneTitle=el.querySelector(".lc-scene-copy h4"),sceneCopy=el.querySelector(".lc-scene-copy p"),sceneNumber=el.querySelector(".lc-scene-number"),ratios=[...el.querySelectorAll("[data-r]")];
- let ratio="16:9",index=0,playing=false,muted=false,voice=null,voiceAvailable=false,raf=0,startedAt=0,elapsedBefore=0,sceneStarted=0,sceneTimer=0,actualSceneDurations=[],totalEstimate=0;
+ let ratio="16:9",index=0,playing=false,muted=false,voice=null,voiceAvailable=false,raf=0,startedAt=0,elapsedBefore=0,sceneStarted=0,sceneTimer=0,sceneElapsed=0,actualSceneDurations=[],totalEstimate=0;
  const sceneData=d.scenes.map((s,i)=>({tag:s[0],title:s[0],copy:s[1],voice:(i+1)+". "+s[0]+". "+s[1]}));
  const estimateScene=s=>Math.max(4.5,Math.min(13,(s.voice.length/13)+1.4));
  const estimates=sceneData.map(estimateScene);totalEstimate=estimates.reduce((a,b)=>a+b,0);
  function chooseVoice(){
   if(!("speechSynthesis"in window))return null;
   const voices=window.speechSynthesis.getVoices()||[];
-  return voices.find(v=>/^id(-|_)/i.test(v.lang||"")&&v.localService===true&&!/google/i.test(v.name||""))||null;
+  const indonesian=voices.filter(v=>/^id(-|_)/i.test(v.lang||"")&&!/google/i.test(v.name||""));
+  return indonesian.find(v=>v.localService===true)||indonesian[0]||null;
  }
- function updateDuration(){const known=actualSceneDurations.reduce((a,b)=>a+b,0);const remaining=estimates.slice(actualSceneDurations.length).reduce((a,b)=>a+b,0);return Math.max(1,Math.ceil(known+remaining));}
- function updateTime(){const elapsed=elapsedBefore+(playing?(performance.now()-startedAt)/1000:0);const total=actualSceneDurations.length===sceneData.length?actualSceneDurations.reduce((a,b)=>a+b,0):updateDuration();time.textContent=fmt(elapsed)+" / "+fmt(total);const percent=Math.min(100,Math.max(0,total?elapsed/total*100:0));bar.style.width=percent+"%";track.setAttribute("aria-valuenow",String(Math.round(percent)));}
+ function updateDuration(){
+  const completed=actualSceneDurations.reduce((a,b)=>a+b,0);
+  const liveSceneElapsed=sceneElapsed+(playing?Math.max(0,(performance.now()-sceneStarted)/1000):0);
+  const current=Math.max(estimates[index]||0,liveSceneElapsed);
+  const future=estimates.slice(index+1).reduce((a,b)=>a+b,0);
+  return Math.max(1,Math.ceil(completed+current+future));
+ }
+ function updateTime(){
+  const elapsed=elapsedBefore+(playing?(performance.now()-startedAt)/1000:0);
+  const total=actualSceneDurations.length===sceneData.length?actualSceneDurations.reduce((a,b)=>a+b,0):updateDuration();
+  time.textContent=fmt(elapsed)+" / "+fmt(total);
+  const percent=Math.min(100,Math.max(0,total?elapsed/total*100:0));
+  bar.style.width=percent+"%";track.setAttribute("aria-valuenow",String(Math.round(percent)));
+ }
  function roundRect(x,y,w,h,r,fill,stroke){ctx.beginPath();ctx.roundRect(x,y,w,h,r);if(fill){ctx.fillStyle=fill;ctx.fill();}if(stroke){ctx.strokeStyle=stroke;ctx.stroke();}}
- function wrap(txt,x,y,max,line,font,color){ctx.font=font;ctx.fillStyle=color;let row="";for(const word of String(txt).split(/\s+/)){const t=row?row+" "+word:word;if(ctx.measureText(t).width>max&&row){ctx.fillText(row,x,y);row=word;y+=line;}else row=t;}if(row)ctx.fillText(row,x,y);}
+ function wrap(txt,x,y,max,line,font,color){ctx.font=font;ctx.fillStyle=color;let row="";for(const word of String(txt).split(/\s+/)){const t=row?row+" "+word:word;if(ctx.measureText(t).width>max&&row){ctx.fillText(row,x,y);row=word;y+=line;}else row=t;}if(row)ctx.fillText(row,x,y);return y;}
  function drawDemo(w,h){
   const compact=ratio==="9:16",pad=w*(compact?.09:.07),boxW=w-pad*2,boxH=h*(compact?.34:.32),boxY=h*(compact?.49:.48),sc=sceneData[index];
   roundRect(pad,boxY,boxW,boxH,Math.min(26,w*.018),"rgba(255,255,255,.095)","rgba(255,255,255,.25)");
@@ -51,7 +64,7 @@ function add(id,d){
    speed:["PING","DOWNLOAD","UPLOAD","JITTER"],website:["URL WEBSITE","STATUS PEMERIKSAAN","DOMAIN"],bypass:["LINK SFL","PERIKSA TUJUAN","DOMAIN TUJUAN"],camera:["IZIN KAMERA","PREVIEW LANGSUNG","HENTIKAN"],install:["BROWSER","INSTALL APLIKASI","LAYAR UTAMA"],members:["STATUS ANGGOTA","PENGUNJUNG","DATA TERSEDIA"],media:["VIDEO","AUDIO","GAMBAR","FAVORIT"],queue:["DAFTAR TAUTAN","ANTREAN","MULAI"],editor:["KLIP VIDEO","TIMELINE","AUDIO / SUBTITLE","EKSPOR"],music:["SUMBER AUDIO","KENALI LAGU","HASIL ARTIS"],converter:["PILIH VIDEO","PREVIEW & DURASI","KONVERSI MP3"],image:["EDITOR GAMBAR","RASIO","PREVIEW","EKSPOR"],pdf:["GAMBAR / TEKS","CETAK","SIMPAN PDF"],qr:["TEKS / URL","GENERATE QR","UNDUH PNG"],password:["PANJANG PASSWORD","GENERATE","SALIN"],gradient:["JENIS GRADASI","WARNA","PREVIEW CSS"],hash:["PILIH FILE","SHA-256","FINGERPRINT"],color:["PRESET TEMA","WARNA AKSEN","PREVIEW"]
   }[d.kind]||["PILIH","PROSES","HASIL"];
   const gap=h*(compact?.048:.052),startY=y+h*.10;
-  labels.forEach((label,i)=>{const yy=startY+i*gap;if(yy>boxY+boxH-h*.045)return;roundRect(x,yy,innerW,h*.037,Math.min(12,w*.008),"rgba(7,18,38,.78)","rgba(153,197,244,.16)");ctx.fillStyle="#eaf4ff";ctx.font="700 "+Math.round(w*.018)+"px system-ui";ctx.fillText(label,x+w*.018,yy+h*.026);const pct=[.72,.48,.86,.57][(i+index)%4];roundRect(x+innerW*.64,yy+h*.012,innerW*.30,h*.011,8,"rgba(255,255,255,.14)");roundRect(x+innerW*.64,yy+h*.012,innerW*.30*pct,h*.011,8,"#a7d9ce");});
+  labels.forEach((label,i)=>{const yy=startY+i*gap;if(yy>boxY+boxH-h*.045)return;roundRect(x,yy,innerW,h*.037,Math.min(12,w*.008),"rgba(7,18,38,.78)","rgba(153,197,244,.16)");ctx.fillStyle="#eaf4ff";ctx.font="700 "+Math.round(w*.018)+"px system-ui";ctx.fillText(label,x+w*.018,yy+h*.026);});
   ctx.fillStyle="#b8cde8";ctx.font="600 "+Math.round(w*.016)+"px system-ui";ctx.fillText("DEMO ILUSTRASI · "+String(index+1).padStart(2,"0")+"/05",x,boxY+boxH-h*.018);
  }
  function paint(){
@@ -59,32 +72,33 @@ function add(id,d){
   bg.addColorStop(0,"#0b1425");bg.addColorStop(1,"#172c46");ctx.fillStyle=bg;ctx.fillRect(0,0,w,h);
   ctx.fillStyle="rgba(123,199,185,.09)";ctx.beginPath();ctx.arc(w*.88,h*.12,w*.22,0,Math.PI*2);ctx.fill();
   ctx.fillStyle="#a7d9ce";ctx.font="900 "+Math.round(w*.021)+"px system-ui";ctx.fillText("ARYANZZ  /  PANDUAN ALAT",pad,h*.12);
-  ctx.fillStyle="#ffffff";wrap(sc.title,pad,h*(compact?.25:.27),w-pad*2,h*.07,"900 "+Math.round(w*(compact?.052:.055))+"px system-ui","#ffffff");
-  wrap(sc.copy,pad,h*(compact?.38:.39),w-pad*2,h*.046,"500 "+Math.round(w*(compact?.027:.026))+"px system-ui","#d6e4f4");
+  ctx.fillStyle="#ffffff";const titleBottom=wrap(sc.title,pad,h*(compact?.23:.24),w-pad*2,h*(compact?.065:.06),"900 "+Math.round(w*(compact?.052:.055))+"px system-ui","#ffffff");
+  const copyTop=Math.max(h*(compact?.37:.36),titleBottom+h*(compact?.075:.065));
+  wrap(sc.copy,pad,copyTop,w-pad*2,h*.046,"500 "+Math.round(w*(compact?.027:.026))+"px system-ui","#d6e4f4");
   drawDemo(w,h);
   ctx.fillStyle="#dbe8f5";ctx.font="700 "+Math.round(w*.018)+"px system-ui";ctx.fillText("BAGIAN "+(index+1)+" DARI "+sceneData.length,pad,h*.94);
   sceneNumber.textContent="BAGIAN "+(index+1)+" DARI "+sceneData.length;sceneTitle.textContent=sc.title;sceneCopy.textContent=sc.copy;
   prev.disabled=index===0;next.disabled=index===sceneData.length-1;
  }
  function resize(){const vertical=ratio==="9:16";stage.style.aspectRatio=vertical?"9 / 16":"16 / 9";stage.classList.toggle("is-vertical",vertical);canvas.width=vertical?720:1280;canvas.height=vertical?1280:720;paint();}
- function stopVoice(){if("speechSynthesis"in window)window.speechSynthesis.cancel();voice=null;}
- function finish(){playing=false;clearTimeout(sceneTimer);cancelAnimationFrame(raf);elapsedBefore+=Math.max(0,(performance.now()-startedAt)/1000);stopVoice();overlay.classList.remove("is-hidden");play.textContent="↻";overlay.querySelector("span").textContent="PUTAR ULANG TUTORIAL";updateTime();voiceNote.textContent=voiceAvailable?"Narasi lokal selesai. Durasi aktual ditampilkan.":"Narasi suara non-Google tidak tersedia; seluruh penjelasan tetap tersedia sebagai teks.";}
- function advance(){if(!playing)return;const duration=Math.max(1,(performance.now()-sceneStarted)/1000);actualSceneDurations[index]=duration;if(index<sceneData.length-1){index++;paint();speakCurrent();}else finish();}
+ function stopVoice(){if("speechSynthesis"in window)window.speechSynthesis.cancel();}
+ function finish(){playing=false;clearTimeout(sceneTimer);cancelAnimationFrame(raf);elapsedBefore+=Math.max(0,(performance.now()-startedAt)/1000);stopVoice();overlay.classList.remove("is-hidden");play.textContent="↻";overlay.querySelector("span").textContent="PUTAR ULANG TUTORIAL";updateTime();voiceNote.textContent=voiceAvailable?"Narasi perangkat selesai. Durasi aktual ditampilkan.":"Suara Indonesia non-Google tidak tersedia; panduan teks tetap lengkap.";}
+ function advance(){if(!playing)return;sceneElapsed+=Math.max(0,(performance.now()-sceneStarted)/1000);actualSceneDurations[index]=Math.max(1,sceneElapsed);sceneElapsed=0;if(index<sceneData.length-1){index++;paint();speakCurrent();}else finish();}
  function speakCurrent(){
   if(!playing)return;clearTimeout(sceneTimer);sceneStarted=performance.now();
   if(!muted&&voiceAvailable&&voice){
    const utter=new SpeechSynthesisUtterance(sceneData[index].voice);utter.voice=voice;utter.lang=voice.lang;utter.rate=.94;utter.pitch=1;utter.volume=1;utter.onend=()=>{if(playing)advance();};utter.onerror=()=>{voiceNote.textContent="Narasi perangkat terhenti. Penjelasan teks tetap tersedia.";if(playing)advance();};window.speechSynthesis.speak(utter);
   }else{
-   const wait=estimates[index]*1000;sceneTimer=setTimeout(()=>{if(playing)advance();},wait);
+   const wait=Math.max(1,estimates[index]-(sceneElapsed||0))*1000;sceneTimer=setTimeout(()=>{if(playing)advance();},wait);
   }
  }
  function tick(){if(!playing)return;updateTime();raf=requestAnimationFrame(tick);}
- function start(){if(playing)return;if(index===sceneData.length-1){index=0;actualSceneDurations=[];elapsedBefore=0;paint();}playing=true;startedAt=performance.now();overlay.classList.add("is-hidden");play.textContent="Ⅱ";if(voiceAvailable&&!muted){voiceNote.textContent="Menggunakan narasi lokal bahasa Indonesia, bukan suara Google.";}else{voiceNote.textContent="Narasi suara non-Google tidak tersedia di perangkat ini. Ikuti teks panduan per adegan.";}speakCurrent();raf=requestAnimationFrame(tick);}
- function pause(){if(!playing)return;playing=false;clearTimeout(sceneTimer);cancelAnimationFrame(raf);elapsedBefore+=Math.max(0,(performance.now()-startedAt)/1000);stopVoice();overlay.classList.remove("is-hidden");play.textContent="▶";overlay.querySelector("span").textContent="LANJUTKAN TUTORIAL";updateTime();}
- function reset(){pause();index=0;elapsedBefore=0;actualSceneDurations=[];paint();updateTime();}
+ function start(){if(playing)return;if(index===sceneData.length-1){index=0;actualSceneDurations=[];sceneElapsed=0;elapsedBefore=0;paint();}playing=true;startedAt=performance.now();overlay.classList.add("is-hidden");play.textContent="Ⅱ";if(voiceAvailable&&!muted){voiceNote.textContent="Menggunakan narasi lokal bahasa Indonesia, bukan suara Google.";}else{voiceNote.textContent="Narasi suara non-Google tidak tersedia di perangkat ini. Ikuti teks panduan per adegan.";}speakCurrent();raf=requestAnimationFrame(tick);}
+ function pause(){if(!playing)return;sceneElapsed+=Math.max(0,(performance.now()-sceneStarted)/1000);playing=false;clearTimeout(sceneTimer);cancelAnimationFrame(raf);elapsedBefore+=Math.max(0,(performance.now()-startedAt)/1000);stopVoice();overlay.classList.remove("is-hidden");play.textContent="▶";overlay.querySelector("span").textContent="LANJUTKAN TUTORIAL";updateTime();}
+ function reset(){pause();index=0;elapsedBefore=0;sceneElapsed=0;actualSceneDurations=[];paint();updateTime();}
  play.addEventListener("click",()=>{if(playing)pause();else start();});
- prev.addEventListener("click",()=>{pause();index=Math.max(0,index-1);paint();updateTime();});
- next.addEventListener("click",()=>{pause();index=Math.min(sceneData.length-1,index+1);paint();updateTime();});
+ prev.addEventListener("click",()=>{pause();index=Math.max(0,index-1);sceneElapsed=0;paint();updateTime();});
+ next.addEventListener("click",()=>{pause();index=Math.min(sceneData.length-1,index+1);sceneElapsed=0;paint();updateTime();});
  ratios.forEach(b=>b.addEventListener("click",()=>{pause();ratio=b.dataset.r;ratios.forEach(x=>x.classList.toggle("active",x===b));resize();updateTime();}));
  audio.addEventListener("click",()=>{muted=!muted;audio.textContent=muted?"Narasi: OFF":"Narasi: ON";if(playing){pause();start();}});
  if("speechSynthesis"in window){voice=chooseVoice();voiceAvailable=!!voice;window.speechSynthesis.addEventListener?.("voiceschanged",()=>{if(!playing){voice=chooseVoice();voiceAvailable=!!voice;voiceNote.textContent=voiceAvailable?"Suara lokal Indonesia tersedia. Suara Google tidak digunakan.":"Tidak ditemukan suara Indonesia lokal non-Google pada perangkat ini.";}});}
