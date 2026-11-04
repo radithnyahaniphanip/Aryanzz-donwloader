@@ -255,27 +255,36 @@ async function freePublicMediaInfo(rawUrl,requestUrl){
     threads:"Gunakan post Threads publik yang benar-benar memuat video.",
     soundcloud:"SoundCloud diproses sebagai audio (MP3/M4A jika tersedia), bukan video MP4."
   };
-  const endpoint=FREE_MEDIA_API+"/api/download/"+key+"?url="+encodeURIComponent(rawUrl);
+  const canonicalUrl=await resolveSocialShortLink(rawUrl,key);
+  const endpoint=FREE_MEDIA_API+"/api/download/"+key+"?url="+encodeURIComponent(canonicalUrl);
   let primaryError="";
   try{
-    const response=await fetch(endpoint,{headers:{accept:"application/json"},signal:AbortSignal.timeout(key==="snackvideo"?12000:28000),cache:"no-store"});
+    const response=await fetch(endpoint,{headers:{accept:"application/json"},signal:AbortSignal.timeout(key==="snackvideo"?12000:16000),cache:"no-store"});
     const data=await response.json().catch(()=>({}));
     if(response.ok&&data?.success!==false){
-      const normalized=freeProviderMediaInfo(data,rawUrl,requestUrl);
-      if(normalized)return json(normalized);
+      const normalized=freeProviderMediaInfo(data,canonicalUrl,requestUrl);
+      if(normalized)return json({...normalized,canonicalUrl:canonicalUrl!==rawUrl?canonicalUrl:undefined});
       primaryError="Provider utama tidak mengembalikan stream video/audio yang valid.";
     }else{
       const detail=data?.error?.message||data?.error||"HTTP "+response.status;
       primaryError=String(detail).slice(0,140);
     }
   }catch(error){primaryError=String(error?.message||error).slice(0,140)}
+  if(key==="tiktok"){
+    try{
+      const fallback=await tikwmFallbackMediaInfo(canonicalUrl,requestUrl);
+      return json({...fallback,canonicalUrl:canonicalUrl!==rawUrl?canonicalUrl:undefined});
+    }catch(error){
+      primaryError+="; TikWM: "+String(error?.message||error).slice(0,140);
+    }
+  }
   if(key==="snackvideo"){
-    try{return await snackVideoFallbackMediaInfo(rawUrl,requestUrl)}
+    try{return await snackVideoFallbackMediaInfo(canonicalUrl,requestUrl)}
     catch(error){
       return json({error:"SnackVideo belum dapat diproses. Provider utama: "+(primaryError||"gagal")+"; provider alternatif: "+String(error?.message||error).slice(0,150)+". "+guidance[key],provider:"Fallback cascade",fallbackTried:true},502);
     }
   }
-  return json({error:label+" belum bisa diproses oleh provider gratis. "+(primaryError||"Provider tidak mengembalikan hasil.")+" "+(guidance[key]||"Periksa kembali tautan publik.")},502);
+  return json({error:label+" belum bisa diproses oleh provider gratis. "+(primaryError||"Provider tidak mengembalikan hasil.")+" "+(guidance[key]||"Periksa kembali tautan publik."),provider:"Fallback cascade",fallbackTried:key==="tiktok"},502);
 }
 
 function mediaAsciiAt(bytes,offset,value){
@@ -928,7 +937,7 @@ function socialImageProxyUrl(raw,requestUrl,filename,download=false,sourceUrl=""
   return out.href;
 }
 function collectImageUrls(value,output,depth=0,forceImage=false){
-  if(depth>6||value==null)return;
+  if(depth>12||value==null)return;
   if(typeof value==="string"){
     const candidate=value.replace(/\\u0026/g,"&").replace(/\\u003d/g,"=").replace(/\\//g,"/");
     if(/^https?:\/\//i.test(candidate)&&(forceImage||/\.(?:jpe?g|png|webp|gif|avif|bmp)(?:[?#]|$)/i.test(candidate)||/image|photo|picture/i.test(candidate)))output.push(candidate);
@@ -936,9 +945,9 @@ function collectImageUrls(value,output,depth=0,forceImage=false){
   }
   if(Array.isArray(value)){for(const item of value.slice(0,80))collectImageUrls(item,output,depth+1,forceImage);return}
   if(typeof value==="object"){
-    for(const key of ["url","urlList","url_list","contentUrl","image","images","photo","photos","picture","pictures","src","displayImage","display_image","imageURL","image_urls","display_url","download_url","image_url","original","large","thumbnail_src","media_url","media_url_https","originCover","origin_cover","cover","imagePost","image_post","photoPost","photo_post","carousel","gallery","itemInfo","item_info","itemStruct","item_struct","itemModule","item_module","itemList","item_list","data","props","pageProps","result","results","post","postInfo","post_info","webapp.video-detail","aweme_detail","awemeDetail","videoDetail","video_detail","__DEFAULT_SCOPE__"]){
+    for(const key of ["url","urlList","url_list","contentUrl","image","images","photo","photos","picture","pictures","src","displayImage","display_image","imageURL","image_urls","display_url","download_url","image_url","original","large","thumbnail_src","thumbnail_url","thumbnail_resources","media_url","media_url_https","originCover","origin_cover","cover","imagePost","image_post","photoPost","photo_post","image_versions2","image_versions","image_candidates","display_resources","displayResources","candidates","carousel","carousel_media","edge_sidecar_to_children","edges","node","gallery","resources","items","media","itemInfo","item_info","itemStruct","item_struct","itemModule","item_module","itemList","item_list","data","props","pageProps","result","results","post","postInfo","post_info","shortcode_media","graphql","webapp.video-detail","aweme_detail","awemeDetail","videoDetail","video_detail","__DEFAULT_SCOPE__"]){
       const normalizedKey=key.toLowerCase();
-      if(value[key]!==undefined)collectImageUrls(value[key],output,depth+1,["image","images","photo","photos","picture","pictures","image_url","displayimage","display_image","imageurl","image_urls","urllist","url_list","origincover","origin_cover","imagepost","image_post","photopost","photo_post","carousel","gallery"].includes(normalizedKey)||forceImage);
+      if(value[key]!==undefined)collectImageUrls(value[key],output,depth+1,["image","images","photo","photos","picture","pictures","image_url","displayimage","display_image","imageurl","image_urls","urllist","url_list","origincover","origin_cover","imagepost","image_post","photopost","photo_post","image_versions2","image_versions","image_candidates","display_resources","carousel","carousel_media","edge_sidecar_to_children","thumbnail_resources","candidates","gallery"].includes(normalizedKey)||forceImage);
     }
   }
 }
@@ -975,7 +984,7 @@ function extractSocialImageCandidates(html,pageUrl,platform){
     const attrs=match[1]||"",body=String(match[2]||"").trim();
     if(!body||body.length>2500000)continue;
     const id=attrs.match(/\bid=["']([^"']+)["']/i)?.[1]||"";
-    if(!/__UNIVERSAL_DATA_FOR_REHYDRATION__|SIGI_STATE|__NEXT_DATA__/i.test(id)&&!/"(?:imagePost|photoPost|image_post|photo_post|imageURL|urlList)"/i.test(body))continue;
+    if(!/__UNIVERSAL_DATA_FOR_REHYDRATION__|SIGI_STATE|__NEXT_DATA__/i.test(id)&&!/"(?:imagePost|photoPost|image_post|photo_post|imageURL|urlList|display_url|image_versions2|carousel_media|edge_sidecar_to_children|shortcode_media|thumbnail_resources)"/i.test(body))continue;
     let parsed=null;
     try{parsed=JSON.parse(body)}catch{
       const first=body.indexOf("{"),last=body.lastIndexOf("}");
@@ -994,7 +1003,7 @@ function extractSocialImageCandidates(html,pageUrl,platform){
     const srcset=attrs.srcset||"";for(const part of srcset.split(",")){const url=part.trim().split(/\s+/)[0];if(url)try{add(new URL(url,pageUrl).href,"html-image")}catch{}}
   }
   if(hasVideoMeta&&platform!=="pinterest"&&platform!=="reddit"&&!isTikTokPhotoRoute){
-    const explicitPhoto=/photo.?mode|image.?post|carousel|multi.?photo|gallery|photo_mode|image_post/i.test(html);
+    const explicitPhoto=/photo.?mode|image.?post|carousel|multi.?photo|gallery|photo_mode|image_post|display_url|image_versions2|carousel_media|edge_sidecar_to_children|shortcode_media/i.test(html);
     if(!explicitPhoto)return [];
   }
   return found.slice(0,35);
@@ -1032,6 +1041,62 @@ async function fetchSocialPostHtml(pageUrl,timeoutMs=18000){
   }
   throw new Error("Terlalu banyak pengalihan dari halaman postingan.");
 }
+function canonicalSocialPostUrl(rawUrl,key){
+  try{
+    const u=new URL(rawUrl);
+    if(key==="instagram"){
+      const match=u.pathname.match(/^\/(p|reel|reels|tv)\/([^/]+)/i);
+      if(match)return "https://www.instagram.com/"+match[1].toLowerCase()+"/"+match[2]+"/";
+    }
+    return u.href;
+  }catch{return rawUrl}
+}
+async function resolveSocialShortLink(rawUrl,key,timeoutMs=11000){
+  const canonical=canonicalSocialPostUrl(rawUrl,key);
+  let input;try{input=new URL(canonical)}catch{return canonical}
+  const host=input.hostname.toLowerCase();
+  const shortLink=(key==="tiktok"&&/^(?:vt|vm)\.tiktok\.com$/.test(host))
+    ||(key==="instagram"&&host==="instagr.am")
+    ||(key==="facebook"&&host==="fb.watch")
+    ||(key==="pinterest"&&host==="pin.it");
+  if(!shortLink)return canonical;
+  try{
+    const page=await fetchSocialPostHtml(canonical,timeoutMs);
+    const finalUrl=canonicalSocialPostUrl(page.url,key);
+    if(platformIdForUrl(finalUrl)===key)return finalUrl;
+  }catch{}
+  return canonical;
+}
+async function fetchTikwmData(rawUrl,timeoutMs=10000){
+  const endpoint=new URL("https://www.tikwm.com/api/");
+  endpoint.searchParams.set("url",rawUrl);
+  endpoint.searchParams.set("hd","1");
+  const response=await fetch(endpoint.href,{headers:{accept:"application/json","user-agent":"Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 Chrome/130.0.0.0 Mobile Safari/537.36"},signal:AbortSignal.timeout(timeoutMs),cache:"no-store"});
+  const payload=await response.json().catch(()=>null);
+  if(!response.ok||!payload||Number(payload.code)!==0||!payload.data||typeof payload.data!=="object")
+    throw new Error("TikWM HTTP "+response.status+": "+String(payload?.msg||payload?.message||"respons tidak berisi data media").slice(0,100));
+  return payload.data;
+}
+async function tikwmFallbackMediaInfo(rawUrl,requestUrl){
+  const data=await fetchTikwmData(rawUrl,10000),media=[],seen=new Set();
+  const add=(url,label,type,ext,mimeType)=>{
+    if(typeof url!=="string"||!url.trim()||seen.has(url))return;
+    const safe=safePublicMediaUrl(url);if(!safe)return;seen.add(safe.href);
+    media.push({type,kind:type,label,url:safe.href,ext,mimeType});
+  };
+  add(data.hdplay,"MP4 HD","video","mp4","video/mp4");
+  add(data.play,"MP4 tanpa watermark","video","mp4","video/mp4");
+  add(data.wmplay,"MP4 dengan watermark","video","mp4","video/mp4");
+  add(data.music,"Audio MP3","audio","mp3","audio/mpeg");
+  if(!media.some(item=>item.type==="video"))throw new Error("TikWM tidak memberikan stream video MP4.");
+  const normalized=freeProviderMediaInfo({normalized:{title:data.title||"Video TikTok",thumbnail:data.origin_cover||data.cover,duration:Number(data.duration)||0,media}},rawUrl,requestUrl);
+  if(!normalized)throw new Error("Stream TikWM tidak lolos normalisasi media.");
+  normalized.providerName="TikWM fallback";
+  normalized.provider="TikWM public API";
+  normalized.fallbackUsed=true;
+  normalized.author=data.author?.nickname||data.author?.unique_id||null;
+  return normalized;
+}
 function providerImageCandidates(data){
   const output=[],n=data?.normalized||{},r=data?.result||{};
   const add=(list,assumeImage)=>{
@@ -1065,27 +1130,41 @@ async function resolveSocialImagePost(rawUrl,requestUrl,options={}){
   const providerKey=freePlatformKey(rawUrl);
   const key=platformIdForUrl(rawUrl)||providerKey;
   if(!key)return null;
-  let providerTitle="",providerImages=[];
-  const providerUrl=FREE_MEDIA_API+"/api/download/"+(providerKey||key)+"?url="+encodeURIComponent(rawUrl);
+  const canonicalUrl=canonicalSocialPostUrl(rawUrl,key);
+  let providerTitle="",providerImages=[],tikwmImages=[];
+  const providerUrl=FREE_MEDIA_API+"/api/download/"+(providerKey||key)+"?url="+encodeURIComponent(canonicalUrl);
   // Experimental catalogue entries still get safe public-page metadata extraction;
   // only established provider keys are sent to the community extractor API.
   const includeProvider=options.includeProvider!==false&&providerKey!=="aio";
   const tasks=[
-    includeProvider?fetch(providerUrl,{headers:{accept:"application/json"},signal:AbortSignal.timeout(Number(options.providerTimeoutMs)||14000),cache:"no-store"}).then(async response=>{
+    includeProvider?fetch(providerUrl,{headers:{accept:"application/json"},signal:AbortSignal.timeout(Number(options.providerTimeoutMs)||12000),cache:"no-store"}).then(async response=>{
       if(!response.ok)throw new Error("Provider gambar HTTP "+response.status);
       const data=await response.json().catch(()=>({}));
       if(data?.success===false)throw new Error("Provider tidak mendukung konten gambar ini.");
       providerTitle=String(data?.normalized?.title||data?.result?.title||data?.result?.caption||"").slice(0,240);
       providerImages=providerImageCandidates(data);
     }).catch(()=>{}):Promise.resolve(),
-    fetchSocialPostHtml(rawUrl,Number(options.timeoutMs)||18000).then(page=>{
-      const images=extractSocialImageCandidates(page.html,page.url,key);
-      return {html:page.html,url:page.url,images};
-    }).catch(()=>null)
+    (async()=>{
+      let page=await fetchSocialPostHtml(canonicalUrl,Number(options.timeoutMs)||12000).then(result=>({...result,images:extractSocialImageCandidates(result.html,result.url,key)})).catch(()=>null);
+      if((!page||!page.images?.length)&&key==="instagram"){
+        const shortcode=canonicalUrl.match(/\/(?:p|reel|reels|tv)\/([^/]+)/i)?.[1];
+        if(shortcode){
+          const variants=["https://www.instagram.com/p/"+shortcode+"/embed/captioned/","https://www.instagram.com/p/"+shortcode+"/embed/"];
+          const fallbacks=await Promise.all(variants.map(url=>fetchSocialPostHtml(url,8500).then(result=>({...result,images:extractSocialImageCandidates(result.html,result.url,key)})).catch(()=>null)));
+          const best=fallbacks.filter(Boolean).sort((a,b)=>(b.images?.length||0)-(a.images?.length||0))[0];
+          if(best&&(!page||(best.images?.length||0)>(page.images?.length||0)))page=best;
+        }
+      }
+      return page;
+    })(),
+    key==="tiktok"?fetchTikwmData(canonicalUrl,9000).then(data=>{
+      providerTitle=providerTitle||String(data.title||"").slice(0,240);
+      tikwmImages=providerImageCandidates({normalized:{images:data.images,photos:data.photos,gallery:data.gallery}});
+    }).catch(()=>{}):Promise.resolve()
   ];
   const page=await tasks[1];
-  await tasks[0];
-  const rawCandidates=[...(page?.images||[]).map(item=>({...item,type:"image",source:item.source||"post-page"})),...providerImages.map(item=>({...item,url:item.url,source:"provider",type:item.type||item.kind||item.media_type||"image",mime_type:item.mime_type||item.mime||item.content_type||"",width:item.width||item.w||0,height:item.height||item.h||0,ext:item.ext||item.extension||""}))];
+  await Promise.all([tasks[0],tasks[2]]);
+  const rawCandidates=[...(page?.images||[]).map(item=>({...item,type:"image",source:item.source||"post-page"})),...providerImages.map(item=>({...item,url:item.url,source:"provider",type:item.type||item.kind||item.media_type||"image",mime_type:item.mime_type||item.mime||item.content_type||"",width:item.width||item.w||0,height:item.height||item.h||0,ext:item.ext||item.extension||""})),...tikwmImages.map(item=>({...item,url:item.url,source:"TikWM",type:"image"}))];
   const seen=new Set(),images=[];
   for(const item of rawCandidates){
     const safe=safePublicMediaUrl(item.url);if(!safe||seen.has(safe.href))continue;
@@ -1109,7 +1188,7 @@ async function resolveSocialImagePost(rawUrl,requestUrl,options={}){
   }
   if(!images.length)return null;
   const title=providerTitle||decodeSearchHtml((page?.html||"").match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1]||"Postingan gambar").slice(0,240);
-  const canonicalSourceUrl=page?.url||rawUrl;
+  const canonicalSourceUrl=page?.url||canonicalUrl;
   for(const image of images){image.sourceUrl=canonicalSourceUrl;image.previewUrl=socialImageProxyUrl(image.url,requestUrl,image.filename,false,canonicalSourceUrl);image.downloadUrl=socialImageProxyUrl(image.url,requestUrl,image.filename,true,canonicalSourceUrl)}
   return {title,url:canonicalSourceUrl,platform:key,provider:providerKey==="aio"?"public-page-metadata":"provider-and-public-page",verified:true,images};
 }
