@@ -30,7 +30,11 @@ for (const match of html.matchAll(/\bid=["']([^"']+)["']/g)) idCounts.set(match[
 const duplicateIds = [...idCounts].filter(([, count]) => count > 1).map(([id]) => id);
 
 const learningCenter = read("../public/learning-center.js");
+const learningCenter = read("../public/learning-center.js");
+const learningCss = read("../public/learning-center.css");
 const checks = [
+  ["V94.3 places a video tutorial launcher directly inside each supported tool panel", learningCenter.includes('className="lc-inline-launch"') && learningCenter.includes('root.prepend(launch)') && learningCenter.includes('el.scrollIntoView')],
+  ["V94.3 inline tutorial launcher has responsive accessible styling", learningCss.includes(".lc-inline-launch") && learningCss.includes("@media(max-width:480px)")],
   ["V94 tutorials cover requested tools and members/visitors", ["linkBypass","mediaStudio","queue","editor","musicFinder","audioStudio","imageTools","pdfTools","fileHash","colorStudio","speed","checker","members"].every(id => learningCenter.includes(id+":"))],
   ["V94 tutorials support vertical/horizontal preview and manual voice with soundtrack", learningCenter.includes('data-r="9:16"') && learningCenter.includes('data-r="16:9"') && learningCenter.includes('getUserMedia') && learningCenter.includes('mixVoiceAndMusic')],
   ["V93.0 Link Bypass panel and Worker resolver are wired",html.includes('id="linkBypass"')&&html.includes('/link-bypass.js?v=93.0')&&worker.includes('url.pathname==="/api/link-bypass"')&&linkBypassJs.includes('Periksa tujuan')],
