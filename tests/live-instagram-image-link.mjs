@@ -1,6 +1,6 @@
 const base=(process.env.WORKER_URL||"https://aryanzz-donwloader.radithnyahaniphanip.workers.dev").replace(/\/$/,"");
 const sourceUrl="https://www.instagram.com/p/Dek72MYE141/?xtok=OWdvNjR4dmZscnlx";
-const report={test:"user-supplied Instagram post image and video extraction",sourceUrl,status:null,title:null,platform:null,imageCount:0,previewStatus:null,previewMime:null,previewDisposition:null,signatureValid:false,downloadUrlAvailable:false,videoInfoStatus:null,videoFormatCount:0,videoProbeStatus:null,videoProbeMime:null,videoProbeValid:false,videoProbeAttempts:[],videoError:null,error:null};
+const report={test:"user-supplied Instagram post image and video extraction",sourceUrl,status:null,title:null,platform:null,imageCount:0,previewStatus:null,previewMime:null,previewDisposition:null,signatureValid:false,downloadUrlAvailable:false,videoInfoStatus:null,videoInfoType:null,imageOnly:false,videoFormatCount:0,videoProbeStatus:null,videoProbeMime:null,videoProbeValid:false,videoProbeAttempts:[],videoError:null,error:null};
 try{
   const endpoint=new URL("/api/image/extract",base);endpoint.searchParams.set("url",sourceUrl);
   const response=await fetch(endpoint.href,{headers:{accept:"application/json"},cache:"no-store",signal:AbortSignal.timeout(35000)});
@@ -35,6 +35,8 @@ try{
     const videoInfoResponse=await fetch(base+"/api/platform/info",{method:"POST",headers:{"content-type":"application/json",accept:"application/json"},body:JSON.stringify({url:sourceUrl,expectedPlatform:"instagram"}),cache:"no-store",signal:AbortSignal.timeout(45000)});
     report.videoInfoStatus=videoInfoResponse.status;
     const videoInfo=await videoInfoResponse.json().catch(()=>({}));
+    report.videoInfoType=videoInfo.type||null;
+    report.imageOnly=videoInfo.imageOnly===true;
     const videoFormats=(videoInfo.formats||[]).filter(item=>item?.mode==="video"&&item?.downloadUrl);
     report.videoFormatCount=videoFormats.length;
     if(videoFormats.length){
@@ -63,7 +65,7 @@ try{
         }
       }
       if(!report.videoProbeValid)report.videoError=String(report.videoProbeAttempts.at(-1)?.error||"Empat format video pertama tidak lolos validasi.").slice(0,180);
-    }else report.videoError=String(videoInfo.error||"Tidak ada stream video pada postingan ini.").slice(0,180);
+    }else report.videoError=report.imageOnly?"Postingan Instagram ini berisi foto, bukan video. Galeri foto tersedia untuk diunduh.":String(videoInfo.error||"Tidak ada stream video pada postingan ini.").slice(0,180);
   }catch(error){report.videoError=String(error?.message||error).slice(0,180)}
   console.log("[INSTAGRAM-USER-LINK-RESULT] "+JSON.stringify(report));
 }catch(error){
