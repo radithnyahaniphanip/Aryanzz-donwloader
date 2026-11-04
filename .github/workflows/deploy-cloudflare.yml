@@ -87,6 +87,9 @@ jobs:
           else
             printf '%s' "$AUDD_API_TOKEN" | wrangler secret put AUDD_API_TOKEN
           fi
+      - name: Export exact expected build version
+        run: |
+          node --input-type=module -e 'import { BUILD_VERSION } from "./src/build-version.js"; process.stdout.write("EXPECTED_BUILD_VERSION=" + BUILD_VERSION + "\\n")' >> "$GITHUB_ENV"
       - name: Verify live Cloudflare deployment
         env:
           WORKER_URL: https://aryanzz-donwloader.radithnyahaniphanip.workers.dev
