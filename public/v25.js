@@ -72,7 +72,6 @@
       safeSet("aryanzz.member.since.v25",since);
     }
     const parts=/^\d{4}-\d{2}-\d{2}$/.test(since)?since.split("-").map(Number):null;
-    const parts=/^\\d{4}-\\d{2}-\\d{2}$/.test(since)?since.split("-").map(Number):null;
     const joined=parts?new Date(parts[0],parts[1]-1,parts[2]):new Date(since);
     if($("profileSince"))$("profileSince").textContent=(Number.isNaN(joined.getTime())?new Date():joined).toLocaleDateString("id-ID",{day:"2-digit",month:"short",year:"numeric"});
   }
