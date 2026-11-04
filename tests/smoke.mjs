@@ -229,7 +229,7 @@ const checks=[
   ["V84.7 platform picker renders all 20 services including Lite, Snapchat, IDN App, LinkedIn, WeChat and KakaoTalk",["youtube","tiktok","instagram","snackvideo","capcut","pinterest","facebook","x","reddit","vimeo","threads","soundcloud","tiktoklite","facebooklite","snapchat","idnapp","instagramlite","linkedin","wechat","kakaotalk"].every(id=>html.includes('data-platform="'+id+'"'))],
   ["V80.0 platform picker uses a five-column CSS grid with no horizontal scroll",downloaderCss.includes("grid-template-columns:repeat(5,minmax(0,1fr))!important")&&downloaderCss.includes("overflow:visible!important")&&downloaderCss.includes("min-width:0!important")],
   ["V80.0 narrow-screen overrides no longer force 74px platform cards or nowrap labels",v674Css.includes(".v736-platform{min-width:0}")&&v674Css.includes(".v736-platform span:last-child{white-space:normal}")&&!v674Css.includes("min-width:74px")],
-  ["V84.7 platform logos have consistent branded icon tiles and responsive labels",downloaderCss.includes(".v736-logo{")&&downloaderCss.includes(".v736-instagram{")&&downloaderCss.includes("overflow-wrap:anywhere")&&html.includes("20 PLATFORM")],
+  ["V92.5 platform logos use branded icon tiles and responsive labels",downloaderCss.includes(".v736-logo{")&&downloaderCss.includes(".v736-instagram{")&&downloaderCss.includes("overflow-wrap:anywhere")&&(html.match(/data-platform=/g)||[]).length===20],
   ["V80.0 Reddit short video host v.redd.it routes through the Reddit provider",workerSource.includes('"v.redd.it":"reddit"')&&workerSource.includes('id:"reddit",domains:["reddit.com","redd.it","v.redd.it"]')],
 
 
