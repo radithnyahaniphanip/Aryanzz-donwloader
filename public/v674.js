@@ -8,6 +8,7 @@ function initTheme(){document.body.dataset.theme=localStorage.getItem(THEME)||"d
 function initSearch(){
 const a=$("downloadLinkMode"),b=$("downloadTitleMode"),x=$("linkModePanel"),y=$("titleModePanel"),picker=$("platformPicker");
 const results=$("titleSearchResults"),help=$("titleSearchHelp"),searchInput=$("titleSearch"),searchType=$("titleSearchType");
+const linkInput=$("url"),linkLabel=$("linkModePanel")?.querySelector("label");
 // Hanya sediakan pencarian Video dan Gambar; konversi MP4 ke MP3 berada di Pusat Alat.
 // All-platform mode searches the complete supported platform list.
 searchType?.querySelectorAll('option[value="audio"]').forEach(node=>node.remove());
@@ -34,13 +35,67 @@ const platforms={
  kakaotalk:{name:"KakaoTalk",url:q=>"https://www.google.com/search?q="+encodeURIComponent("site:kakao.com "+q)}
 };
 let selected="youtube",searchController=null,pageSize=10,currentPage=1;
+const PLATFORM_GUIDES={
+ youtube:{link:"Tempel tautan video, Shorts, atau audio YouTube…",search:"Cari judul video YouTube…",videoHelp:"YouTube: periksa video atau Shorts publik, lalu pilih format dan kualitas yang tersedia.",imageHelp:"YouTube: cari gambar atau thumbnail publik. Hasil gambar dipisahkan dari hasil video."},
+ tiktok:{link:"Tempel tautan TikTok: video atau Photo Mode…",search:"Cari judul video atau foto TikTok…",videoHelp:"TikTok: tautan video diperiksa sebagai MP4; Photo Mode menampilkan foto asli dan bisa dibuat menjadi video slideshow lokal tanpa audio sumber.",imageHelp:"TikTok Photo Mode: cari postingan foto, tampilkan seluruh gambar yang berhasil ditemukan, lalu unduh satu per satu."},
+ instagram:{link:"Tempel tautan Reels, postingan foto, atau carousel Instagram…",search:"Cari Reels atau postingan foto Instagram…",videoHelp:"Instagram: periksa Reels/video publik. Postingan carousel akan diperiksa terpisah untuk foto asli.",imageHelp:"Instagram: cari postingan foto atau carousel publik dan unduh foto yang dapat diakses."},
+ snackvideo:{link:"Tempel tautan berbagi video SnackVideo…",search:"Cari judul atau caption video SnackVideo…",videoHelp:"SnackVideo: gunakan tautan berbagi postingan publik. Stream akan divalidasi sebelum unduhan.",imageHelp:"SnackVideo: pemeriksaan foto hanya berhasil jika sumber publik mengekspos file gambar asli."},
+ pinterest:{link:"Tempel tautan Pin Pinterest (foto atau video)…",search:"Cari Pin foto atau video Pinterest…",videoHelp:"Pinterest: periksa Pin video dan MP4 yang disediakan sumber.",imageHelp:"Pinterest: periksa Pin foto, tampilkan gambar asli, dan unduh gambar yang tersedia."},
+ facebook:{link:"Tempel tautan postingan, Reels, foto, atau album Facebook…",search:"Cari video atau foto Facebook…",videoHelp:"Facebook: periksa video/Reels publik dan validasi stream sebelum unduhan.",imageHelp:"Facebook: periksa foto atau album publik; hasil gambar ditampilkan sebagai galeri."},
+ x:{link:"Tempel tautan postingan X (video atau gambar)…",search:"Cari postingan video atau gambar di X…",videoHelp:"X: periksa video yang dilampirkan pada postingan publik.",imageHelp:"X: periksa gambar yang dilampirkan pada postingan publik."},
+ reddit:{link:"Tempel tautan postingan Reddit (video atau gambar)…",search:"Cari postingan video atau gambar Reddit…",videoHelp:"Reddit: periksa video publik; beberapa sumber mengirim audio terpisah.",imageHelp:"Reddit: periksa galeri gambar pada postingan publik."},
+ threads:{link:"Tempel tautan postingan Threads (foto atau video)…",search:"Cari postingan Threads…",videoHelp:"Threads: periksa video publik yang benar-benar memiliki stream media.",imageHelp:"Threads: periksa foto dan galeri pada postingan publik."},
+ capcut:{link:"Tempel tautan hasil video publik CapCut…",search:"Cari template atau video CapCut…",videoHelp:"CapCut: gunakan tautan hasil ekspor yang dapat diputar publik; draft privat tidak dapat diambil.",imageHelp:"CapCut: foto sampul atau media gambar hanya tersedia jika tautan publik mengekspos file aslinya."},
+ vimeo:{link:"Tempel tautan video Vimeo…",search:"Cari judul video Vimeo…",videoHelp:"Vimeo: periksa video publik yang tidak dilindungi kata sandi.",imageHelp:"Vimeo: gambar hanya tersedia jika halaman publik mengekspos media gambar asli."},
+ soundcloud:{link:"Tempel tautan lagu atau audio SoundCloud…",search:"Cari judul lagu SoundCloud…",videoHelp:"SoundCloud adalah platform audio; hasilnya tidak akan dipaksakan menjadi MP4.",imageHelp:"SoundCloud: pencarian gambar tidak tersedia untuk konten audio."}
+};
 const setMode=v=>{const link=v==="link";if(link&&selected==="all")setPlatform("youtube");if(x)x.hidden=!link;if(y)y.hidden=link;const allButton=picker?.querySelector('[data-platform="all"]');if(allButton)allButton.hidden=link;if(a){a.classList.toggle("active",link);a.setAttribute("aria-selected",String(link))}if(b){b.classList.toggle("active",!link);b.setAttribute("aria-selected",String(!link))}};
 a?.addEventListener("click",()=>setMode("link"));b?.addEventListener("click",()=>setMode("title"));
-const setPlatform=id=>{const next=(id==="all"||platforms[id])?id:"youtube";window.aryanzzSelectedPlatform=()=>selected;if(next!==selected){searchController?.abort();const urlInput=$("url"),downloadResult=$("downloadResult");if(urlInput)urlInput.value="";if(downloadResult){downloadResult.replaceChildren();downloadResult.hidden=true;}if(results){results.replaceChildren();results.hidden=true;}if(help)help.textContent="Platform berubah ke "+(next==="all"?"Semua 200 Platform":(platforms[next]?.name||"platform pilihan"))+". Tempel tautan atau mulai pencarian baru.";if(searchInput)searchInput.value="";document.dispatchEvent(new Event("aryanzz:platform-change"));}selected=next;picker?.querySelectorAll("[data-platform]").forEach(btn=>{const active=btn.dataset.platform===selected;btn.classList.toggle("active",active);btn.setAttribute("aria-pressed",String(active))});const name=selected==="all"?"SEMUA 200 PLATFORM":platforms[selected].name.toUpperCase();const label=y?.querySelector("label");if(label)label.textContent="SMART SEARCH · "+name;if(searchInput)searchInput.placeholder="Contoh: DJ Alan Walker, Tabola Bale, gambar kucing…";if(searchType)searchType.value=selected==="pinterest"?"image":"video";picker?.setAttribute("data-selected-platform",selected);updateSearchHelp();};
+const setPlatform=id=>{
+ const next=(id==="all"||platforms[id])?id:"youtube";
+ window.aryanzzSelectedPlatform=()=>selected;
+ if(next!==selected){
+  searchController?.abort();
+  if(linkInput)linkInput.value="";
+  const downloadResult=$("downloadResult");
+  if(downloadResult){downloadResult.replaceChildren();downloadResult.hidden=true;}
+  if(results){results.replaceChildren();results.hidden=true;}
+  if(help)help.textContent="Platform berubah ke "+(next==="all"?"Semua 200 Platform":(platforms[next]?.name||"platform pilihan"))+". Panduan tempel tautan dan pencarian ikut menyesuaikan.";
+  if(searchInput)searchInput.value="";
+  document.dispatchEvent(new Event("aryanzz:platform-change"));
+ }
+ selected=next;
+ picker?.querySelectorAll("[data-platform]").forEach(btn=>{
+  const active=btn.dataset.platform===selected;
+  btn.classList.toggle("active",active);btn.setAttribute("aria-pressed",String(active));
+ });
+ const entry=platformCatalog.find(platform=>platform.id===selected);
+ const name=selected==="all"?"Semua 200 platform":(platforms[selected]?.name||entry?.name||selected);
+ const modes=entry?.mediaModes||[];
+ const guide=PLATFORM_GUIDES[selected]||{};
+ if(linkLabel)linkLabel.textContent=selected==="all"?"TEMPEL TAUTAN MEDIA":"TEMPEL TAUTAN "+name.toUpperCase();
+ if(linkInput){
+  const types=[modes.includes("video")?"video":"",modes.includes("image")?"foto":"",modes.includes("audio")?"audio":""].filter(Boolean).join(" atau ");
+  linkInput.placeholder=guide.link||(types?"Tempel tautan "+name+" ("+types+")…":"Tempel tautan publik "+name+"…");
+ }
+ const searchLabel=y?.querySelector("label");
+ if(searchLabel)searchLabel.textContent="CARI JUDUL · "+name.toUpperCase();
+ if(searchInput)searchInput.placeholder=guide.search||"Cari judul atau kata kunci di "+name+"…";
+ if(searchType)searchType.value=selected==="pinterest"||(!modes.includes("video")&&modes.includes("image"))?"image":"video";
+ picker?.setAttribute("data-selected-platform",selected);
+ updateSearchHelp();
+};
 picker?.addEventListener("click",e=>{const btn=e.target.closest("[data-platform]");if(btn)setPlatform(btn.dataset.platform)});
 window.aryanzzSelectedPlatform=()=>selected;picker?.setAttribute("data-selected-platform",selected);
 setMode("link");
-const updateSearchHelp=()=>{if(!help)return;const mode=searchType?.value||"video";const scope=selected==="all"?"seluruh 200 platform":"khusus "+platforms[selected].name;if(mode==="image")help.textContent="Gambar: hasil foto, meme, wallpaper, dan PNG dari "+scope+". Hasil gambar tidak dicampur dengan video.";else help.textContent="Video: cari klip, Green Screen, meme, tutorial, dan topik lainnya dari "+scope+". Hasil dikelompokkan menurut sumber.";};
+const updateSearchHelp=()=>{
+ if(!help)return;
+ const mode=searchType?.value||"video";
+ const name=selected==="all"?"semua 200 platform":(platforms[selected]?.name||selected);
+ const guide=PLATFORM_GUIDES[selected]||{};
+ if(mode==="image")help.textContent=guide.imageHelp||"Foto dan gambar publik dari "+name+". ARYANZZ menampilkan gambar yang benar-benar dapat dibaca dari sumber; hasil kosong tidak akan dibuat-buat.";
+ else help.textContent=guide.videoHelp||"Cari video publik di "+name+". Tautan diperiksa sesuai format media yang benar-benar disediakan sumber.";
+};
 searchType?.addEventListener("change",updateSearchHelp);
 const duration=v=>{if(!Number.isFinite(Number(v)))return "";const n=Math.max(0,Math.floor(Number(v)));return Math.floor(n/60)+":"+String(n%60).padStart(2,"0")};
 const SEARCH_PLATFORM_ALIASES={tiktoklite:"tiktok",instagramlite:"instagram",facebooklite:"facebook",twitter:"x"};
@@ -85,10 +140,15 @@ function renderPlatformPage(nextPage){
    if(source&&oldLogo)oldLogo.replaceWith(source.cloneNode(true));
   }
   const oldTier=button.querySelector(".v736-platform-tier");
-  if(platform.extractorStatus==="experimental"){
-   const tier=oldTier||document.createElement("small");tier.className="v736-platform-tier";tier.textContent="Uji coba";
-   if(!oldTier)button.append(tier);
-  }else oldTier?.remove();
+  const modeLabels=(platform.mediaModes||[]).map(mode=>({video:"Video",image:"Foto",audio:"Audio"}[mode]||"")).filter(Boolean);
+  const tier=oldTier||document.createElement("small");
+  tier.className="v736-platform-tier";
+  tier.dataset.status=platform.extractorStatus||"experimental";
+  tier.textContent=(platform.extractorStatus==="experimental"?"Auto · ":"")+(modeLabels.join(" + ")||"Tautan");
+  tier.title=platform.extractorStatus==="experimental"
+    ?"Provider komunitas dan deteksi otomatis; keberhasilan bergantung pada akses publik serta format yang disediakan platform."
+    :"Jalur provider khusus; jenis media mengikuti format yang benar-benar tersedia dari sumber.";
+  if(!oldTier)button.append(tier);
   button.classList.toggle("active",button.dataset.platform===selected);
   button.setAttribute("aria-pressed",String(button.dataset.platform===selected));
   picker.append(button);
@@ -116,7 +176,7 @@ async function loadPlatformCatalog(){
    try{const host=new URL(raw).hostname.toLowerCase().replace(/^www\./,"");const found=platformCatalog.find(platform=>(platform.domains||[]).some(domain=>host===domain||host.endsWith("."+domain)));return found?.aliasOf||found?.id||null}catch{return null}
   };
   window.aryanzzPlatformNameForId=id=>platforms[id]?.name||platformCatalog.find(platform=>platform.id===id)?.name||id;
-  renderPlatformPage(1);updateSearchHelp();
+  renderPlatformPage(1);setPlatform(selected);
  }catch(error){if(platformPager)platformPager.hidden=true;console.warn("ARYANZZ platform catalogue:",error)}
 }
 platformPrev?.addEventListener("click",()=>renderPlatformPage(platformPage-1));

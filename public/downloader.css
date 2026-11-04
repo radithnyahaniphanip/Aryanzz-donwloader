@@ -297,3 +297,44 @@ body[data-motion="off"] .youtube-result .progress-fill{animation:none!important;
 .v674-search-results .v674-image-results{grid-column:1/-1;min-width:0}
 @media(max-width:720px){.v674-search-results{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.v674-search-result.v737-media-result{padding:8px}}
 @media(max-width:360px){.v674-search-results{gap:7px}.v674-search-result.v737-media-result h3{font-size:11px}}
+
+/* V94.26 — clearer platform pager and separated link/search sections */
+.v736-platform-pager{
+  display:grid!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  align-items:stretch!important;
+  gap:9px!important;
+  margin:16px 0 26px!important;
+  padding:13px 0 18px!important;
+  border-top:1px solid #263b59!important;
+  border-bottom:1px solid #263b59!important;
+}
+.v736-platform-pager[hidden]{display:none!important}
+#platformPageLabel{
+  grid-column:1/-1!important;
+  grid-row:1!important;
+  white-space:normal!important;
+  line-height:1.5!important;
+  padding:0 8px 4px!important;
+  font-size:11px!important;
+}
+.v736-platform-pager button,
+.v736-platform-pager button:last-child{
+  width:100%!important;
+  min-width:0!important;
+  min-height:44px!important;
+  justify-self:stretch!important;
+}
+.v736-platform-tier[data-status="experimental"]{color:#f0c16d}
+.v736-platform-tier[data-status="dedicated"]{color:#70e0b2}
+#linkModePanel,#titleModePanel{margin-top:8px;padding-top:2px}
+#linkModePanel>.label,#titleModePanel>label{display:block;margin:0 0 10px;line-height:1.45}
+.v674-download .v80-platform-picker-head{margin:4px 1px 8px}
+.v674-download .v736-platforms{margin-bottom:0;padding-bottom:6px}
+.v674-download .v674-mode-switch{margin-bottom:18px}
+#downloadResult{margin-top:18px}
+@media(max-width:420px){
+  .v736-platform-pager{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important;margin:14px 0 22px!important;padding:12px 0 16px!important}
+  #platformPageLabel{font-size:10px!important}
+  .v736-platform-pager button{font-size:10px!important;padding:8px 5px!important}
+}
