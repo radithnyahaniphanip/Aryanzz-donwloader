@@ -1013,15 +1013,65 @@ function showPlatformGuide(u,platform){
  addExternalAction(out,'Buka video TikTok ↗',u.href);out.append(title,p,steps,note);
 }
 window.showYouTubeDownloader=showYouTubeDownloader;window.showPlatformGuide=showPlatformGuide;
+function aryPlatformForUrl(raw){
+ try{
+  const host=new URL(raw).hostname.toLowerCase().replace(/^www\\./,"");
+  const rules=[
+   [/^(?:youtube\\.com|youtu\\.be|youtube-nocookie\\.com)$/, "youtube"],
+   [/(?:^|\\.)tiktok\\.com$/, "tiktok"],[/(?:^|\\.)instagram\\.com$|^instagr\\.am$/, "instagram"],
+   [/(?:^|\\.)snackvideo\\.com$/, "snackvideo"],[/(?:^|\\.)capcut\\.com$/, "capcut"],
+   [/(?:^|\\.)pinterest\\.com$|^pin\\.it$/, "pinterest"],[/(?:^|\\.)facebook\\.com$|^fb\\.watch$/, "facebook"],
+   [/(?:^|\\.)(?:x\\.com|twitter\\.com)$/, "x"],[/(?:^|\\.)reddit\\.com$|^redd\\.it$|^v\\.redd\\.it$/, "reddit"],
+   [/(?:^|\\.)vimeo\\.com$/, "vimeo"],[/(?:^|\\.)threads\\.net$/, "threads"],
+   [/(?:^|\\.)soundcloud\\.com$/, "soundcloud"],[/(?:^|\\.)snapchat\\.com$/, "snapchat"],
+   [/(?:^|\\.)idntimes\\.com$/, "idnapp"],[/(?:^|\\.)linkedin\\.com$/, "linkedin"],
+   [/(?:^|\\.)(?:wechat\\.com|weixin\\.qq\\.com)$/, "wechat"],[/(?:^|\\.)kakao\\.com$/, "kakaotalk"]
+  ];
+  return rules.find(([pattern])=>pattern.test(host))?.[1]||null;
+ }catch{return null}
+}
+function arySelectedPlatform(){return document.querySelector("#platformPicker [data-platform].active")?.dataset.platform||"all"}
+function aryPlatformLabel(id){return ({youtube:"YouTube",tiktok:"TikTok",instagram:"Instagram",snackvideo:"SnackVideo",capcut:"CapCut",pinterest:"Pinterest",facebook:"Facebook",x:"X",reddit:"Reddit",vimeo:"Vimeo",threads:"Threads",soundcloud:"SoundCloud",snapchat:"Snapchat",idnapp:"IDN App",linkedin:"LinkedIn",wechat:"WeChat",kakaotalk:"KakaoTalk"})[id]||id}
+async function showUniversalPlatformDownloader(u,platform){
+ const out=$("downloadResult");out.hidden=false;out.replaceChildren();
+ const heading=document.createElement("b");heading.textContent=aryPlatformLabel(platform)+" terdeteksi";
+ const status=document.createElement("p");status.className="muted";status.textContent="Memeriksa tautan dan format media yang benar-benar tersedia…";out.append(heading,status);
+ try{
+  const response=await fetch(API+"/api/platform/info",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({url:u.href})});
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok||!data.ok)throw new Error(data.error||"Tautan tidak dapat diproses.");
+  status.textContent=(data.title||"Media ditemukan")+" · "+aryPlatformLabel(data.platform||platform)+" · "+(data.formats?.length||0)+" format tersedia.";
+  if(data.thumbnail){const img=document.createElement("img");img.src=data.thumbnail;img.alt="Thumbnail media";img.loading="lazy";img.style.cssText="display:block;width:100%;max-width:420px;aspect-ratio:16/9;object-fit:cover;border-radius:12px;margin:10px 0";out.append(img)}
+  const list=document.createElement("div");list.style.cssText="display:grid;gap:9px;margin-top:12px";
+  (data.formats||[]).forEach(format=>{
+   const row=document.createElement("div");row.className="result";row.style.cssText="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap";
+   const label=document.createElement("span");label.textContent=[format.mode==="audio"?"Audio":"Video",format.ext?.toUpperCase(),format.height?format.height+"p":"",format.label].filter(Boolean).join(" · ");
+   const link=document.createElement("a");link.className="primary";link.href=format.downloadUrl;link.textContent="Unduh";link.download=data.filename||"aryanzz-media";
+   row.append(label,link);list.append(row);
+  });
+  if(!(data.formats||[]).length)throw new Error("Provider mengenali tautan, tetapi tidak menyediakan format video/audio yang bisa diunduh.");
+  out.append(list);
+  if(data.platform==="soundcloud"){const note=document.createElement("p");note.className="muted";note.textContent="SoundCloud diproses sebagai audio. Format video tidak akan ditawarkan.";out.append(note)}
+ }catch(error){status.className="warning";status.textContent=error.message||"Gagal memeriksa tautan."}
+}
 $('analyze').onclick=async()=>{
- const out=$('downloadResult');out.hidden=false;out.innerHTML='';
+ const out=$('downloadResult');out.hidden=false;out.replaceChildren();
  const raw=$('url').value.trim();let u;
  try{u=new URL(raw);if(!['http:','https:'].includes(u.protocol))throw Error('Gunakan URL http atau https.')}
  catch(e){out.textContent=e.message||'Masukkan URL yang valid.';return}
- const ext=extOf(u);if(ext){showDirectMedia(u);return}
- const host=u.hostname.toLowerCase();
- if(host==='tiktok.com'||host.endsWith('.tiktok.com')){showPlatformGuide(u,'tiktok');return}
- if(host==='youtu.be'||host==='youtube.com'||host.endsWith('.youtube.com')||host==='youtube-nocookie.com'||host.endsWith('.youtube-nocookie.com')){showYouTubeDownloader(u);return}
+ const detected=aryPlatformForUrl(u.href),chosen=arySelectedPlatform();
+ const aliases={tiktoklite:"tiktok",instagramlite:"instagram",facebooklite:"facebook"};
+ const normalizedChosen=aliases[chosen]||chosen;
+ if(detected&&chosen!=="all"&&normalizedChosen!==detected){
+  const b=document.createElement("b"),p=document.createElement("p");
+  b.textContent="Platform tautan tidak sesuai.";
+  p.className="warning";p.textContent="Kamu memilih "+aryPlatformLabel(normalizedChosen)+", tetapi tautan ini berasal dari "+aryPlatformLabel(detected)+". Pilih "+aryPlatformLabel(detected)+" terlebih dahulu, atau pilih Semua 19 Platform.";
+  out.append(b,p);return;
+ }
+ const ext=extOf(u);
+ if(detected==="youtube"){showYouTubeDownloader(u);return}
+ if(detected){await showUniversalPlatformDownloader(u,detected);return}
+ if(ext){if(chosen!=="all"){const p=document.createElement("p");p.className="warning";p.textContent="Domain tautan file langsung tidak menunjukkan asal platform. Pilih Semua 19 Platform untuk memproses tautan umum, atau tempel tautan asli dari "+aryPlatformLabel(normalizedChosen)+".";out.append(p);return}showDirectMedia(u);return}
  if(API){
   out.textContent='Memeriksa tautan ke backend…';
   try{const r=await fetch(API+'/api/info',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:raw})});const d=await r.json();if(!r.ok)throw Error(d.error||'Gagal memeriksa link');activeUrl=raw;out.textContent='Media terdeteksi: '+(d.title||'Media')+'. Pilih format berikut.';const mode=document.createElement('select');mode.id='mode';mode.className='field';['video','audio'].forEach(v=>{const op=document.createElement('option');op.value=v;op.textContent=v==='video'?'Video':'Audio';mode.append(op)});const b=document.createElement('button');b.className='primary';b.textContent='Unduh media';b.onclick=downloadExtracted;out.append(document.createElement('br'),mode,b);return}catch(e){out.textContent='Backend belum tersedia: '+e.message}
