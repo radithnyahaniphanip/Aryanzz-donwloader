@@ -22,7 +22,7 @@
 
   let selectedFile = null, ffmpeg = null, ffmpegPromise = null, controller = null;
   let previewUrl = "", compatiblePreviewUrl = "", resultUrl = "", cancelled = false, running = false;
-  let previewToken = 0;
+  let previewToken = 0, encoderSupportPromise = null;
 
   const formatSize = bytes => bytes < 1048576 ? (bytes / 1024).toFixed(0) + " KB" : (bytes / 1048576).toFixed(1) + " MB";
   const formatTime = seconds => {
@@ -44,6 +44,7 @@
     if(convert){convert.disabled=value||!selectedFile;convert.textContent=value?"Memproses…":"Konversi ke "+($("audioStudioFormat")?.value||"mp3").toUpperCase();}
     if(cancel)cancel.hidden=!value;
     const previewConvert=$("audioStudioPreviewConvert");if(previewConvert)previewConvert.disabled=value;
+    const diagnosticsButton=$("audioStudioTestEngine");if(diagnosticsButton)diagnosticsButton.disabled=value;
     fileInput.disabled=value;
     const bitrate=$("audioStudioBitrate"),name=$("audioStudioName"),start=$("audioStudioStart"),end=$("audioStudioEnd"),format=$("audioStudioFormat"),volume=$("audioStudioVolume");
     if(bitrate)bitrate.disabled=value;if(name)name.disabled=value;if(start)start.disabled=value;if(end)end.disabled=value;if(format)format.disabled=value;if(volume)volume.disabled=value;
@@ -266,6 +267,24 @@
       controller=null;cancelled=false;busy(false);
     }
   }
+  async function detectEncoders(engine) {
+    if(encoderSupportPromise)return encoderSupportPromise;
+    encoderSupportPromise=(async()=>{
+      const lines=[];
+      const handler=event=>{const line=String(event?.message||"");if(line)lines.push(line);};
+      engine.on("log",handler);
+      try {
+        const code=await engine.exec(["-hide_banner","-encoders"],120000);
+        if(code!==0)throw new Error("FFmpeg tidak dapat membaca daftar encoder.");
+        const output=lines.join("\n");
+        const names=["libmp3lame","pcm_s16le","aac","flac"];
+        const supported={};
+        for(const name of names)supported[name]=new RegExp("(?:^|\\s)"+name+"(?:\\s|$)","m").test(output);
+        return supported;
+      } finally {engine.off("log",handler);}
+    })().catch(error=>{encoderSupportPromise=null;throw error;});
+    return encoderSupportPromise;
+  }
   async function convert() {
     if(!selectedFile||running)return;
     const file=selectedFile;
@@ -280,6 +299,10 @@
     try {
       engine=await loadEngine(controller.signal);
       if(cancelled||controller.signal.aborted)throw new Error("Proses dibatalkan.");
+      status("Memeriksa dukungan format audio…");
+      const supported=await detectEncoders(engine);
+      const requiredEncoder=({mp3:"libmp3lame",wav:"pcm_s16le",aac:"aac",flac:"flac"})[format];
+      if(!supported[requiredEncoder])throw new Error("Encoder "+format.toUpperCase()+" tidak tersedia pada mesin browser ini. Jalankan Uji mesin & format untuk melihat format yang didukung.");
       status("Membaca file video…");progress(20);
       const bytes=new Uint8Array(await file.arrayBuffer());
       if(!bytes.length)throw new Error("File tidak dapat dibaca.");
@@ -336,6 +359,25 @@
     }
   }
   const formatSelect=$("audioStudioFormat"),bitrateSelect=$("audioStudioBitrate"),volumeSlider=$("audioStudioVolume"),volumeValue=$("audioStudioVolumeValue");
+  const diagnosticsButton=$("audioStudioTestEngine"),diagnosticsResult=$("audioStudioDiagnosticsResult");
+  diagnosticsButton?.addEventListener("click",async()=>{
+    if(running)return;
+    cancelled=false;controller=new AbortController();busy(true);
+    if(diagnosticsResult){diagnosticsResult.hidden=false;diagnosticsResult.textContent="Memuat mesin FFmpeg dan memeriksa encoder di perangkat ini…";}
+    try{
+      const engine=await loadEngine(controller.signal);
+      const supported=await detectEncoders(engine);
+      const labels=[["MP3","libmp3lame"],["WAV","pcm_s16le"],["AAC","aac"],["FLAC","flac"]];
+      const summary=labels.map(([label,key])=>label+": "+(supported[key]?"tersedia":"tidak tersedia")).join(" · ");
+      if(diagnosticsResult)diagnosticsResult.textContent="Pemeriksaan selesai — "+summary+". Hasil bergantung pada build mesin FFmpeg dan browser perangkat.";
+      status("Uji mesin selesai. Pilih format yang ditandai tersedia.");
+    }catch(error){
+      const message=cancelled||controller?.signal.aborted?"Uji dibatalkan.":String(error?.message||error).slice(0,200);
+      if(diagnosticsResult)diagnosticsResult.textContent="Uji mesin gagal: "+message;
+      status(message);
+    }finally{controller=null;cancelled=false;busy(false);}
+  });
+
   const fileLimitLabel=document.querySelector('label.audio-file-drop small');
   if(fileLimitLabel)fileLimitLabel.textContent="MP4 · Maksimal "+formatSize(MAX_FILE_BYTES)+" pada perangkat ini · Proses lokal di browser";
   function syncAudioOptions(){
