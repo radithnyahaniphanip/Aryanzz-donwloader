@@ -1032,7 +1032,7 @@ if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.ser
   <form id="aryRegisterForm" class="ary-auth-form" autocomplete="on">
    <label>Nama lengkap<input id="aryRegName" name="name" type="text" maxlength="80" autocomplete="name" placeholder="Nama lengkap kamu" required></label>
    <label>Email<input id="aryRegEmail" name="email" type="email" maxlength="254" autocomplete="email" placeholder="nama@email.com" required></label>
-   <label>ID ARYANZZ <input id="aryRegId" type="text" value="Dibuat otomatis setelah daftar" readonly><small>ID unik diterbitkan otomatis oleh server.</small></label>
+   <label>ID ARYANZZ <input id="aryRegId" type="text" value="Dibuat otomatis setelah daftar" readonly><small>ID unik dibuat otomatis dan disimpan pada browser ini.</small></label>
    <label>Kode redeem <span class="ary-auth-optional">OPSIONAL</span><input id="aryRegRedeem" name="redeemCode" type="text" maxlength="64" autocomplete="off" placeholder="Masukkan jika punya"></label>
    <label>Password<div class="ary-auth-password"><input id="aryRegPassword" name="password" type="password" minlength="12" maxlength="128" autocomplete="new-password" placeholder="Minimal 12 karakter" required><button type="button" id="aryRegEye" aria-label="Lihat password">◉</button></div></label>
    <div class="ary-auth-strength"><div class="ary-auth-strength-track"><i id="aryStrengthBar"></i></div><b id="aryStrengthLabel">Kekuatan password: belum diisi</b></div>
@@ -1045,7 +1045,7 @@ if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.ser
    <button class="ary-auth-submit" type="submit" id="aryLoginSubmit">Masuk ke ARYANZZ</button>
   </form>
   <p id="aryAuthMessage" class="ary-auth-message" role="status" aria-live="polite"></p>
-  <p class="ary-auth-foot">Gunakan akun milikmu sendiri. Jangan bagikan password atau kode redeem kepada siapa pun.</p>
+  <p class="ary-auth-foot">Akun hanya tersimpan di browser dan perangkat ini. Menghapus data situs dapat menghapus akun. Akun lokal tidak tersinkron ke perangkat lain.</p>
  </div>
 </div>
 
