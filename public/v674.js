@@ -90,13 +90,13 @@ const card=document.createElement("article");card.className="v674-search-result 
 if(item.thumbnail){try{const u=new URL(item.thumbnail);if(u.protocol==="https:"){const img=document.createElement("img");img.src=u.href;img.alt="Pratinjau "+(item.title||"media");img.loading="lazy";card.append(img)}}catch{}}
 const info=document.createElement("div"),title=document.createElement("h3"),meta=document.createElement("p"),snippet=document.createElement("p"),pick=document.createElement("button");
 title.textContent=item.title||"Media tanpa judul";
-meta.textContent=[item.channel,item.platform||target.name,item.mediaMode==="audio"?"Audio":"Video",duration(item.duration),item.width&&item.height?item.width+" × "+item.height+" px":"",item.searchOnly?"Buka sumber asli":item.verified?"✓ Tautan terverifikasi":""].filter(Boolean).join(" · ");
+meta.textContent=[item.channel,item.platform||target.name,item.mediaMode==="audio"?"Audio":"Video",duration(item.duration),item.width&&item.height?item.width+" × "+item.height+" px":"",item.searchOnly?"Belum diverifikasi · periksa saat dipilih":item.verified?"✓ Tautan terverifikasi":""].filter(Boolean).join(" · ");
 snippet.textContent=item.snippet||"Pilih hasil ini untuk memeriksa pratinjau dan format unduhan.";
 if(searchType?.value==="audio"&&item.mediaMode==="audio"&&item.verified&&item.previewUrl){
 try{const audioUrl=new URL(item.previewUrl,location.origin);if(audioUrl.origin===location.origin&&audioUrl.pathname==="/api/social-file"){const player=document.createElement("audio");player.controls=true;player.preload="none";player.src=audioUrl.href;player.setAttribute("aria-label","Pratinjau audio "+(item.title||"hasil pencarian"));player.style.cssText="display:block;width:100%;margin:10px 0";card.append(player);}}catch{}
 }
-pick.type="button";pick.className="primary";pick.textContent=item.searchOnly?"Buka di "+(platforms[item.platform]?.name||target.name) :searchType?.value==="audio"?"Buka unduhan audio":"Lihat & unduh";
-pick.addEventListener("click",()=>{if(item.searchOnly){window.open(item.url,"_blank","noopener,noreferrer");return}const input=$("url");if(!input)return;input.value=item.url;setMode("link");$("analyze")?.click();$("downloadResult")?.scrollIntoView({behavior:"smooth",block:"nearest"})});
+pick.type="button";pick.className="primary";pick.textContent=searchType?.value==="audio"?"Periksa & buat MP3":"Lihat & unduh";
+pick.addEventListener("click",()=>{const input=$("url");if(!input||!item.url)return;const source=SEARCH_PLATFORM_ALIASES[item.platform]||item.platform;if(platforms[source])setPlatform(source);setMode("link");input.value=item.url;$("analyze")?.click();$("downloadResult")?.scrollIntoView({behavior:"smooth",block:"nearest"})});
 info.append(title,meta,snippet,pick);card.append(info);
 // Keep every platform result in one shared grid; platform identity stays on each card.
 results.append(card);
