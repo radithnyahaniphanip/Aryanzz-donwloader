@@ -34,6 +34,8 @@ const checks = [
   ["V93.0 Link Bypass panel stylesheet is wired",html.includes('/link-bypass.css?v=93.0')&&linkBypassCss.includes(".v93-bypass-hero")&&linkBypassCss.includes("@media(max-width:680px)")],
   ["V93.0 restores original home layout while keeping Link Bypass mobile responsive",!html.includes('class="v93-popular-grid"')&&linkBypassCss.includes("@media(max-width:680px)")&&linkBypassCss.includes(".v93-bypass-panel")],
   ["V93.0 restores original Profile Studio layout",!profileJs.includes("consolidateProfileSettings")&&!html.includes('class="v93-profile-links"')],
+  ["V94 owner social links can be cleared or replaced without restoring defaults", read("../public/owner.js").includes("hasOwnProperty.call(stored,key) ? validLink(stored[key]) : DEFAULTS[key]")],
+  ["V94 profile and owner assets use refreshed cache versions", html.includes("owner.js?v=94.0") && html.includes("v25.js?v=94.0") && read("../public/sw.js").includes("owner.js?v=94.0")],
   ["V94 auth API uses PBKDF2 password hashing and D1 sessions", worker.includes("AUTH_PBKDF2_ITERATIONS=600000") && worker.includes("auth_sessions") && worker.includes("HttpOnly; Secure; SameSite=Strict") && worker.includes("/api/auth/register")],
   ["V94 auth gate is only enabled when D1 is configured", worker.includes('enabled:!!authDb(env)') && read("../public/auth-gate.js").includes('if(!config.enabled)return;')],
   ["V94 registration UI includes requested fields and password visibility", html.includes('id="aryRegName"') && html.includes('id="aryRegEmail"') && html.includes('id="aryRegId"') && html.includes('id="aryRegRedeem"') && html.includes('id="aryRegEye"')],
