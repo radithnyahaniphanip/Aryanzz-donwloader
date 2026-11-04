@@ -1189,9 +1189,11 @@ async function resolveSocialImagePost(rawUrl,requestUrl,options={}){
     (async()=>{
       let page=await fetchSocialPostHtml(canonicalUrl,Number(options.timeoutMs)||12000).then(result=>({...result,images:extractSocialImageCandidates(result.html,result.url,key)})).catch(()=>null);
       if((!page||!page.images?.length)&&key==="instagram"){
-        const shortcode=canonicalUrl.match(/\/(?:p|reel|reels|tv)\/([^/]+)/i)?.[1];
-        if(shortcode){
-          const variants=["https://www.instagram.com/p/"+shortcode+"/embed/captioned/","https://www.instagram.com/p/"+shortcode+"/embed/"];
+        const postMatch=canonicalUrl.match(/\/(p|reel|reels|tv)\/([^/]+)/i);
+        if(postMatch){
+          const shareQuery=new URL(canonicalUrl).search;
+          const postBase="https://www.instagram.com/"+postMatch[1].toLowerCase()+"/"+postMatch[2]+"/";
+          const variants=[postBase+"embed/captioned/"+shareQuery,postBase+"embed/"+shareQuery];
           const fallbacks=await Promise.all(variants.map(url=>fetchSocialPostHtml(url,8500).then(result=>({...result,images:extractSocialImageCandidates(result.html,result.url,key)})).catch(()=>null)));
           const best=fallbacks.filter(Boolean).sort((a,b)=>(b.images?.length||0)-(a.images?.length||0))[0];
           if(best&&(!page||(best.images?.length||0)>(page.images?.length||0)))page=best;
