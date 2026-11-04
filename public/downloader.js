@@ -1171,11 +1171,27 @@
     button.textContent = "Memeriksa…";
     try {
       const detectedPlatform=platformName(url);
+      const selectedRaw=String(window.aryanzzSelectedPlatform?.()||$("platformPicker")?.getAttribute("data-selected-platform")||$("platformPicker")?.querySelector("[data-platform].active")?.dataset.platform||"youtube").toLowerCase();
+      const aliases={tiktoklite:"tiktok",instagramlite:"instagram",facebooklite:"facebook",twitter:"x"};
+      const selectedPlatform=aliases[selectedRaw]||selectedRaw;
+      const selectedNames={youtube:"YouTube",tiktok:"TikTok",instagram:"Instagram",snackvideo:"SnackVideo",capcut:"CapCut",pinterest:"Pinterest",facebook:"Facebook",x:"X",reddit:"Reddit",vimeo:"Vimeo",threads:"Threads",soundcloud:"SoundCloud",snapchat:"Snapchat",idnapp:"IDN App",linkedin:"LinkedIn",wechat:"WeChat",kakaotalk:"KakaoTalk"};
+      const expectedName=selectedNames[selectedPlatform]||"";
+      const detectedKey=detectedPlatform==="Direct Media URL"?"":detectedPlatform.toLowerCase();
+      if(!expectedName||detectedKey!==selectedPlatform){
+        const expectedLabel=expectedName||"satu platform khusus";
+        const message=detectedPlatform==="Direct Media URL"
+          ?"Domain tautan tidak dikenali sebagai tautan platform yang dipilih."
+          :"Kamu memilih "+expectedLabel+", tetapi tautan berasal dari "+detectedPlatform+". Tautan ditolak.";
+        box.replaceChildren(make("b","","GAGAL — PLATFORM TIDAK SESUAI"),make("p","warning",message+" Pilih platform yang sesuai lalu tempel tautannya kembali."));
+        button.disabled=false;
+        button.textContent=oldText;
+        return;
+      }
       const host=url.hostname.toLowerCase();
       const isYouTube=["youtube.com","www.youtube.com","m.youtube.com","music.youtube.com","youtu.be","www.youtu.be"].includes(host);
       const info=isYouTube
         ? await browserHybridYoutubeInfo(url.href)
-        : await postJson("/api/info", {url:url.href});
+        : await postJson("/api/platform/info", {url:url.href,expectedPlatform:selectedPlatform});
       if(runId!==analysisRunId)return;
       const imageFirstPlatforms=new Set(["Pinterest","Instagram","Facebook","X","Reddit","Threads","TikTok","SnackVideo","CapCut"]);
       const hasVideoFormat=(info.formats||[]).some(item=>item?.mode==="video"||item?.type==="video"||/^video\//i.test(String(item?.mimeType||item?.mime_type||""))||["mp4","m4v","webm","mov","avi","3gp"].includes(String(item?.ext||"").toLowerCase()));
