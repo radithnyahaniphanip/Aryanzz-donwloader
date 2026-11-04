@@ -14,8 +14,8 @@
     "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm",
     "https://unpkg.com/@ffmpeg/core@0.12.10/dist/esm"
   ];
-  const WORKER_URL = "/ffmpeg-worker-bootstrap.js?v=90.2";
-  const LOAD_TIMEOUT_MS = 90000;
+  const WORKER_URL = "/ffmpeg-worker-local.js?v=90.4";
+  const LOAD_TIMEOUT_MS = 120000;
   const FETCH_TIMEOUT_MS = 45000;
 
   let selectedFile = null, ffmpeg = null, ffmpegPromise = null, controller = null;
@@ -186,38 +186,35 @@
     if(ffmpeg?.loaded)return ffmpeg;
     if(ffmpegPromise)return ffmpegPromise;
     ffmpegPromise=(async()=>{
-      let instance=null,coreURL="",wasmURL="";
+      let instance=null;
       try {
-        status("Mengunduh library konversi…");progress(2);
+        status("Memuat library konversi…");progress(2);
         const mod=await importWithFallback(signal);
         if(signal.aborted)throw new Error("Proses dibatalkan.");
         instance=new mod.FFmpeg();
-        const corePaths=CORE_BASES.map(base=>base+"/ffmpeg-core.js");
-        const wasmPaths=CORE_BASES.map(base=>base+"/ffmpeg-core.wasm");
-        [coreURL,wasmURL]=await Promise.all([
-          fetchWithFallback(corePaths,"text/javascript",signal,"CORE"),
-          fetchWithFallback(wasmPaths,"application/wasm",signal,"WASM")
-        ]);
-        if(signal.aborted)throw new Error("Proses dibatalkan.");
-        status("Menyiapkan worker FFmpeg…");progress(19);
+        status("Menghubungkan worker lokal…");progress(12);
         const workerURL=new URL(WORKER_URL,location.origin).href;
+        status("Memuat mesin audio MP3…");progress(18);
         let timer;
         try {
           await Promise.race([
-            instance.load({coreURL,wasmURL,classWorkerURL:workerURL},{signal}),
-            new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error("Worker FFmpeg tidak berhasil aktif dalam 90 detik. Muat ulang halaman dan coba lagi.")),LOAD_TIMEOUT_MS);})
+            instance.load({
+              classWorkerURL:workerURL,
+              coreURL:CORE_BASES[0]+"/ffmpeg-core.js",
+              wasmURL:CORE_BASES[0]+"/ffmpeg-core.wasm",
+              coreFallbackURL:CORE_BASES[1]+"/ffmpeg-core.js",
+              wasmFallbackURL:CORE_BASES[1]+"/ffmpeg-core.wasm"
+            },{signal}),
+            new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error("Mesin audio belum siap setelah 120 detik. Periksa koneksi internet lalu coba lagi.")),LOAD_TIMEOUT_MS);})
           ]);
         } finally {clearTimeout(timer);}
         if(signal.aborted)throw new Error("Proses dibatalkan.");
-        if(!instance.loaded)throw new Error("Worker FFmpeg belum siap.");
+        if(!instance.loaded)throw new Error("Worker lokal merespons, tetapi core FFmpeg belum siap.");
         ffmpeg=instance;
         return instance;
       } catch(error) {
         if(instance){try{instance.terminate();}catch{}}
         throw error;
-      } finally {
-        if(coreURL)URL.revokeObjectURL(coreURL);
-        if(wasmURL)URL.revokeObjectURL(wasmURL);
       }
     })().catch(error=>{ffmpegPromise=null;throw error;});
     return ffmpegPromise;
