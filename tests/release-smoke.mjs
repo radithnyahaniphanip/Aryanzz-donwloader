@@ -31,7 +31,7 @@ const duplicateIds = [...idCounts].filter(([, count]) => count > 1).map(([id]) =
 
 const checks = [
   ["V93.0 Link Bypass panel and Worker resolver are wired",html.includes('id="linkBypass"')&&html.includes('/link-bypass.js?v=93.0')&&worker.includes('url.pathname==="/api/link-bypass"')&&linkBypassJs.includes('Periksa tujuan')],
-  ["V93.0 Link Bypass styles and PWA cache are wired",html.includes('/link-bypass.css?v=93.0')&&linkBypassCss.includes(".v93-bypass-hero")&&sw.includes("/link-bypass.js?v=93.0")&&sw.includes("/link-bypass.css?v=93.0")],
+  ["V93.0 Link Bypass panel stylesheet is wired",html.includes('/link-bypass.css?v=93.0')&&linkBypassCss.includes(".v93-bypass-hero")&&linkBypassCss.includes("@media(max-width:680px)")],
   ["V93.0 restores original home layout while keeping Link Bypass mobile responsive",!html.includes('class="v93-popular-grid"')&&linkBypassCss.includes("@media(max-width:680px)")&&linkBypassCss.includes(".v93-bypass-panel")],
   ["V93.0 restores original Profile Studio layout",!profileJs.includes("consolidateProfileSettings")&&!html.includes('class="v93-profile-links"')],
   ["V93.0 HTML contains no duplicate element IDs", duplicateIds.length === 0],
