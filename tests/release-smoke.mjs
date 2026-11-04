@@ -32,7 +32,7 @@ const checks = [
   ["V92.2 platform-link YouTube MP4 mux uses the refreshed FFmpeg bootstrap", downloaderJs.includes('ffmpeg-worker-bootstrap.js?v=92.2')],
   ["V92.2 platform-link FFmpeg loader retries both module CDNs", downloaderJs.includes('https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js') && downloaderJs.includes('https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js')],
   ["V92.2 platform-link FFmpeg loader retries both core CDNs with a fresh instance", downloaderJs.includes('for(let index=0;index<coreBases.length;index++)') && downloaderJs.includes('coreURL,wasmURL,classWorkerURL:workerUrl') && downloaderJs.includes('ffmpeg?.terminate()')],
-  ["V92.2 platform-link FFmpeg component timeout resets while chunks arrive", downloaderJs.includes('const resetIdle=()=>') && downloaderJs.includes('resetIdle();') && downloaderJs.includes('CDN '+ 'label' +' + " tidak mengirim data selama 45 detik.")],
+  ["V92.2 platform-link FFmpeg component timeout resets while chunks arrive", downloaderJs.includes("const resetIdle=()=>") && downloaderJs.includes("resetIdle();") && downloaderJs.includes("controller.abort(),45000")],
   ["V92.2 downloader asset and PWA cache are refreshed", html.includes('/downloader.js?v=92.2') && sw.includes('/downloader.js?v=92.2') && sw.includes('/ffmpeg-worker-bootstrap.js?v=92.2') && sw.includes('aryanzz-v92-4')],
 
   ["Worker bootstrap reports import errors with the original message ID", bootstrap.includes("id: data?.id") && bootstrap.includes("type: \"ERROR\"")],
