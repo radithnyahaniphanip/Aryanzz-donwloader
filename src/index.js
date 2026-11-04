@@ -936,9 +936,9 @@ function collectImageUrls(value,output,depth=0,forceImage=false){
   }
   if(Array.isArray(value)){for(const item of value.slice(0,80))collectImageUrls(item,output,depth+1,forceImage);return}
   if(typeof value==="object"){
-    for(const key of ["url","urlList","url_list","contentUrl","image","images","photo","photos","picture","pictures","src","displayImage","display_image","display_url","download_url","image_url","original","large","thumbnail_src","media_url","media_url_https","originCover","origin_cover","cover","imagePost","image_post","photoPost","photo_post","carousel","gallery","itemInfo","item_info","itemStruct","item_struct","itemModule","item_module","itemList","item_list","data","props","pageProps","result","results","post","postInfo","post_info","aweme_detail","awemeDetail","videoDetail","video_detail","__DEFAULT_SCOPE__"]){
+    for(const key of ["url","urlList","url_list","contentUrl","image","images","photo","photos","picture","pictures","src","displayImage","display_image","imageURL","image_urls","display_url","download_url","image_url","original","large","thumbnail_src","media_url","media_url_https","originCover","origin_cover","cover","imagePost","image_post","photoPost","photo_post","carousel","gallery","itemInfo","item_info","itemStruct","item_struct","itemModule","item_module","itemList","item_list","data","props","pageProps","result","results","post","postInfo","post_info","aweme_detail","awemeDetail","videoDetail","video_detail","__DEFAULT_SCOPE__"]){
       const normalizedKey=key.toLowerCase();
-      if(value[key]!==undefined)collectImageUrls(value[key],output,depth+1,["image","images","photo","photos","picture","pictures","image_url","displayimage","display_image","urllist","url_list","origincover","origin_cover","imagepost","image_post","photopost","photo_post","carousel","gallery"].includes(normalizedKey)||forceImage);
+      if(value[key]!==undefined)collectImageUrls(value[key],output,depth+1,["image","images","photo","photos","picture","pictures","image_url","displayimage","display_image","imageurl","image_urls","urllist","url_list","origincover","origin_cover","imagepost","image_post","photopost","photo_post","carousel","gallery"].includes(normalizedKey)||forceImage);
     }
   }
 }
@@ -997,7 +997,7 @@ function extractSocialImageCandidates(html,pageUrl,platform){
     const explicitPhoto=/photo.?mode|image.?post|carousel|multi.?photo|gallery|photo_mode|image_post/i.test(html);
     if(!explicitPhoto)return [];
   }
-  return found.slice(0,24);
+  return found.slice(0,35);
 }
 async function fetchSocialPostHtml(pageUrl,timeoutMs=18000){
   let current=safePublicMediaUrl(pageUrl);if(!current)throw new Error("Tautan postingan harus HTTPS dan tidak boleh mengarah ke jaringan lokal.");
@@ -1096,7 +1096,7 @@ async function resolveSocialImagePost(rawUrl,requestUrl,options={}){
       previewUrl:socialImageProxyUrl(safe.href,requestUrl,filename,false,rawUrl),
       downloadUrl:socialImageProxyUrl(safe.href,requestUrl,filename,true,rawUrl)
     });
-    if(images.length>=20)break;
+    if(images.length>=35)break;
   }
   if(!images.length)return null;
   const title=providerTitle||decodeSearchHtml((page?.html||"").match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1]||"Postingan gambar").slice(0,240);
