@@ -273,6 +273,12 @@ async function freePublicMediaInfo(rawUrl,requestUrl){
     if(response?.ok&&data?.success!==false){
       const normalized=freeProviderMediaInfo(data,canonicalUrl,requestUrl);
       if(normalized){
+        if(key==="instagram"){
+          try{
+            const alternative=normalizeWeirdDlInstagramData(await fetchWeirdDlInstagramData(canonicalUrl,9000),canonicalUrl,requestUrl);
+            if(alternative)return json({...alternative,canonicalUrl:canonicalUrl!==rawUrl?canonicalUrl:undefined});
+          }catch{}
+        }
         if(key==="tiktok"){
           try{
             const fallback=await tikwmFallbackMediaInfo(canonicalUrl,requestUrl);
@@ -304,6 +310,12 @@ async function freePublicMediaInfo(rawUrl,requestUrl){
     }catch(error){
       primaryError+="; TikWM: "+String(error?.message||error).slice(0,140);
     }
+  }
+  if(key==="instagram"){
+    try{
+      const fallback=normalizeWeirdDlInstagramData(await fetchWeirdDlInstagramData(canonicalUrl,9000),canonicalUrl,requestUrl);
+      if(fallback)return json({...fallback,canonicalUrl:canonicalUrl!==rawUrl?canonicalUrl:undefined});
+    }catch(error){primaryError+="; WeirdDL: "+String(error?.message||error).slice(0,120)}
   }
   if(key==="snackvideo"){
     try{return await snackVideoFallbackMediaInfo(canonicalUrl,requestUrl)}
@@ -1214,6 +1226,27 @@ function providerImageCandidates(data){
   }
   return output;
 }
+async function fetchWeirdDlInstagramData(rawUrl,timeoutMs=9000){
+  const endpoint=new URL("https://weirddl.sbs/api/info");
+  endpoint.searchParams.set("url",rawUrl);
+  const response=await fetch(endpoint.href,{headers:{accept:"application/json","user-agent":"Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/130.0.0.0 Mobile Safari/537.36"},signal:AbortSignal.timeout(timeoutMs),cache:"no-store"});
+  const data=await response.json().catch(()=>null);
+  if(!response.ok||data?.ok!==true||!Array.isArray(data.media))throw new Error("WeirdDL Instagram HTTP "+response.status+": "+String(data?.error||data?.message||"metadata tidak tersedia").slice(0,100));
+  return data;
+}
+function normalizeWeirdDlInstagramData(data,rawUrl,requestUrl){
+  const media=Array.isArray(data?.media)?data.media:[];
+  const videos=media.filter(item=>String(item?.type||item?.kind||"").toLowerCase()==="video"||String(item?.mime_type||item?.mime||"").toLowerCase().startsWith("video/"));
+  const images=media.filter(item=>String(item?.type||item?.kind||"").toLowerCase()==="image"||String(item?.mime_type||item?.mime||"").toLowerCase().startsWith("image/")||["jpg","jpeg","png","webp","avif","gif"].includes(String(item?.ext||item?.extension||"").toLowerCase()));
+  if(videos.length){
+    const normalized=freeProviderMediaInfo({normalized:{title:data.title||"Instagram video",thumbnail:data.thumbnail,media:videos}},rawUrl,requestUrl);
+    if(normalized){normalized.providerName="WeirdDL Instagram fallback";normalized.provider="Public Instagram media API";normalized.fallbackUsed=true;return normalized;}
+  }
+  if(images.length&&!videos.length){
+    return {ok:true,providerReady:true,providerName:"WeirdDL Instagram photo resolver",provider:"Public Instagram image post",platform:"instagram",title:String(data.title||"Foto Instagram").slice(0,300),filename:String(data.title||"Instagram-photo").slice(0,300),duration:null,thumbnail:safePublicMediaUrl(data.thumbnail||"")?.href||null,type:"image",formats:[],imageOnly:true,capabilities:{linkAccepted:true,preview:true,mp4:false,audio:false,mp4Qualities:[]}};
+  }
+  return null;
+}
 async function resolveSocialImagePost(rawUrl,requestUrl,options={}){
   const providerKey=freePlatformKey(rawUrl);
   const key=platformIdForUrl(rawUrl)||providerKey;
@@ -1224,7 +1257,7 @@ async function resolveSocialImagePost(rawUrl,requestUrl,options={}){
   // Experimental catalogue entries still get safe public-page metadata extraction;
   // only established provider keys are sent to the community extractor API.
   const includeProvider=options.includeProvider!==false&&providerKey!=="aio";
-  let oembedImage=null;
+  let oembedImage=null,weirdDlImages=[];
   const tasks=[
     includeProvider?fetch(providerUrl,{headers:{accept:"application/json"},signal:AbortSignal.timeout(Number(options.providerTimeoutMs)||12000),cache:"no-store"}).then(async response=>{
       if(!response.ok)throw new Error("Provider gambar HTTP "+response.status);
@@ -1264,11 +1297,19 @@ async function resolveSocialImagePost(rawUrl,requestUrl,options={}){
           providerTitle=providerTitle||String(data.title||"").slice(0,240);
         }
       }catch{}
+    })():Promise.resolve(),
+    key==="instagram"?(async()=>{
+      try{
+        const data=await fetchWeirdDlInstagramData(canonicalUrl,9000);
+        providerTitle=providerTitle||String(data.title||"").slice(0,240);
+        const images=(Array.isArray(data.media)?data.media:[]).filter(item=>String(item?.type||item?.kind||"").toLowerCase()==="image"||["jpg","jpeg","png","webp","avif","gif"].includes(String(item?.ext||item?.extension||"").toLowerCase()));
+        weirdDlImages=providerImageCandidates({normalized:{title:data.title,media:images}}).filter(item=>item.type==="image").map(item=>({...item,source:"WeirdDL"}));
+      }catch{}
     })():Promise.resolve()
   ];
   const page=await tasks[1];
-  await Promise.all([tasks[0],tasks[2],tasks[3]]);
-  const rawCandidates=[...(page?.images||[]).map(item=>({...item,type:"image",source:item.source||"post-page"})),...providerImages.map(item=>({...item,url:item.url,source:"provider",type:item.type||item.kind||item.media_type||"image",mime_type:item.mime_type||item.mime||item.content_type||"",width:item.width||item.w||0,height:item.height||item.h||0,ext:item.ext||item.extension||""})),...(oembedImage?[oembedImage]:[]),...tikwmImages.map(item=>({...item,url:item.url,source:"TikWM",type:"image"}))];
+  await Promise.all([tasks[0],tasks[2],tasks[3],tasks[4]]);
+  const rawCandidates=[...(page?.images||[]).map(item=>({...item,type:"image",source:item.source||"post-page"})),...providerImages.map(item=>({...item,url:item.url,source:"provider",type:item.type||item.kind||item.media_type||"image",mime_type:item.mime_type||item.mime||item.content_type||"",width:item.width||item.w||0,height:item.height||item.h||0,ext:item.ext||item.extension||""})),...(oembedImage?[oembedImage]:[]),...weirdDlImages,...tikwmImages.map(item=>({...item,url:item.url,source:"TikWM",type:"image"}))];
   const seen=new Set(),images=[];
   for(const item of rawCandidates){
     const safe=safePublicMediaUrl(item.url);if(!safe||seen.has(safe.href))continue;
