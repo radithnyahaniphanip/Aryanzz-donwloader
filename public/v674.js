@@ -205,10 +205,10 @@ const go=async()=>{
 const q=(searchInput?.value||"").trim();if(!q){if(help)help.textContent="Masukkan judul atau kata kunci gambar.";return}if(q.length<2){if(help)help.textContent="Masukkan minimal 2 karakter.";return}
 searchController?.abort();searchController=new AbortController();
 results.hidden=false;results.replaceChildren();
-const target=selected==="all"?{name:"Semua 19 platform"}:platforms[selected],kind=["image","audio"].includes(searchType?.value)?searchType.value:"video";
+const target=selected==="all"?{name:"Semua 200 platform"}:platforms[selected],kind=["image","audio"].includes(searchType?.value)?searchType.value:"video";
 const loading=document.createElement("div");loading.className="v674-search-loading";loading.textContent=kind==="image"?"Mencari gambar dari "+target.name+"…":kind==="audio"?"Mencari musik dan video sumber untuk dibuat MP3 dari "+target.name+"…":"Mencari video dari "+target.name+"…";results.append(loading);
 const btn=$("titleSearchBtn");if(btn){btn.disabled=true;btn.textContent="Mencari…"}
-if(help)help.textContent=selected==="all"?"Smart Search aktif: mencari lintas 19 platform dan mengelompokkan hasil menurut sumber.":kind==="image"?"Mode gambar: sumber "+target.name+".":kind==="audio"?"Mode audio: hanya file audio yang diverifikasi dari "+target.name+".":"Mode video: sumber "+target.name+".";
+if(help)help.textContent=selected==="all"?"Smart Search aktif: mencari lintas 200 platform dan mengelompokkan hasil menurut sumber.":kind==="image"?"Mode gambar: sumber "+target.name+".":kind==="audio"?"Mode audio: hanya file audio yang diverifikasi dari "+target.name+".":"Mode video: sumber "+target.name+".";
 try{
 const endpoint=kind==="image"?"/api/image/search":(selected==="youtube"&&kind==="video"?"/api/search":"/api/social/search");
 const options={method:"POST",headers:{"content-type":"application/json"},cache:"no-store"};
