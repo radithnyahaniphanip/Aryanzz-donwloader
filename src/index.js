@@ -613,7 +613,7 @@ async function searchSocial(request){
     if(platform==="all"||platform==="youtube"){
       // Search YouTube independently: one combined site: query across 19 domains is not a reliable YouTube search.
       const youtubeTerms=[query,query+" lagu",query+" song",query+" official audio",query+" DJ remix",...variants]
-        .map(value=>String(value||"").replace(/\\s+/g," ").trim())
+        .map(value=>String(value||"").replace(/\s+/g," ").trim())
         .filter((value,index,array)=>value.length>=2&&array.indexOf(value)===index).slice(0,5);
       const hybridPages=await Promise.all(youtubeTerms.slice(0,3).map(term=>hybridYouTubeSearch(term)));
       for(const page of hybridPages)for(const item of page?.results||[]){
