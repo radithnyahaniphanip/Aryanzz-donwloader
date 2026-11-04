@@ -100,8 +100,8 @@ const checks = [
   ["Worker health reports the generated build version", worker.includes("version:BUILD_VERSION")],
   ["Homepage loads the shared V89 shell stylesheet", html.includes("/v89.css?v=93.2")],
   ["Every homepage JS and CSS asset is included in the active PWA shell cache", htmlAssetRefs.length>0 && htmlAssetRefs.every(ref=>sw.includes('"'+ref+'"'))],
-  ["PWA cache namespace is V93.0", sw.includes('const CACHE="aryanzz-v94-14"')],
-  ["PWA cache includes homepage, converter and Media Studio", sw.includes("/?v=94.3") && sw.includes("/audio-studio.js?v=92.5") && sw.includes("/audio-studio.css?v=92.0") && sw.includes("/media-studio.js?v=92.0") && sw.includes("/media-studio.css?v=92.0")],
+  ["PWA cache namespace is build-scoped and refreshed on each deployment", sw.includes('const CACHE="aryanzz-build-__ARYANZZ_VERSION__"')],
+  ["PWA cache includes homepage, converter and Media Studio", sw.includes("/?v=__ARYANZZ_VERSION__") && sw.includes("/audio-studio.js?v=92.5") && sw.includes("/audio-studio.css?v=92.0") && sw.includes("/media-studio.js?v=92.0") && sw.includes("/media-studio.css?v=92.0")],
 
   ["Converter Pro includes optional audio trim controls", html.includes('id="audioStudioStart"') && html.includes('id="audioStudioEnd"') && converterJs.includes('ffmpegArgs.push("-t"')],
   ["Converter Pro supports MP3 WAV AAC and FLAC output", ["mp3","wav","aac","flac"].every(format => html.includes('value="'+format+'"')) && converterJs.includes("libmp3lame") && converterJs.includes("pcm_s16le") && converterJs.includes('format==="aac"') && converterJs.includes('format==="flac"')],
