@@ -1,5 +1,5 @@
 const base=(process.env.WORKER_URL||"https://aryanzz-donwloader.radithnyahaniphanip.workers.dev").replace(/\/$/,"");
-const sourceUrl="https://vt.tiktok.com/ZsPNASkHN/";
+const sourceUrl="https://vt.tiktok.com/ZSPNASKHN/";
 const request=(path,init={})=>fetch(base+path,{cache:"no-store",signal:AbortSignal.timeout(45000),...init});
 const report={test:"user-supplied TikTok short link",sourceUrl,infoStatus:null,title:null,durationSeconds:null,durationLabel:null,videoFormats:0,selectedFormat:null,probeStatus:null,probeMime:null,previewStatus:null,previewMime:null,previewDisposition:null,downloadUrlAvailable:false,playbackReady:false,downloadReady:false,error:null};
 try{
