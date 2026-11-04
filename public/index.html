@@ -789,6 +789,13 @@ body{background-color:var(--ary-app-bg)}
     <div><b id="profileSince">Hari ini</b><span>Bergabung</span></div>
   </div>
   <div class="v25-profile-layout">
+    <section class="v25-profile-card">
+      <div class="v25-section-heading"><div><span class="v25-kicker">PERSONAL ID</span><h3>Profil kamu</h3></div><span class="v25-heading-icon">◉</span></div>
+      <label class="label" for="profileName">Nama tampilan</label><input id="profileName" class="field tool-input" maxlength="40" placeholder="Nama kamu">
+      <label class="label" for="profileBio">Bio singkat</label><textarea id="profileBio" class="field tool-input" rows="3" maxlength="160" placeholder="Ceritakan sedikit tentang dirimu…"></textarea>
+      <div class="v25-form-foot"><small id="profileCharCount">0/160 karakter</small><button class="primary" id="profileSave" type="button">Simpan perubahan</button></div>
+      <button class="v25-text-button" id="profileReset" type="button">Reset informasi profil</button><small class="v25-privacy-note" id="profileAutoSaveStatus" role="status" aria-live="polite">Menyiapkan penyimpanan otomatis…</small>
+    </section>
     <section class="v25-profile-card v25-account-id-card"><div class="v25-section-heading"><div><span class="v25-kicker">PROFILE IDENTIFIER</span><h3>ID profil</h3></div><span class="v25-heading-icon">⌁</span></div><p class="v25-muted">ID profil sementara pada perangkat ini. ID akun resmi akan diterbitkan server setelah registrasi akun diaktifkan.</p><div class="v25-profile-id-row"><code id="profileRandomId">ARY-••••••••</code><button class="tag" id="profileCopyId" type="button">Salin ID</button></div></section>
   </div>
   <section class="v25-profile-card v25-backup-card">
