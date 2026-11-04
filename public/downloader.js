@@ -37,7 +37,7 @@
     } catch { return null; }
   }
   function platformName(url) {
-    const host = url.hostname.toLowerCase().replace(/^www\\./,"");
+    const host = url.hostname.toLowerCase().replace(/^www\./,"");
     const catalogItem=(window.ARYANZZ_PLATFORM_CATALOG||[]).find(platform=>(platform.domains||[]).some(domain=>host===domain||host.endsWith("."+domain)));
     if(catalogItem)return catalogItem.name;
     const item = PLATFORM_NAMES.find(([domain]) => host === domain || host.endsWith("." + domain));
