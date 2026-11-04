@@ -59,6 +59,6 @@ for (const path of ["/v89.css?v=90.0", "/v674.js?v=89.2", "/v674.css?v=85.5.0", 
   const response = await fetch(base + path, { cache: "no-store", signal: AbortSignal.timeout(10000) });
   assert.equal(response.status, 200, "Missing live asset " + path);
 }
-console.log("✔ Cloudflare Worker health: V92.1");
+console.log("✔ Cloudflare Worker health: V92.5");
 console.log("✔ Security middleware and release endpoints are active");
 console.log("✔ V92.5 homepage, Converter Pro, Media Studio, Smart Queue, local player and storage assets are live");
