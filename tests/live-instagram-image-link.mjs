@@ -1,6 +1,6 @@
 const base=(process.env.WORKER_URL||"https://aryanzz-donwloader.radithnyahaniphanip.workers.dev").replace(/\/$/,"");
 const sourceUrl="https://www.instagram.com/p/Dek72MYE141/?xtok=OWdvNjR4dmZscnlx";
-const report={test:"user-supplied Instagram post image extraction",sourceUrl,status:null,title:null,platform:null,imageCount:0,previewStatus:null,previewMime:null,previewDisposition:null,signatureValid:false,downloadUrlAvailable:false,error:null};
+const report={test:"user-supplied Instagram post image and video extraction",sourceUrl,status:null,title:null,platform:null,imageCount:0,previewStatus:null,previewMime:null,previewDisposition:null,signatureValid:false,downloadUrlAvailable:false,videoInfoStatus:null,videoFormatCount:0,videoProbeStatus:null,videoProbeMime:null,videoProbeValid:false,videoError:null,error:null};
 try{
   const endpoint=new URL("/api/image/extract",base);endpoint.searchParams.set("url",sourceUrl);
   const response=await fetch(endpoint.href,{headers:{accept:"application/json"},cache:"no-store",signal:AbortSignal.timeout(35000)});
@@ -31,6 +31,23 @@ try{
   report.signatureValid=(bytes[0]===0xff&&bytes[1]===0xd8&&bytes[2]===0xff)||(bytes[0]===0x89&&bytes[1]===0x50&&bytes[2]===0x4e&&bytes[3]===0x47)||(bytes[0]===0x47&&bytes[1]===0x49&&bytes[2]===0x46)||(bytes[0]===0x52&&bytes[1]===0x49&&bytes[2]===0x46&&bytes[8]===0x57&&bytes[9]===0x45&&bytes[10]===0x42&&bytes[11]===0x50)||(bytes[4]===0x66&&bytes[5]===0x74&&bytes[6]===0x79&&bytes[7]===0x70);
   await reader?.cancel().catch(()=>{});
   if(!report.signatureValid)throw new Error("Data awal yang dikirim bukan signature JPEG/PNG/GIF/WebP/AVIF yang dikenali.");
+  try{
+    const videoInfoResponse=await fetch(base+"/api/platform/info",{method:"POST",headers:{"content-type":"application/json",accept:"application/json"},body:JSON.stringify({url:sourceUrl,expectedPlatform:"instagram"}),cache:"no-store",signal:AbortSignal.timeout(45000)});
+    report.videoInfoStatus=videoInfoResponse.status;
+    const videoInfo=await videoInfoResponse.json().catch(()=>({}));
+    const videoFormats=(videoInfo.formats||[]).filter(item=>item?.mode==="video"&&item?.downloadUrl);
+    report.videoFormatCount=videoFormats.length;
+    if(videoFormats.length){
+      const candidate=videoFormats.find(item=>["mp4","m4v"].includes(String(item.ext||"").toLowerCase()))||videoFormats[0];
+      const probe=new URL(candidate.downloadUrl);probe.searchParams.set("probe","1");
+      const checked=await fetch(probe.href,{cache:"no-store",signal:AbortSignal.timeout(20000)});
+      report.videoProbeStatus=checked.status;
+      const result=await checked.json().catch(()=>({}));
+      report.videoProbeMime=result.mimeType||null;
+      report.videoProbeValid=checked.ok&&result.valid===true&&String(result.mimeType||"").startsWith("video/");
+      if(!report.videoProbeValid)report.videoError=String(result.error||"Video stream gagal validasi.").slice(0,180);
+    }else report.videoError=String(videoInfo.error||"Tidak ada stream video pada postingan ini.").slice(0,180);
+  }catch(error){report.videoError=String(error?.message||error).slice(0,180)}
   console.log("[INSTAGRAM-USER-LINK-RESULT] "+JSON.stringify(report));
 }catch(error){
   report.error=String(error?.message||error).slice(0,320);
