@@ -1097,8 +1097,11 @@ function normalizeTikTokFallbackPayload(data,rawUrl,requestUrl,providerName){
     const height=Number(quality.match(/(144|240|360|480|540|576|720|900|960|1080|1440|2160)p?/i)?.[1]||0);
     add(item?.url||item?.download_url||item?.downloadUrl,quality,audio?"audio":"video",audio?"mp3":"mp4",audio?"audio/mpeg":"video/mp4",height);
   }
+  add(data?.hdplay,"MP4 HD tanpa watermark","video","mp4","video/mp4");
+  add(data?.play,"MP4 tanpa watermark","video","mp4","video/mp4");
+  add(data?.wmplay,"MP4 dengan watermark","video","mp4","video/mp4");
   add(data?.download_url||data?.video_url||data?.videoUrl,"MP4 tanpa watermark","video","mp4","video/mp4");
-  add(data?.author?.audio_url||data?.audio_url||data?.music_url,"Audio MP3","audio","mp3","audio/mpeg");
+  add(data?.author?.audio_url||data?.audio_url||data?.music_url||data?.music,"Audio MP3","audio","mp3","audio/mpeg");
   if(!media.some(item=>item.type==="video"))throw new Error(providerName+" tidak memberikan stream video MP4.");
   const normalized=freeProviderMediaInfo({normalized:{title:data.title||data.desc||"Video TikTok",thumbnail:data.thumbnail||data.cover||data.origin_cover,duration:Number(data.duration||data.author?.duration)||0,media}},rawUrl,requestUrl);
   if(!normalized)throw new Error("Stream "+providerName+" tidak lolos normalisasi media.");
