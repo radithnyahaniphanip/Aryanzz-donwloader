@@ -52,3 +52,7 @@ body[data-motion=off] .audio-file-drop,body[data-motion=off] .audio-progress-tra
 .audio-preview-note[hidden]{display:none!important}
 #audioStudioPreview{object-fit:contain;aspect-ratio:16/9;background:#050b14}
 #audioStudioPreview:not([hidden]){display:block!important}
+
+.audio-preview-convert{width:100%;margin:0 0 12px;min-height:42px;border-color:#4d86ae;color:#d8f5ff;background:linear-gradient(110deg,#193f62,#174d67)}
+.audio-preview-convert[hidden]{display:none!important}
+.audio-preview-convert:disabled{opacity:.55}
