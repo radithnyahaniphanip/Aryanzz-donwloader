@@ -6,6 +6,7 @@
   if (!fileInput) return;
   const MAX_FILE_BYTES = 100 * 1024 * 1024;
   const moduleUrl = "https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js";
+  const LOAD_TIMEOUT_MS = 60000;
   const coreBase = "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm";
   let selectedFile = null, ffmpeg = null, ffmpegPromise = null, controller = null;
   let previewUrl = "", resultUrl = "", cancelled = false, running = false;
@@ -51,7 +52,7 @@
     if(!reader)return URL.createObjectURL(new Blob([await response.arrayBuffer()],{type:mime}));
     const chunks=[];let received=0;
     while(true){const part=await reader.read();if(part.done)break;chunks.push(part.value);received+=part.value.byteLength;
-      if(label==="WASM"&&total){progress(4+Math.min(14,received/total*14));status("Menyiapkan mesin MP3 · "+formatSize(received)+(total?" / "+formatSize(total):"")+"…");}}
+      if(total){const base=label==="WASM"?4:2,span=label==="WASM"?14:2;progress(base+Math.min(span,received/total*span));status((label==="WASM"?"Mengunduh komponen mesin MP3 · ":"Memuat komponen FFmpeg · ")+formatSize(received)+(total?" / "+formatSize(total):"")+"…");}}
     return URL.createObjectURL(new Blob(chunks,{type:mime}));
   }
   async function loadEngine(signal) {
@@ -64,8 +65,12 @@
         blobUrl(coreBase+"/ffmpeg-core.js","text/javascript",signal,"CORE"),
         blobUrl(coreBase+"/ffmpeg-core.wasm","application/wasm",signal,"WASM")
       ]);
-      try{status("Menyiapkan FFmpeg…");progress(19);
-        await instance.load({coreURL,wasmURL,classWorkerURL:new URL("/ffmpeg-worker-bootstrap.js?v=89.0",location.origin).href});
+      try{status("Mengaktifkan mesin konversi…");progress(19);
+        const workerURL=new URL("/ffmpeg-worker-bootstrap.js?v=89.2",location.origin).href;
+        await Promise.race([
+          instance.load({coreURL,wasmURL,classWorkerURL:workerURL}),
+          new Promise((_,reject)=>setTimeout(()=>reject(new Error("Mesin FFmpeg tidak merespons dalam 60 detik. Periksa koneksi internet lalu muat ulang halaman.")),LOAD_TIMEOUT_MS))
+        ]);
         if(signal.aborted){instance.terminate();throw new Error("Proses dibatalkan.");}
         ffmpeg=instance;return instance;
       }catch(error){instance.terminate();throw error;}
@@ -90,6 +95,7 @@
     try{
       const engine=await loadEngine(controller.signal);
       if(cancelled||controller.signal.aborted)throw new Error("Proses dibatalkan.");
+      status("Membaca video MP4 dari perangkat…");progress(20);
       const bytes=new Uint8Array(await selectedFile.arrayBuffer());
       if(!bytes.length)throw new Error("File tidak dapat dibaca.");
       status("Memasukkan video ke mesin konversi · "+formatSize(bytes.byteLength));progress(20);
