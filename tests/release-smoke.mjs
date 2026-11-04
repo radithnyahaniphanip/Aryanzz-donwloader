@@ -24,7 +24,7 @@ const downloaderJs = read("../public/downloader.js");
 const ownerJs = read("../public/owner.js");
 
 const idCounts = new Map();
-for (const match of html.matchAll(/\\bid=["']([^"']+)["']/g)) idCounts.set(match[1], (idCounts.get(match[1]) || 0) + 1);
+for (const match of html.matchAll(/\bid=["']([^"']+)["']/g)) idCounts.set(match[1], (idCounts.get(match[1]) || 0) + 1);
 const duplicateIds = [...idCounts].filter(([, count]) => count > 1).map(([id]) => id);
 
 const checks = [
