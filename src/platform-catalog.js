@@ -12,7 +12,7 @@ export const PLATFORM_CATALOG = rows.map(row => ({
 export const PLATFORM_CATALOG_BY_ID = new Map(PLATFORM_CATALOG.map(platform => [platform.id, platform]));
 export const PLATFORM_DOMAINS = [...new Set(PLATFORM_CATALOG.flatMap(platform => platform.domains))];
 export function platformForHost(hostname) {
-  const host = String(hostname || "").toLowerCase().replace(/^www\\./, "");
+  const host = String(hostname || "").toLowerCase().replace(/^www\./, "");
   return PLATFORM_CATALOG.find(platform => platform.domains.some(domain => host === domain || host.endsWith("." + domain))) || null;
 }
 if (PLATFORM_CATALOG.length !== 200) throw new Error("ARYANZZ catalogue must contain exactly 200 platform choices.");
