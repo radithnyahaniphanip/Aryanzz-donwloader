@@ -251,66 +251,113 @@
     const engineStatus=progressMeta?.parentElement?.querySelector(".youtube-engine-status");
     const showEngine=text=>{if(engineStatus){engineStatus.hidden=false;engineStatus.textContent=text;}};
     if(aryanzzFfmpegPromise){
-      progressText.textContent="Mesin perakit MP4 sudah siap · melanjutkan penggabungan…";
-      if(sizeNote)progressMeta.textContent=sizeNote+" Mesin sudah dimuat pada sesi ini.";
-      showEngine("Mesin MP4 siap ✓ · melanjutkan tahap penggabungan.");
+      progressText.textContent="Mesin perakit MP4 sedang disiapkan…";
+      if(sizeNote)progressMeta.textContent=sizeNote+" Menunggu mesin FFmpeg yang sedang dimuat.";
+      showEngine("Mesin MP4 · menunggu proses pemuatan yang sedang berjalan…");
       return aryanzzFfmpegPromise;
     }
-    progressText.textContent="Memuat mesin perakit MP4 · hanya untuk kualitas video+audio terpisah…";
-    progressMeta.textContent=(sizeNote?sizeNote+" ":"")+"Mesin lokal sekitar 30 MB diperlukan untuk menyatukan kedua komponen menjadi satu MP4.";
-    showEngine("Persiapan mesin MP4 · mengunduh modul dan WebAssembly. Progres ini terpisah dari progres video.");
-    aryanzzFfmpegPromise=(async()=>{
-      const moduleUrl="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js";
-      const coreBase="https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm";
-      let ffmpeg=null,coreURL,wasmURL;
-      const loadBlob=async(url,type,label)=>{
-        const response=await fetch(url,{mode:"cors",credentials:"omit",cache:"force-cache",signal:downloadTimeoutSignal(60000)});
-        if(!response.ok)throw new Error("CDN FFmpeg "+label+" HTTP "+response.status);
+    const moduleUrls=[
+      "https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js",
+      "https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js"
+    ];
+    const coreBases=[
+      "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm",
+      "https://unpkg.com/@ffmpeg/core@0.12.10/dist/esm"
+    ];
+    const workerUrl=new URL("/ffmpeg-worker-bootstrap.js?v=92.2",location.origin).href;
+    const assertActive=()=>{
+      if(activeDownloadController?.signal.aborted)throw new Error("Unduhan dibatalkan.");
+    };
+    const withTimeout=(promise,ms,message)=>{
+      let timer;
+      return Promise.race([promise,new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error(message)),ms);})]).finally(()=>clearTimeout(timer));
+    };
+    const loadBlob=async(url,type,label)=>{
+      const controller=new AbortController();
+      let idleTimer=null;
+      const resetIdle=()=>{
+        clearTimeout(idleTimer);
+        idleTimer=setTimeout(()=>controller.abort(),45000);
+      };
+      const abortFromDownload=()=>controller.abort();
+      activeDownloadController?.signal.addEventListener("abort",abortFromDownload,{once:true});
+      resetIdle();
+      try{
+        const response=await fetch(url,{mode:"cors",credentials:"omit",cache:"force-cache",signal:controller.signal});
+        if(!response.ok)throw new Error("CDN "+label+" HTTP "+response.status);
         const total=Number(response.headers.get("content-length"))||0,reader=response.body?.getReader();
         if(!reader){
           const blob=new Blob([await response.arrayBuffer()],{type});
-          showEngine("Mesin MP4 · "+label+" siap · "+formatDownloadSize(blob.size));
+          assertActive();showEngine("Mesin MP4 · "+label+" siap · "+formatDownloadSize(blob.size));
           return URL.createObjectURL(blob);
         }
         const chunks=[];let received=0;
         while(true){
+          assertActive();
           const part=await reader.read();if(part.done)break;
-          if(activeDownloadController?.signal.aborted){await reader.cancel().catch(()=>{});throw new Error("Unduhan dibatalkan.");}
-          chunks.push(part.value);received+=part.value.byteLength;
+          chunks.push(part.value);received+=part.value.byteLength;resetIdle();
           showEngine("Mesin MP4 · "+label+" "+formatDownloadSize(received)+(total?" / "+formatDownloadSize(total):"")+" · memuat komponen…");
         }
         const blob=new Blob(chunks,{type});
+        if(!blob.size)throw new Error("CDN "+label+" mengirim file kosong.");
         showEngine("Mesin MP4 · "+label+" selesai · "+formatDownloadSize(blob.size));
         return URL.createObjectURL(blob);
-      };
-      try{
-        showEngine("Mesin MP4 · memuat modul JavaScript…");
-        const mod=await import(moduleUrl);
-        if(activeDownloadController?.signal.aborted)throw new Error("Unduhan dibatalkan.");
-        ffmpeg=new mod.FFmpeg();activeDownloadFfmpeg=ffmpeg;
-        [coreURL,wasmURL]=await Promise.all([
-          loadBlob(coreBase+"/ffmpeg-core.js","text/javascript","CORE"),
-          loadBlob(coreBase+"/ffmpeg-core.wasm","application/wasm","WASM")
-        ]);
-        showEngine("Mesin MP4 · menyiapkan worker lokal…");
-        let loadTimer;
-        try{
-          await Promise.race([
-            ffmpeg.load({coreURL,wasmURL,classWorkerURL:new URL("/ffmpeg-worker-bootstrap.js?v=92.1",location.origin).href}),
-            new Promise((_,reject)=>{loadTimer=setTimeout(()=>reject(new Error("Mesin MP4 belum siap setelah 90 detik. Coba lagi saat jaringan stabil atau pilih kualitas MP4 langsung.")),90000);})
-          ]);
-        }finally{clearTimeout(loadTimer);}
-        if(activeDownloadController?.signal.aborted)throw new Error("Unduhan dibatalkan.");
-        showEngine("Mesin MP4 siap ✓ · lanjut mengunduh audio dan menyatukan file.");
-        return ffmpeg;
       }catch(error){
-        try{ffmpeg?.terminate()}catch{}
-        if(activeDownloadFfmpeg===ffmpeg)activeDownloadFfmpeg=null;
-        if(error&&typeof error==="object"&&!error.code)error.code="FFMPEG_LOAD_FAILED";
+        if(activeDownloadController?.signal.aborted)throw new Error("Unduhan dibatalkan.");
+        if(controller.signal.aborted)throw new Error("CDN "+label+" tidak mengirim data selama 45 detik.");
         throw error;
       }finally{
-        if(coreURL)URL.revokeObjectURL(coreURL);
-        if(wasmURL)URL.revokeObjectURL(wasmURL);
+        clearTimeout(idleTimer);
+        activeDownloadController?.signal.removeEventListener("abort",abortFromDownload);
+      }
+    };
+    aryanzzFfmpegPromise=(async()=>{
+      let lastError=null;
+      try{
+        let mod=null;
+        for(let i=0;i<moduleUrls.length;i++){
+          assertActive();
+          try{
+            showEngine("Mesin MP4 · memuat library "+(i?"cadangan ":"")+"JavaScript…");
+            mod=await withTimeout(import(moduleUrls[i]),35000,"Library FFmpeg tidak merespons dalam 35 detik.");
+            if(mod?.FFmpeg)break;
+            throw new Error("Library CDN tidak menyediakan kelas FFmpeg.");
+          }catch(error){lastError=error;if(activeDownloadController?.signal.aborted)throw new Error("Unduhan dibatalkan.");}
+        }
+        if(!mod?.FFmpeg)throw new Error("Library FFmpeg gagal dimuat dari CDN utama maupun cadangan: "+String(lastError?.message||lastError));
+        for(let index=0;index<coreBases.length;index++){
+          assertActive();
+          let ffmpeg=null,coreURL=null,wasmURL=null;
+          try{
+            showEngine("Mesin MP4 · mengambil komponen "+(index?"CDN cadangan":"CDN utama")+"…");
+            coreURL=await loadBlob(coreBases[index]+"/ffmpeg-core.js","text/javascript","CORE");
+            wasmURL=await loadBlob(coreBases[index]+"/ffmpeg-core.wasm","application/wasm","WASM");
+            assertActive();
+            ffmpeg=new mod.FFmpeg();activeDownloadFfmpeg=ffmpeg;
+            showEngine("Mesin MP4 · menyiapkan worker lokal…");
+            await withTimeout(
+              ffmpeg.load({coreURL,wasmURL,classWorkerURL:workerUrl}),
+              75000,
+              "Worker FFmpeg belum siap setelah 75 detik pada CDN "+(index?"cadangan":"utama")+"."
+            );
+            assertActive();
+            if(!ffmpeg.loaded)throw new Error("Worker merespons, tetapi mesin FFmpeg belum siap.");
+            showEngine("Mesin MP4 siap ✓ · lanjut mengunduh audio dan menyatukan file.");
+            return ffmpeg;
+          }catch(error){
+            lastError=error;
+            try{ffmpeg?.terminate()}catch{}
+            if(activeDownloadFfmpeg===ffmpeg)activeDownloadFfmpeg=null;
+            if(activeDownloadController?.signal.aborted)throw new Error("Unduhan dibatalkan.");
+          }finally{
+            if(coreURL)URL.revokeObjectURL(coreURL);
+            if(wasmURL)URL.revokeObjectURL(wasmURL);
+          }
+        }
+        throw new Error("Mesin FFmpeg gagal dimuat dari CDN utama maupun cadangan: "+String(lastError?.message||lastError));
+      }catch(error){
+        if(error&&typeof error==="object"&&!error.code)error.code="FFMPEG_LOAD_FAILED";
+        throw error;
       }
     })().catch(error=>{aryanzzFfmpegPromise=null;throw error;});
     return aryanzzFfmpegPromise;
