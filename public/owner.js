@@ -69,7 +69,7 @@
     const profile = safeRead(PROFILE_KEY, safeRead("aryanzz.profile.v2", {}));
     const design = safeRead(DESIGN_KEY, {});
     const name = String(profile.name || "").trim() || "ARYANZZ";
-    const bio = String(profile.bio || "").trim() || "Pengelola dan pengembang ARYANZZ.";
+    const bio = String(profile.bio || "").trim() || "Merancang, membangun, dan mengembangkan ekosistem digital ARYANZZ.";
     const nameNode = $("ownerName"), bioNode = $("ownerBio"), avatar = $("ownerAvatar"), cover = $("ownerCover");
     if (nameNode) nameNode.textContent = name;
     if (bioNode) bioNode.textContent = bio;
@@ -109,7 +109,7 @@
     try {
       localStorage.setItem(KEY, JSON.stringify(values));
       renderLinks();
-      alert("Tautan sosial tersimpan di browser ini.");
+      alert("Tautan sosial berhasil diperbarui.");
     } catch {
       alert("Penyimpanan browser penuh atau tidak tersedia. Kosongkan ruang lalu coba lagi.");
     }
