@@ -36,18 +36,52 @@
     urlField.value=item.url;
     urlField.dispatchEvent(new Event("input",{bubbles:true}));
     analyze.click();
-    setStatus("Tautan dibuka di downloader utama. Selesaikan unduhan di sana, lalu kembali ke antrean untuk menandai statusnya.");
+    setStatus("Menunggu proses unduhan. Jika file selesai diunduh melalui ARYANZZ, status akan berubah otomatis.");
   }
-  function mark(id,status){
+  function advanceQueue(message){
+    const next=nextPending();
+    if(running&&next){setStatus(message+" Melanjutkan ke tautan berikutnya…");openItem(next);return;}
+    if(running){running=false;setStatus(message+" Semua item antrean sudah diproses.");}
+    else setStatus(message);
+    render();
+  }
+  function mark(id,status,automatic=false){
     const item=items.find(x=>x.id===id);if(!item)return;
-    item.status=status;
+    item.status=status;item.externalStarted=false;item.updatedAt=Date.now();
     if(activeId===id)activeId=null;
     save();render();
-    if(status==="done"&&running){const next=nextPending();if(next)openItem(next);else{running=false;setStatus("Semua tautan dalam antrean sudah diproses.");render();}}
-    else if(status==="failed")setStatus("Item ditandai gagal. Kamu dapat mencoba lagi atau melewatinya.");
-    else if(status==="skipped"&&running){const next=nextPending();if(next)openItem(next);else{running=false;setStatus("Tidak ada tautan pending lagi.");render();}}
-    else setStatus(status==="done"?"Unduhan ditandai selesai.":status==="skipped"?"Item dilewati.":"Item diperbarui.");
+    if(status==="done")advanceQueue(automatic?"File berhasil disiapkan dan unduhan dimulai.":"Unduhan ditandai selesai.");
+    else if(status==="failed")advanceQueue("Unduhan gagal. Item berikutnya dapat dilanjutkan.");
+    else if(status==="skipped")advanceQueue("Item dilewati.");
+    else setStatus("Item diperbarui.");
   }
+  function findActive(detail){
+    const raw=detail&&typeof detail.url==="string"?detail.url:"";
+    let normalized=raw;try{normalized=new URL(raw).href;}catch{}
+    return items.find(x=>x.id===activeId&&x.status==="active")||items.find(x=>x.status==="active"&&x.url===normalized);
+  }
+  window.addEventListener("aryanzz:download-start",event=>{
+    const item=findActive(event.detail);if(!item)return;
+    item.externalStarted=false;item.downloadStartedAt=Date.now();save();render();
+    setStatus("Unduhan sedang diproses: "+(item.host||"media")+"…");
+  });
+  window.addEventListener("aryanzz:download-complete",event=>{
+    const item=findActive(event.detail);if(!item)return;
+    const detail=event.detail||{};
+    mark(item.id,"done",true);
+    const suffix=detail.bytes?" · "+(detail.bytes/1048576).toFixed(1)+" MB":"";
+    setStatus("✓ "+(detail.name||item.host||"File")+" siap"+suffix+". "+(running?"Melanjutkan antrean…":""));
+  });
+  window.addEventListener("aryanzz:download-failed",event=>{
+    const item=findActive(event.detail);if(!item)return;
+    mark(item.id,"failed",true);
+    setStatus("✕ "+(item.host||"Unduhan")+" gagal: "+String(event.detail?.error||"Kesalahan tidak diketahui").slice(0,150));
+  });
+  window.addEventListener("aryanzz:download-link-opened",event=>{
+    const item=findActive(event.detail);if(!item)return;
+    item.externalStarted=true;save();render();
+    setStatus("Tautan unduhan dibuka di tab lain. Browser tidak memberi status selesai untuk tautan eksternal; konfirmasi setelah file benar-benar tersimpan.");
+  });
   function button(label,cls,handler,disabled=false){const b=document.createElement("button");b.type="button";b.className=cls;b.textContent=label;b.disabled=disabled;b.addEventListener("click",handler);return b;}
   function render(){
     const pending=items.filter(x=>x.status==="pending").length,active=items.filter(x=>x.status==="active").length,done=items.filter(x=>x.status==="done").length;
@@ -58,12 +92,12 @@
       const row=document.createElement("article");row.className="queue-item queue-"+item.status;
       const top=document.createElement("div");top.className="queue-item-top";
       const title=document.createElement("b");title.textContent=item.host||"Tautan media";
-      const badge=document.createElement("span");badge.className="queue-state";badge.textContent=({pending:"Menunggu",active:"Sedang dibuka",done:"Selesai",skipped:"Dilewati",failed:"Gagal"})[item.status];
+      const badge=document.createElement("span");badge.className="queue-state";badge.textContent=item.status==="active"&&item.externalStarted?"Menunggu konfirmasi":({pending:"Menunggu",active:"Mengunduh",done:"Selesai",skipped:"Dilewati",failed:"Gagal"})[item.status];
       top.append(title,badge);
       const url=document.createElement("div");url.className="queue-url";url.textContent=item.url;
       const actions=document.createElement("div");actions.className="queue-item-actions";
       if(item.status==="pending"||item.status==="active")actions.append(button("Buka di Downloader","tag",()=>openItem(item)));
-      if(item.status==="active")actions.append(button("Tandai selesai","tag queue-success",()=>mark(item.id,"done")),button("Tandai gagal","tag queue-danger",()=>mark(item.id,"failed")),button("Lewati","tag",()=>mark(item.id,"skipped")));
+      if(item.status==="active")actions.append(button("Konfirmasi selesai","tag queue-success",()=>mark(item.id,"done")),button("Tandai gagal","tag queue-danger",()=>mark(item.id,"failed")),button("Lewati","tag",()=>mark(item.id,"skipped")));
       if(["done","failed","skipped"].includes(item.status))actions.append(button("Ulangi","tag",()=>{item.status="pending";save();render();setStatus("Item dikembalikan ke antrean.");}));
       actions.append(button("Hapus","tag queue-danger",()=>{items=items.filter(x=>x.id!==item.id);if(activeId===item.id)activeId=null;save();render();}));
       row.append(top,url,actions);list.append(row);
