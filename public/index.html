@@ -975,6 +975,7 @@ function showYouTubeDownloader(u){
    const name=document.createElement('b');name.textContent=ready.title||'YouTube Content';
    const meta=document.createElement('p');meta.className='muted';meta.textContent='Format: '+String(ready.format||format).toUpperCase()+(ready.filename?' · '+ready.filename:'')+(ready.expiresIn?' · Link berlaku '+ready.expiresIn:'');
    const link=document.createElement('a');link.href=ready.url;link.target='_blank';link.rel='noopener noreferrer';link.className='tag';link.style.cssText='display:inline-block;margin-top:8px';link.textContent='Unduh file ↗';
+   link.addEventListener('click',()=>window.dispatchEvent(new CustomEvent('aryanzz:download-link-opened',{detail:{url:u.href,name:ready.filename||ready.title||'YouTube media'}})));
    result.append(name,meta,link);
    saveHistory({url:ready.url,name:ready.filename||((ready.title||'youtube')+'.'+format),at:Date.now()});
   }catch(error){status.textContent=error.message||'Download gagal.';status.className='warning';}
