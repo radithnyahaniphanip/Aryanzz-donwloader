@@ -16,6 +16,7 @@ const titleSearchStart = html.indexOf('<select id="titleSearchType"');
 const titleSearchEnd = html.indexOf("</select>", titleSearchStart);
 const titleSearchMarkup = titleSearchStart >= 0 && titleSearchEnd >= 0 ? html.slice(titleSearchStart, titleSearchEnd) : "";
 const bootstrap = read("../public/ffmpeg-worker-bootstrap.js");
+const downloaderJs = read("../public/downloader.js");
 
 const checks = [
   ["ALL platform option is removed", !html.includes('data-platform="all"') && !searchJs.includes('all:{name:"Semua platform"')],
@@ -28,7 +29,11 @@ const checks = [
   ["V92.1 converter uses the shared FFmpeg class worker with a versioned same-origin bootstrap", converterJs.includes('ffmpeg-worker-bootstrap.js?v=92.1') && html.includes('/audio-studio.js?v=92.1')],
   ["V92.1 converter retries jsDelivr and unpkg core assets independently", converterJs.includes('for(let index=0;index<CORE_BASES.length;index++)') && converterJs.includes('coreURL:base+"/ffmpeg-core.js"') && converterJs.includes('wasmURL:base+"/ffmpeg-core.wasm"')],
   ["V92.1 converter reports stalled CDN transfers and resets timeout after each chunk", converterJs.includes('const armIdleTimeout=()=>') && converterJs.includes('armIdleTimeout();') && converterJs.includes('Koneksi CDN tidak mengirim data selama 45 detik')],
-  ["V92.1 adaptive YouTube mux uses the refreshed FFmpeg bootstrap", read("../public/downloader.js").includes('ffmpeg-worker-bootstrap.js?v=92.1')],
+  ["V92.2 platform-link YouTube MP4 mux uses the refreshed FFmpeg bootstrap", downloaderJs.includes('ffmpeg-worker-bootstrap.js?v=92.2')],
+  ["V92.2 platform-link FFmpeg loader retries both module CDNs", downloaderJs.includes('https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js') && downloaderJs.includes('https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js')],
+  ["V92.2 platform-link FFmpeg loader retries both core CDNs with a fresh instance", downloaderJs.includes('for(let index=0;index<coreBases.length;index++)') && downloaderJs.includes('coreURL,wasmURL,classWorkerURL:workerUrl') && downloaderJs.includes('ffmpeg?.terminate()')],
+  ["V92.2 platform-link FFmpeg component timeout resets while chunks arrive", downloaderJs.includes('const resetIdle=()=>') && downloaderJs.includes('resetIdle();') && downloaderJs.includes('CDN '+ 'label' +' + " tidak mengirim data selama 45 detik.")],
+  ["V92.2 downloader asset and PWA cache are refreshed", html.includes('/downloader.js?v=92.2') && sw.includes('/downloader.js?v=92.2') && sw.includes('/ffmpeg-worker-bootstrap.js?v=92.2') && sw.includes('aryanzz-v92-4')],
 
   ["Worker bootstrap reports import errors with the original message ID", bootstrap.includes("id: data?.id") && bootstrap.includes("type: \"ERROR\"")],
   ["MP4 duration fallback parser is present", converterJs.includes("parseMp4Duration") && converterJs.includes("recoverDuration")],
@@ -37,8 +42,8 @@ const checks = [
   ["Converter uses a same-origin local FFmpeg worker", converterJs.includes("ffmpeg-worker-bootstrap.js?v=92.1")],
   ["Local worker loads primary and fallback single-thread cores", converterJs.includes("for(let index=0;index<CORE_BASES.length;index++)") && converterJs.includes("instance.terminate()") && converterJs.includes("coreURL:base+\"/ffmpeg-core.js\"")],
   ["Worker CSP permits blob fetch for local WASM resources", worker.includes("connect-src") && worker.includes("wss: blob:;")],
-  ["Homepage release label is V92.0", html.includes("V92.1 · GRATIS")],
-  ["Worker health reports V92.0", worker.includes('version:"92.1"')],
+  ["Homepage release label is V92.0", html.includes("V92.2 · GRATIS")],
+  ["Worker health reports V92.0", worker.includes('version:"92.2"')],
   ["Homepage loads the shared V89 shell stylesheet", html.includes("/v89.css?v=90.0")],
   ["PWA cache namespace is V92.0", sw.includes('const CACHE="aryanzz-v92-2"')],
   ["PWA cache includes homepage, converter and Media Studio", sw.includes("/?v=92.1") && sw.includes("/audio-studio.js?v=92.1") && sw.includes("/audio-studio.css?v=92.0") && sw.includes("/media-studio.js?v=92.0") && sw.includes("/media-studio.css?v=92.0")],
