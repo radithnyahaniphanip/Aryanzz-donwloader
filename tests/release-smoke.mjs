@@ -188,6 +188,7 @@ const checks = [
   ["Mobile navigation stays fixed inside viewport", unifiedCss.includes(".nav{position:fixed!important")],
   ["Security status endpoint remains available", worker.includes('url.pathname==="/api/security/status"')],
   ["Security middleware wraps Worker requests", worker.includes("export default {fetch:securityFetch};")],
+  ["V94.26 release line is selected", read("../package.json").includes('"version": "94.26.0"')],
   ["Security Center remains in homepage", html.includes('id="securityCenter"') && searchJs.includes("initSecurityCenter")],
   ["TikTok Photo Mode routes bypass the video-only metadata filter and inspect hydration JSON", worker.includes("isTikTokPhotoRoute") && worker.includes("__UNIVERSAL_DATA_FOR_REHYDRATION__") && worker.includes("urlList") && worker.includes("images.length>=35")],
   ["Downloader checks photo galleries for image-capable and auto-detect platforms", downloaderJs.includes("shouldTryImageExtraction") && downloaderJs.includes("imageGallery") && downloaderJs.includes("isTikTokPhotoPost")],
