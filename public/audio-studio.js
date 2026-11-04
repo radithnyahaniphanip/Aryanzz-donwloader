@@ -19,7 +19,7 @@
   const FETCH_TIMEOUT_MS = 45000;
 
   let selectedFile = null, ffmpeg = null, ffmpegPromise = null, controller = null;
-  let previewUrl = "", resultUrl = "", cancelled = false, running = false;
+  let previewUrl = "", compatiblePreviewUrl = "", resultUrl = "", cancelled = false, running = false;
   let previewToken = 0;
 
   const formatSize = bytes => bytes < 1048576 ? (bytes / 1024).toFixed(0) + " KB" : (bytes / 1048576).toFixed(1) + " MB";
@@ -41,6 +41,7 @@
     const convert=$("audioStudioConvert"),cancel=$("audioStudioCancel");
     if(convert){convert.disabled=value||!selectedFile;convert.textContent=value?"Memproses…":"Konversi ke MP3";}
     if(cancel)cancel.hidden=!value;
+    const previewConvert=$("audioStudioPreviewConvert");if(previewConvert)previewConvert.disabled=value;
     fileInput.disabled=value;
     const bitrate=$("audioStudioBitrate"),name=$("audioStudioName");
     if(bitrate)bitrate.disabled=value;if(name)name.disabled=value;
@@ -100,8 +101,10 @@
     selectedFile=null;
     const preview=$("audioStudioPreview"),note=$("audioStudioPreviewNote"),meta=$("audioStudioFileMeta"),convert=$("audioStudioConvert"),result=$("audioStudioResult");
     if(previewUrl){URL.revokeObjectURL(previewUrl);previewUrl="";}
+    if(compatiblePreviewUrl){URL.revokeObjectURL(compatiblePreviewUrl);compatiblePreviewUrl="";}
     if(preview){preview.pause();preview.removeAttribute("src");preview.load();preview.hidden=true;}
     if(note){note.hidden=true;note.textContent="";}
+    const previewConvert=$("audioStudioPreviewConvert");if(previewConvert){previewConvert.hidden=true;previewConvert.disabled=false;}
     if(result){result.hidden=true;result.replaceChildren();}
     if(!file){meta.textContent="Belum ada video dipilih.";convert.disabled=true;return;}
     const ext=(file.name.split(".").pop()||"").toLowerCase();
@@ -121,7 +124,8 @@
     };
     preview.onerror=()=>{
       if(token!==previewToken)return;
-      if(note){note.hidden=false;note.textContent="Pratinjau tidak dapat diputar oleh browser HP ini (kemungkinan codec video tidak didukung). Kami sedang membaca durasi MP4; ekstraksi audio tetap bisa dicoba.";}
+      if(note){note.hidden=false;note.textContent="Pratinjau asli tidak didukung oleh browser HP ini. Coba buat pratinjau kompatibel H.264; proses ini dilakukan lokal di perangkat.";} 
+      const previewConvert=$("audioStudioPreviewConvert");if(previewConvert)previewConvert.hidden=false;
       status("Codec video tidak didukung untuk pratinjau. Kamu tetap bisa mencoba ekstrak audionya.");
       recoverDuration(file,token);
     };
@@ -219,6 +223,7 @@
     return ffmpegPromise;
   }
   function showResult(blob,filename) {
+    if(compatiblePreviewUrl)URL.revokeObjectURL(compatiblePreviewUrl);
     if(resultUrl)URL.revokeObjectURL(resultUrl);
     resultUrl=URL.createObjectURL(blob);
     const box=$("audioStudioResult");box.replaceChildren();box.hidden=false;
@@ -227,6 +232,40 @@
     const audio=document.createElement("audio");audio.controls=true;audio.preload="metadata";audio.src=resultUrl;audio.style.cssText="display:block;width:100%;margin:10px 0 12px";
     const link=document.createElement("a");link.href=resultUrl;link.download=filename;link.textContent="↓ Unduh MP3";
     box.append(title,meta,audio,link);
+  }
+  async function makeCompatiblePreview() {
+    if(!selectedFile||running)return;
+    const file=selectedFile;
+    cancelled=false;controller=new AbortController();busy(true);
+    const inputName="aryanzz-preview-source.mp4",outputName="aryanzz-preview-compatible.mp4";
+    let engine=null;
+    try {
+      status("Menyiapkan mesin untuk pratinjau kompatibel…");progress(1);
+      engine=await loadEngine(controller.signal);
+      if(controller.signal.aborted)throw new Error("Proses dibatalkan.");
+      status("Membaca video untuk membuat pratinjau…");progress(20);
+      await engine.writeFile(inputName,new Uint8Array(await file.arrayBuffer()));
+      status("Mengubah video ke format H.264 yang kompatibel dengan HP…");progress(24);
+      const code=await engine.exec(["-i",inputName,"-map","0:v:0","-an","-vf","scale='min(960,iw)':-2","-c:v","libx264","-preset","ultrafast","-crf","30","-pix_fmt","yuv420p","-movflags","+faststart","-y",outputName],300000);
+      if(code!==0)throw new Error("Encoder H.264 tidak tersedia atau video tidak memiliki trek gambar.");
+      if(controller.signal.aborted)throw new Error("Proses dibatalkan.");
+      const output=await engine.readFile(outputName);
+      if(!output||output.length<1024)throw new Error("Pratinjau kompatibel tidak berhasil dibuat.");
+      if(compatiblePreviewUrl)URL.revokeObjectURL(compatiblePreviewUrl);
+      compatiblePreviewUrl=URL.createObjectURL(new Blob([output],{type:"video/mp4"}));
+      const preview=$("audioStudioPreview");
+      preview.pause();preview.src=compatiblePreviewUrl;preview.hidden=false;preview.load();
+      const note=$("audioStudioPreviewNote");
+      if(note){note.hidden=false;note.textContent="Pratinjau kompatibel H.264 berhasil dibuat. Tekan Play untuk memutar video.";}
+      $("audioStudioPreviewConvert").hidden=true;
+      progress(100,"done");status("Pratinjau video siap diputar. File asli tetap digunakan untuk ekstraksi MP3.");
+    } catch(error) {
+      progress(0,cancelled?"idle":"failed");
+      status(cancelled||controller?.signal.aborted?"Proses dibatalkan.":"Pratinjau kompatibel gagal: "+String(error?.message||error).slice(0,180));
+    } finally {
+      if(engine?.loaded){try{await engine.deleteFile(inputName);}catch{}try{await engine.deleteFile(outputName);}catch{}}
+      controller=null;cancelled=false;busy(false);
+    }
   }
   async function convert() {
     if(!selectedFile||running)return;
@@ -274,6 +313,7 @@
   }
   fileInput.addEventListener("change",()=>selectFile(fileInput.files?.[0]));
   $("audioStudioConvert").addEventListener("click",convert);
+  $("audioStudioPreviewConvert")?.addEventListener("click",makeCompatiblePreview);
   $("audioStudioCancel").addEventListener("click",()=>{
     cancelled=true;controller?.abort();
     if(ffmpeg){try{ffmpeg.terminate();}catch{}ffmpeg=null;ffmpegPromise=null;}
