@@ -56,3 +56,7 @@ body[data-motion=off] .audio-file-drop,body[data-motion=off] .audio-progress-tra
 .audio-preview-convert{width:100%;margin:0 0 12px;min-height:42px;border-color:#4d86ae;color:#d8f5ff;background:linear-gradient(110deg,#193f62,#174d67)}
 .audio-preview-convert[hidden]{display:none!important}
 .audio-preview-convert:disabled{opacity:.55}
+
+.audio-trim-note{margin:7px 0 0;color:var(--muted);font-size:10px;line-height:1.5}
+.audio-trim-fields{margin-top:10px}
+.audio-trim-fields input{min-width:0}
