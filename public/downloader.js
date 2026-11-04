@@ -901,7 +901,7 @@
         }
       }catch(error){await reader.cancel().catch(()=>{});throw error;}
       if(!received)throw new Error("Provider mengirim file kosong.");
-      if(responseSize&&received!==responseSize)throw new Error("Transfer tidak lengkap: diterima "+formatDownloadSize(received)+" dari "+formatDownloadSize(responseSize)+". File tidak disimpan.");
+      if(responseSize&&received!==responseSize){await reader.cancel().catch(()=>{});addReadyDownloadLink(container,downloadUrl.href,filename,mode==="audio"?"⬇ Lanjutkan unduhan audio lewat Chrome":"⬇ Lanjutkan unduhan video lewat Chrome");bar.style.width="0%";bar.parentElement?.classList.remove("is-indeterminate");bar.parentElement?.setAttribute("aria-valuenow","0");progressText.textContent="Koneksi terputus · unduhan langsung tersedia";if(progressMeta)progressMeta.textContent="Browser menerima "+formatDownloadSize(received)+" dari "+formatDownloadSize(responseSize)+". File parsial tidak disimpan. Gunakan tombol unduhan langsung agar Chrome mengelola transfer dan percobaan ulang.";return filename;}
       const blob=new Blob(chunks,{type:check.mimeType||selected.mimeType||"application/octet-stream"});
       if(blob.size!==received)throw new Error("Ukuran file hasil rakitan tidak cocok dengan data yang diterima.");
       if(mode==="video"&&["mp4","m4v","mov"].includes(check.extension)){
