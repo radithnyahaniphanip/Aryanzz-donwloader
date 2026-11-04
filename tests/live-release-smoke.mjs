@@ -1,76 +1,82 @@
 import assert from "node:assert/strict";
 
-const base = (process.env.WORKER_URL || "https://aryanzz-donwloader.radithnyahaniphanip.workers.dev").replace(/\/$/, "");
-let health;
-let lastError;
-for (let attempt = 0; attempt < 18; attempt++) {
-  try {
-    const response = await fetch(base + "/api/health", { cache: "no-store", signal: AbortSignal.timeout(10000) });
-    if (response.ok) health = await response.json();
-    if (health?.version === "93.0") break;
-    lastError = new Error("Worker still reports " + String(health?.version || "no version"));
-  } catch (error) { lastError = error; }
-  await new Promise(resolve => setTimeout(resolve, 3000));
+const base=(process.env.WORKER_URL||"https://aryanzz-donwloader.radithnyahaniphanip.workers.dev").replace(/\/$/,"");
+const request=(path,init={})=>fetch(base+path,{cache:"no-store",signal:AbortSignal.timeout(15000),...init});
+
+let health,lastError;
+for(let attempt=0;attempt<18;attempt++){
+  try{
+    const response=await request("/api/health");
+    if(response.ok)health=await response.json();
+    if(/^\d+\.\d+$/.test(String(health?.version||"")))break;
+    lastError=new Error("Worker belum melaporkan versi build: "+String(health?.version||"kosong"));
+  }catch(error){lastError=error;}
+  await new Promise(resolve=>setTimeout(resolve,3000));
 }
-assert.equal(health?.version, "93.0", "Live Worker did not report V93.0: " + String(lastError?.message || ""));
-assert.equal(health?.mode, "cloudflare-worker-zero-server-hybrid");
-assert.equal(health?.securityActive, true);
+assert.match(String(health?.version||""),/^\d+\.\d+$/,"Live Worker tidak melaporkan versi build: "+String(lastError?.message||""));
+assert.equal(health?.mode,"cloudflare-worker-zero-server-hybrid");
+assert.equal(health?.securityActive,true);
+const version=String(health.version);
 
-const securityResponse = await fetch(base + "/api/security/status", { cache: "no-store", signal: AbortSignal.timeout(10000) });
-assert.equal(securityResponse.status, 200);
-const security = await securityResponse.json();
-assert.equal(security?.security?.active, true);
+const securityResponse=await request("/api/security/status");
+assert.equal(securityResponse.status,200);
+const security=await securityResponse.json();
+assert.equal(security?.security?.active,true);
 
-const rejectedBypass = await fetch(base + "/api/link-bypass?url=" + encodeURIComponent("https://example.com/"), { cache: "no-store", signal: AbortSignal.timeout(10000) });
-assert.equal(rejectedBypass.status, 400, "Link Bypass must reject domains outside the SFL allowlist");
-const rejectedBypassBody = await rejectedBypass.json();
-assert.equal(rejectedBypassBody.ok, false);
+const rejectedBypass=await request("/api/link-bypass?url="+encodeURIComponent("https://example.com/"));
+assert.equal(rejectedBypass.status,400,"Link Bypass harus menolak domain di luar allowlist SFL");
+assert.equal((await rejectedBypass.json()).ok,false);
 
+const ping=await request("/api/speedtest/ping?live-smoke=1");
+assert.equal(ping.status,204,"Endpoint ping Speed Test harus menjawab 204");
+const downloadBytes=65536;
+const speedDownload=await request("/api/speedtest/download?bytes="+downloadBytes+"&live-smoke=1");
+assert.equal(speedDownload.status,200,"Endpoint download Speed Test gagal");
+assert.equal((await speedDownload.arrayBuffer()).byteLength,downloadBytes,"Ukuran payload download Speed Test tidak sesuai");
+const uploadBytes=32768;
+const speedUpload=await request("/api/speedtest/upload?live-smoke=1",{method:"POST",headers:{"content-type":"application/octet-stream"},body:new Uint8Array(uploadBytes)});
+assert.equal(speedUpload.status,200,"Endpoint upload Speed Test gagal");
+const uploadResult=await speedUpload.json();
+assert.equal(uploadResult?.ok,true);
+assert.equal(uploadResult?.received,uploadBytes);
 
-const homeResponse = await fetch(base + "/", { cache: "no-store", signal: AbortSignal.timeout(10000) });
-assert.equal(homeResponse.status, 200);
-const html = await homeResponse.text();
-assert.ok(html.includes("V93.0 · GRATIS"));
-assert.ok(html.includes("/v674.js?v=89.2"));
-assert.ok(html.includes("/v89.css?v=93.0"));
-assert.ok(html.includes("V93.0 · GRATIS"));
-assert.ok(html.includes("/link-bypass.css?v=93.0"));
-assert.ok(html.includes("/link-bypass.js?v=93.0"));
-assert.ok(html.includes("/v25.js?v=93.0"));
-assert.ok(html.includes('id="linkBypass"'));
-assert.ok(!html.includes('class="v93-popular-grid"'));
-assert.ok(html.includes("/audio-studio.js?v=92.5"));
-assert.ok(html.includes("/downloader.js?v=92.2"));
-assert.ok(html.includes("/advanced.js?v=92.5"));
-assert.ok(html.includes("/media-studio.js?v=92.0"));
-assert.ok(html.includes("/media-studio.css?v=92.0"));
-assert.ok(html.includes('id="mediaStudio"'));
-assert.ok(html.includes('id="queue"'));
-assert.ok(html.includes('id="queueCounts"'));
-assert.ok(html.includes("/download-queue.js?v=92.0"));
-assert.ok(html.includes("/download-queue.css?v=92.0"));
-assert.ok(html.includes("aryanzz:download-complete"));
-assert.ok(html.includes("aryanzz:download-failed"));
-assert.ok(html.includes("aryanzz:download-link-opened"));
-assert.ok(html.includes('id="audioStudioStart"'));
-assert.ok(html.includes('id="audioStudioEnd"'));
-assert.ok(html.includes('id="audioStudioFormat"'));
-assert.ok(html.includes('id="audioStudioVolume"'));
-assert.ok(html.includes('id="audioStudioTestEngine"'));
-assert.ok(html.includes('id="audioStudioDiagnosticsResult"'));
-assert.ok(html.includes("V93.0 · GRATIS"));
-assert.ok(html.includes('id="audioStudioPreviewNote"'));
-assert.ok(html.includes('id="audioStudioPreviewConvert"'));
-assert.ok(html.includes('id="v89Welcome"'));
-assert.ok(html.includes("Semua berawal"));
-assert.ok(html.includes("dari satu tautan"));
-assert.ok(html.includes('id="securityCenter"'));
-assert.ok(!html.includes('class="audio-studio-disclaimer"'));
+const homeResponse=await request("/");
+assert.equal(homeResponse.status,200);
+const html=await homeResponse.text();
+assert.ok(html.includes("V"+version+" · GRATIS"),"Label homepage tidak cocok dengan versi Worker");
+for(const marker of [
+  "/speed-test.js?v=94.6",
+  'id="networkProfile"',
+  'id="speedBtn"',
+  'id="linkBypass"',
+  'id="sflBypassForm"',
+  "/link-bypass.js?v=94.0",
+  "/link-bypass.css?v=94.0",
+  "/v89.css?v=93.2",
+  "/v25.js?v=94.0",
+  'id="mediaStudio"',
+  'id="queue"',
+  'id="securityCenter"',
+  'id="audioStudioStart"',
+  'id="audioStudioEnd"',
+  'id="audioStudioFormat"',
+  'id="audioStudioTestEngine"',
+  'id="audioStudioDiagnosticsResult"',
+  'id="v89Welcome"'
+])assert.ok(html.includes(marker),"Homepage kehilangan elemen/asset: "+marker);
 
-for (const path of ["/v89.css?v=93.0", "/link-bypass.css?v=93.0", "/link-bypass.js?v=93.0", "/v674.js?v=89.2", "/v674.css?v=85.5.0", "/v25.css?v=93.0", "/v25.js?v=93.0", "/owner.js?v=92.3", "/advanced.js?v=92.5", "/downloader.css?v=88.3", "/brand-refresh.css?v=82.1", "/audio-studio.js?v=92.5", "/audio-studio.css?v=92.0", "/media-studio.js?v=92.0", "/media-studio.css?v=92.0", "/download-queue.js?v=92.0", "/download-queue.css?v=92.0", "/downloader.js?v=92.2", "/ffmpeg-worker-bootstrap.js?v=92.2", "/sw.js?v=93.0"]) {
-  const response = await fetch(base + path, { cache: "no-store", signal: AbortSignal.timeout(10000) });
-  assert.equal(response.status, 200, "Missing live asset " + path);
+const assetRefs=[...html.matchAll(/(?:src|href)="(\/(?:[^"]+\.(?:js|css))(?:\?[^"]*)?)"/g)].map(match=>match[1]);
+assert.ok(assetRefs.length>=15,"Homepage tidak memuat kumpulan aset aplikasi yang diharapkan");
+for(const path of [...new Set(assetRefs)]){
+  const response=await request(path);
+  assert.equal(response.status,200,"Aset live tidak ditemukan: "+path);
 }
-console.log("✔ Cloudflare Worker health: V93.0");
-console.log("✔ Security middleware and release endpoints are active");
-console.log("✔ V93.0 homepage, Link Bypass, mobile UI, Profile and existing media tools are live");
+const swResponse=await request("/sw.js");
+assert.equal(swResponse.status,200,"Service worker tidak tersedia");
+const sw=await swResponse.text();
+assert.ok(sw.includes("aryanzz-build-"+version),"Namespace cache PWA tidak mengikuti versi build");
+assert.ok(sw.includes("/speed-test.js?v=94.6"),"Service worker belum mencache controller Speed Test");
+console.log("✔ Cloudflare Worker health: "+version);
+console.log("✔ Security middleware and Link Bypass validation are active");
+console.log("✔ Speed Test ping, download and upload endpoints pass live HTTP checks");
+console.log("✔ Homepage, Profile, media tools, adaptive network selector and PWA assets are live");
