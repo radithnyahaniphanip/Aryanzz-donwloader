@@ -259,9 +259,18 @@ async function freePublicMediaInfo(rawUrl,requestUrl){
   const endpoint=FREE_MEDIA_API+"/api/download/"+key+"?url="+encodeURIComponent(canonicalUrl);
   let primaryError="";
   try{
-    const response=await fetch(endpoint,{headers:{accept:"application/json"},signal:AbortSignal.timeout(key==="snackvideo"?12000:16000),cache:"no-store"});
-    const data=await response.json().catch(()=>({}));
-    if(response.ok&&data?.success!==false){
+    let response=null,data={},attempts=key==="instagram"?2:1;
+    for(let attempt=0;attempt<attempts;attempt++){
+      try{
+        response=await fetch(endpoint,{headers:{accept:"application/json","user-agent":"Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/130.0.0.0 Mobile Safari/537.36",...(key==="instagram"?{referer:"https://www.instagram.com/"}:{})},signal:AbortSignal.timeout(key==="snackvideo"?12000:14000),cache:"no-store"});
+        data=await response.json().catch(()=>({}));
+        if(response.ok||response.status<500||attempt===attempts-1)break;
+      }catch(error){
+        if(attempt===attempts-1)throw error;
+      }
+      await new Promise(resolve=>setTimeout(resolve,650));
+    }
+    if(response?.ok&&data?.success!==false){
       const normalized=freeProviderMediaInfo(data,canonicalUrl,requestUrl);
       if(normalized){
         if(key==="tiktok"){
