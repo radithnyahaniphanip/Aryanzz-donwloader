@@ -45,3 +45,18 @@ body[data-view="owner"] .nav button[data-nav="owner"]{font-weight:1000}
 @media(max-width:600px){.owner-shell{padding:10px;border-radius:19px;box-shadow:0 14px 36px #0005}.owner-topbar{margin-bottom:17px}.owner-cover{height:174px;padding:18px}.owner-avatar-row{margin:0 16px;height:32px}.owner-avatar{width:88px;height:88px;top:-47px;font-size:34px}.owner-profile-content{padding:0 16px 15px}.owner-badges{padding-left:98px;gap:6px;margin-bottom:13px}.owner-badge{font-size:8px;padding:7px 9px}.owner-profile-content h2{font-size:31px}.owner-stats{padding:0 16px 17px;gap:7px}.owner-stats>div{padding:9px}.owner-stats b{font-size:17px}.owner-stats span{font-size:8px}.owner-social-grid{gap:12px}.owner-social-card{min-height:158px;padding:14px;border-radius:16px;box-shadow:0 5px 0 #030812}.owner-social-card b{font-size:15px}.owner-social-icon{width:45px;height:45px;font-size:23px}.owner-social-action{font-size:10px}.owner-social-action i{font-size:18px}.owner-social-heading h2{font-size:22px}}
 @media(max-width:380px){.owner-social-grid{grid-template-columns:1fr}.owner-social-card{min-height:130px}.owner-badges{padding-left:90px}.owner-top-actions button{width:35px;height:35px}.owner-wordmark{font-size:16px}}
 @media(prefers-reduced-motion:reduce){.owner-cover:before,.owner-cover:after,.owner-cover-orbit{animation:none!important}.owner-social-card{transition:none!important}}
+
+/* V94.0 — Developer Website cinematic profile */
+.owner-badge-gold{position:relative;overflow:hidden;letter-spacing:1.7px;background:linear-gradient(110deg,#30204d,#8054c8 42%,#d7b56d 70%,#46316e)!important;background-size:220% 100%;border:1px solid rgba(226,195,255,.55)!important;box-shadow:0 0 18px rgba(145,93,255,.28),inset 0 1px rgba(255,255,255,.2);animation:aryOwnerTitle 8s ease-in-out infinite}
+.owner-profile-card{position:relative;isolation:isolate}
+.owner-profile-card:before{content:"";position:absolute;inset:-1px;border-radius:inherit;padding:1px;background:linear-gradient(120deg,transparent,#9c7cff,#74dfff,#d6b36b,transparent);background-size:260% 260%;z-index:-1;opacity:.75;animation:aryOwnerBorder 12s linear infinite;pointer-events:none}
+.owner-cover-orbit{animation:aryOwnerOrbit 18s linear infinite;transform-origin:center}
+.owner-profile-content h2{background:linear-gradient(100deg,#fff,#c7b2ff 38%,#8ce8ff 72%,#fff);background-size:200% auto;background-clip:text;-webkit-background-clip:text;color:transparent;animation:aryOwnerTitle 9s ease-in-out infinite}
+.owner-social-card{transition:transform .24s ease,border-color .24s ease,box-shadow .24s ease}
+.owner-social-card:hover{transform:translateY(-4px);box-shadow:0 12px 34px rgba(91,110,255,.18)}
+.owner-link-editor details[open]{border-color:rgba(132,160,255,.42)}
+.owner-link-editor details>summary{cursor:pointer}
+@keyframes aryOwnerTitle{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
+@keyframes aryOwnerBorder{0%{background-position:0% 50%}100%{background-position:260% 50%}}
+@keyframes aryOwnerOrbit{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.owner-badge-gold,.owner-profile-card:before,.owner-cover-orbit,.owner-profile-content h2{animation:none!important}.owner-social-card{transition:none}}
