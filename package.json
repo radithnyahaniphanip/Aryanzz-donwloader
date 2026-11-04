@@ -6,7 +6,9 @@
   "scripts": {
     "start": "node server/index.js",
     "test": "node tests/smoke.mjs",
-    "test:release": "node tests/release-smoke.mjs"
+    "test:release": "node tests/release-smoke.mjs",
+    "build:version": "node scripts/build-version.mjs",
+    "deploy": "npm run build:version && wrangler deploy"
   },
   "dependencies": {
     "cors": "^2.8.5",
