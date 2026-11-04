@@ -81,6 +81,15 @@ for(const path of [...new Set(assetRefs)]){
   const response=await request(path);
   assert.equal(response.status,200,"Aset live tidak ditemukan: "+path);
 }
+
+const platformMatrixResponse=await request("/api/platform/status");
+assert.equal(platformMatrixResponse.status,200,"Platform status endpoint gagal");
+const platformMatrix=await platformMatrixResponse.json();
+assert.equal(platformMatrix.platformCount,19,"Status platform harus melaporkan 19 pilihan");
+const expectedPlatforms=["youtube","tiktok","instagram","snackvideo","capcut","pinterest","facebook","x","reddit","vimeo","threads","soundcloud","tiktoklite","facebooklite","snapchat","idnapp","instagramlite","linkedin","wechat","kakaotalk"];
+for(const id of expectedPlatforms)assert.ok(platformMatrix.platforms.some(item=>item.id===id),"Platform tidak terdaftar: "+id);
+console.log("✔ Platform status endpoint exposes all 19 platform choices.");
+
 const releaseResponse=await request("/release.json");
 assert.equal(releaseResponse.status,200,"Metadata release.json tidak tersedia");
 const release=await releaseResponse.json();
