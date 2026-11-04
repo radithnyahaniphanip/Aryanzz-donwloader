@@ -42,11 +42,11 @@ const checks = [
   ["Converter uses a same-origin local FFmpeg worker", converterJs.includes("ffmpeg-worker-bootstrap.js?v=92.1")],
   ["Local worker loads primary and fallback single-thread cores", converterJs.includes("for(let index=0;index<CORE_BASES.length;index++)") && converterJs.includes("instance.terminate()") && converterJs.includes("coreURL:base+\"/ffmpeg-core.js\"")],
   ["Worker CSP permits blob fetch for local WASM resources", worker.includes("connect-src") && worker.includes("wss: blob:;")],
-  ["Homepage release label is V92.0", html.includes("V92.2 · GRATIS")],
-  ["Worker health reports V92.0", worker.includes('version:"92.2"')],
+  ["Homepage release label is V92.2", html.includes("V92.2 · GRATIS")],
+  ["Worker health reports V92.2", worker.includes('version:"92.2"')],
   ["Homepage loads the shared V89 shell stylesheet", html.includes("/v89.css?v=90.0")],
-  ["PWA cache namespace is V92.0", sw.includes('const CACHE="aryanzz-v92-2"')],
-  ["PWA cache includes homepage, converter and Media Studio", sw.includes("/?v=92.1") && sw.includes("/audio-studio.js?v=92.1") && sw.includes("/audio-studio.css?v=92.0") && sw.includes("/media-studio.js?v=92.0") && sw.includes("/media-studio.css?v=92.0")],
+  ["PWA cache namespace is V92.2", sw.includes('const CACHE="aryanzz-v92-4"')],
+  ["PWA cache includes homepage, converter and Media Studio", sw.includes("/?v=92.2") && sw.includes("/audio-studio.js?v=92.1") && sw.includes("/audio-studio.css?v=92.0") && sw.includes("/media-studio.js?v=92.0") && sw.includes("/media-studio.css?v=92.0")],
 
   ["Converter Pro includes optional audio trim controls", html.includes('id="audioStudioStart"') && html.includes('id="audioStudioEnd"') && converterJs.includes('ffmpegArgs.push("-t"')],
   ["Converter Pro supports MP3 WAV AAC and FLAC output", ["mp3","wav","aac","flac"].every(format => html.includes('value="'+format+'"')) && converterJs.includes("libmp3lame") && converterJs.includes("pcm_s16le") && converterJs.includes('format==="aac"') && converterJs.includes('format==="flac"')],
@@ -78,7 +78,7 @@ const checks = [
   ["Media Studio responsive stylesheet is wired", html.includes("/media-studio.css?v=92.0") && mediaStudioCss.includes("@media(max-width:480px)")],
   ["PWA cache includes current search bundle", sw.includes("/v674.js?v=89.2")],
   ["Worker CSP permits FFmpeg WebAssembly and blob core loading", worker.includes("wasm-unsafe-eval") && worker.includes("https: blob:")],
-  ["Homepage loads the V92.0 converter runtime", html.includes("/audio-studio.js?v=92.1")],
+  ["Homepage loads the current converter runtime", html.includes("/audio-studio.js?v=92.1")],
   ["Unified navigation hides home when another view opens", html.includes('id="appViewHeader"') && html.includes("home.hidden=!!id") && html.includes("p.id===id")],
   ["Unified responsive app shell is loaded", html.includes("/v89.css?v=90.0") && unifiedCss.includes("V89.0 — ONE UNIFIED ECOSYSTEM")],
   ["Shared header and persistent welcome remain", html.includes('class="top v674-top"') && html.includes('id="v89Welcome"')],
@@ -93,4 +93,4 @@ for (const [name, ok] of checks) {
   assert.ok(ok, name + " failed");
   console.log("✔ " + name);
 }
-console.log("\nARYANZZ V92.1 release smoke tests passed.");
+console.log("\nARYANZZ V92.2 platform downloader release smoke tests passed.");
