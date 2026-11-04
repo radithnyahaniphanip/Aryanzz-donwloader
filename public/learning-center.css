@@ -7,3 +7,15 @@
 @media(max-width:480px){.lc-hub{padding:12px}.lc-hub-grid{grid-template-columns:1fr}.lc-hub-card{padding:11px}.lc-hub-head h3{font-size:16px}}
 
 .lc-screen-rec{border:1px solid rgba(101,205,187,.38);border-radius:11px;background:rgba(28,112,104,.22);color:#dffdf5;padding:10px 12px;font-size:12px;font-weight:800;margin-top:8px}
+
+
+/* V94.3 — inline tutorial entry in every tool panel */
+.lc-inline-launch{display:flex;align-items:center;gap:12px;width:100%;margin:0 0 14px;padding:12px 14px;border:1px solid rgba(102,190,255,.3);border-radius:15px;background:linear-gradient(110deg,rgba(23,72,132,.42),rgba(100,65,165,.25));color:inherit;text-align:left;cursor:pointer;transition:transform .18s ease,border-color .18s ease,background .18s ease}
+.lc-inline-launch:active{transform:scale(.985)}
+.lc-inline-launch>span:first-child{display:grid;place-items:center;flex:0 0 38px;width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,#3bbfdf,#8765f5);color:#fff;font-size:15px}
+.lc-inline-launch>span:nth-child(2){display:grid;gap:3px;min-width:0}
+.lc-inline-launch b{font-size:13px;font-weight:800;letter-spacing:.01em}
+.lc-inline-launch small{font-size:11px;opacity:.72;line-height:1.4}
+.lc-inline-arrow{margin-left:auto;font-size:18px;color:#8ce4f4}
+@media(hover:hover){.lc-inline-launch:hover{border-color:rgba(116,210,255,.7);background:linear-gradient(110deg,rgba(23,92,160,.52),rgba(113,74,190,.34))}}
+@media(max-width:480px){.lc-inline-launch{padding:10px 11px;margin-bottom:11px}.lc-inline-launch b{font-size:12px}}
