@@ -970,25 +970,46 @@ function socialNetworkPlan(selected=0){
     const hasSocialDownloadFormats=Array.isArray(info.formats)&&info.formats.some(item=>item?.downloadUrl);
     if(hasSocialDownloadFormats){
       const all=(Array.isArray(info.formats)?info.formats:[]).filter(item=>item.mode===mode&&item.downloadUrl&&!(mode==="video"&&(item.videoOnly||!["mp4","m4v"].includes(String(item.ext||"").toLowerCase()))));
-      let selected=null;
-      if(mode==="audio")selected=all.find(item=>item.ext===requestedAudioFormat)||all[0]||null;
-      else{
+      let orderedCandidates=[];
+      if(mode==="audio"){
+        orderedCandidates=[...all.filter(item=>item.ext===requestedAudioFormat),...all.filter(item=>item.ext!==requestedAudioFormat)];
+      }else{
         const wanted=Number(quality)||0;
-        selected=all.filter(item=>Number(item.height)>0).sort((a,b)=>{
-          const ah=Number(a.height),bh=Number(b.height),aBelow=ah<=wanted,bBelow=bh<=wanted;
+        orderedCandidates=all.slice().sort((a,b)=>{
+          const ah=Number(a.height)||0,bh=Number(b.height)||0;
+          if(!ah&&bh)return 1;if(ah&&!bh)return -1;
+          const aBelow=ah>0&&ah<=wanted,bBelow=bh>0&&bh<=wanted;
           if(aBelow!==bBelow)return aBelow?-1:1;
           return aBelow?bh-ah:ah-bh;
-        })[0]||all[0]||null;
+        });
       }
-      if(!selected)throw new Error(mode==="audio"?"Provider gratis tidak menyediakan audio yang dapat diunduh.":"Provider gratis tidak menyediakan MP4 lengkap dengan suara. Format selain MP4 tidak akan diberi ekstensi MP4 palsu. Coba tautan video publik lain.");
-      const ready=safeUrl(selected.downloadUrl);
-      if(!ready||ready.origin!==location.origin||ready.pathname!=="/api/social-file")throw new Error("Tautan unduhan tidak melewati pemeriksaan keamanan ARYANZZ.");
-      const probeUrl=new URL(ready.href);probeUrl.searchParams.set("probe","1");
+      const seenCandidates=new Set();
+      orderedCandidates=orderedCandidates.filter(item=>{
+        const key=String(item.downloadUrl||"")+"|"+String(item.mode||"");
+        if(!item.downloadUrl||seenCandidates.has(key))return false;
+        seenCandidates.add(key);return true;
+      }).slice(0,6);
+      if(!orderedCandidates.length)throw new Error(mode==="audio"?"Provider gratis tidak menyediakan audio yang dapat diunduh.":"Provider gratis tidak menyediakan MP4 lengkap dengan suara. Format selain MP4 tidak akan diberi ekstensi MP4 palsu. Coba tautan video publik lain.");
+      let selected=null,ready=null,check=null,lastProbeError="";
       progressText.textContent="Memeriksa ukuran dan isi media…";
-      if(progressMeta)progressMeta.textContent="Memeriksa header MP4/WebM, ukuran total dan dukungan stream sebelum mulai mengunduh.";
-      const probeResponse=await fetch(probeUrl.href,{cache:"no-store",credentials:"same-origin",signal:downloadTimeoutSignal(45000)});
-      const check=await probeResponse.json().catch(()=>({}));
-      if(!probeResponse.ok||!check.valid)throw new Error(check.error||"Pemeriksaan file media gagal (HTTP "+probeResponse.status+").");
+      if(progressMeta)progressMeta.textContent="Memeriksa hingga enam jalur media. Jika satu provider mengirim file rusak, ARYANZZ otomatis mencoba jalur berikutnya.";
+      for(let index=0;index<orderedCandidates.length;index++){
+        const candidate=orderedCandidates[index],candidateUrl=safeUrl(candidate.downloadUrl);
+        if(!candidateUrl||candidateUrl.origin!==location.origin||candidateUrl.pathname!=="/api/social-file"){
+          lastProbeError="Tautan unduhan tidak melewati pemeriksaan keamanan ARYANZZ.";continue;
+        }
+        const probeUrl=new URL(candidateUrl.href);probeUrl.searchParams.set("probe","1");
+        try{
+          progressText.textContent="Memvalidasi format "+(index+1)+" dari "+orderedCandidates.length+"…";
+          const probeResponse=await fetch(probeUrl.href,{cache:"no-store",credentials:"same-origin",signal:downloadTimeoutSignal(20000)});
+          const candidateCheck=await probeResponse.json().catch(()=>({}));
+          if(probeResponse.ok&&candidateCheck.valid===true){
+            selected=candidate;ready=candidateUrl;check=candidateCheck;break;
+          }
+          lastProbeError=String(candidateCheck.error||"File tidak lolos validasi (HTTP "+probeResponse.status+").").slice(0,180);
+        }catch(error){lastProbeError=String(error?.message||error).slice(0,180)}
+      }
+      if(!selected||!ready||!check)throw new Error("Tidak ada format yang lolos validasi media. "+(lastProbeError||"Semua provider mengirim file yang tidak cocok."));
       const size=Number(check.bytes)||Number(selected.filesize)||0;
       const filenameBase=safeFilename(info.outputName||info.title||"aryanzz-media").replace(/\.[a-z0-9]{2,5}$/i,"");
       const filename=filenameBase+"."+check.extension;
