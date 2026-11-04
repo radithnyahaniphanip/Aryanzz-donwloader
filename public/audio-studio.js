@@ -223,7 +223,6 @@
     return ffmpegPromise;
   }
   function showResult(blob,filename) {
-    if(compatiblePreviewUrl)URL.revokeObjectURL(compatiblePreviewUrl);
     if(resultUrl)URL.revokeObjectURL(resultUrl);
     resultUrl=URL.createObjectURL(blob);
     const box=$("audioStudioResult");box.replaceChildren();box.hidden=false;
@@ -322,6 +321,7 @@
   window.addEventListener("pagehide",()=>{
     if(ffmpeg){try{ffmpeg.terminate();}catch{}}
     if(previewUrl)URL.revokeObjectURL(previewUrl);
+    if(compatiblePreviewUrl)URL.revokeObjectURL(compatiblePreviewUrl);
     if(resultUrl)URL.revokeObjectURL(resultUrl);
   });
 })();
