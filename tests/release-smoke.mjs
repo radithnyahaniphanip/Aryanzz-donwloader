@@ -29,8 +29,6 @@ const idCounts = new Map();
 for (const match of html.matchAll(/\bid=["']([^"']+)["']/g)) idCounts.set(match[1], (idCounts.get(match[1]) || 0) + 1);
 const duplicateIds = [...idCounts].filter(([, count]) => count > 1).map(([id]) => id);
 
-const learningCenter = read("../public/learning-center.js");
-const learningCss = read("../public/learning-center.css");
 const checks = [
   ["Speed test controller and same-origin Worker endpoints are present", read("../public/speed-test.js").includes('"/api/speedtest/download?bytes="') && read("../src/index.js").includes('url.pathname==="/api/speedtest/download"') && read("../src/index.js").includes('url.pathname==="/api/speedtest/upload"')],
   ["Adaptive network profiles cover five levels and auto mode", read("../public/index.html").includes('id="networkProfile"') && read("../public/downloader.js").includes("window.ARYANZZ_NETWORK_PROFILE") && ["Terendah","Rendah","Normal","Tinggi","Tertinggi"].every(x => read("../public/downloader.js").includes(x))],
@@ -38,10 +36,6 @@ const checks = [
 
   ["Automatic release version generator is wired to the Cloudflare build step", read("../package.json").includes('"build:version": "node scripts/build-version.mjs"') && read("../scripts/build-version.mjs").includes('git", ["rev-list", "--count", "HEAD"]') && read("../src/index.js").includes("version:BUILD_VERSION")],
   ["Version placeholders cover app UI, PWA manifest and service-worker cache", read("../public/index.html").includes("__ARYANZZ_VERSION__") && read("../public/manifest.webmanifest").includes("__ARYANZZ_VERSION__") && read("../public/sw.js").includes("__ARYANZZ_VERSION__")],
-  ["V94 tutorial player is mounted inside each supported tool panel and hub navigation scrolls to the guide", learningCenter.includes('el.className="lc-guide lc-cinema"') && learningCenter.includes('root.prepend(el)') && learningCenter.includes('$(id)?.scrollIntoView') && learningCenter.includes('data-open=')],
-  ["V94.3 inline tutorial launcher has responsive accessible styling", learningCss.includes(".lc-inline-launch") && learningCss.includes("@media(max-width:480px)")],
-  ["V94 tutorials cover requested tools and members/visitors", ["linkBypass","mediaStudio","queue","editor","musicFinder","audioStudio","imageTools","pdfTools","qrTools","securityTools","gradientStudio","fileHash","colorStudio","speed","checker","members","heart","install","history"].every(id => learningCenter.includes(id+":"))],
-  ["Tutorials support vertical/horizontal preview, measured duration, and non-Google local narration", learningCenter.includes('data-r="9:16"') && learningCenter.includes('data-r="16:9"') && learningCenter.includes("SpeechSynthesisUtterance") && learningCenter.includes("localService===true") && learningCenter.includes("actualSceneDurations") && !learningCenter.includes("musicStart()")],
   ["V93 Link Bypass panel, form, controller, and Worker resolver are wired",html.includes('id="linkBypass"')&&html.includes('id="sflBypassForm"')&&html.includes('/link-bypass.js?v=94.0')&&worker.includes('url.pathname==="/api/link-bypass"')&&linkBypassJs.includes('Periksa tujuan')],
   ["V93 Link Bypass panel stylesheet is wired",html.includes('/link-bypass.css?v=94.0')&&linkBypassCss.includes(".v93-bypass-hero")&&linkBypassCss.includes("@media(max-width:680px)")],
   ["V93.0 restores original home layout while keeping Link Bypass mobile responsive",!html.includes('class="v93-popular-grid"')&&linkBypassCss.includes("@media(max-width:680px)")&&linkBypassCss.includes(".v93-bypass-panel")],
@@ -57,9 +51,7 @@ const checks = [
   ["V94 profile removes Personalization and Motion & Experience sections", !html.includes("PERSONALIZATION</span>") && !html.includes("MOTION & EXPERIENCE") && html.includes('id="profileRandomId"') && html.includes('id="profileName"')],
   ["V94 Developer Website title and editable social links are visible", html.includes("DEVELOPER WEBSITE") && html.includes('<details open>') && html.includes('id="ownerLinksSave"')],
   ["V94 theme studio assets are loaded and cached", html.includes("theme-studio.js?v=94.1") && html.includes("theme-studio.css?v=94.1") && read("../public/sw.js").includes("theme-studio.js?v=94.1")],
-  ["Learning Center renders six teaching scenes covering definition, purpose, workflow, steps, and tips", learningCenter.includes('title:"Apa itu "+d.title+"?"') && learningCenter.includes('title:"Apa tujuan alat ini?"') && learningCenter.includes('title:"Bagaimana cara kerjanya?"') && learningCenter.includes("firstSteps.map") && learningCenter.includes("lastSteps.map") && learningCenter.includes("Hasil dan tips penting") && learningCenter.includes("sc.demoLines")],
-  ["Learning Center adds searchable help hub and saved completion progress", read("../public/learning-center.js").includes("buildHub") && read("../public/learning-center.js").includes("aryanzz_learning_progress_v940") && read("../public/learning-center.css").includes(".lc-hub-grid")],
-  ["V93.7 Learning Center assets are loaded", html.includes("/learning-center.js?v=94.9") && html.includes("/learning-center.css?v=94.9") && ["linkBypass","mediaStudio","queue","heart","install","members","editor","musicFinder","audioStudio","history","imageTools","pdfTools","qrTools","securityTools","gradientStudio","fileHash","colorStudio","speed","checker"].every(id => read("../public/learning-center.js").includes(id))],
+  ["Tool tutorial videos and the explanatory text below them are removed from all tools", !html.includes("learning-center.js") && !html.includes("learning-center.css") && !read("../public/sw.js").includes("learning-center.js") && !read("../public/sw.js").includes("learning-center.css")],
   ["V93.0 keeps every workspace panel inside the shared tools container", html.indexOf('<section id="toolsArea">') < html.indexOf('id="speed"') && html.indexOf('id="help"') < html.indexOf('id="owner"') && !html.includes('← Kembali ke Home</button></div><div class="panel card editor-panel"')],
 
   ["V93.0 HTML contains no duplicate element IDs", duplicateIds.length === 0],
