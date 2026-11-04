@@ -224,7 +224,7 @@
     if(resultUrl)URL.revokeObjectURL(resultUrl);
     resultUrl=URL.createObjectURL(blob);
     const box=$("audioStudioResult");box.replaceChildren();box.hidden=false;
-    const title=document.createElement("b");title.textContent="Konversi MP3 berhasil ✓";
+    const title=document.createElement("b");title.textContent="Konversi audio berhasil ✓";
     const meta=document.createElement("small");meta.textContent=filename+" · "+formatSize(blob.size)+" · siap disimpan";
     const audio=document.createElement("audio");audio.controls=true;audio.preload="metadata";audio.src=resultUrl;audio.style.cssText="display:block;width:100%;margin:10px 0 12px";
     const link=document.createElement("a");link.href=resultUrl;link.download=filename;link.textContent="↓ Unduh MP3";
