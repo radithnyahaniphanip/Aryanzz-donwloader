@@ -3,13 +3,15 @@ import assert from "node:assert/strict";
 const base=(process.env.WORKER_URL||"https://aryanzz-donwloader.radithnyahaniphanip.workers.dev").replace(/\/$/,"");
 const request=(path,init={})=>fetch(base+path,{cache:"no-store",signal:AbortSignal.timeout(15000),...init});
 
+const expectedVersion=String(process.env.EXPECTED_BUILD_VERSION||"");
+assert.ok(expectedVersion,"Deployment must provide EXPECTED_BUILD_VERSION for live verification");
 let health,lastError;
-for(let attempt=0;attempt<18;attempt++){
+for(let attempt=0;attempt<24;attempt++){
   try{
     const response=await request("/api/health");
     if(response.ok)health=await response.json();
-    if(/^\d+\.\d+\.\d+$/.test(String(health?.version||"")))break;
-    lastError=new Error("Worker belum melaporkan versi build: "+String(health?.version||"kosong"));
+    if(String(health?.version||"")===expectedVersion)break;
+    lastError=new Error("Worker masih melayani build "+String(health?.version||"kosong")+"; menunggu "+expectedVersion);
   }catch(error){lastError=error;}
   await new Promise(resolve=>setTimeout(resolve,3000));
 }
@@ -17,8 +19,6 @@ assert.match(String(health?.version||""),/^\d+\.\d+\.\d+$/,"Live Worker tidak me
 assert.equal(health?.mode,"cloudflare-worker-zero-server-hybrid");
 assert.equal(health?.securityActive,true);
 const version=String(health.version);
-const expectedVersion=String(process.env.EXPECTED_BUILD_VERSION||"");
-assert.ok(expectedVersion,"Deployment must provide EXPECTED_BUILD_VERSION for live verification");
 assert.equal(version,expectedVersion,"Live Worker version does not match the build that was just deployed");
 
 const securityResponse=await request("/api/security/status");
