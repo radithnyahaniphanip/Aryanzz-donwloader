@@ -16,6 +16,7 @@ const titleSearchStart = html.indexOf('<select id="titleSearchType"');
 const titleSearchEnd = html.indexOf("</select>", titleSearchStart);
 const titleSearchMarkup = titleSearchStart >= 0 && titleSearchEnd >= 0 ? html.slice(titleSearchStart, titleSearchEnd) : "";
 const bootstrap = read("../public/ffmpeg-worker-bootstrap.js");
+const htmlAssetRefs = [...html.matchAll(/(?:src|href)="(\\/[^"]+\\.(?:js|css)(?:\\?[^"]*)?)"/g)].map(match => match[1]);
 const downloaderJs = read("../public/downloader.js");
 const profileJs = read("../public/v25.js");
 const ownerJs = read("../public/owner.js");
@@ -52,6 +53,7 @@ const checks = [
   ["Homepage release label is V92.3", html.includes("V92.3 · GRATIS")],
   ["Worker health reports V92.3", worker.includes('version:"92.3"')],
   ["Homepage loads the shared V89 shell stylesheet", html.includes("/v89.css?v=90.0")],
+  ["Every homepage JS and CSS asset is included in the active PWA shell cache", htmlAssetRefs.length>0 && htmlAssetRefs.every(ref=>sw.includes('"'+ref+'"'))],
   ["PWA cache namespace is V92.3", sw.includes('const CACHE="aryanzz-v92-5"')],
   ["PWA cache includes homepage, converter and Media Studio", sw.includes("/?v=92.3") && sw.includes("/audio-studio.js?v=92.1") && sw.includes("/audio-studio.css?v=92.0") && sw.includes("/media-studio.js?v=92.0") && sw.includes("/media-studio.css?v=92.0")],
 
