@@ -43,6 +43,19 @@ setMode("link");
 const updateSearchHelp=()=>{if(!help)return;const mode=searchType?.value||"video";const scope=selected==="all"?"seluruh 19 platform":"khusus "+platforms[selected].name;if(mode==="image")help.textContent="Gambar: hasil foto, meme, wallpaper, dan PNG dari "+scope+". Hasil gambar tidak dicampur dengan video.";else help.textContent="Video: cari klip, Green Screen, meme, tutorial, dan topik lainnya dari "+scope+". Hasil dikelompokkan menurut sumber.";};
 searchType?.addEventListener("change",updateSearchHelp);
 const duration=v=>{if(!Number.isFinite(Number(v)))return "";const n=Math.max(0,Math.floor(Number(v)));return Math.floor(n/60)+":"+String(n%60).padStart(2,"0")};
+const SEARCH_PLATFORM_ALIASES={tiktoklite:"tiktok",instagramlite:"instagram",facebooklite:"facebook",twitter:"x"};
+const SEARCH_PLATFORM_DOMAINS={
+youtube:["youtube.com","youtu.be"],tiktok:["tiktok.com"],instagram:["instagram.com","instagr.am"],snackvideo:["snackvideo.com"],
+capcut:["capcut.com"],pinterest:["pinterest.com","pin.it"],facebook:["facebook.com","fb.watch"],x:["x.com","twitter.com"],
+reddit:["reddit.com","redd.it"],vimeo:["vimeo.com"],threads:["threads.net"],soundcloud:["soundcloud.com"],
+snapchat:["snapchat.com"],idnapp:["idntimes.com"],linkedin:["linkedin.com"],wechat:["wechat.com","weixin.qq.com"],kakaotalk:["kakao.com"]
+};
+function searchResultBelongsTo(item,platform){
+ let host="";try{host=new URL(item?.url||item?.sourceUrl||"").hostname.toLowerCase().replace(/^www\\./,"")}catch{return false}
+ const key=SEARCH_PLATFORM_ALIASES[platform]||platform;
+ if(key==="all")return Object.values(SEARCH_PLATFORM_DOMAINS).flat().some(domain=>host===domain||host.endsWith("."+domain));
+ return (SEARCH_PLATFORM_DOMAINS[key]||[]).some(domain=>host===domain||host.endsWith("."+domain));
+}
 function showFallback(target,q){
 const card=document.createElement("article");card.className="v674-search-result v736-search-handoff";
 const title=document.createElement("h3");title.textContent="Pencarian "+target.name+" belum tersedia";
@@ -150,8 +163,8 @@ const allowedDomains=expected==="all"?Object.values(domains).flat():domains[expe
 });
 if(!imageItems.length)throw new Error("Belum ada gambar yang cocok dari "+target.name+". Tidak ada hasil dari platform lain yang akan ditampilkan.");
 }else{
-mediaItems=Array.isArray(data.results)?data.results:[];
-if(!mediaItems.length)throw new Error("Belum ada sumber musik atau video yang cocok dari "+target.name+". Coba variasi kata kunci lain.");
+mediaItems=(Array.isArray(data.results)?data.results:[]).filter(item=>searchResultBelongsTo(item,selected));
+if(!mediaItems.length)throw new Error("Belum ada hasil publik yang cocok khusus dari "+target.name+". Hasil platform lain sengaja disaring agar tidak tercampur.");
 }
 render(mediaItems,target,q,unavailable,imageItems);
 const resultCards=[...results.querySelectorAll(".v674-search-result,.v674-audio-inline-result,.aryanzz-inline-image-card")];
