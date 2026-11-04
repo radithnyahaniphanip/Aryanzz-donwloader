@@ -42,6 +42,8 @@ assert.ok(html.includes('id="audioStudioStart"'));
 assert.ok(html.includes('id="audioStudioEnd"'));
 assert.ok(html.includes('id="audioStudioFormat"'));
 assert.ok(html.includes('id="audioStudioVolume"'));
+assert.ok(html.includes('id="audioStudioTestEngine"'));
+assert.ok(html.includes('id="audioStudioDiagnosticsResult"'));
 assert.ok(html.includes("V92.0 · GRATIS"));
 assert.ok(html.includes('id="audioStudioPreviewNote"'));
 assert.ok(html.includes('id="audioStudioPreviewConvert"'));
