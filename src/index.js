@@ -640,7 +640,11 @@ async function searchSocial(request){
         if(!seen.has(item.url)){seen.add(item.url);candidates.push({...item,platform:"youtube",snippet:item.channel||"YouTube video",searchProvider:item.searchProvider||"YouTube public search"});}
       }
     }
-    const relevantCandidates=candidates.filter(item=>{
+    const canonicalResultKey=value=>({twitter:"x",tiktoklite:"tiktok",instagramlite:"instagram",facebooklite:"facebook"})[value]||value;
+    const platformScopedCandidates=platform==="all"
+      ?candidates.filter(item=>!!freePlatformKey(item.url))
+      :candidates.filter(item=>canonicalResultKey(freePlatformKey(item.url)||"")===canonicalPlatform);
+    const relevantCandidates=platformScopedCandidates.filter(item=>{
       const score=publicSearchRelevance(query,item.title+" "+item.snippet);
       // YouTube titles often omit generic words such as "lagu", "official", or "DJ"; preserve strong title matches.
       return score>=0.25||(item.platform==="youtube"&&score>=0.16);
