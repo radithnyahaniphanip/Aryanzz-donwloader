@@ -1130,7 +1130,9 @@ function normalizeTikTokFallbackPayload(data,rawUrl,requestUrl,providerName){
   add(data?.download_url||data?.video_url||data?.videoUrl,"MP4 tanpa watermark","video","mp4","video/mp4");
   add(data?.author?.audio_url||data?.audio_url||data?.music_url||data?.music,"Audio MP3","audio","mp3","audio/mpeg");
   if(!media.some(item=>item.type==="video"))throw new Error(providerName+" tidak memberikan stream video MP4.");
-  const normalized=freeProviderMediaInfo({normalized:{title:data.title||data.desc||"Video TikTok",thumbnail:data.thumbnail||data.cover||data.origin_cover,duration:Number(data.duration||data.author?.duration)||0,media}},rawUrl,requestUrl);
+  const groupDurationMs=mediaGroups.find(group=>Number(group?.durationMs)>0)?.durationMs;
+  const durationSeconds=Number(data.duration||data.author?.duration||(Number(groupDurationMs)>0?Number(groupDurationMs)/1000:0))||0;
+  const normalized=freeProviderMediaInfo({normalized:{title:data.title||data.text||data.desc||"Video TikTok",thumbnail:data.thumbnail||data.cover||data.origin_cover,duration:durationSeconds,media}},rawUrl,requestUrl);
   if(!normalized)throw new Error("Stream "+providerName+" tidak lolos normalisasi media.");
   normalized.providerName=providerName+" fallback";
   normalized.provider=providerName+" public API";
