@@ -96,8 +96,8 @@ jobs:
         env:
           WORKER_URL: https://aryanzz-donwloader.radithnyahaniphanip.workers.dev
         run: node tests/live-release-smoke.mjs
-      - name: Diagnose title search and extraction across the 20 dedicated provider choices
-        if: success()
+      - name: Optional manual diagnostic matrix for the 20 dedicated provider choices
+        if: github.event_name == 'workflow_dispatch' && success()
         continue-on-error: true
         timeout-minutes: 18
         env:
