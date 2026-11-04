@@ -66,7 +66,12 @@
     const history=count(HISTORY_KEYS),favorites=count(FAV_KEYS);
     if($("profileHistoryCount"))$("profileHistoryCount").textContent=history;
     if($("profileFavoriteCount"))$("profileFavoriteCount").textContent=favorites;
-    let since=localStorage.getItem("aryanzz.member.since.v25");if(!since){const now=new Date();since=[now.getFullYear(),String(now.getMonth()+1).padStart(2,"0"),String(now.getDate()).padStart(2,"0")].join("-");localStorage.setItem("aryanzz.member.since.v25",since);}
+    let since=safeGet("aryanzz.member.since.v25","");
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(since)){
+      const now=new Date();since=[now.getFullYear(),String(now.getMonth()+1).padStart(2,"0"),String(now.getDate()).padStart(2,"0")].join("-");
+      safeSet("aryanzz.member.since.v25",since);
+    }
+    const parts=/^\d{4}-\d{2}-\d{2}$/.test(since)?since.split("-").map(Number):null;
     const parts=/^\\d{4}-\\d{2}-\\d{2}$/.test(since)?since.split("-").map(Number):null;
     const joined=parts?new Date(parts[0],parts[1]-1,parts[2]):new Date(since);
     if($("profileSince"))$("profileSince").textContent=(Number.isNaN(joined.getTime())?new Date():joined).toLocaleDateString("id-ID",{day:"2-digit",month:"short",year:"numeric"});
