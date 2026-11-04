@@ -216,9 +216,8 @@ body{background-color:var(--ary-app-bg)}
 <div class="card download v6-download v674-download">
 <div class="v674-download-heading"><div><span class="section-kicker">PENGUNDUH ARYANZZ</span><h2>Mau unduh apa?</h2></div><span class="v674-download-mark">↗</span></div>
 <div class="v674-mode-switch" role="tablist"><button id="downloadLinkMode" class="active" type="button" role="tab" aria-selected="true">↗ Tempel tautan</button><button id="downloadTitleMode" type="button" role="tab" aria-selected="false">⌕ Cari judul</button></div>
-<div class="v80-platform-picker-head"><span>PILIH PLATFORM</span><span>20 PLATFORM</span></div>
-<div class="v736-platforms" id="platformPicker" aria-label="Pilih satu platform atau semua platform media sosial">
-<button class="v736-platform" type="button" data-platform="all" aria-pressed="false" aria-label="Semua platform"><span class="v736-logo v736-all-logo"><b>ALL</b></span><span>Semua</span></button>
+<div class="v80-platform-picker-head"><span>PILIH PLATFORM</span><span>19 PLATFORM</span></div>
+<div class="v736-platforms" id="platformPicker" aria-label="Pilih platform media sosial">
 <button class="v736-platform active" type="button" data-platform="youtube" aria-pressed="true" aria-label="YouTube"><span class="v736-logo v736-youtube"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="1" y="4" width="22" height="16" rx="5" fill="currentColor"/><path d="M10 8.2 16 12l-6 3.8z" fill="#fff"/></svg></span><span>YouTube</span></button>
 <button class="v736-platform" type="button" data-platform="tiktok" aria-pressed="false" aria-label="TikTok"><span class="v736-logo v736-tiktok"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.2 3v11.1a4.1 4.1 0 1 1-3.5-4.05v3.05a1.2 1.2 0 1 0 .6 1.04V3h2.9c.2 2.05 1.35 3.3 3.6 3.65v3.02c-1.45-.08-2.65-.56-3.6-1.4V3z" fill="currentColor"/></svg></span><span>TikTok</span></button>
 <button class="v736-platform" type="button" data-platform="instagram" aria-pressed="false" aria-label="Instagram"><span class="v736-logo v736-instagram"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="2" width="20" height="20" rx="6" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="4.2" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="17.7" cy="6.5" r="1.3" fill="currentColor"/></svg></span><span>Instagram</span></button>
@@ -243,7 +242,7 @@ body{background-color:var(--ary-app-bg)}
 </div>
 
 <div id="linkModePanel"><label class="label" for="url">TEMPEL TAUTAN MEDIA</label><div class="inputrow v674-input-row"><input class="field" id="url" type="text" inputmode="url" placeholder="Tempel tautan video atau audio…" autocomplete="url"><button class="primary" id="analyze">Periksa ↗</button></div><div class="format-strip v674-format-strip"><span>MP4</span><span>MP3</span><span>M4A</span><span>WAV</span></div></div>
-<div id="titleModePanel" hidden><label class="label" for="titleSearch">CARI VIDEO / AUDIO / GAMBAR</label><div class="v674-input-row v674-search-type-row"><select id="titleSearchType" class="field" aria-label="Jenis hasil pencarian"><option value="video">Video</option><option value="audio">Audio</option><option value="image">Gambar</option></select></div><div class="inputrow v674-input-row"><input class="field" id="titleSearch" type="search" placeholder="Contoh: DJ tabola bale atau meme kucing" autocomplete="off"><button class="primary" id="titleSearchBtn" type="button">Cari ⌕</button></div><p class="v674-title-help" id="titleSearchHelp">Pilih platform dan jenis hasil. Hasil hanya dari platform yang dipilih.</p><div class="v674-search-results" id="titleSearchResults" hidden aria-live="polite"></div></div>
+<div id="titleModePanel" hidden><label class="label" for="titleSearch">CARI VIDEO / GAMBAR</label><div class="v674-input-row v674-search-type-row"><select id="titleSearchType" class="field" aria-label="Jenis hasil pencarian"><option value="video">Video</option><option value="image">Gambar</option></select></div><div class="inputrow v674-input-row"><input class="field" id="titleSearch" type="search" placeholder="Contoh: DJ tabola bale atau meme kucing" autocomplete="off"><button class="primary" id="titleSearchBtn" type="button">Cari ⌕</button></div><p class="v674-title-help" id="titleSearchHelp">Pilih platform dan jenis hasil. Hasil hanya dari platform yang dipilih.</p><div class="v674-search-results" id="titleSearchResults" hidden aria-live="polite"></div></div>
 <div id="downloadResult" class="result v674-result" hidden></div><div id="historyBox" class="result" hidden></div>
 </div>
 <style>
@@ -265,7 +264,7 @@ body{background-color:var(--ary-app-bg)}
 <button class="tool" data-panel="queue" data-category="media"><div class="ico">⇄</div><b>Smart Queue</b><small>Atur beberapa unduhan dalam antrean.</small><span class="v674-tool-category">MEDIA</span></button>
 <button class="tool" data-panel="editor" data-category="creative"><div class="ico">▶</div><b>Video Editor Studio</b><small>Trim, filter, teks, audio, subtitle, dan ekspor.</small><span class="v674-tool-category">CREATIVE</span></button>
 <button class="tool" data-panel="musicFinder" data-category="media"><div class="ico">♫</div><b>Music Finder</b><small>Kenali lagu dari audio, video, atau mikrofon.</small><span class="v674-tool-category">MEDIA</span></button>
-<button class="tool" data-panel="audioStudio" data-category="media"><div class="ico">♫</div><b>Audio Studio</b><small>MP4 ke MP3, equalizer, bass, pitch, dan simpan hasil.</small><span class="v674-tool-category">MEDIA</span></button>
+<button class="tool" data-panel="audioStudio" data-category="media"><div class="ico">♫</div><b>MP4 ke MP3 Converter</b><small>Ubah video MP4 menjadi audio MP3 langsung di perangkat.</small><span class="v674-tool-category">MEDIA</span></button>
 <button class="tool" data-panel="history" data-category="media"><div class="ico">◷</div><b>Library</b><small>Riwayat unduhan dan daftar favorit.</small><span class="v674-tool-category">MEDIA</span></button>
 <button class="tool" data-panel="imageTools" data-category="creative"><div class="ico">▧</div><b>Image Studio</b><small>Unduh, edit, atur rasio, resolusi, dan ekspor gambar.</small><span class="v674-tool-category">CREATIVE</span></button>
 <button class="tool" data-panel="pdfTools" data-category="creative"><div class="ico">▤</div><b>PDF & Text Tools</b><small>Alat dokumen dan pengolah teks.</small><span class="v674-tool-category">CREATIVE</span></button>
@@ -571,40 +570,20 @@ body{background-color:var(--ary-app-bg)}
 </div>
 
 <div class="panel card audio-studio-panel" id="audioStudio">
-  <div class="audio-studio-head"><div><span class="section-kicker">ARYANZZ AUDIO LAB · LOCAL PROCESSING</span><h2>Audio Studio</h2><p>Ubah video atau audio menjadi MP3, atur pitch, volume, bass, dan equalizer 10-band. File diproses di perangkat.</p></div><span class="audio-studio-mark">♫</span></div>
-  <label class="audio-file-drop" for="audioStudioFile"><span class="audio-file-icon">＋</span><b>Pilih video atau audio</b><small>MP4 · MOV · WEBM · MP3 · M4A · WAV · Maksimal 100 MB</small></label>
-  <input id="audioStudioFile" type="file" accept="audio/*,video/mp4,video/webm,video/quicktime,video/x-matroska" hidden>
-  <div class="audio-file-meta" id="audioStudioFileMeta" role="status">Belum ada file dipilih.</div>
-  <audio id="audioStudioPreview" controls preload="metadata" hidden></audio>
+  <div class="audio-studio-head"><div><span class="section-kicker">ARYANZZ MEDIA TOOLS · LOCAL PROCESSING</span><h2>MP4 ke MP3 Converter</h2><p>Ekstrak audio dari video MP4 menjadi file MP3. Semua proses dilakukan langsung di perangkat, tanpa mengunggah video ke server.</p></div><span class="audio-studio-mark">♫</span></div>
+  <label class="audio-file-drop" for="audioStudioFile"><span class="audio-file-icon">＋</span><b>Pilih video MP4</b><small>MP4 · Maksimal 100 MB · Proses lokal di browser</small></label>
+  <input id="audioStudioFile" type="file" accept="video/mp4,.mp4,.m4v" hidden>
+  <div class="audio-file-meta" id="audioStudioFileMeta" role="status">Belum ada video dipilih.</div>
+  <video id="audioStudioPreview" controls playsinline preload="metadata" hidden style="display:block;width:100%;max-height:280px;border-radius:14px;margin-top:12px;background:#050b14"></video>
   <div class="audio-studio-fields">
-    <label class="audio-control"><span>Nama file hasil</span><input id="audioStudioName" class="field" maxlength="90" placeholder="aryanzz-audio"></label>
-    <label class="audio-control"><span>Bitrate MP3</span><select id="audioStudioBitrate" class="field"><option value="128">128 kbps · hemat</option><option value="192" selected>192 kbps · seimbang</option><option value="256">256 kbps · tinggi</option><option value="320">320 kbps · maksimum</option></select></label>
-    <label class="audio-control"><span>Judul metadata MP3</span><input id="audioStudioTitle" class="field" maxlength="100" placeholder="Judul audio"></label>
-    <label class="audio-control"><span>Artis / kreator</span><input id="audioStudioArtist" class="field" maxlength="80" placeholder="Nama artis (opsional)"></label>
+    <label class="audio-control"><span>Nama file MP3</span><input id="audioStudioName" class="field" maxlength="90" placeholder="aryanzz-audio"></label>
+    <label class="audio-control"><span>Kualitas audio</span><select id="audioStudioBitrate" class="field"><option value="128">128 kbps · Hemat</option><option value="192" selected>192 kbps · Seimbang</option><option value="256">256 kbps · Tinggi</option><option value="320">320 kbps · Maksimum</option></select></label>
   </div>
-  <section class="audio-adjust-card"><div class="audio-adjust-heading"><div><b>Pitch / nada</b><small>Ubah tinggi-rendah nada. Pengaturan ini juga mengubah warna suara.</small></div><output id="audioStudioPitchValue">0 semitone</output></div><input id="audioStudioPitch" type="range" min="-12" max="12" step="1" value="0"><div class="audio-range-labels"><span>-12</span><span>Normal</span><span>+12</span></div></section>
-  <section class="audio-adjust-card"><div class="audio-adjust-heading"><div><b>Tempo / kecepatan</b><small>Percepat atau perlambat audio tanpa mengubah tinggi nada.</small></div><output id="audioStudioTempoValue">100%</output></div><input id="audioStudioTempo" type="range" min="50" max="200" step="5" value="100"><div class="audio-range-labels"><span>0,5×</span><span>Normal</span><span>2×</span></div></section>
-  <section class="audio-adjust-card"><div class="audio-adjust-heading"><div><b>Volume / penguat</b><small>Atur volume hasil dengan pembatas puncak agar tidak mudah clipping.</small></div><output id="audioStudioVolumeValue">100%</output></div><input id="audioStudioVolume" type="range" min="50" max="200" step="5" value="100"><div class="audio-range-labels"><span>50%</span><span>100%</span><span>200%</span></div></section>
-  <section class="audio-adjust-card"><div class="audio-adjust-heading"><div><b>Equalizer 10-band</b><small>Atur frekuensi bass, mid, dan treble secara terpisah.</small></div><button class="tag" id="audioStudioEqReset" type="button">Reset EQ</button></div>
-    <div class="audio-eq-grid" id="audioStudioEq">
-      <label><span>31 Hz</span><input type="range" min="-12" max="12" value="0" data-frequency="31"><output>0 dB</output></label>
-      <label><span>62 Hz</span><input type="range" min="-12" max="12" value="0" data-frequency="62"><output>0 dB</output></label>
-      <label><span>125 Hz</span><input type="range" min="-12" max="12" value="0" data-frequency="125"><output>0 dB</output></label>
-      <label><span>250 Hz</span><input type="range" min="-12" max="12" value="0" data-frequency="250"><output>0 dB</output></label>
-      <label><span>500 Hz</span><input type="range" min="-12" max="12" value="0" data-frequency="500"><output>0 dB</output></label>
-      <label><span>1 kHz</span><input type="range" min="-12" max="12" value="0" data-frequency="1000"><output>0 dB</output></label>
-      <label><span>2 kHz</span><input type="range" min="-12" max="12" value="0" data-frequency="2000"><output>0 dB</output></label>
-      <label><span>4 kHz</span><input type="range" min="-12" max="12" value="0" data-frequency="4000"><output>0 dB</output></label>
-      <label><span>8 kHz</span><input type="range" min="-12" max="12" value="0" data-frequency="8000"><output>0 dB</output></label>
-      <label><span>16 kHz</span><input type="range" min="-12" max="12" value="0" data-frequency="16000"><output>0 dB</output></label>
-    </div>
-    <div class="audio-preset-row"><button class="tag" data-audio-preset="bass" type="button">Bass boost</button><button class="tag" data-audio-preset="vocal" type="button">Vokal jernih</button><button class="tag" data-audio-preset="treble" type="button">Treble</button><button class="tag" data-audio-preset="flat" type="button">Flat</button></div>
-  </section>
   <div class="audio-studio-actions"><button class="primary" id="audioStudioConvert" type="button" disabled>Konversi ke MP3</button><button class="tag" id="audioStudioCancel" type="button" hidden>Batalkan</button></div>
-  <div class="audio-progress-track" id="audioStudioProgressTrack" role="progressbar" aria-label="Progres konversi audio" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="audioStudioProgressBar"></div></div>
-  <p class="audio-studio-status" id="audioStudioStatus" role="status" aria-live="polite">Pilih file untuk memulai.</p>
+  <div class="audio-progress-track" id="audioStudioProgressTrack" role="progressbar" aria-label="Progres konversi MP4 ke MP3" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="audioStudioProgressBar"></div></div>
+  <p class="audio-studio-status" id="audioStudioStatus" role="status" aria-live="polite">Pilih video MP4 untuk memulai.</p>
   <div class="audio-studio-result" id="audioStudioResult" hidden></div>
-  <p class="audio-studio-disclaimer">Pengolahan dilakukan lokal di browser; mesin konversi diunduh saat pertama kali dipakai. Mengubah pitch, EQ, volume, atau nama file tidak menghapus hak cipta dan tidak menjamin bebas klaim. Gunakan audio milik sendiri atau yang memiliki izin.</p>
+  <p class="audio-studio-disclaimer">Video diproses secara lokal di browser dan tidak dikirim ke server ARYANZZ. Mesin FFmpeg diunduh saat pertama kali digunakan. Gunakan video yang kamu miliki atau yang penggunaannya diizinkan.</p>
 </div>
 
 <div class="panel card" id="queue"><h3>⇄ Smart Download Queue</h3><p class="muted">Masukkan beberapa URL, satu per baris. Antrean diproses satu per satu agar lebih stabil.</p><textarea id="queueUrls" class="field tool-input" rows="4" placeholder="https://..."></textarea><div class="feature-row"><button class="primary" id="queueAdd">Tambah ke antrean</button><button class="tag" id="queueRun">Mulai antrean</button><button class="tag" id="queueClear">Kosongkan</button></div><div id="queueList" class="result"></div></div>
