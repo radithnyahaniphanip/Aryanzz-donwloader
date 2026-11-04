@@ -28,7 +28,7 @@ assert.ok(html.includes("V92.3 · GRATIS"));
 assert.ok(html.includes("/v674.js?v=89.2"));
 assert.ok(html.includes("/v89.css?v=90.0"));
 assert.ok(html.includes("/audio-studio.js?v=92.1"));
-assert.ok(html.includes("/downloader.js?v=92.3"));
+assert.ok(html.includes("/downloader.js?v=92.2"));
 assert.ok(html.includes("/media-studio.js?v=92.0"));
 assert.ok(html.includes("/media-studio.css?v=92.0"));
 assert.ok(html.includes('id="mediaStudio"'));
@@ -54,7 +54,7 @@ assert.ok(html.includes("dari satu tautan"));
 assert.ok(html.includes('id="securityCenter"'));
 assert.ok(!html.includes('class="audio-studio-disclaimer"'));
 
-for (const path of ["/v89.css?v=90.0", "/v674.js?v=89.2", "/v674.css?v=85.5.0", "/audio-studio.js?v=92.1", "/audio-studio.css?v=92.0", "/media-studio.js?v=92.0", "/media-studio.css?v=92.0", "/download-queue.js?v=92.0", "/download-queue.css?v=92.0", "/downloader.js?v=92.3", "/ffmpeg-worker-bootstrap.js?v=92.3", "/sw.js?v=92.3"]) {
+for (const path of ["/v89.css?v=90.0", "/v674.js?v=89.2", "/v674.css?v=85.5.0", "/v25.css?v=85.1", "/v25.js?v=92.3", "/owner.js?v=92.3", "/downloader.css?v=88.3", "/brand-refresh.css?v=82.1", "/audio-studio.js?v=92.1", "/audio-studio.css?v=92.0", "/media-studio.js?v=92.0", "/media-studio.css?v=92.0", "/download-queue.js?v=92.0", "/download-queue.css?v=92.0", "/downloader.js?v=92.3", "/ffmpeg-worker-bootstrap.js?v=92.3", "/sw.js?v=92.3"]) {
   const response = await fetch(base + path, { cache: "no-store", signal: AbortSignal.timeout(10000) });
   assert.equal(response.status, 200, "Missing live asset " + path);
 }
