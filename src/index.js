@@ -1884,6 +1884,59 @@ async function recognizeMusicVideo(request,env){
 }
 
 
+
+const SFL_BYPASS_HOSTS=new Set(["sf1.gl","sfl.gl","sflink.io"]);
+function safeBypassUrl(raw){
+  let u;try{u=new URL(raw)}catch{return null}
+  const h=u.hostname.toLowerCase().replace(/^\[|\]$/g,"");
+  if(!["https:","http:"].includes(u.protocol)||u.username||u.password||u.port)return null;
+  if(h==="localhost"||h.endsWith(".localhost")||h.endsWith(".local")||h==="::"||h==="::1"||/^127\./.test(h)||/^10\./.test(h)||/^192\.168\./.test(h)||/^169\.254\./.test(h)||/^172\.(1[6-9]|2\d|3[01])\./.test(h)||/^fc[0-9a-f]{2}:/i.test(h)||/^fd[0-9a-f]{2}:/i.test(h)||/^fe80:/i.test(h))return null;
+  return u;
+}
+async function bypassSflLink(request){
+  const raw=new URL(request.url).searchParams.get("url")||"";
+  let current=safeBypassUrl(raw);
+  if(!current||!SFL_BYPASS_HOSTS.has(current.hostname.toLowerCase()))return json({ok:false,error:"Masukkan tautan SFL yang didukung (sf1.gl atau sfl.gl)."},400);
+  const ip=request.headers.get("cf-connecting-ip")||"unknown";
+  const now=Date.now();let bucket=SFL_BYPASS_BUCKETS.get(ip);
+  if(!bucket||now-bucket.started>60000)bucket={started:now,count:0};
+  bucket.count++;SFL_BYPASS_BUCKETS.set(ip,bucket);
+  if(bucket.count>12)return json({ok:false,error:"Batas pemeriksaan sementara tercapai. Coba lagi sebentar."},429);
+  let lastStatus=0;
+  try{
+    for(let hop=0;hop<7;hop++){
+      const response=await fetch(current.toString(),{method:"GET",redirect:"manual",cache:"no-store",headers:{accept:"text/html,application/xhtml+xml,*/*;q=0.8","user-agent":"Mozilla/5.0 (compatible; ARYANZZ Link Resolver/1.0)"} ,signal:AbortSignal.timeout(9000)});
+      lastStatus=response.status;
+      if([301,302,303,307,308,300].includes(response.status)){
+        const location=response.headers.get("location");
+        if(!location)return json({ok:false,error:"SFL memberi pengalihan tanpa alamat tujuan."},502);
+        const next=safeBypassUrl(new URL(location,current).toString());
+        if(!next)return json({ok:false,error:"Alamat tujuan tidak aman atau tidak didukung."},400);
+        current=next;continue;
+      }
+      const type=response.headers.get("content-type")||"";
+      if(type.includes("text/html")){
+        const body=(await response.text()).slice(0,750000);
+        const candidates=[
+          body.match(/<meta[^>]+http-equiv=["']?refresh["']?[^>]+content=["'][^"']*url=([^"']+)/i)?.[1],
+          body.match(/(?:window\.)?location(?:\.href)?\s*=\s*["']([^"']+)["']/i)?.[1],
+          body.match(/(?:window\.)?location\.replace\(\s*["']([^"']+)["']\s*\)/i)?.[1],
+          body.match(/<link[^>]+rel=["']canonical["'][^>]+href=["']([^"']+)["']/i)?.[1]
+        ].filter(Boolean);
+        for(const candidate of candidates){
+          const next=safeBypassUrl(new URL(candidate.replace(/&amp;/g,"&"),current).toString());
+          if(next&&next.href!==current.href){current=next;break;}
+        }
+        if(current.hostname.toLowerCase()===new URL(raw).hostname.toLowerCase())return json({ok:false,error:"Tujuan belum dapat ditemukan otomatis. Halaman ini mungkin memerlukan JavaScript, CAPTCHA, atau verifikasi."},422);
+        continue;
+      }
+      return json({ok:true,url:current.href,host:current.hostname,status:lastStatus,hops:hop+1});
+    }
+    return json({ok:false,error:"Tautan memiliki terlalu banyak pengalihan."},422);
+  }catch(error){return json({ok:false,error:"Gagal memeriksa tautan: "+String(error.message||"jaringan tidak tersedia")},502);}
+}
+const SFL_BYPASS_BUCKETS=new Map();
+
 const workerHandler = {async fetch(request,env){
   const url=new URL(request.url);
   // Serve crawler files explicitly so Google receives deterministic XML/plain-text MIME types.
@@ -1900,6 +1953,7 @@ const workerHandler = {async fetch(request,env){
     return new Response(robots,{status:200,headers:{"content-type":"text/plain; charset=utf-8","cache-control":"public, max-age=3600","x-content-type-options":"nosniff"}});
   }
   if(request.method==="OPTIONS"&&url.pathname.startsWith("/api/"))return new Response(null,{status:204,headers:{"access-control-allow-origin":url.origin,"access-control-allow-methods":"GET,POST,OPTIONS","access-control-allow-headers":"Content-Type"}});
+  if(url.pathname==="/api/link-bypass"&&request.method==="GET")return bypassSflLink(request);
   if(url.pathname==="/api/music/scan-video"&&request.method==="POST")return recognizeMusicVideo(request,env);
   if(url.pathname==="/api/music/status"&&request.method==="GET")return musicStatus(env);
   if(url.pathname==="/api/search"&&request.method==="POST")return searchYouTube(request,env);
