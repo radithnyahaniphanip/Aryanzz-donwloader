@@ -936,8 +936,9 @@ function collectImageUrls(value,output,depth=0,forceImage=false){
   }
   if(Array.isArray(value)){for(const item of value.slice(0,80))collectImageUrls(item,output,depth+1,forceImage);return}
   if(typeof value==="object"){
-    for(const key of ["url","contentUrl","image","images","photo","photos","picture","pictures","src","display_url","download_url","image_url","original","large","thumbnail_src","media_url","media_url_https"]){
-      if(value[key]!==undefined)collectImageUrls(value[key],output,depth+1,["image","images","photo","photos","picture","pictures","image_url"].includes(key)||forceImage);
+    for(const key of ["url","urlList","url_list","contentUrl","image","images","photo","photos","picture","pictures","src","displayImage","display_image","display_url","download_url","image_url","original","large","thumbnail_src","media_url","media_url_https","originCover","origin_cover","cover"]){
+      const normalizedKey=key.toLowerCase();
+      if(value[key]!==undefined)collectImageUrls(value[key],output,depth+1,["image","images","photo","photos","picture","pictures","image_url","displayimage","display_image","urllist","url_list","origincover","origin_cover"].includes(normalizedKey)||forceImage);
     }
   }
 }
@@ -969,8 +970,22 @@ function extractSocialImageCandidates(html,pageUrl,platform){
     const body=script.replace(/^<script\b[^>]*>/i,"").replace(/<\/script>$/i,"").replace(/&quot;/g,'"').trim();
     try{const parsed=JSON.parse(body);collectImageUrls(parsed,jsonImages)}catch{}
   }
+  // TikTok Photo Mode and other JS-rendered galleries can expose image arrays in hydration JSON.
+  for(const match of String(html||"").matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)){
+    const attrs=match[1]||"",body=String(match[2]||"").trim();
+    if(!body||body.length>2500000)continue;
+    const id=attrs.match(/\bid=["']([^"']+)["']/i)?.[1]||"";
+    if(!/__UNIVERSAL_DATA_FOR_REHYDRATION__|SIGI_STATE|__NEXT_DATA__/i.test(id)&&!/"(?:imagePost|photoPost|image_post|photo_post|imageURL|urlList)"/i.test(body))continue;
+    let parsed=null;
+    try{parsed=JSON.parse(body)}catch{
+      const first=body.indexOf("{"),last=body.lastIndexOf("}");
+      if(first>=0&&last>first){try{parsed=JSON.parse(body.slice(first,last+1))}catch{}}
+    }
+    if(parsed)collectImageUrls(parsed,jsonImages);
+  }
   for(const raw of jsonImages)add(raw,"jsonld");
   const hasVideoMeta=!!(meta["og:video"]||meta["og:video:url"]||meta["twitter:player"]||meta["og:type"]==="video.other"||meta["og:type"]==="video");
+  const isTikTokPhotoRoute=platform==="tiktok"&&(()=>{try{return /\/photo\//i.test(new URL(pageUrl).pathname)}catch{return false}})();
   const imageTags=html.match(/<img\b[^>]*>/gi)||[];
   for(const tag of imageTags){
     const attrs={};for(const m of tag.matchAll(/([a-zA-Z_:][-a-zA-Z0-9_:]*)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/g))attrs[m[1].toLowerCase()]=m[2]??m[3]??m[4]??"";
@@ -978,7 +993,7 @@ function extractSocialImageCandidates(html,pageUrl,platform){
     if(src&&(w>=180&&h>=180||imageExtensionFromUrl(src)))try{add(new URL(src,pageUrl).href,"html-image")}catch{}
     const srcset=attrs.srcset||"";for(const part of srcset.split(",")){const url=part.trim().split(/\s+/)[0];if(url)try{add(new URL(url,pageUrl).href,"html-image")}catch{}}
   }
-  if(hasVideoMeta&&platform!=="pinterest"&&platform!=="reddit"){
+  if(hasVideoMeta&&platform!=="pinterest"&&platform!=="reddit"&&!isTikTokPhotoRoute){
     const explicitPhoto=/photo.?mode|image.?post|carousel|multi.?photo|gallery|photo_mode|image_post/i.test(html);
     if(!explicitPhoto)return [];
   }
