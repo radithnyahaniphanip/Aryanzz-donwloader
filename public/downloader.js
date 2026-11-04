@@ -1305,7 +1305,8 @@ function socialNetworkPlan(selected=0){
       const isExplicitVideoRoute=/\/(?:video|reel|reels|watch|shorts|live|clip)\//i.test(url.pathname);
       const catalogPlatform=(window.ARYANZZ_PLATFORM_CATALOG||[]).find(platform=>platform.id===selectedPlatform);
       const shouldTryImageExtraction=isTikTokPhotoPost||isYouTubePhotoPost||isPhotoRoute||(!isYouTube&&!isExplicitVideoRoute&&selectedPlatform!=="soundcloud"&&!isTikTokPlatform&&catalogPlatform?.mediaModes?.includes("image"));
-      const imageCheckTimeout=(isTikTokPhotoPost||isYouTubePhotoPost||isPhotoRoute)?22000:6500;
+      const isSocialImagePostRoute=/\/(?:p|post|posts|status|pin|photo|photos|image|images|album|gallery|share)\//i.test(url.pathname);
+      const imageCheckTimeout=(isTikTokPhotoPost||isYouTubePhotoPost||isPhotoRoute||isSocialImagePostRoute)?22000:6500;
       const imageExtractionPromise=shouldTryImageExtraction
         ?fetch("/api/image/extract?url="+encodeURIComponent(url.href),{cache:"no-store",signal:AbortSignal.timeout(imageCheckTimeout)}).then(async response=>({ok:response.ok,data:await response.json().catch(()=>({}))})).catch(error=>({ok:false,data:{error:String(error?.message||error)}}))
         :Promise.resolve(null);
