@@ -150,6 +150,16 @@ function freeProviderMediaInfo(data,rawUrl,requestUrl){
   const mp4Formats=formats.filter(item=>item.mode==="video"&&!item.videoOnly&&["mp4","m4v"].includes(item.ext));
   return {ok:true,providerName:"Public API",providerReady:true,provider:"Free public provider",platform:platformKey,title,filename:title,duration,thumbnail,type:formats.some(x=>x.mode==="video")?"video":"audio",formats,capabilities:{linkAccepted:true,preview:formats.some(item=>item.mode==="video"||item.mode==="audio"),mp4:mp4Formats.length>0,audio:formats.some(item=>item.mode==="audio"),mp4Qualities:[...new Set(mp4Formats.map(item=>item.height).filter(Boolean))]}};
 }
+async function platformMediaInfo(request){
+  let body;try{body=await request.json()}catch{return json({error:"Body JSON tidak valid."},400)}
+  const raw=String(body?.url||"").trim();
+  if(raw.length>3000)return json({error:"Tautan terlalu panjang."},400);
+  let parsed;try{parsed=new URL(raw)}catch{return json({error:"Tautan tidak valid."},400)}
+  if(!["http:","https:"].includes(parsed.protocol)||parsed.username||parsed.password)return json({error:"Gunakan tautan publik HTTP/HTTPS yang valid."},400);
+  const key=freePlatformKey(parsed.href);
+  if(!key)return json({error:"Domain tautan tidak dikenali sebagai platform yang didukung."},400);
+  return freePublicMediaInfo(parsed.href,request.url);
+}
 async function freePublicMediaInfo(rawUrl,requestUrl){
   const key=freePlatformKey(rawUrl);
   if(!key)return json({error:"Platform belum didukung oleh provider gratis."},400);
@@ -2003,6 +2013,7 @@ const workerHandler = {async fetch(request,env){
     if(url.pathname==="/api/security/status"&&request.method==="GET")return json({ok:true,security:{active:true,mode:"worker-edge-defense",controls:["origin-validation","method-allowlist","content-type-validation","request-size-guard","per-ip-endpoint-rate-limits","content-security-policy","strict-transport-security","frame-protection","mime-sniffing-protection","request-id","sanitized-error-handling"],events:{blockedOrigin:SECURITY_EVENTS.blockedOrigin,rateLimited:SECURITY_EVENTS.rateLimited,oversizedRequest:SECURITY_EVENTS.oversizedRequest,blockedMethod:SECURITY_EVENTS.blockedMethod},note:"Event counters are per Worker isolate and are not a global security incident log."}});
   if(url.pathname==="/api/health"&&request.method==="GET")return json({ok:true,service:"ARYANZZ",version:BUILD_VERSION,securityActive:true,mode:"cloudflare-worker-zero-server-hybrid",directMediaDownload:true,selfHostedDownloader:false,youtubeDownloader:true,youtubeApiKeyConfigured:false,cobalt:false,paidYoutubeProvider:false,musicRecognitionConfigured:!!env.AUDD_API_TOKEN,musicFallbackReady:false,musicVideoRecognitionReady:false,platformExtraction:true,platformBackend:"public-free-community-api"});
   if(url.pathname==="/api/social-file"&&request.method==="GET")return socialMediaFile(request);
+  if(url.pathname==="/api/platform/info"&&request.method==="POST")return platformMediaInfo(request);
   if(url.pathname==="/api/info"&&request.method==="POST"){const proxied=await proxyPlatform(request,env,"/api/info");if(proxied)return proxied;return info(request);}
   if(url.pathname==="/api/direct-file"&&request.method==="GET")return download(request);
   if(url.pathname==="/api/download"&&request.method==="POST"){const proxied=await proxyPlatform(request,env,"/api/download");if(proxied)return proxied;return download(request);}
