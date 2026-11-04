@@ -8,6 +8,8 @@ const sw = read("../public/sw.js");
 const searchJs = read("../public/v674.js");
 const unifiedCss = read("../public/v89.css");
 const converterJs = read("../public/audio-studio.js");
+const mediaStudioJs = read("../public/media-studio.js");
+const mediaStudioCss = read("../public/media-studio.css");
 const bootstrap = read("../public/ffmpeg-worker-bootstrap.js");
 
 const checks = [
@@ -25,14 +27,23 @@ const checks = [
   ["Converter uses a same-origin local FFmpeg worker", converterJs.includes("/ffmpeg-worker-local.js?v=90.4")],
   ["Local worker loads primary and fallback single-thread cores", read("../public/ffmpeg-worker-local.js").includes("coreFallbackURL") && read("../public/ffmpeg-worker-local.js").includes("await import(item.js)")],
   ["Worker CSP permits blob fetch for local WASM resources", worker.includes("connect-src") && worker.includes("wss: blob:;")],
-  ["Homepage release label is V90.4", html.includes("V90.4 · GRATIS")],
-  ["Worker health reports V90.4", worker.includes('version:"90.4"')],
+  ["Homepage release label is V91.0", html.includes("V91.0 · GRATIS")],
+  ["Worker health reports V91.0", worker.includes('version:"91.0"')],
   ["Homepage loads the shared V89 shell stylesheet", html.includes("/v89.css?v=90.0")],
-  ["PWA cache namespace is V90.4", sw.includes('const CACHE="aryanzz-v90-4"')],
-  ["PWA cache includes current homepage and converter", sw.includes("/?v=90.4") && sw.includes("/audio-studio.js?v=90.4") && sw.includes("/audio-studio.css?v=90.4")],
+  ["PWA cache namespace is V91.0", sw.includes('const CACHE="aryanzz-v91-1"')],
+  ["PWA cache includes homepage, converter and Media Studio", sw.includes("/?v=91.0") && sw.includes("/audio-studio.js?v=91.0") && sw.includes("/audio-studio.css?v=91.0") && sw.includes("/media-studio.js?v=91.0") && sw.includes("/media-studio.css?v=91.0")],
+
+  ["Converter Pro includes optional audio trim controls", html.includes('id="audioStudioStart"') && html.includes('id="audioStudioEnd"') && converterJs.includes('ffmpegArgs.push("-t"')],
+  ["Media Studio is integrated into the existing tools grid", html.includes('data-panel="mediaStudio"') && html.includes('id="mediaStudio"')],
+  ["Media library persists media blobs with IndexedDB", mediaStudioJs.includes("indexedDB.open(DB_NAME") && mediaStudioJs.includes("store.put(item)")],
+  ["Media library supports search, filters, favorites and deletion", mediaStudioJs.includes("msSearch") && mediaStudioJs.includes("msFilter") && mediaStudioJs.includes("toggleFavorite") && mediaStudioJs.includes("deleteItem")],
+  ["Video Player Pro includes playback speed, PiP, fullscreen and frame capture", mediaStudioJs.includes("playbackRate") && mediaStudioJs.includes("requestPictureInPicture") && mediaStudioJs.includes("requestFullscreen") && mediaStudioJs.includes("drawImage(video")],
+  ["Download Manager links to the existing Smart Queue", html.includes('id="queue"') && mediaStudioJs.includes('data-panel="queue"')],
+  ["Storage and performance dashboard uses Storage API", mediaStudioJs.includes("navigator.storage?.estimate") && mediaStudioJs.includes("navigator.storage?.persist")],
+  ["Media Studio responsive stylesheet is wired", html.includes("/media-studio.css?v=91.0") && mediaStudioCss.includes("@media(max-width:480px)")],
   ["PWA cache includes current search bundle", sw.includes("/v674.js?v=89.2")],
   ["Worker CSP permits FFmpeg WebAssembly and blob core loading", worker.includes("wasm-unsafe-eval") && worker.includes("https: blob:")],
-  ["Homepage loads the V90.4 converter runtime", html.includes("/audio-studio.js?v=90.4")],
+  ["Homepage loads the V91.0 converter runtime", html.includes("/audio-studio.js?v=91.0")],
   ["Unified navigation hides home when another view opens", html.includes('id="appViewHeader"') && html.includes("home.hidden=!!id") && html.includes("p.id===id")],
   ["Unified responsive app shell is loaded", html.includes("/v89.css?v=90.0") && unifiedCss.includes("V89.0 — ONE UNIFIED ECOSYSTEM")],
   ["Shared header and persistent welcome remain", html.includes('class="top v674-top"') && html.includes('id="v89Welcome"')],
@@ -47,4 +58,4 @@ for (const [name, ok] of checks) {
   assert.ok(ok, name + " failed");
   console.log("✔ " + name);
 }
-console.log("\nARYANZZ V90.1 release smoke tests passed.");
+console.log("\nARYANZZ V91.0 release smoke tests passed.");
