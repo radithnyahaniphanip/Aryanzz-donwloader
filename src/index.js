@@ -2011,7 +2011,7 @@ async function authMe(request,env){
  const token=authCookie(request);if(!token)return authResponse({ok:true,enabled:true,user:null});
  const hash=await authDigest(token),now=Math.floor(Date.now()/1000);
  const user=await db.prepare("SELECT u.id,u.full_name,u.email,u.created_at FROM auth_sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=? AND s.expires_at>? LIMIT 1").bind(hash,now).first();
- if(!user)return authResponse({ok:true,enabled:true,user:null},{});
+ if(!user)return authResponse({ok:true,enabled:true,user:null});
  return authResponse({ok:true,enabled:true,user:{id:user.id,fullName:user.full_name,email:user.email,createdAt:user.created_at}});
 }
 async function authLogout(request,env){
