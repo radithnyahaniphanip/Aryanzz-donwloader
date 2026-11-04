@@ -484,6 +484,18 @@ body{background-color:var(--ary-app-bg)}
     <div class="speed-stat"><span class="speed-stat-icon">≈</span><small>Jitter</small><b id="jitterVal">— <em>ms</em></b></div>
   </div>
   <div class="speed-control">
+    <label for="networkProfile">Kecepatan proses ARYANZZ</label>
+    <select id="networkProfile" class="field">
+      <option value="auto">Otomatis · sesuaikan jaringan</option>
+      <option value="1">Terendah · hemat data</option>
+      <option value="2">Rendah · stabil</option>
+      <option value="3" selected>Normal · seimbang</option>
+      <option value="4">Tinggi · lebih cepat</option>
+      <option value="5">Tertinggi · maksimal</option>
+    </select>
+    <small id="networkProfileHint">Otomatis memilih jumlah jalur berdasarkan kualitas jaringan.</small>
+  </div>
+  <div class="speed-control">
     <label for="speedMode">Mode pengujian</label>
     <select id="speedMode" class="field"><option value="quick">Cepat · ±3 MB data</option><option value="full">Lengkap · ±11 MB data</option></select>
     <small id="speedDataEstimate">Perkiraan pemakaian kuota sekitar 3 MB (download + upload).</small>
@@ -1049,4 +1061,5 @@ if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.ser
  </div>
 </div>
 
+<script src="/speed-test.js?v=94.6" defer></script>
 <script src="/auth-gate.js?v=94.4" defer></script></body></html>
