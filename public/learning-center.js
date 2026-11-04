@@ -35,7 +35,10 @@ recording=true;rec.disabled=true;screenRec.disabled=true;stop.disabled=false;vid
 screenStream.getVideoTracks()[0]?.addEventListener("ended",()=>{if(recording&&recorder?.state!=="inactive")recorder.stop();});
 }catch(e){screenStream?.getTracks().forEach(t=>t.stop());mic?.getTracks?.().forEach(t=>t.stop());screenStream=null;mic=null;status.textContent=e.name==="NotAllowedError"?"Izin berbagi layar atau mikrofon ditolak.":"Perekaman layar tidak tersedia pada perangkat ini. Gunakan Rekam preview sebagai alternatif.";}
 });
-stop.addEventListener("click",()=>{if(recorder&&recording&&recorder.state!=="inactive")recorder.stop();});root.append(el);draw();}
+stop.addEventListener("click",()=>{if(recorder&&recording&&recorder.state!=="inactive")recorder.stop();});root.append(el);
+const launch=document.createElement("button");launch.type="button";launch.className="lc-inline-launch";launch.innerHTML='<span aria-hidden="true">▶</span><span><b>Video tutorial & panduan</b><small>Fungsi · cara kerja · langkah penggunaan</small></span><span class="lc-inline-arrow" aria-hidden="true">↗</span>';
+launch.addEventListener("click",()=>{if(body.hidden){body.hidden=false;toggle.setAttribute("aria-expanded","true");toggle.firstChild.textContent="Tutup tutorial ";}draw();el.scrollIntoView({behavior:"smooth",block:"start"});});
+root.prepend(launch);draw();}
 function buildHub(){
 const host=$("help");if(!host||host.querySelector(".lc-hub"))return;
 const hub=document.createElement("section");hub.className="lc-hub";
