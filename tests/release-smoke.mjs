@@ -157,7 +157,7 @@ const checks = [
   ["Smart Queue script is wired and cached", html.includes("/download-queue.js?v=92.0") && sw.includes("/download-queue.js?v=92.0")],
   ["Storage and performance dashboard uses Storage API", mediaStudioJs.includes("navigator.storage?.estimate") && mediaStudioJs.includes("navigator.storage?.persist")],
   ["Media Studio responsive stylesheet is wired", html.includes("/media-studio.css?v=92.0") && mediaStudioCss.includes("@media(max-width:480px)")],
-  ["PWA cache includes current search bundle", sw.includes("/v674.js?v=89.3")],
+  ["PWA cache includes current search bundle", sw.includes("/v674.js?v=94.13.0")],
   ["Worker CSP permits FFmpeg WebAssembly and blob core loading", worker.includes("wasm-unsafe-eval") && worker.includes("https: blob:")],
   ["Homepage loads the current converter runtime", html.includes("/audio-studio.js?v=92.5")],
   ["Unified navigation hides home when another view opens", html.includes('id="appViewHeader"') && html.includes("home.hidden=!!id") && html.includes("p.id===id")],
