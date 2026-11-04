@@ -32,6 +32,10 @@ const duplicateIds = [...idCounts].filter(([, count]) => count > 1).map(([id]) =
 const learningCenter = read("../public/learning-center.js");
 const learningCss = read("../public/learning-center.css");
 const checks = [
+  ["Speed test controller and same-origin Worker endpoints are present", read("../public/speed-test.js").includes('"/api/speedtest/download?bytes="') && read("../src/index.js").includes('url.pathname==="/api/speedtest/download"') && read("../src/index.js").includes('url.pathname==="/api/speedtest/upload"')],
+  ["Adaptive network profiles cover five levels and auto mode", read("../public/index.html").includes('id="networkProfile"') && read("../public/downloader.js").includes("window.ARYANZZ_NETWORK_PROFILE") && ["Terendah","Rendah","Normal","Tinggi","Tertinggi"].every(x => read("../public/downloader.js").includes(x))],
+  ["Incomplete video transfers offer browser-managed download fallback", read("../public/downloader.js").includes("unduhan langsung tersedia") && read("../public/downloader.js").includes("Lanjutkan unduhan video lewat Chrome")],
+
   ["Automatic release version generator is wired to the Cloudflare build step", read("../package.json").includes('"build:version": "node scripts/build-version.mjs"') && read("../scripts/build-version.mjs").includes('git", ["rev-list", "--count", "HEAD"]') && read("../src/index.js").includes("version:BUILD_VERSION")],
   ["Version placeholders cover app UI, PWA manifest and service-worker cache", read("../public/index.html").includes("__ARYANZZ_VERSION__") && read("../public/manifest.webmanifest").includes("__ARYANZZ_VERSION__") && read("../public/sw.js").includes("__ARYANZZ_VERSION__")],
   ["V94.3 places a video tutorial launcher directly inside each supported tool panel", learningCenter.includes('className="lc-inline-launch"') && learningCenter.includes('root.prepend(launch)') && learningCenter.includes('el.scrollIntoView')],
