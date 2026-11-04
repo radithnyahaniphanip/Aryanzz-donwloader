@@ -1130,7 +1130,7 @@ async function resolveSocialImagePost(rawUrl,requestUrl,options={}){
   const providerKey=freePlatformKey(rawUrl);
   const key=platformIdForUrl(rawUrl)||providerKey;
   if(!key)return null;
-  const canonicalUrl=canonicalSocialPostUrl(rawUrl,key);
+  const canonicalUrl=await resolveSocialShortLink(rawUrl,key);
   let providerTitle="",providerImages=[],tikwmImages=[];
   const providerUrl=FREE_MEDIA_API+"/api/download/"+(providerKey||key)+"?url="+encodeURIComponent(canonicalUrl);
   // Experimental catalogue entries still get safe public-page metadata extraction;
