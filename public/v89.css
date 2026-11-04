@@ -136,3 +136,65 @@ footer:not(.owner-footer){color:#7185a5;text-align:center;font-size:11px}
  .nav button{font-size:8px!important}
 }
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+
+
+/* ARYANZZ V93.2 — consistent full-width responsive workspace */
+html,body{width:100%;max-width:100%;overflow-x:hidden}
+.wrap{
+  display:block!important;
+  width:100%!important;
+  max-width:1160px!important;
+  min-width:0!important;
+  margin-inline:auto!important;
+  padding-left:clamp(10px,2.5vw,18px)!important;
+  padding-right:clamp(10px,2.5vw,18px)!important;
+}
+.top.v674-top,.v89-welcome,#home,#toolsArea{
+  width:100%!important;
+  max-width:none!important;
+  min-width:0!important;
+  margin-left:0!important;
+  margin-right:0!important;
+}
+#toolsArea>.panel,
+#toolsArea>.panel.active{
+  display:block;
+  width:100%!important;
+  max-width:none!important;
+  min-width:0!important;
+  margin-left:0!important;
+  margin-right:0!important;
+}
+#toolsArea>.panel:not(.active){display:none!important}
+#toolsArea>.panel>*{max-width:100%;min-width:0}
+#toolsArea .ary-editorial-hero,
+#toolsArea .ary-editorial-section,
+#toolsArea .ary-editorial-footer,
+#toolsArea .v674-feature-panel,
+#toolsArea .v25-profile-card{
+  width:100%;
+  max-width:none!important;
+  min-width:0;
+}
+#toolsArea .ary-editorial-panel{padding:clamp(14px,3vw,26px)!important}
+#toolsArea .ary-editorial-panel .ary-editorial-hero{margin-inline:0!important}
+#toolsArea .ary-editorial-panel .ary-editorial-section{margin-inline:0!important}
+@media(max-width:680px){
+  .wrap{
+    width:100%!important;
+    padding-left:11px!important;
+    padding-right:11px!important;
+    padding-bottom:calc(108px + env(safe-area-inset-bottom))!important;
+  }
+  .top.v674-top,.v89-welcome{width:100%!important}
+  #toolsArea>.panel,#toolsArea>.panel.active{
+    width:100%!important;
+    padding:14px!important;
+    border-radius:18px!important;
+  }
+  #toolsArea>.panel.active.owner-panel{padding:0!important}
+  #toolsArea .ary-editorial-panel{padding:14px!important}
+  #toolsArea .ary-editorial-hero,
+  #toolsArea .ary-editorial-section,
+  #toolsArea .ary-editorial-footer{width:100%!important}
+}
