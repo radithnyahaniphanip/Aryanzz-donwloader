@@ -988,7 +988,7 @@ function socialNetworkPlan(selected=0){
         const key=String(item.downloadUrl||"")+"|"+String(item.mode||"");
         if(!item.downloadUrl||seenCandidates.has(key))return false;
         seenCandidates.add(key);return true;
-      }).slice(0,6);
+      }).slice(0,4);
       if(!orderedCandidates.length)throw new Error(mode==="audio"?"Provider gratis tidak menyediakan audio yang dapat diunduh.":"Provider gratis tidak menyediakan MP4 lengkap dengan suara. Format selain MP4 tidak akan diberi ekstensi MP4 palsu. Coba tautan video publik lain.");
       let selected=null,ready=null,check=null,lastProbeError="";
       progressText.textContent="Memeriksa ukuran dan isi media…";
@@ -1001,7 +1001,7 @@ function socialNetworkPlan(selected=0){
         const probeUrl=new URL(candidateUrl.href);probeUrl.searchParams.set("probe","1");
         try{
           progressText.textContent="Memvalidasi format "+(index+1)+" dari "+orderedCandidates.length+"…";
-          const probeResponse=await fetch(probeUrl.href,{cache:"no-store",credentials:"same-origin",signal:downloadTimeoutSignal(20000)});
+          const probeResponse=await fetch(probeUrl.href,{cache:"no-store",credentials:"same-origin",signal:downloadTimeoutSignal(15000)});
           const candidateCheck=await probeResponse.json().catch(()=>({}));
           if(probeResponse.ok&&candidateCheck.valid===true){
             selected=candidate;ready=candidateUrl;check=candidateCheck;break;
