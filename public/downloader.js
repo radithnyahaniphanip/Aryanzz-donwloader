@@ -970,6 +970,7 @@ function socialNetworkPlan(selected=0){
         remember(url,filename,mode,quality);
         return filename;
       }
+    }
     let sourcePlatform="Direct Media URL";try{sourcePlatform=platformName(new URL(url));}catch{}
     if(sourcePlatform!=="Direct Media URL")throw new Error("Provider "+sourcePlatform+" belum memberikan tautan file media yang valid. ARYANZZ menghentikan unduhan agar halaman atau respons JSON tidak tersimpan sebagai MP4.");
     const sourceExt=/^[a-z0-9]{2,8}$/i.test(info.extension||"")?info.extension.toLowerCase():"";
