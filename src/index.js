@@ -1,4 +1,4 @@
-import { BUILD_VERSION } from "./build-version.js";
+const BUILD_VERSION = "__ARYANZZ_VERSION__";
 import { PLATFORM_CATALOG, PLATFORM_DOMAINS, PLATFORM_CATALOG_BY_ID, platformForHost } from "./platform-catalog.js";
 const MEDIA_EXT = new Set(["mp4","webm","mov","m4v","mkv","avi","mpeg","mpg","m2ts","mts","ts","3gp","ogv","asf","wmv","mp3","m4a","aac","wav","ogg","oga","flac","opus","wma","aiff","aif","mka"]);
 const MAX_BYTES = 100 * 1024 * 1024;
