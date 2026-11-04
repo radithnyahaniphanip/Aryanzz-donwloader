@@ -17,6 +17,9 @@ assert.match(String(health?.version||""),/^\d+\.\d+\.\d+$/,"Live Worker tidak me
 assert.equal(health?.mode,"cloudflare-worker-zero-server-hybrid");
 assert.equal(health?.securityActive,true);
 const version=String(health.version);
+const expectedVersion=String(process.env.EXPECTED_BUILD_VERSION||"");
+assert.ok(expectedVersion,"Deployment must provide EXPECTED_BUILD_VERSION for live verification");
+assert.equal(version,expectedVersion,"Live Worker version does not match the build that was just deployed");
 
 const securityResponse=await request("/api/security/status");
 assert.equal(securityResponse.status,200);
@@ -50,15 +53,15 @@ for(let attempt=0;attempt<15;attempt++){
 }
 assert.ok(homepageReady,"Homepage belum menyajikan versi "+version+" setelah menunggu propagasi aset; status HTTP "+lastHomepageStatus);
 for(const marker of [
-  "/speed-test.js?v=94.6",
+  "/speed-test.js?v="+version,
   'id="networkProfile"',
   'id="speedBtn"',
   'id="linkBypass"',
   'id="sflBypassForm"',
-  "/link-bypass.js?v=94.0",
-  "/link-bypass.css?v=94.0",
-  "/v89.css?v=93.2",
-  "/v25.js?v=94.0",
+  "/link-bypass.js?v="+version,
+  "/link-bypass.css?v="+version,
+  "/v89.css?v="+version,
+  "/v25.js?v="+version,
   'id="mediaStudio"',
   'id="queue"',
   'id="securityCenter"',
@@ -73,15 +76,27 @@ for(const marker of [
 const assetRefs=[...html.matchAll(/(?:src|href)="(\/(?:[^"]+\.(?:js|css))(?:\?[^"]*)?)"/g)].map(match=>match[1]);
 assert.ok(assetRefs.length>=15,"Homepage tidak memuat kumpulan aset aplikasi yang diharapkan");
 for(const path of [...new Set(assetRefs)]){
+  const assetUrl=new URL(path,base);
+  assert.equal(assetUrl.searchParams.get("v"),version,"Aset tidak memakai versi build yang sama: "+path);
   const response=await request(path);
   assert.equal(response.status,200,"Aset live tidak ditemukan: "+path);
 }
+const releaseResponse=await request("/release.json");
+assert.equal(releaseResponse.status,200,"Metadata release.json tidak tersedia");
+const release=await releaseResponse.json();
+assert.equal(release?.version,version,"Metadata release.json tidak cocok dengan Worker");
+const manifestResponse=await request("/manifest.webmanifest?v="+version);
+assert.equal(manifestResponse.status,200,"PWA manifest tidak tersedia");
+const manifest=await manifestResponse.json();
+assert.equal(manifest?.version,version,"PWA manifest belum mengikuti versi Worker");
 const swResponse=await request("/sw.js");
 assert.equal(swResponse.status,200,"Service worker tidak tersedia");
 const sw=await swResponse.text();
 assert.ok(sw.includes("aryanzz-build-"+version),"Namespace cache PWA tidak mengikuti versi build");
-assert.ok(sw.includes("/speed-test.js?v=94.6"),"Service worker belum mencache controller Speed Test");
-console.log("✔ Cloudflare Worker health: "+version);
+assert.ok(sw.includes("/speed-test.js?v="+version),"Service worker belum mencache controller Speed Test dengan versi terbaru");
+assert.ok(sw.includes("/link-bypass.js?v="+version),"Service worker belum mencache Link Bypass dengan versi terbaru");
+console.log("✔ Cloudflare Worker health matches expected build: "+version);
+console.log("✔ release.json, PWA manifest, homepage, JS/CSS assets and service-worker cache all match "+version);
 console.log("✔ Security middleware and Link Bypass validation are active");
 console.log("✔ Speed Test ping, download and upload endpoints pass live HTTP checks");
 console.log("✔ Homepage, Profile, media tools, adaptive network selector and PWA assets are live");
