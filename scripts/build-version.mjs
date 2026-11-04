@@ -12,6 +12,9 @@ const buildNumber = runNumber > 0 ? runNumber : patch;
 const version = major + "." + minor + "." + buildNumber;
 const commit = String(process.env.GITHUB_SHA || process.env.CF_COMMIT_SHA || "local").slice(0, 8);
 
+const workerPath = resolve(root, "src/index.js");
+let worker = readFileSync(workerPath, "utf8").replaceAll("__ARYANZZ_VERSION__", version);
+writeFileSync(workerPath, worker);
 writeFileSync(resolve(root, "src/build-version.js"), 'export const BUILD_VERSION = "' + version + '";\nexport const BUILD_COMMIT = "' + commit + '";\n');
 
 const htmlPath = resolve(root, "public/index.html");
