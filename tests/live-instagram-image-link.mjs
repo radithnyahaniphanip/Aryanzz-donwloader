@@ -24,8 +24,10 @@ try{
   if(!media.ok||!String(report.previewMime||"").toLowerCase().startsWith("image/"))
     throw new Error("Gambar ditemukan, tetapi endpoint pratinjau tidak mengirim MIME gambar yang valid (HTTP "+media.status+").");
   const reader=media.body?.getReader();
-  const first=reader?await reader.read():{done:true,value:null};
-  const bytes=first.value?new Uint8Array(first.value):new Uint8Array();
+  const chunks=[];let length=0;
+  while(reader&&length<16){const part=await reader.read();if(part.done)break;chunks.push(part.value);length+=part.value.byteLength;}
+  const bytes=new Uint8Array(Math.min(length,32));let offset=0;
+  for(const chunk of chunks){const count=Math.min(chunk.byteLength,bytes.length-offset);bytes.set(chunk.subarray(0,count),offset);offset+=count;if(offset>=bytes.length)break;}
   report.signatureValid=(bytes[0]===0xff&&bytes[1]===0xd8&&bytes[2]===0xff)||(bytes[0]===0x89&&bytes[1]===0x50&&bytes[2]===0x4e&&bytes[3]===0x47)||(bytes[0]===0x47&&bytes[1]===0x49&&bytes[2]===0x46)||(bytes[0]===0x52&&bytes[1]===0x49&&bytes[2]===0x46&&bytes[8]===0x57&&bytes[9]===0x45&&bytes[10]===0x42&&bytes[11]===0x50)||(bytes[4]===0x66&&bytes[5]===0x74&&bytes[6]===0x79&&bytes[7]===0x70);
   await reader?.cancel().catch(()=>{});
   if(!report.signatureValid)throw new Error("Data awal yang dikirim bukan signature JPEG/PNG/GIF/WebP/AVIF yang dikenali.");
