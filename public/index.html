@@ -591,7 +591,8 @@ body{background-color:var(--ary-app-bg)}
     <label class="audio-control"><span>Akhiri pada (detik, opsional)</span><input id="audioStudioEnd" class="field" type="number" min="0" step="0.1" inputmode="decimal" placeholder="Durasi penuh"></label>
   </div>
   <p class="audio-trim-note">Kosongkan kedua kolom untuk mengonversi seluruh audio. Waktu dihitung dalam detik.</p>
-  <div class="audio-studio-actions"><button class="primary" id="audioStudioConvert" type="button" disabled>Konversi ke MP3</button><button class="tag" id="audioStudioCancel" type="button" hidden>Batalkan</button></div>
+  <div class="audio-studio-actions"><button class="primary" id="audioStudioConvert" type="button" disabled>Konversi ke MP3</button><button class="tag" id="audioStudioTestEngine" type="button">Uji mesin & format</button><button class="tag" id="audioStudioCancel" type="button" hidden>Batalkan</button></div>
+  <div class="audio-diagnostics-result" id="audioStudioDiagnosticsResult" role="status" aria-live="polite" hidden></div>
   <div class="audio-progress-track" id="audioStudioProgressTrack" role="progressbar" aria-label="Progres konversi MP4 ke MP3" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="audioStudioProgressBar"></div></div>
   <p class="audio-studio-status" id="audioStudioStatus" role="status" aria-live="polite">Pilih video MP4 untuk memulai.</p>
   <div class="audio-studio-result" id="audioStudioResult" hidden></div>
