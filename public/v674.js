@@ -51,7 +51,7 @@ reddit:["reddit.com","redd.it"],vimeo:["vimeo.com"],threads:["threads.net"],soun
 snapchat:["snapchat.com"],idnapp:["idntimes.com"],linkedin:["linkedin.com"],wechat:["wechat.com","weixin.qq.com"],kakaotalk:["kakao.com"]
 };
 function searchResultBelongsTo(item,platform){
- let host="";try{host=new URL(item?.url||item?.sourceUrl||"").hostname.toLowerCase().replace(/^www\\./,"")}catch{return false}
+ let host="";try{host=new URL(item?.url||item?.sourceUrl||"").hostname.toLowerCase().replace(/^www\./,"")}catch{return false}
  const key=SEARCH_PLATFORM_ALIASES[platform]||platform;
  if(key==="all")return Object.values(SEARCH_PLATFORM_DOMAINS).flat().some(domain=>host===domain||host.endsWith("."+domain));
  return (SEARCH_PLATFORM_DOMAINS[key]||[]).some(domain=>host===domain||host.endsWith("."+domain));
