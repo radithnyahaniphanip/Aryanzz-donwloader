@@ -44,6 +44,7 @@ function setUser(user){
  const node=$("profileRandomId"),copy=$("profileCopyId"),logout=$("accountLogout");
  if(user){
   if(node)node.textContent=user.id;
+  const desc=$("profileIdDescription");if(desc)desc.textContent="ID akun ARYANZZ yang diterbitkan oleh server.";
   if(copy){copy.onclick=async()=>{try{await navigator.clipboard.writeText(user.id);say("ID akun berhasil disalin.");}catch{say("Tidak dapat menyalin ID pada browser ini.",true)}}}
   if(logout)logout.hidden=false;
  }else{if(logout)logout.hidden=true;}
