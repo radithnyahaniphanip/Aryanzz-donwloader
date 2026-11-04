@@ -47,3 +47,8 @@
 @media(max-width:520px){.audio-studio-fields{grid-template-columns:1fr}.audio-studio-head{gap:8px}.audio-studio-mark{width:42px;height:42px;flex-basis:42px}.audio-eq-grid{gap:6px;padding-inline:0}.audio-eq-grid label{padding:7px 2px}.audio-eq-grid input{height:82px}.audio-adjust-card{padding:12px}}
 @media(prefers-reduced-motion:reduce){.audio-file-drop,.audio-progress-track>div{transition:none!important;animation:none!important}}
 body[data-motion=off] .audio-file-drop,body[data-motion=off] .audio-progress-track>div{transition:none!important;animation:none!important}
+
+.audio-preview-note{margin:0 0 12px;padding:10px 12px;border:1px solid #8a7040;border-radius:11px;background:#211d15;color:#e8d8ad;font-size:11px;line-height:1.6}
+.audio-preview-note[hidden]{display:none!important}
+#audioStudioPreview{object-fit:contain;aspect-ratio:16/9;background:#050b14}
+#audioStudioPreview:not([hidden]){display:block!important}
