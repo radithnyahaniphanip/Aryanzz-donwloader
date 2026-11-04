@@ -32,6 +32,7 @@
 <link rel="stylesheet" href="/v690.css?v=71.0">
 <link rel="stylesheet" href="/audio-studio.css?v=91.0">
 <link rel="stylesheet" href="/media-studio.css?v=91.0">
+<link rel="stylesheet" href="/download-queue.css?v=91.0">
 <link rel="stylesheet" href="/image-studio.css?v=81.4">
 <link rel="stylesheet" href="/preview-fix.css?v=1.1">
 <link rel="stylesheet" href="/search-session-fix.css?v=1.0">
@@ -637,7 +638,25 @@ body{background-color:var(--ary-app-bg)}
   </section>
   <button class="back-home" type="button" data-panel="allTools">← Kembali ke Pusat Alat</button>
 </div>
-<div class="panel card" id="queue"><h3>⇄ Smart Download Queue</h3><p class="muted">Masukkan beberapa URL, satu per baris. Antrean diproses satu per satu agar lebih stabil.</p><textarea id="queueUrls" class="field tool-input" rows="4" placeholder="https://..."></textarea><div class="feature-row"><button class="primary" id="queueAdd">Tambah ke antrean</button><button class="tag" id="queueRun">Mulai antrean</button><button class="tag" id="queueClear">Kosongkan</button></div><div id="queueList" class="result"></div></div>
+<div class="panel card queue-panel" id="queue">
+  <span class="section-kicker">ARYANZZ · DOWNLOAD MANAGER</span>
+  <h2>Smart Download Queue</h2>
+  <p>Susun beberapa tautan dan buka satu per satu melalui downloader utama. Status unduhan ditandai setelah kamu menyelesaikannya di halaman downloader.</p>
+  <div class="queue-entry">
+    <label class="audio-control" for="queueUrls">TAUTAN MEDIA · SATU TAUTAN PER BARIS</label>
+    <textarea id="queueUrls" class="field tool-input" rows="4" placeholder="https://..."></textarea>
+    <div class="queue-entry-actions">
+      <button class="primary" id="queueAdd" type="button">＋ Tambah ke antrean</button>
+      <button class="tag" id="queueRun" type="button">Mulai antrean</button>
+      <button class="tag" id="queuePause" type="button" hidden>Jeda antrean</button>
+      <button class="tag queue-danger" id="queueClear" type="button">Kosongkan</button>
+    </div>
+  </div>
+  <div class="queue-counts" id="queueCounts">0 item · 0 menunggu · 0 aktif · 0 selesai</div>
+  <p class="queue-status" id="queueStatus" role="status" aria-live="polite">Antrean tersimpan secara lokal di browser ini.</p>
+  <div class="queue-list" id="queueList"></div>
+  <button class="back-home" type="button" data-panel="allTools">← Kembali ke Pusat Alat</button>
+</div>
 <div class="panel card ary-members-panel" id="members">
   <div class="v674-tools-head"><div><span class="section-kicker">KOMUNITAS ARYANZZ</span><h2>Anggota & Pengunjung</h2><p>Ringkasan pengunjung aktif pada website kamu.</p></div><div class="v674-tools-orb">♙</div></div>
   <div class="ary-members-status"><b>Penyiapan diperlukan</b><p>Daftar pengunjung lintas perangkat belum aktif. Agar data online tersinkron untuk semua pengunjung, ARYANZZ memerlukan binding Cloudflare D1.</p></div>
@@ -992,4 +1011,5 @@ $('checkSite').onclick=()=>{const o=$('siteResult');o.hidden=false;try{const u=n
 let stream=null;$('camStart').onclick=async()=>{try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false});$('camera').srcObject=stream;$('camStart').hidden=true;$('camStop').hidden=false;$('heartResult').textContent='Kamera aktif. Demo ini belum mengestimasi BPM.';}catch{$('heartResult').textContent='Kamera perlu HTTPS dan izin browser.';}};function stop(){if(stream)stream.getTracks().forEach(t=>t.stop());stream=null;$('camera').srcObject=null;$('camStart').hidden=false;$('camStop').hidden=true;}$('camStop').onclick=stop;window.addEventListener('pagehide',stop);
 let deferred=null;window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferred=e;});$('installBtn').onclick=async()=>{if(deferred){deferred.prompt();await deferred.userChoice;deferred=null;}else $('installMsg').textContent='Gunakan menu Chrome ⋮ → Tambahkan ke layar utama.';};
 if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('/sw.js?v=91.0').catch(()=>{}));
-</script><script src="/audio-studio.js?v=91.0" defer></script><script src="/media-studio.js?v=91.0" defer></script><script src="/image-studio.js?v=81.4" defer></script><script src="/advanced.js?v=59.5" defer></script><script src="/v15.js?v=59.5" defer></script><script src="/v25.js?v=85.1" defer></script><script src="/owner.js?v=59.5" defer></script><script src="/downloader.js?v=88.8" defer></script><script src="/v59.js?v=59.5" defer></script><script src="/editor.js?v=65.0" defer></script><script src="/music-recognition.js?v=71.0" defer></script><script src="/v674.js?v=89.2" defer></script><script src="/v677.js?v=67.7" defer></script><script src="/v680.js?v=71.0" defer></script></body></html>
+</script><script src="/audio-studio.js?v=91.0" defer></script><script src="/media-studio.js?v=91.0" defer></script>
+<script src="/download-queue.js?v=91.0" defer></script><script src="/image-studio.js?v=81.4" defer></script><script src="/advanced.js?v=59.5" defer></script><script src="/v15.js?v=59.5" defer></script><script src="/v25.js?v=85.1" defer></script><script src="/owner.js?v=59.5" defer></script><script src="/downloader.js?v=88.8" defer></script><script src="/v59.js?v=59.5" defer></script><script src="/editor.js?v=65.0" defer></script><script src="/music-recognition.js?v=71.0" defer></script><script src="/v674.js?v=89.2" defer></script><script src="/v677.js?v=67.7" defer></script><script src="/v680.js?v=71.0" defer></script></body></html>
