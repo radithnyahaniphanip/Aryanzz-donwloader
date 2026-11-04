@@ -63,14 +63,10 @@ function isPlatformLink(raw){
   try{const u=new URL(raw);const h=u.hostname.toLowerCase();return ["http:","https:"].includes(u.protocol)&&PLATFORM_HOSTS.some(d=>h===d||h.endsWith("."+d));}catch{return false;}
 }
 const FREE_MEDIA_API="https://btch-downloader-api-green.vercel.app";
-const FREE_PLATFORM_KEYS=Object.fromEntries(PLATFORM_CATALOG.flatMap(platform=>platform.domains.map(domain=>[domain,platform.providerKey])));
 function freePlatformKey(raw){
   try{return platformForHost(new URL(raw).hostname)?.providerKey||null}catch{return null}
 }
 const SOCIAL_RATE_BUCKETS=new Map();
-function freePlatformKey(raw){
-  try{const host=new URL(raw).hostname.toLowerCase();return Object.entries(FREE_PLATFORM_KEYS).find(([domain])=>host===domain||host.endsWith("."+domain))?.[1]||null}catch{return null}
-}
 function socialRateLimited(request){
   const ip=request.headers.get("cf-connecting-ip")||"unknown",now=Date.now();
   let bucket=SOCIAL_RATE_BUCKETS.get(ip);
@@ -152,8 +148,10 @@ async function platformMediaInfo(request){
   if(raw.length>3000)return json({error:"Tautan terlalu panjang."},400);
   let parsed;try{parsed=new URL(raw)}catch{return json({error:"Tautan tidak valid."},400)}
   if(!["http:","https:"].includes(parsed.protocol)||parsed.username||parsed.password)return json({error:"Gunakan tautan publik HTTP/HTTPS yang valid."},400);
-  const key=freePlatformKey(parsed.href);
-  if(!key)return json({ok:false,error:"GAGAL — domain tautan tidak dikenali sebagai platform yang didukung."},400);
+  const platformEntry=platformForHost(parsed.hostname);
+  if(!platformEntry)return json({ok:false,error:"GAGAL — domain tautan tidak dikenali sebagai platform yang didukung."},400);
+  const key=platformEntry.providerKey;
+  if(key==="aio")return json({ok:false,error:platformEntry.name+" sudah terdaftar dalam katalog 200 platform, tetapi mesin unduhnya masih eksperimental dan belum diaktifkan. Gunakan AI Search untuk menemukan konten publik; ekstraksi langsung akan tersedia setelah provider platform ini selesai diuji."},501);
   const expected=String(body?.expectedPlatform||"").toLowerCase();
   if(!expected||expected==="all")return json({ok:false,error:"Pilih satu platform khusus. AI Search lintas platform tidak menggunakan endpoint unduhan ini."},400);
   const expectedEntry=PLATFORM_CATALOG_BY_ID.get(expected);
@@ -616,7 +614,7 @@ function parseBingSocialVideoResults(html,platform,query,seen){
 async function verifySocialSearchResult(result,requestUrl,desiredMode="any"){
   const key=freePlatformKey(result.url),platformId=platformIdForUrl(result.url);
   const searchOnly=()=>({...result,platform:platformId||result.platform||"unknown",verified:false,downloadable:false,searchOnly:true,mediaMode:desiredMode==="audio"?"audio":"video",channel:"Hasil publik · unduhan belum diverifikasi"});
-  if(!key)return searchOnly();
+  if(!key||key==="aio")return searchOnly();
   const endpoint=FREE_MEDIA_API+"/api/download/"+key+"?url="+encodeURIComponent(result.url);
   try{
     const response=await fetch(endpoint,{headers:{accept:"application/json"},signal:AbortSignal.timeout(9000),cache:"no-store"});
