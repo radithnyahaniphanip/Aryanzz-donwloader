@@ -233,7 +233,7 @@
       const videoBlob=new Blob(chunks,{type:actualMime});
       if(!videoBlob.size||!actualMime.startsWith("video/"))throw new Error("Hasil slideshow tidak menghasilkan file video yang valid.");
       const extension=actualMime.includes("mp4")?"mp4":"webm";
-      const safeTitle=String(title||"aryanzz-photo-slideshow").replace(/[\\/:*?"<>|]+/g," ").trim().slice(0,70)||"aryanzz-photo-slideshow";
+      const safeTitle=String(title||"aryanzz-photo-slideshow").replace(/[\\:*?"<>|]+/g," ").replace(/\//g," ").trim().slice(0,70)||"aryanzz-photo-slideshow";
       await saveBrowserBlob(videoBlob,safeTitle+"-slideshow."+extension,container,"⬇ Simpan video slideshow");
       if(button){button.textContent="Video slideshow siap ✓";button.disabled=true;}
       return {mime:actualMime,extension,size:videoBlob.size};
