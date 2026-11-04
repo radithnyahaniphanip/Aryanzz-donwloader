@@ -81,7 +81,7 @@ function socialRateLimited(request){
   if(!bucket||now-bucket.started>=60000)bucket={started:now,count:0};
   bucket.count++;SOCIAL_RATE_BUCKETS.set(ip,bucket);
   if(SOCIAL_RATE_BUCKETS.size>1200)for(const [key,value] of SOCIAL_RATE_BUCKETS)if(now-value.started>=60000)SOCIAL_RATE_BUCKETS.delete(key);
-  return bucket.count>18;
+  return bucket.count>30;
 }
 function safePublicMediaUrl(raw){
   try{
@@ -2129,7 +2129,7 @@ const workerHandler = {async fetch(request,env){
 const SECURITY_BUCKETS=new Map();
 const SECURITY_EVENTS={blockedOrigin:0,rateLimited:0,oversizedRequest:0,blockedMethod:0};
 const SECURITY_LIMITS=[
-  {match:/^\/api\/(?:social\/search|social\/image-search|image\/search|search)$/,limit:18},
+  {match:/^\/api\/(?:social\/search|social\/image-search|image\/search|search)$/,limit:30},
   {match:/^\/api\/(?:social-file|image\/file|social-image-file|direct-file)$/,limit:90},
   {match:/^\/api\//,limit:90}
 ];
