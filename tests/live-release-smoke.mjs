@@ -31,6 +31,10 @@ assert.ok(html.includes("/audio-studio.js?v=91.0"));
 assert.ok(html.includes("/media-studio.js?v=91.0"));
 assert.ok(html.includes("/media-studio.css?v=91.0"));
 assert.ok(html.includes('id="mediaStudio"'));
+assert.ok(html.includes('id="queue"'));
+assert.ok(html.includes('id="queueCounts"'));
+assert.ok(html.includes("/download-queue.js?v=91.0"));
+assert.ok(html.includes("/download-queue.css?v=91.0"));
 assert.ok(html.includes('id="audioStudioStart"'));
 assert.ok(html.includes('id="audioStudioEnd"'));
 assert.ok(html.includes('id="audioStudioPreviewNote"'));
@@ -41,10 +45,10 @@ assert.ok(html.includes("dari satu tautan"));
 assert.ok(html.includes('id="securityCenter"'));
 assert.ok(!html.includes('class="audio-studio-disclaimer"'));
 
-for (const path of ["/v89.css?v=90.0", "/v674.js?v=89.2", "/v674.css?v=85.5.0", "/audio-studio.js?v=91.0", "/audio-studio.css?v=91.0", "/media-studio.js?v=91.0", "/media-studio.css?v=91.0", "/ffmpeg-worker-local.js?v=91.0", "/sw.js?v=91.0"]) {
+for (const path of ["/v89.css?v=90.0", "/v674.js?v=89.2", "/v674.css?v=85.5.0", "/audio-studio.js?v=91.0", "/audio-studio.css?v=91.0", "/media-studio.js?v=91.0", "/media-studio.css?v=91.0", "/download-queue.js?v=91.0", "/download-queue.css?v=91.0", "/ffmpeg-worker-local.js?v=91.0", "/sw.js?v=91.0"]) {
   const response = await fetch(base + path, { cache: "no-store", signal: AbortSignal.timeout(10000) });
   assert.equal(response.status, 200, "Missing live asset " + path);
 }
 console.log("✔ Cloudflare Worker health: V91.0");
 console.log("✔ Security middleware and release endpoints are active");
-console.log("✔ V91.0 homepage, Converter Pro, Media Studio, local player and storage assets are live");
+console.log("✔ V91.0 homepage, Converter Pro, Media Studio, Smart Queue, local player and storage assets are live");
