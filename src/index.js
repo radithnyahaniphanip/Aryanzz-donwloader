@@ -157,7 +157,12 @@ async function platformMediaInfo(request){
   let parsed;try{parsed=new URL(raw)}catch{return json({error:"Tautan tidak valid."},400)}
   if(!["http:","https:"].includes(parsed.protocol)||parsed.username||parsed.password)return json({error:"Gunakan tautan publik HTTP/HTTPS yang valid."},400);
   const key=freePlatformKey(parsed.href);
-  if(!key)return json({error:"Domain tautan tidak dikenali sebagai platform yang didukung."},400);
+  if(!key)return json({ok:false,error:"GAGAL — domain tautan tidak dikenali sebagai platform yang didukung."},400);
+  const expected=String(body?.expectedPlatform||"").toLowerCase();
+  if(!expected||expected==="all")return json({ok:false,error:"Pilih satu platform khusus. AI Search lintas platform tidak menggunakan endpoint unduhan ini."},400);
+  const aliases={x:"twitter",twitter:"twitter",instagramlite:"instagram",facebooklite:"facebook",tiktoklite:"tiktok"};
+  const normalizedExpected=aliases[expected]||expected;
+  if(normalizedExpected!==key)return json({ok:false,error:"GAGAL — tautan "+key+" ditolak karena endpoint ini khusus untuk "+normalizedExpected+"."},400);
   return freePublicMediaInfo(parsed.href,request.url);
 }
 async function freePublicMediaInfo(rawUrl,requestUrl){
