@@ -1,4 +1,4 @@
-name: ARYANZZ — Validate and deploy V94.19.x
+name: ARYANZZ — Validate and deploy V94.20.x
 
 on:
   push:
@@ -16,7 +16,7 @@ concurrency:
 
 jobs:
   test:
-    name: Validate V94.19.x release
+    name: Validate V94.20.x release
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -42,7 +42,7 @@ jobs:
         run: npm test
 
   deploy:
-    name: Deploy V94.19.x to Cloudflare Workers
+    name: Deploy V94.20.x to Cloudflare Workers
     needs: test
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
@@ -94,3 +94,17 @@ jobs:
         env:
           WORKER_URL: https://aryanzz-donwloader.radithnyahaniphanip.workers.dev
         run: node tests/live-release-smoke.mjs
+      - name: Diagnose title search and link extraction across all 19 platforms
+        if: success()
+        continue-on-error: true
+        timeout-minutes: 18
+        env:
+          WORKER_URL: https://aryanzz-donwloader.radithnyahaniphanip.workers.dev
+        run: node tests/live-platform-matrix.mjs
+      - name: Upload 19-platform diagnostic matrix
+        if: always() && hashFiles('platform-matrix.json') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: aryanzz-platform-matrix
+          path: platform-matrix.json
+          retention-days: 14
