@@ -26,8 +26,7 @@
     const removeBanner=$("clearProfileBanner"),removeAvatar=$("clearProfilePhoto");
     if(removeBanner)removeBanner.hidden=!d.banner;
     if(removeAvatar)removeAvatar.hidden=!d.avatar;
-    if(d.background){document.body.style.setProperty("--v25-bg-image",'url("'+d.background+'")');document.body.dataset.customBackground="true";}
-    else{document.body.style.removeProperty("--v25-bg-image");document.body.dataset.customBackground="false";}
+    document.body.style.removeProperty("--v25-bg-image");document.body.dataset.customBackground="false";
   }
   async function compressImage(file,maxWidth,maxHeight,quality){
     if(!file||!file.type.startsWith("image/"))throw new Error("Pilih file gambar yang valid.");
@@ -55,9 +54,7 @@
     document.querySelectorAll("[data-surface]").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.surface===surface)));
   }
   function setupSurface(){
-    document.querySelectorAll("[data-surface]").forEach(b=>b.addEventListener("click",()=>{setSurface(b.dataset.surface);toast("Background "+b.dataset.surface+" diterapkan.");}));
-    setSurface(safeGet(SURFACE_KEY,"aurora"));
-    $("clearProfileBackground")?.addEventListener("click",()=>{const d=readDesign();d.background="";if(!write(DESIGN_KEY,d)){toast("Background belum terhapus karena penyimpanan browser penuh.");return;}applyDesign();setSurface("aurora");toast("Background pribadi dihapus.");});
+    $("clearProfileBackground")?.addEventListener("click",()=>{const d=readDesign();d.background="";if(!write(DESIGN_KEY,d)){toast("Background belum terhapus karena penyimpanan browser penuh.");return;}applyDesign();toast("Background pribadi dihapus.");});
     $("clearProfileBanner")?.addEventListener("click",()=>{const d=readDesign();d.banner="";if(!write(DESIGN_KEY,d)){toast("Banner belum terhapus karena penyimpanan browser penuh.");return;}applyDesign();window.dispatchEvent(new Event("aryanzz:profile-assets-updated"));toast("Banner berhasil dihapus.");});
     $("clearProfilePhoto")?.addEventListener("click",()=>{const d=readDesign();d.avatar="";if(!write(DESIGN_KEY,d)){toast("Foto profil belum terhapus karena penyimpanan browser penuh.");return;}applyDesign();window.dispatchEvent(new Event("aryanzz:profile-assets-updated"));toast("Foto profil berhasil dihapus.");});
   }
@@ -271,9 +268,8 @@
     if(!$("profile"))return;
     installAutoSaveObserver();applyDesign();initDeviceHistory();
     storeImage("profileBanner","banner",1500,520,.78,"Banner");
-    storeImage("profileBackground","background",1600,1000,.72,"Background");
     storeImage("profilePhoto","avatar",520,520,.8,"Foto profil");
-    setupSurface();setupProfilePreview();setupBackupActions();setupMotionToggle();profileCounts();setupReveal();setupPremiumEffects();initRandomProfileId();
+    setupSurface();setupProfilePreview();setupBackupActions();profileCounts();setupReveal();setupPremiumEffects();initRandomProfileId();
     window.addEventListener("storage",()=>{profileCounts();applyDesign();});
     window.addEventListener("aryanzz:profile-assets-updated",applyDesign);
     queueAutoSnapshot();
