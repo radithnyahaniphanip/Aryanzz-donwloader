@@ -40,12 +40,12 @@ const favicon=file("../public/favicon.svg");
 const deployWorkflow=file("../.github/workflows/deploy-cloudflare.yml");
 
 const checks=[
-  ["V93.0 responsive mobile popular tools use two columns and desktop uses four",linkBypassCss.includes(".v93-popular-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr))")&&linkBypassCss.includes(".v93-popular-grid,.all-tools-grid,.v674-tool-grid{grid-template-columns:repeat(2,minmax(0,1fr))")],
-  ["V93.0 home contains a compact eight-card popular tools section",html.includes('id="v93PopularTitle"')&&html.includes('class="v93-popular-grid"')&&(html.match(/class="v93-popular-card/g)||[]).length===8],
+  ["V93.0 preserves the original responsive home and tools layout",!html.includes('class="v93-popular-grid"')&&!linkBypassCss.includes(".all-tools-grid")&&!linkBypassCss.includes(".v674-tool-grid")],
+  ["V93.0 keeps the original homepage without the added Popular Tools section",!html.includes('id="v93PopularTitle"')&&!html.includes('class="v93-popular-card')],
   ["V93.0 Link Bypass has a dedicated panel, form and safe SFL endpoint",html.includes('id="linkBypass"')&&html.includes('id="sflBypassForm"')&&html.includes('/link-bypass.js?v=93.0')&&workerSource.includes('url.pathname==="/api/link-bypass"')&&workerSource.includes('SFL_BYPASS_HOSTS')],
   ["V93.0 Link Bypass client validates hosts, handles result, copy and optional auto-open",linkBypassJs.includes('new Set(["sf1.gl","sfl.gl","sflink.io"])')&&linkBypassJs.includes('navigator.clipboard.writeText')&&linkBypassJs.includes('window.open("about:blank"')&&linkBypassJs.includes('target.href=resolvedUrl')],
-  ["V93.0 profile settings are consolidated into one accordion without removing existing controls",profileJs.includes("function consolidateProfileSettings()")&&profileJs.includes("v93-profile-settings")&&profileJs.includes("v25-backup-card")&&profileJs.includes("v75-motion-card")],
-  ["V93.0 profile banner uses soft gradients without decorative orbit rings",profileCss.includes("radial-gradient(circle at 50% 55%")&&profileCss.includes("border:0!important")],
+  ["V93.0 restores the original Profile Studio settings layout",!profileJs.includes("consolidateProfileSettings")&&!profileJs.includes("v93-profile-settings")],
+  ["V93.0 restores the original Profile Studio banner styling",!profileCss.includes("radial-gradient(circle at 50% 55%")],
   ["V93.0 About ARYANZZ and Help remain available from Profile and Tools",html.includes('data-panel="about"')&&html.includes('data-panel="help"')&&html.includes('class="v93-profile-links"')],
   ["V93.0 PWA shell caches the new Link Bypass assets and profile script",sw.includes("aryanzz-v93-0")&&sw.includes("/link-bypass.css?v=93.0")&&sw.includes("/link-bypass.js?v=93.0")&&sw.includes("/v25.js?v=93.0")],
   ["Green Screen and cat-meme discovery variants are generated from ordinary search keywords",workerSource.includes("function socialSearchQueryVariants(query)")&&workerSource.includes('add("green screen meme","green screen meme template","chroma key meme"')&&workerSource.includes('add("green screen cat meme","green screen meme kucing","cat green screen meme")')&&workerSource.includes("return variants.map(value=>") ],
