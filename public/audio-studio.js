@@ -5,7 +5,9 @@
   const fileInput = $("audioStudioFile");
   if (!fileInput) return;
 
-  const MAX_FILE_BYTES = 100 * 1024 * 1024;
+  const MOBILE_DEVICE = Boolean(navigator.userAgentData?.mobile || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent));
+  const DEVICE_MEMORY_GB = Number(navigator.deviceMemory) || 0;
+  const MAX_FILE_BYTES = MOBILE_DEVICE ? (DEVICE_MEMORY_GB > 0 && DEVICE_MEMORY_GB <= 4 ? 50 : DEVICE_MEMORY_GB > 0 && DEVICE_MEMORY_GB <= 6 ? 70 : 80) * 1024 * 1024 : 100 * 1024 * 1024;
   const MODULE_URLS = [
     "https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js",
     "https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js"
@@ -39,7 +41,7 @@
   function busy(value) {
     running=value;
     const convert=$("audioStudioConvert"),cancel=$("audioStudioCancel");
-    if(convert){convert.disabled=value||!selectedFile;convert.textContent=value?"Memproses…":"Konversi ke MP3";}
+    if(convert){convert.disabled=value||!selectedFile;convert.textContent=value?"Memproses…":"Konversi ke "+($("audioStudioFormat")?.value||"mp3").toUpperCase();}
     if(cancel)cancel.hidden=!value;
     const previewConvert=$("audioStudioPreviewConvert");if(previewConvert)previewConvert.disabled=value;
     fileInput.disabled=value;
@@ -110,7 +112,7 @@
     if(!file){meta.textContent="Belum ada video dipilih.";convert.disabled=true;return;}
     const ext=(file.name.split(".").pop()||"").toLowerCase();
     if(!["mp4","m4v"].includes(ext)&&file.type!=="video/mp4"){meta.textContent="Format tidak didukung. Pilih file video MP4.";convert.disabled=true;return;}
-    if(file.size>MAX_FILE_BYTES){meta.textContent="Ukuran file "+formatSize(file.size)+" melebihi batas 100 MB.";convert.disabled=true;return;}
+    if(file.size>MAX_FILE_BYTES){meta.textContent="Ukuran file "+formatSize(file.size)+" melebihi batas perangkat "+formatSize(MAX_FILE_BYTES)+". Kurangi ukuran video atau gunakan perangkat dengan kapasitas lebih besar.";convert.disabled=true;return;}
     if(!file.size){meta.textContent="File kosong atau tidak dapat dibaca.";convert.disabled=true;return;}
     selectedFile=file;
     $("audioStudioName").value=safeName(file.name);
@@ -227,7 +229,7 @@
     const title=document.createElement("b");title.textContent="Konversi audio berhasil ✓";
     const meta=document.createElement("small");meta.textContent=filename+" · "+formatSize(blob.size)+" · siap disimpan";
     const audio=document.createElement("audio");audio.controls=true;audio.preload="metadata";audio.src=resultUrl;audio.style.cssText="display:block;width:100%;margin:10px 0 12px";
-    const link=document.createElement("a");link.href=resultUrl;link.download=filename;link.textContent="↓ Unduh MP3";
+    const link=document.createElement("a");link.href=resultUrl;link.download=filename;link.textContent="↓ Unduh "+filename.split(".").pop().toUpperCase();
     box.append(title,meta,audio,link);
   }
   async function makeCompatiblePreview() {
@@ -283,6 +285,7 @@
       if(!bytes.length)throw new Error("File tidak dapat dibaca.");
       status("Memasukkan video ke mesin konversi · "+formatSize(bytes.byteLength));progress(21);
       await engine.writeFile(inputName,bytes);
+      bytes.fill(0);
       const bitrate=Number($("audioStudioBitrate").value)||192;
       const startValue=$("audioStudioStart")?.value.trim()||"";
       const endValue=$("audioStudioEnd")?.value.trim()||"";
@@ -316,11 +319,11 @@
       engine.on("log",logHandler);engine.on("progress",progressHandler);
       try {
         const code=await engine.exec(ffmpegArgs,300000);
-        if(code!==0)throw new Error("FFmpeg tidak dapat mengekstrak audio. Pastikan file memiliki trek suara dan format MP4 valid.");
+        if(code!==0)throw new Error("Mesin konversi tidak mendukung encoder "+({mp3:"MP3",wav:"WAV",aac:"AAC",flac:"FLAC"}[format]||format)+", atau file tidak memiliki trek suara. Coba MP3 atau periksa file video.");
       } finally {engine.off("log",logHandler);engine.off("progress",progressHandler);}
       if(cancelled||controller.signal.aborted)throw new Error("Proses dibatalkan.");
       const output=await engine.readFile(outputName);
-      if(!output||output.length<1024)throw new Error("Hasil MP3 kosong. Pastikan video memiliki suara.");
+      if(!output||output.length<1024)throw new Error("Hasil "+extension.toUpperCase()+" kosong. Pastikan video memiliki trek suara.");
       const filename=safeName($("audioStudioName").value||file.name)+"."+extension;
       showResult(new Blob([output],{type:mime}),filename);
       progress(100,"done");status("Selesai! Putar pratinjau audio atau unduh file "+extension.toUpperCase()+".");
@@ -333,6 +336,8 @@
     }
   }
   const formatSelect=$("audioStudioFormat"),bitrateSelect=$("audioStudioBitrate"),volumeSlider=$("audioStudioVolume"),volumeValue=$("audioStudioVolumeValue");
+  const fileLimitLabel=document.querySelector('label.audio-file-drop small');
+  if(fileLimitLabel)fileLimitLabel.textContent="MP4 · Maksimal "+formatSize(MAX_FILE_BYTES)+" pada perangkat ini · Proses lokal di browser";
   function syncAudioOptions(){
     const format=formatSelect?.value||"mp3";
     const convertButton=$("audioStudioConvert");if(convertButton)convertButton.textContent=running?"Memproses…":"Konversi ke "+format.toUpperCase();
