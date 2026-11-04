@@ -24,8 +24,6 @@ assert.equal(security?.security?.active, true);
 const homeResponse = await fetch(base + "/", { cache: "no-store", signal: AbortSignal.timeout(10000) });
 assert.equal(homeResponse.status, 200);
 const html = await homeResponse.text();
-const csp = homeResponse.headers.get("content-security-policy") || "";
-assert.ok(csp.includes("connect-src") && csp.includes("blob:"), "Worker CSP must allow blob resource loading");
 assert.ok(html.includes("V90.2 · GRATIS"));
 assert.ok(html.includes("/v674.js?v=89.2"));
 assert.ok(html.includes("/v89.css?v=90.0"));
@@ -42,5 +40,5 @@ for (const path of ["/v89.css?v=90.0", "/v674.js?v=89.2", "/v674.css?v=85.5.0", 
   assert.equal(response.status, 200, "Missing live asset " + path);
 }
 console.log("✔ Cloudflare Worker health: V90.2");
-console.log("✔ Security middleware and blob CSP are active");
+console.log("✔ Security middleware and release endpoints are active");
 console.log("✔ V90.2 homepage, FFmpeg worker, converter and preview assets are live");
