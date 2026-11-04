@@ -67,14 +67,14 @@
   });
   window.addEventListener("aryanzz:download-complete",event=>{
     const item=findActive(event.detail);if(!item)return;
-    const detail=event.detail||{};
+    const detail=event.detail||{};const wasRunning=running;
     mark(item.id,"done",true);
-    if(!running){const suffix=detail.bytes?" · "+(detail.bytes/1048576).toFixed(1)+" MB":"";setStatus("✓ "+(detail.name||item.host||"File")+" siap"+suffix+".");}
+    if(!wasRunning){const suffix=detail.bytes?" · "+(detail.bytes/1048576).toFixed(1)+" MB":"";setStatus("✓ "+(detail.name||item.host||"File")+" siap"+suffix+".");}
   });
   window.addEventListener("aryanzz:download-failed",event=>{
-    const item=findActive(event.detail);if(!item)return;
+    const item=findActive(event.detail);if(!item)return;const wasRunning=running;
     mark(item.id,"failed",true);
-    if(!running)setStatus("✕ "+(item.host||"Unduhan")+" gagal: "+String(event.detail?.error||"Kesalahan tidak diketahui").slice(0,150));
+    if(!wasRunning)setStatus("✕ "+(item.host||"Unduhan")+" gagal: "+String(event.detail?.error||"Kesalahan tidak diketahui").slice(0,150));
   });
   window.addEventListener("aryanzz:download-link-opened",event=>{
     const item=findActive(event.detail);if(!item)return;
