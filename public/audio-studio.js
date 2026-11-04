@@ -43,8 +43,8 @@
     if(cancel)cancel.hidden=!value;
     const previewConvert=$("audioStudioPreviewConvert");if(previewConvert)previewConvert.disabled=value;
     fileInput.disabled=value;
-    const bitrate=$("audioStudioBitrate"),name=$("audioStudioName");
-    if(bitrate)bitrate.disabled=value;if(name)name.disabled=value;
+    const bitrate=$("audioStudioBitrate"),name=$("audioStudioName"),start=$("audioStudioStart"),end=$("audioStudioEnd");
+    if(bitrate)bitrate.disabled=value;if(name)name.disabled=value;if(start)start.disabled=value;if(end)end.disabled=value;
   }
   function updateFileMeta(extra="") {
     const meta=$("audioStudioFileMeta");
@@ -279,6 +279,17 @@
       status("Memasukkan video ke mesin konversi · "+formatSize(bytes.byteLength));progress(21);
       await engine.writeFile(inputName,bytes);
       const bitrate=Number($("audioStudioBitrate").value)||192;
+      const startValue=$("audioStudioStart")?.value.trim()||"";
+      const endValue=$("audioStudioEnd")?.value.trim()||"";
+      const startSeconds=startValue===""?0:Number(startValue);
+      const endSeconds=endValue===""?0:Number(endValue);
+      if(!Number.isFinite(startSeconds)||startSeconds<0)throw new Error("Waktu mulai harus berupa angka 0 atau lebih.");
+      if(endValue!==""&&(!Number.isFinite(endSeconds)||endSeconds<=startSeconds))throw new Error("Waktu akhir harus lebih besar daripada waktu mulai.");
+      const ffmpegArgs=[];
+      if(startSeconds>0)ffmpegArgs.push("-ss",String(startSeconds));
+      ffmpegArgs.push("-i",inputName);
+      if(endValue!=="")ffmpegArgs.push("-t",String(endSeconds-startSeconds));
+      ffmpegArgs.push("-map","0:a:0","-vn","-c:a","libmp3lame","-b:a",bitrate+"k","-ar","44100","-id3v2_version","3","-y",outputName);
       const logHandler=event=>{
         const line=String(event?.message||"");
         const match=line.match(/Duration:\s*(\d{2}:\d{2}:\d{2}(?:\.\d+)?)/);
@@ -290,7 +301,7 @@
       };
       engine.on("log",logHandler);engine.on("progress",progressHandler);
       try {
-        const code=await engine.exec(["-i",inputName,"-map","0:a:0","-vn","-c:a","libmp3lame","-b:a",bitrate+"k","-ar","44100","-id3v2_version","3","-y",outputName],300000);
+        const code=await engine.exec(ffmpegArgs,300000);
         if(code!==0)throw new Error("FFmpeg tidak dapat mengekstrak audio. Pastikan file memiliki trek suara dan format MP4 valid.");
       } finally {engine.off("log",logHandler);engine.off("progress",progressHandler);}
       if(cancelled||controller.signal.aborted)throw new Error("Proses dibatalkan.");
