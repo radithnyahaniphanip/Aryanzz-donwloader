@@ -8,12 +8,12 @@ for(let attempt=0;attempt<18;attempt++){
   try{
     const response=await request("/api/health");
     if(response.ok)health=await response.json();
-    if(/^\d+\.\d+$/.test(String(health?.version||"")))break;
+    if(/^\d+\.\d+\.\d+$/.test(String(health?.version||"")))break;
     lastError=new Error("Worker belum melaporkan versi build: "+String(health?.version||"kosong"));
   }catch(error){lastError=error;}
   await new Promise(resolve=>setTimeout(resolve,3000));
 }
-assert.match(String(health?.version||""),/^\d+\.\d+$/,"Live Worker tidak melaporkan versi build: "+String(lastError?.message||""));
+assert.match(String(health?.version||""),/^\d+\.\d+\.\d+$/,"Live Worker tidak melaporkan versi build: "+String(lastError?.message||""));
 assert.equal(health?.mode,"cloudflare-worker-zero-server-hybrid");
 assert.equal(health?.securityActive,true);
 const version=String(health.version);
