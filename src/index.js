@@ -177,31 +177,29 @@ async function snackVideoNativePageFallback(rawUrl,requestUrl){
   if(!response.ok)throw new Error("Halaman SnackVideo menjawab HTTP "+response.status+".");
   const finalUrl=response.url||rawUrl;
   const finalHost=new URL(finalUrl).hostname.toLowerCase();
-  if(!/(^|\\.)(snackvideo\\.com|kwai\\.com|kuaishou\\.com)$/.test(finalHost))throw new Error("Redirect keluar dari domain SnackVideo/Kwai ditolak.");
+  if(!/(^|\.)(snackvideo\.com|kwai\.com|kuaishou\.com)$/.test(finalHost))throw new Error("Redirect keluar dari domain SnackVideo/Kwai ditolak.");
   let html=await response.text();
-  if(html.length>5_000_000)html=html.slice(0,5_000_000);
-  const decoded=html.replace(/\\\\u002[fF]/g,"/").replace(/\\\\u0026/g,"&").replace(/\\\\\\//g,"/").replace(/&amp;/g,"&").replace(/\\\\u003[dD]/g,"=");
+  if(html.length>5000000)html=html.slice(0,5000000);
+  const decoded=html.replaceAll("\\/","/").replaceAll("&amp;","&").replaceAll("\\u002F","/").replaceAll("\\u002f","/").replaceAll("\\u0026","&").replaceAll("\\u003D","=").replaceAll("\\u003d","=");
   const candidates=[];
   const add=value=>{
     if(typeof value!=="string"||!value.trim())return;
-    let candidate=value.trim().replace(/\\\\u0026/g,"&").replace(/&amp;/g,"&").replace(/\\\\\\//g,"/");
+    let candidate=value.trim().replaceAll("\\/","/").replaceAll("&amp;","&").replaceAll("\\u0026","&");
     if(candidate.startsWith("//"))candidate="https:"+candidate;
-    if(safePublicMediaUrl(candidate)&&/\\.(?:mp4|m3u8)(?:[?#]|$)/i.test(candidate))candidates.push(candidate);
+    if(safePublicMediaUrl(candidate)&&/\.(?:mp4|m3u8)(?:[?#]|$)/i.test(candidate))candidates.push(candidate);
   };
-  const patterns=[
-    /"(?:playUrl|play_url|videoUrl|video_url|mainMvUrl|main_mv_url|downloadUrl|download_url)"\\s*:\\s*"((?:https?:)?(?:\\\\/\\\\/|[^"]){10,1600})"/gi,
-    /https?:\\\\/\\\\/[^"\\s<>]{8,1800}?(?:kwai\\.net|snackvideo|kwai-cdn)[^"\\s<>]{0,1200}?(?:\\.mp4|\\.m3u8)(?:\\?[^"\\s<>]*)?/gi,
-    /https?:\\/\\/[^"'\\s<>]{8,1800}?(?:kwai\\.net|snackvideo|kwai-cdn)[^"'\\s<>]{0,1200}?(?:\\.mp4|\\.m3u8)(?:\\?[^"'\\s<>]*)?/gi
-  ];
-  for(const pattern of patterns){for(const match of decoded.matchAll(pattern))add(match[1]||match[0]);}
-  const titleMatch=decoded.match(/<title[^>]*>([^<]{1,300})<\\/title>/i);
+  const keyPattern=/"(?:playUrl|play_url|videoUrl|video_url|mainMvUrl|main_mv_url|downloadUrl|download_url)"\s*:\s*"([^"]{12,2000})"/gi;
+  for(const match of decoded.matchAll(keyPattern))add(match[1]);
+  const mediaPattern=/https?:\/\/[^"'\\\s<>]{8,2500}?(?:kwai\.net|snackvideo|kwai-cdn)[^"'\\\s<>]{0,1500}?\.(?:mp4|m3u8)(?:\?[^"'\\\s<>]*)?/gi;
+  for(const match of decoded.matchAll(mediaPattern))add(match[0]);
+  const titleMatch=decoded.match(/<title[^>]*>([^<]{1,300})<\/title>/i);
   const ogTitle=decoded.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']{1,300})["']/i);
   const ogImage=decoded.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']{1,1200})["']/i);
   const canonical=decoded.match(/<link[^>]+rel=["']canonical["'][^>]+href=["']([^"']+)["']/i);
-  const title=String(ogTitle?.[1]||titleMatch?.[1]||"Video SnackVideo").replace(/\\s*[-|]\\s*SnackVideo.*$/i,"").slice(0,300);
+  const title=String(ogTitle?.[1]||titleMatch?.[1]||"Video SnackVideo").replace(/\s*[-|]\s*SnackVideo.*$/i,"").slice(0,300);
   const thumbnail=String(ogImage?.[1]||"");
   const unique=[...new Set(candidates)];
-  if(!unique.length)throw new Error("Halaman publik berhasil dibuka, tetapi URL stream MP4 belum ditemukan pada HTML.");
+  if(!unique.length)throw new Error("Halaman publik berhasil dibuka, tetapi URL stream MP4 tidak ditemukan pada HTML.");
   const media=unique.slice(0,12).map((url,index)=>({type:"video",kind:"video",label:"MP4"+(index?" alternatif "+(index+1):""),url}));
   const normalized=freeProviderMediaInfo({normalized:{title,thumbnail,media}},rawUrl,requestUrl);
   if(!normalized)throw new Error("Stream dari halaman SnackVideo tidak lolos validasi media.");
