@@ -41,3 +41,45 @@ try{
   console.log("[TIKTOK-USER-LINK-RESULT] "+JSON.stringify(report));
   process.exitCode=1;
 }
+
+const publicTikTokUrl="https://vm.tiktok.com/ZMkyTWLpV/";
+const publicReport={test:"public TikTok sample short-link playback and download",sourceUrl:publicTikTokUrl,status:null,canonicalUrl:null,title:null,durationSeconds:null,videoFormats:0,probeAttempts:[],videoReady:false,previewStatus:null,previewMime:null,previewDisposition:null,error:null};
+try{
+  const response=await fetch(base+"/api/platform/info",{method:"POST",headers:{"content-type":"application/json",accept:"application/json"},body:JSON.stringify({url:publicTikTokUrl,expectedPlatform:"tiktok"}),cache:"no-store",signal:AbortSignal.timeout(45000)});
+  publicReport.status=response.status;
+  const info=await response.json().catch(()=>({}));
+  publicReport.canonicalUrl=info.canonicalUrl||null;
+  publicReport.title=String(info.title||"").slice(0,120)||null;
+  publicReport.durationSeconds=Number(info.duration)||null;
+  const videos=(info.formats||[]).filter(item=>item?.mode==="video"&&item?.downloadUrl);
+  publicReport.videoFormats=videos.length;
+  const ordered=videos.slice().sort((a,b)=>{
+    const ae=["mp4","m4v"].includes(String(a.ext||"").toLowerCase())?0:1;
+    const be=["mp4","m4v"].includes(String(b.ext||"").toLowerCase())?0:1;
+    return ae-be;
+  }).slice(0,4);
+  for(const [index,candidate] of ordered.entries()){
+    try{
+      const probe=new URL(candidate.downloadUrl);probe.searchParams.set("probe","1");
+      const checked=await fetch(probe.href,{cache:"no-store",signal:AbortSignal.timeout(12000)});
+      const data=await checked.json().catch(()=>({}));
+      const valid=checked.ok&&data.valid===true&&String(data.mimeType||"").startsWith("video/");
+      publicReport.probeAttempts.push({index:index+1,status:checked.status,mime:data.mimeType||null,valid,error:valid?null:String(data.error||"Video signature tidak valid.").slice(0,120)});
+      if(valid){
+        publicReport.videoReady=true;
+        const previewUrl=new URL(candidate.previewUrl);
+        const preview=await fetch(previewUrl.href,{headers:{range:"bytes=0-65535"},cache:"no-store",signal:AbortSignal.timeout(15000)});
+        publicReport.previewStatus=preview.status;
+        publicReport.previewMime=preview.headers.get("content-type");
+        publicReport.previewDisposition=preview.headers.get("content-disposition");
+        await preview.body?.cancel().catch(()=>{});
+        break;
+      }
+    }catch(error){publicReport.probeAttempts.push({index:index+1,error:String(error?.message||error).slice(0,120)})}
+  }
+  if(!publicReport.videoReady&&!publicReport.error)publicReport.error=String(info.error||"Tidak ada format TikTok publik yang lolos validasi.").slice(0,180);
+  console.log("[TIKTOK-PUBLIC-SAMPLE-RESULT] "+JSON.stringify(publicReport));
+}catch(error){
+  publicReport.error=String(error?.message||error).slice(0,220);
+  console.log("[TIKTOK-PUBLIC-SAMPLE-RESULT] "+JSON.stringify(publicReport));
+}
