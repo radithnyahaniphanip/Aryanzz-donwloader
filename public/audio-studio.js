@@ -67,10 +67,15 @@
       ]);
       try{status("Mengaktifkan mesin konversi…");progress(19);
         const workerURL=new URL("/ffmpeg-worker-bootstrap.js?v=89.2",location.origin).href;
-        await Promise.race([
-          instance.load({coreURL,wasmURL,classWorkerURL:workerURL}),
-          new Promise((_,reject)=>setTimeout(()=>reject(new Error("Mesin FFmpeg tidak merespons dalam 60 detik. Periksa koneksi internet lalu muat ulang halaman.")),LOAD_TIMEOUT_MS))
-        ]);
+        let loadTimer;
+        try {
+          await Promise.race([
+            instance.load({coreURL,wasmURL,classWorkerURL:workerURL}),
+            new Promise((_,reject)=>{loadTimer=setTimeout(()=>reject(new Error("Mesin FFmpeg tidak merespons dalam 60 detik. Periksa koneksi internet lalu coba lagi.")),LOAD_TIMEOUT_MS);})
+          ]);
+        } finally {
+          clearTimeout(loadTimer);
+        }
         if(signal.aborted){instance.terminate();throw new Error("Proses dibatalkan.");}
         ffmpeg=instance;return instance;
       }catch(error){instance.terminate();throw error;}
