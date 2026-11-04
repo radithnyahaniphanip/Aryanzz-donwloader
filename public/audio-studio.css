@@ -60,3 +60,6 @@ body[data-motion=off] .audio-file-drop,body[data-motion=off] .audio-progress-tra
 .audio-trim-note{margin:7px 0 0;color:var(--muted);font-size:10px;line-height:1.5}
 .audio-trim-fields{margin-top:10px}
 .audio-trim-fields input{min-width:0}
+
+.audio-control input[type=range]{width:100%;accent-color:#39c9dc;cursor:pointer;padding:8px 0}
+.audio-control output{color:#80e3eb;font-size:10px;font-variant-numeric:tabular-nums;margin-left:6px}
