@@ -26,14 +26,14 @@ assert.equal(homeResponse.status, 200);
 const html = await homeResponse.text();
 assert.ok(html.includes("V90.1 · GRATIS"));
 assert.ok(html.includes("/v674.js?v=89.2"));
-assert.ok(html.includes("/v89.css?v=90.1"));
+assert.ok(html.includes("/v89.css?v=90.0"));
 assert.ok(html.includes('id="v89Welcome"'));
 assert.ok(html.includes("Semua berawal"));
 assert.ok(html.includes("dari satu tautan"));
 assert.ok(html.includes('id="securityCenter"'));
 assert.ok(!html.includes('class="audio-studio-disclaimer"'));
 
-for (const path of ["/v89.css?v=90.1", "/v674.js?v=89.2", "/v674.css?v=85.5.0", "/audio-studio.js?v=90.1", "/audio-studio.css?v=90.1", "/ffmpeg-worker-bootstrap.js?v=89.2", "/sw.js?v=90.1"]) {
+for (const path of ["/v89.css?v=90.0", "/v674.js?v=89.2", "/v674.css?v=85.5.0", "/audio-studio.js?v=90.1", "/audio-studio.css?v=90.0", "/ffmpeg-worker-bootstrap.js?v=89.2", "/sw.js?v=90.1"]) {
   const response = await fetch(base + path, { cache: "no-store", signal: AbortSignal.timeout(10000) });
   assert.equal(response.status, 200, "Missing live asset " + path);
 }
