@@ -12,6 +12,8 @@ const mediaStudioJs = read("../public/media-studio.js");
 const mediaStudioCss = read("../public/media-studio.css");
 const queueJs = read("../public/download-queue.js");
 const queueCss = read("../public/download-queue.css");
+const advancedJs = read("../public/advanced.js");
+const profileJs = read("../public/v25.js");
 const titleSearchStart = html.indexOf('<select id="titleSearchType"');
 const titleSearchEnd = html.indexOf("</select>", titleSearchStart);
 const titleSearchMarkup = titleSearchStart >= 0 && titleSearchEnd >= 0 ? html.slice(titleSearchStart, titleSearchEnd) : "";
@@ -22,6 +24,8 @@ const profileJs = read("../public/v25.js");
 const ownerJs = read("../public/owner.js");
 
 const checks = [
+  ["Profile Studio is the single owner of profile photo, banner, background and bio handlers", !advancedJs.includes("profilePhoto") && !advancedJs.includes("profileBanner") && !advancedJs.includes("profileSave") && profileJs.includes('storeImage("profileBanner"') && profileJs.includes('storeImage("profilePhoto"') && profileJs.includes("setupProfilePreview()")],
+  ["Profile backup actions are not duplicated by legacy Tools code", !advancedJs.includes("exportData") && !advancedJs.includes("importData") && profileJs.includes("setupBackupActions()")],
   ["ALL platform option is removed", !html.includes('data-platform="all"') && !searchJs.includes('all:{name:"Semua platform"')],
   ["Audio search option is removed", !titleSearchMarkup.includes('<option value="audio">')],
   ["Video and image search remain available", html.includes('<option value="video">Video</option>') && html.includes('<option value="image">Gambar</option>')],
@@ -32,11 +36,11 @@ const checks = [
   ["V92.1 converter uses the shared FFmpeg class worker with a versioned same-origin bootstrap", converterJs.includes('ffmpeg-worker-bootstrap.js?v=92.1') && html.includes('/audio-studio.js?v=92.1')],
   ["V92.1 converter retries jsDelivr and unpkg core assets independently", converterJs.includes('for(let index=0;index<CORE_BASES.length;index++)') && converterJs.includes('coreURL:base+"/ffmpeg-core.js"') && converterJs.includes('wasmURL:base+"/ffmpeg-core.wasm"')],
   ["V92.1 converter reports stalled CDN transfers and resets timeout after each chunk", converterJs.includes('const armIdleTimeout=()=>') && converterJs.includes('armIdleTimeout();') && converterJs.includes('Koneksi CDN tidak mengirim data selama 45 detik')],
-  ["V92.3 platform-link YouTube MP4 mux uses the refreshed FFmpeg bootstrap", downloaderJs.includes('ffmpeg-worker-bootstrap.js?v=92.2')],
-  ["V92.3 platform-link FFmpeg loader retries both module CDNs", downloaderJs.includes('https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js') && downloaderJs.includes('https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js')],
-  ["V92.3 platform-link FFmpeg loader retries both core CDNs with a fresh instance", downloaderJs.includes('for(let index=0;index<coreBases.length;index++)') && downloaderJs.includes('coreURL,wasmURL,classWorkerURL:workerUrl') && downloaderJs.includes('ffmpeg?.terminate()')],
-  ["V92.3 platform-link FFmpeg component timeout resets while chunks arrive", downloaderJs.includes("const resetIdle=()=>") && downloaderJs.includes("resetIdle();") && downloaderJs.includes("controller.abort(),45000")],
-  ["V92.3 downloader asset and PWA cache are refreshed", html.includes('/downloader.js?v=92.2') && sw.includes('/downloader.js?v=92.2') && sw.includes('/ffmpeg-worker-bootstrap.js?v=92.2') && sw.includes('aryanzz-v92-5')],
+  ["V92.4 platform-link YouTube MP4 mux uses the refreshed FFmpeg bootstrap", downloaderJs.includes('ffmpeg-worker-bootstrap.js?v=92.2')],
+  ["V92.4 platform-link FFmpeg loader retries both module CDNs", downloaderJs.includes('https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js') && downloaderJs.includes('https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js')],
+  ["V92.4 platform-link FFmpeg loader retries both core CDNs with a fresh instance", downloaderJs.includes('for(let index=0;index<coreBases.length;index++)') && downloaderJs.includes('coreURL,wasmURL,classWorkerURL:workerUrl') && downloaderJs.includes('ffmpeg?.terminate()')],
+  ["V92.4 platform-link FFmpeg component timeout resets while chunks arrive", downloaderJs.includes("const resetIdle=()=>") && downloaderJs.includes("resetIdle();") && downloaderJs.includes("controller.abort(),45000")],
+  ["V92.4 downloader asset and PWA cache are refreshed", html.includes('/downloader.js?v=92.2') && sw.includes('/downloader.js?v=92.2') && sw.includes('/ffmpeg-worker-bootstrap.js?v=92.2') && sw.includes('aryanzz-v92-6')],
   ["Profile Studio and Owner page share the same V25 profile and design stores", ownerJs.includes('aryanzz.profile.info.v25') && ownerJs.includes('aryanzz.profile.design.v25') && profileJs.includes('const PROFILE_KEY="aryanzz.profile.info.v25"')],
   ["Owner profile displays the Profile Studio avatar and banner assets", ownerJs.includes('validImage(design.avatar)') && ownerJs.includes('validImage(design.banner)') && ownerJs.includes('$("ownerAvatar")')],
   ["Owner profile updates once when profile assets change", (ownerJs.match(/aryanzz:profile-assets-updated/g)||[]).length===1],
@@ -50,12 +54,12 @@ const checks = [
   ["Converter uses a same-origin local FFmpeg worker", converterJs.includes("ffmpeg-worker-bootstrap.js?v=92.1")],
   ["Local worker loads primary and fallback single-thread cores", converterJs.includes("for(let index=0;index<CORE_BASES.length;index++)") && converterJs.includes("instance.terminate()") && converterJs.includes("coreURL:base+\"/ffmpeg-core.js\"")],
   ["Worker CSP permits blob fetch for local WASM resources", worker.includes("connect-src") && worker.includes("wss: blob:;")],
-  ["Homepage release label is V92.3", html.includes("V92.3 · GRATIS")],
-  ["Worker health reports V92.3", worker.includes('version:"92.3"')],
+  ["Homepage release label is V92.4", html.includes("V92.4 · GRATIS")],
+  ["Worker health reports V92.4", worker.includes('version:"92.4"')],
   ["Homepage loads the shared V89 shell stylesheet", html.includes("/v89.css?v=90.0")],
   ["Every homepage JS and CSS asset is included in the active PWA shell cache", htmlAssetRefs.length>0 && htmlAssetRefs.every(ref=>sw.includes('"'+ref+'"'))],
-  ["PWA cache namespace is V92.3", sw.includes('const CACHE="aryanzz-v92-5"')],
-  ["PWA cache includes homepage, converter and Media Studio", sw.includes("/?v=92.3") && sw.includes("/audio-studio.js?v=92.1") && sw.includes("/audio-studio.css?v=92.0") && sw.includes("/media-studio.js?v=92.0") && sw.includes("/media-studio.css?v=92.0")],
+  ["PWA cache namespace is V92.4", sw.includes('const CACHE="aryanzz-v92-6"')],
+  ["PWA cache includes homepage, converter and Media Studio", sw.includes("/?v=92.4") && sw.includes("/audio-studio.js?v=92.1") && sw.includes("/audio-studio.css?v=92.0") && sw.includes("/media-studio.js?v=92.0") && sw.includes("/media-studio.css?v=92.0")],
 
   ["Converter Pro includes optional audio trim controls", html.includes('id="audioStudioStart"') && html.includes('id="audioStudioEnd"') && converterJs.includes('ffmpegArgs.push("-t"')],
   ["Converter Pro supports MP3 WAV AAC and FLAC output", ["mp3","wav","aac","flac"].every(format => html.includes('value="'+format+'"')) && converterJs.includes("libmp3lame") && converterJs.includes("pcm_s16le") && converterJs.includes('format==="aac"') && converterJs.includes('format==="flac"')],
@@ -102,4 +106,4 @@ for (const [name, ok] of checks) {
   assert.ok(ok, name + " failed");
   console.log("✔ " + name);
 }
-console.log("\nARYANZZ V92.3 platform downloader release smoke tests passed.");
+console.log("\nARYANZZ V92.4 platform downloader release smoke tests passed.");
