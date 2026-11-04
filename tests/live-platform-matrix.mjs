@@ -1,6 +1,7 @@
 import { writeFileSync } from "node:fs";
+import { PLATFORM_CATALOG } from "../src/platform-catalog.js";
 const base=(process.env.WORKER_URL||"https://aryanzz-donwloader.radithnyahaniphanip.workers.dev").replace(/\/$/,"");
-const platforms=["youtube","tiktok","instagram","snackvideo","capcut","pinterest","facebook","x","reddit","vimeo","threads","soundcloud","tiktoklite","facebooklite","snapchat","idnapp","instagramlite","linkedin","wechat","kakaotalk"];
+const platforms=PLATFORM_CATALOG.filter(platform=>platform.providerKey!=="aio").map(platform=>platform.id);
 const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 const sampleLinks={tiktok:"https://vt.tiktok.com/ZSgEFBrCq/",snackvideo:"https://s.snackvideo.com/p/ztwycdXp"};
 const rows=[];
