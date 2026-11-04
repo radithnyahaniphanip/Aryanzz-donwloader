@@ -50,7 +50,7 @@ const checks = [
   ["Local worker loads primary and fallback single-thread cores", converterJs.includes("for(let index=0;index<CORE_BASES.length;index++)") && converterJs.includes("instance.terminate()") && converterJs.includes("coreURL:base+\"/ffmpeg-core.js\"")],
   ["Worker CSP permits blob fetch for local WASM resources", worker.includes("connect-src") && worker.includes("wss: blob:;")],
   ["Homepage release label is V92.3", html.includes("V92.3 · GRATIS")],
-  ["Worker health reports V92.3", worker.includes('version:"92.2"')],
+  ["Worker health reports V92.3", worker.includes('version:"92.3"')],
   ["Homepage loads the shared V89 shell stylesheet", html.includes("/v89.css?v=90.0")],
   ["PWA cache namespace is V92.3", sw.includes('const CACHE="aryanzz-v92-5"')],
   ["PWA cache includes homepage, converter and Media Studio", sw.includes("/?v=92.3") && sw.includes("/audio-studio.js?v=92.1") && sw.includes("/audio-studio.css?v=92.0") && sw.includes("/media-studio.js?v=92.0") && sw.includes("/media-studio.css?v=92.0")],
