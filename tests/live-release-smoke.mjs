@@ -21,6 +21,12 @@ assert.equal(securityResponse.status, 200);
 const security = await securityResponse.json();
 assert.equal(security?.security?.active, true);
 
+const rejectedBypass = await fetch(base + "/api/link-bypass?url=" + encodeURIComponent("https://example.com/"), { cache: "no-store", signal: AbortSignal.timeout(10000) });
+assert.equal(rejectedBypass.status, 400, "Link Bypass must reject domains outside the SFL allowlist");
+const rejectedBypassBody = await rejectedBypass.json();
+assert.equal(rejectedBypassBody.ok, false);
+
+
 const homeResponse = await fetch(base + "/", { cache: "no-store", signal: AbortSignal.timeout(10000) });
 assert.equal(homeResponse.status, 200);
 const html = await homeResponse.text();
