@@ -647,6 +647,33 @@ async function verifySocialSearchResult(result,requestUrl,desiredMode="any"){
     return {...result,platform:key,title:result.title||info.title,mediaTitle:info.title||"",thumbnail:info.thumbnail||null,duration:info.duration||null,verified:true,downloadable:true,mediaMode:playable.mode,previewUrl:playable.mode==="audio"?playable.previewUrl:null,downloadUrl:playable.mode==="audio"?playable.downloadUrl:null,extension:mediaData.extension,mediaType:mediaData.mimeType};
   }catch{return searchOnly()}
 }
+function parseGoogleSocialVideoResults(html,platform,query,seen){
+  const domains=socialSearchDomains(platform),out=[];
+  for(const match of String(html||"").matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/gi)){
+    const attrs=match[1]||"",raw=attrs.match(/\bhref=["']([^"']+)["']/i)?.[1];
+    if(!raw)continue;
+    let link;try{link=new URL(decodeSearchHtml(raw),"https://www.google.com")}catch{continue}
+    if(link.hostname==="www.google.com"||link.hostname==="google.com"){
+      if(!/^\/url\/?$/.test(link.pathname))continue;
+      const target=link.searchParams.get("q")||link.searchParams.get("url")||link.searchParams.get("adurl")||"";
+      if(!target)continue;
+      try{link=new URL(target)}catch{continue}
+    }
+    if(link.protocol!=="https:"||!domains.some(domain=>link.hostname===domain||link.hostname.endsWith("."+domain)))continue;
+    const key=freePlatformKey(link.href);if(!key)continue;
+    if(key==="tiktok"&&!/\/video\//i.test(link.pathname))continue;
+    if(key==="instagram"&&!/\/(?:p|reel|tv|share)\//i.test(link.pathname))continue;
+    if(key==="pinterest"&&!/\/pin\//i.test(link.pathname))continue;
+    const href=link.href.split("#")[0];if(seen.has(href))continue;
+    const title=decodeSearchHtml((match[2].match(/<h3\b[^>]*>([\s\S]*?)<\/h3>/i)?.[1]||match[2]).replace(/<[^>]+>/g," "));
+    if(!title)continue;
+    const snippet=decodeSearchHtml(match[2].replace(/<[^>]+>/g," ")).slice(0,300);
+    if(publicSearchRelevance(query,title+" "+snippet)<0.16)continue;
+    seen.add(href);out.push({title,url:href,snippet,platform:key,searchProvider:"Google Video/Web"});
+    if(out.length>=100)break;
+  }
+  return out;
+}
 async function searchSocial(request){
   let body;try{body=await request.json()}catch{return json({error:"Body JSON tidak valid."},400)}
   const platform=String(body?.platform||"").toLowerCase(),query=String(body?.query||"").replace(/\s+/g," ").trim();
@@ -664,7 +691,7 @@ async function searchSocial(request){
     const variants=(desiredMode==="audio"
       ? [query,query+" audio",query+" song",query+" soundtrack",query+" instrumental",...baseVariants]
       : desiredMode==="video"
-        ? [query,query+" video",query+" clip",query+" shorts",...baseVariants]
+        ? [query,query+" video",query+" clip",query+" shorts",query+" DJ remix",query+" official video",...baseVariants]
         : baseVariants).filter((value,index,array)=>array.indexOf(value)===index).slice(0,platform==="all"?5:12);
     const pages=await Promise.all(variants.flatMap(term=>searchSites.map(async searchSite=>{
       const url=new URL("https://html.duckduckgo.com/html/");url.searchParams.set("q",searchSite+" "+term);
@@ -710,6 +737,13 @@ async function searchSocial(request){
     })));
     let bingCandidateCount=0;
     for(const page of bingPages){const parsed=parseBingSocialVideoResults(page,platform,query,seen);bingCandidateCount+=parsed.length;candidates.push(...parsed)}
+    const googleQuery=platform==="all"?site:domains.map(domain=>"site:"+domain).join(" OR ");
+    const googlePages=await Promise.all(variants.slice(0,3).map(async term=>{
+      const url=new URL("https://www.google.com/search");url.searchParams.set("q",googleQuery+" "+term);url.searchParams.set("tbm","vid");url.searchParams.set("num","30");url.searchParams.set("filter","0");
+      try{const response=await fetch(url.href,{headers:{accept:"text/html,application/xhtml+xml","user-agent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/131.0.0.0 Safari/537.36","accept-language":"id-ID,id;q=0.9,en-US;q=0.8"},signal:AbortSignal.timeout(9000),cache:"no-store"});return response.ok?await response.text():""}catch{return ""}
+    }));
+    let googleCandidateCount=0;
+    for(const page of googlePages){const parsed=parseGoogleSocialVideoResults(page,platform,query,seen);googleCandidateCount+=parsed.length;candidates.push(...parsed)}
     let tiktokPageDiagnostics={status:null,bytes:0,count:0,queries:[]};
     if(platform==="tiktok"||platform==="tiktoklite"||platform==="all"){
       const directPages=await Promise.all(variants.slice(0,platform==="all"?3:5).map(term=>searchTikTokPublicPage(term)));
@@ -747,7 +781,7 @@ async function searchSocial(request){
     const orderedCandidates=platform==="all"?(()=>{const buckets=new Map();for(const item of relevantCandidates){const key=freePlatformKey(item.url)||"other";if(!buckets.has(key))buckets.set(key,[]);buckets.get(key).push(item)}const out=[];for(let round=0;round<12;round++)for(const list of buckets.values())if(list[round])out.push(list[round]);return out})():relevantCandidates;
     const verificationLimit=12;const verificationCandidates=orderedCandidates.slice(0,verificationLimit);const checked=await Promise.all(verificationCandidates.map(item=>verifySocialSearchResult(item,request.url,desiredMode)));const searchOnlyRemainder=orderedCandidates.slice(verificationLimit,500).map(item=>({...item,platform:freePlatformKey(item.url)||item.platform||"unknown",verified:false,downloadable:false,searchOnly:true,mediaMode:desiredMode==="audio"?"audio":"video",channel:desiredMode==="audio"?"Sumber video · audio MP3 diproses saat dipilih":"Hasil publik · unduhan belum diverifikasi"}));
     const results=[...checked.filter(Boolean),...searchOnlyRemainder].slice(0,500);
-    return json({ok:true,platform,query,mediaType:desiredMode,results,candidateCount:candidates.length,ddgCandidateCount,bingCandidateCount,relevantCount:relevantCandidates.length,verifiedCount:results.filter(item=>item.verified).length,searchOnlyCount:results.filter(item=>item.searchOnly).length,unavailableCount:relevantCandidates.length-results.length,candidateSamples:candidates.slice(0,5).map(item=>({title:item.title,url:item.url,score:publicSearchRelevance(query,item.title+" "+item.snippet)})),providerDiagnostics:{ddgPages:pages.length,ddgNonEmpty:pages.filter(Boolean).length,bingPages:bingPages.length,bingNonEmpty:bingPages.filter(Boolean).length,bingAlgoCount:bingPages.reduce((sum,page)=>sum+[...page.matchAll(/<li\b[^>]*class=["'][^"']*\bb_algo\b/gi)].length,0),ddgResultLinkCount:pages.reduce((sum,page)=>sum+[...page.matchAll(/class=["'][^"']*\bresult__a\b/gi)].length,0),bingSample:(bingPages.find(Boolean)||"").slice(0,2200),tiktokPublicPage:tiktokPageDiagnostics},searchVariants:variants,verification:"provider-and-media-signature",verificationLimit,searchScope:platform==="all"?"all-supported-platform-domains":"selected-platform",returnedPublicResults:results.length,verifiedChecks:verificationCandidates.length});
+    return json({ok:true,platform,query,mediaType:desiredMode,results,candidateCount:candidates.length,ddgCandidateCount,bingCandidateCount,relevantCount:relevantCandidates.length,verifiedCount:results.filter(item=>item.verified).length,searchOnlyCount:results.filter(item=>item.searchOnly).length,unavailableCount:relevantCandidates.length-results.length,candidateSamples:candidates.slice(0,5).map(item=>({title:item.title,url:item.url,score:publicSearchRelevance(query,item.title+" "+item.snippet)})),providerDiagnostics:{ddgPages:pages.length,ddgNonEmpty:pages.filter(Boolean).length,bingPages:bingPages.length,bingNonEmpty:bingPages.filter(Boolean).length,googlePages:googlePages.length,googleNonEmpty:googlePages.filter(Boolean).length,googleCandidateCount,ddgResultLinkCount:pages.reduce((sum,page)=>sum+[...page.matchAll(/class=["'][^"']*\bresult__a\b/gi)].length,0),bingCandidateCount,tiktokPublicPage:tiktokPageDiagnostics},searchVariants:variants,verification:"provider-and-media-signature",verificationLimit,searchScope:platform==="all"?"all-supported-platform-domains":"selected-platform",returnedPublicResults:results.length,verifiedChecks:verificationCandidates.length});
   }catch(error){return json({error:"Pencarian publik gagal dijangkau. Coba lagi nanti. "+String(error?.message||error).slice(0,100)},502)}
 }
 
