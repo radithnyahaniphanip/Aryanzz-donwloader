@@ -209,7 +209,8 @@ body{background-color:var(--ary-app-bg)}
 @keyframes v8814ViewIn{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
 @media(max-width:420px){.v8814-view-state{font-size:7px;padding:5px 6px}.nav button{font-size:10px}.nav button .nav-icon{font-size:17px}}
 @media(prefers-reduced-motion:reduce){#toolsArea>.panel.active{animation:none}html{scroll-behavior:auto}}
-</style><link rel="stylesheet" href="/link-bypass.css?v=93.0"><link rel="stylesheet" href="/learning-center.css?v=93.7"></head><body>
+</style><link rel="stylesheet" href="/link-bypass.css?v=93.0"><link rel="stylesheet" href="/learning-center.css?v=93.7"><link rel="stylesheet" href="/theme-studio.css?v=94.0">
+</head><body>
 <div class="wrap">
 <header class="top v674-top"><a class="brand v674-brand" href="/" aria-label="ARYANZZ Home"><span class="logo v674-logo">A<span>✦</span></span><span>ARYANZZ<small>RUANG KREATIF</small></span></a><div class="v674-top-actions"><span class="pill v674-version"><i></i> V93.0 · GRATIS</span><span class="v674-security-indicator" id="securityStatusIndicator" role="status" aria-live="polite" title="Memeriksa perlindungan website"><i></i><span>Memeriksa keamanan</span></span><button class="v674-theme-toggle" id="themeToggle" type="button" aria-label="Ganti tema">☼</button></div></header>
 <div class="v89-welcome" id="v89Welcome"><div class="v89-welcome-copy"><span class="v89-welcome-kicker">ARYANZZ · RUANG KREATIF</span><h1>Semua berawal<br><span>dari satu tautan.</span></h1><p>Satu ruang terpadu untuk mengunduh, mencari, mengolah, dan mengelola media.</p></div><div class="v89-welcome-mark" aria-hidden="true">✦</div></div>
@@ -760,12 +761,18 @@ body{background-color:var(--ary-app-bg)}
   <label class="label" for="hashOutput" style="margin-top:14px">HASH HEX</label><textarea id="hashOutput" class="field v680-hash-result" readonly placeholder="Hash akan tampil di sini"></textarea>
   <div class="v680-actions"><button class="tag" id="hashCopy" type="button" disabled>Salin hash</button></div><span class="v680-status" id="hashStatus" role="status" aria-live="polite">File diproses lokal menggunakan Web Crypto.</span>
 </div>
-<div class="panel card v674-feature-panel" id="colorStudio">
-<div class="v674-feature-head"><div><span class="section-kicker">ARYANZZ COLOR LAB</span><h2>Color Studio</h2><p>Temukan warna, buat kombinasi, salin kode HEX, dan simpan warna favoritmu.</p></div><span class="v674-feature-mark">◈</span></div>
-<div class="v674-color-controls"><label class="label" for="colorCategory">KATEGORI WARNA</label><select class="field" id="colorCategory"><option value="all">Spectrum · semua warna</option><option value="primary">Primer</option><option value="secondary">Sekunder</option><option value="tertiary">Tersier</option><option value="pastel">Pastel</option><option value="neon">Neon</option><option value="metallic">Metalik</option><option value="rare">Rare & unusual</option><option value="nature">Nature</option><option value="cyber">Cyber / futuristic</option><option value="sunset">Sunset</option><option value="monochrome">Monokrom</option></select><button class="primary" id="colorGenerate" type="button">✦ Generate palette</button></div>
-<div class="v674-color-meta"><span>RGB 24-bit · 16.777.216 kombinasi warna</span><span id="colorPaletteCount">12 warna dibuat</span></div><div class="v674-palette-grid" id="colorPalette" aria-live="polite"></div>
-<div class="v674-color-custom"><div class="v674-color-preview" id="colorPreview"></div><div class="v674-color-custom-fields"><label class="label" for="colorHex">CUSTOM HEX</label><input class="field" id="colorHex" type="text" value="#8B5CF6" maxlength="7" spellcheck="false" placeholder="#8B5CF6"></div><button class="tag" id="colorApply" type="button">Preview</button><button class="primary" id="colorCopy" type="button">Salin HEX</button></div>
-<div class="v674-color-fav-head"><div><span class="section-kicker">SAVED COLORS</span><h3>Warna favorit</h3></div><span id="colorFavoriteCount">0 tersimpan</span></div><div class="v674-color-favorites" id="colorFavorites"></div><p class="v674-color-message" id="colorMessage" role="status" aria-live="polite">Pilih kategori dan buat palet warna pertamamu.</p></div><div class="panel card v25-profile-panel" id="profile">
+<div class="panel card v674-feature-panel ary-theme-studio" id="colorStudio">
+  <div class="ary-theme-hero"><div><span class="section-kicker">ARYANZZ · APPEARANCE STUDIO</span><h2>Color Studio</h2><p>Atur warna seluruh ruang ARYANZZ. Perubahan diterapkan ke beranda, navigasi, profil, kartu, dan semua alat.</p></div><span class="ary-theme-orb">◈</span></div>
+  <div class="ary-theme-presets" role="group" aria-label="Preset warna">
+    <button type="button" data-theme-preset="midnight"><i></i><span>Midnight</span></button><button type="button" data-theme-preset="ocean"><i></i><span>Ocean</span></button><button type="button" data-theme-preset="violet"><i></i><span>Violet</span></button><button type="button" data-theme-preset="emerald"><i></i><span>Emerald</span></button>
+  </div>
+  <div class="ary-theme-custom">
+    <label><span>Warna aksen</span><input id="aryThemeAccent" type="color" value="#8b5cf6"></label><label><span>Latar website</span><input id="aryThemeBackground" type="color" value="#080d1c"></label><label><span>Warna panel & alat</span><input id="aryThemeSurface" type="color" value="#111c33"></label>
+  </div>
+  <div class="ary-theme-preview" id="aryThemePreview"><span>PREVIEW TAMPILAN</span><strong>ARYANZZ</strong><small>Semua ruang, satu identitas visual.</small><button type="button" tabindex="-1">Tombol contoh</button></div>
+  <div class="ary-theme-actions"><button class="primary" id="aryThemeApply" type="button">Terapkan ke seluruh website</button><button class="tag" id="aryThemeReset" type="button">Kembalikan warna awal</button></div><p class="ary-theme-status" id="aryThemeStatus" role="status" aria-live="polite">Pilih preset atau atur warna sendiri.</p>
+</div>
+<div class="panel card v25-profile-panel" id="profile">
   <div class="v25-profile-cover" id="profileBannerPreview">
     <div class="v25-cover-glow"></div>
     <div class="v25-cover-label"><span class="v25-kicker">YOUR DIGITAL SPACE</span><b>ARYANZZ MEMBER</b></div>
@@ -782,32 +789,8 @@ body{background-color:var(--ary-app-bg)}
     <div><b id="profileSince">Hari ini</b><span>Bergabung</span></div>
   </div>
   <div class="v25-profile-layout">
-    <section class="v25-profile-card">
-      <div class="v25-section-heading"><div><span class="v25-kicker">PERSONAL ID</span><h3>Profil kamu</h3></div><span class="v25-heading-icon">◉</span></div>
-      <label class="label" for="profileName">Nama tampilan</label><input id="profileName" class="field tool-input" maxlength="40" placeholder="Nama kamu">
-      <label class="label" for="profileBio">Bio singkat</label><textarea id="profileBio" class="field tool-input" rows="3" maxlength="160" placeholder="Ceritakan sedikit tentang dirimu…"></textarea>
-      <div class="v25-form-foot"><small id="profileCharCount">0/160 karakter</small><button class="primary" id="profileSave">Simpan perubahan</button></div>
-      <button class="v25-text-button" id="profileReset" type="button">Reset informasi profil</button><small class="v25-privacy-note" id="profileAutoSaveStatus" role="status" aria-live="polite">Menyiapkan penyimpanan otomatis…</small>
-    </section>
-    <section class="v25-profile-card">
-      <div class="v25-section-heading"><div><span class="v25-kicker">PERSONALIZATION</span><h3>Atur tampilan</h3></div><span class="v25-heading-icon">✧</span></div>
-      <p class="v25-muted">Buat ruang ARYANZZ dengan gaya visual pilihanmu. Gambar diperkecil dan disimpan di perangkat.</p>
-      <label class="v25-upload-row"><span class="v25-upload-icon">▧</span><span><b>Background pribadi</b><small>Ganti latar belakang website</small></span><span class="v25-upload-cta">Pilih</span><input id="profileBackground" type="file" accept="image/*" hidden></label>
-      <div class="v25-surface-picker" aria-label="Preset background">
-        <button type="button" data-surface="aurora" aria-label="Aurora" title="Aurora"></button>
-        <button type="button" data-surface="ocean" aria-label="Ocean" title="Ocean"></button>
-        <button type="button" data-surface="nebula" aria-label="Nebula" title="Nebula"></button>
-        <button type="button" data-surface="midnight" aria-label="Midnight" title="Midnight"></button>
-      </div>
-      <button class="v25-text-button" id="clearProfileBackground" type="button">Hapus background pribadi</button>
-    </section>
+    <section class="v25-profile-card v25-account-id-card"><div class="v25-section-heading"><div><span class="v25-kicker">PROFILE IDENTIFIER</span><h3>ID profil</h3></div><span class="v25-heading-icon">⌁</span></div><p class="v25-muted">ID profil sementara pada perangkat ini. ID akun resmi akan diterbitkan server setelah registrasi akun diaktifkan.</p><div class="v25-profile-id-row"><code id="profileRandomId">ARY-••••••••</code><button class="tag" id="profileCopyId" type="button">Salin ID</button></div></section>
   </div>
-  <section class="v25-profile-card v75-motion-card">
-    <div class="v25-section-heading"><div><span class="v25-kicker">MOTION & EXPERIENCE</span><h3>Animasi & efek visual</h3></div><span class="v25-heading-icon">✧</span></div>
-    <p class="v25-muted">Aktifkan efek gerak lembut pada beranda, kartu fitur, profil, dan halaman alat. Pilihan ini tersimpan otomatis di browser.</p>
-    <label class="v75-motion-toggle" for="profileMotionToggle"><input id="profileMotionToggle" type="checkbox" checked><span class="v75-motion-switch" aria-hidden="true"></span><span><b>Aktifkan animasi</b><small>Transisi, efek cahaya, dan gerakan kartu</small></span></label>
-    <small class="v25-privacy-note" id="profileMotionStatus" role="status" aria-live="polite">Animasi aktif.</small>
-  </section>
   <section class="v25-profile-card v25-backup-card">
     <div class="v25-section-heading"><div><span class="v25-kicker">YOUR DATA</span><h3>Backup & pemulihan</h3></div><span class="v25-heading-icon">⬡</span></div>
     <p class="v25-muted">Ekspor profil, tema, riwayat, dan favorit untuk dipindahkan atau dipulihkan di perangkat lain.</p>
@@ -843,10 +826,10 @@ body{background-color:var(--ary-app-bg)}
       </div>
       <div class="owner-avatar-row"><div class="owner-avatar" id="ownerAvatar">A</div></div>
       <div class="owner-profile-content">
-        <div class="owner-badges"><span class="owner-badge owner-badge-gold">♛ OWNER &amp; DEVELOPER</span><span class="owner-badge owner-badge-green">✦ ARYANZZ CREATOR</span></div>
+        <div class="owner-badges"><span class="owner-badge owner-badge-gold">♛ DEVELOPER WEBSITE</span><span class="owner-badge owner-badge-green">✦ ARYANZZ CREATOR</span></div>
         <h2 id="ownerName">ARYANZZ</h2>
         <p class="owner-handle" id="ownerHandle">@ARYANZZ</p>
-        <p class="owner-bio" id="ownerBio">Pengelola dan pengembang ARYANZZ.</p>
+        <p class="owner-bio" id="ownerBio">Merancang, membangun, dan mengembangkan ekosistem digital ARYANZZ.</p>
         <button class="owner-edit-button" id="ownerEditProfile" type="button">✎ Edit foto &amp; banner</button>
       </div>
       <div class="owner-stats">
@@ -871,15 +854,15 @@ body{background-color:var(--ary-app-bg)}
       </a>
     </div>
     <section class="owner-link-editor">
-      <details>
+      <details open>
         <summary>⚙ Atur tautan sosial</summary>
         <p>Masukkan tautan milikmu. Pengaturan ini tersimpan di browser perangkat ini.</p>
         <label for="ownerWhatsappUrl">WhatsApp</label><input id="ownerWhatsappUrl" class="field" type="url" placeholder="https://wa.me/628...">
         <label for="ownerGithubUrl">GitHub Profile</label><input id="ownerGithubUrl" class="field" type="url" placeholder="https://github.com/username">
         <label for="ownerTelegramUrl">Telegram</label><input id="ownerTelegramUrl" class="field" type="url" placeholder="https://t.me/username">
         <label for="ownerTiktokUrl">TikTok</label><input id="ownerTiktokUrl" class="field" type="url" placeholder="https://www.tiktok.com/@username">
-        <button class="owner-save-button" id="ownerLinksSave" type="button">Simpan tautan</button>
-        <small>Kontak WhatsApp dan TikTok bawaan sudah dipasang untuk semua pengunjung. Jika kamu mengubahnya di sini, perubahan akan berlaku di browser ini saja.</small>
+        <button class="owner-save-button" id="ownerLinksSave" type="button">Simpan tautan sosial</button>
+        <small>Tautan yang kamu atur akan ditampilkan pada kartu sosial di halaman ini dan disimpan pada browser perangkat ini.</small>
       </details>
     </section>
     <section class="v8813-security-center" id="securityCenter"><div class="v8813-security-head"><div><span>SECURITY STATUS · PUBLIC SUMMARY</span><h3>Security Center</h3><p>Ringkasan perlindungan Worker ARYANZZ.</p></div><span class="v8813-shield">◈</span></div><div class="v8813-security-state" id="securityCenterState">Memeriksa status keamanan…</div><div class="v8813-security-metrics"><div><b id="securityBlockedOrigin">—</b><small>Origin diblokir</small></div><div><b id="securityRateLimited">—</b><small>Rate limited</small></div><div><b id="securityOversized">—</b><small>Request besar</small></div><div><b id="securityMethods">—</b><small>Metode ditolak</small></div></div><div class="v8813-security-foot"><span>Counter per Worker isolate · bukan log global</span><button type="button" id="securityCenterRefresh">↻ Perbarui</button></div></section>
@@ -1032,4 +1015,4 @@ let stream=null;$('camStart').onclick=async()=>{try{stream=await navigator.media
 let deferred=null;window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferred=e;});$('installBtn').onclick=async()=>{if(deferred){deferred.prompt();await deferred.userChoice;deferred=null;}else $('installMsg').textContent='Gunakan menu Chrome ⋮ → Tambahkan ke layar utama.';};
 if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('/sw.js?v=93.0').catch(()=>{}));
 </script><script src="/link-bypass.js?v=93.0" defer></script><script src="/audio-studio.js?v=92.5" defer></script><script src="/media-studio.js?v=92.0" defer></script>
-<script src="/download-queue.js?v=92.0" defer></script><script src="/image-studio.js?v=81.4" defer></script><script src="/advanced.js?v=92.5" defer></script><script src="/v15.js?v=59.5" defer></script><script src="/v25.js?v=93.0" defer></script><script src="/owner.js?v=92.3" defer></script><script src="/downloader.js?v=92.2" defer></script><script src="/v59.js?v=59.5" defer></script><script src="/editor.js?v=65.0" defer></script><script src="/music-recognition.js?v=71.0" defer></script><script src="/v674.js?v=89.2" defer></script><script src="/v677.js?v=67.7" defer></script><script src="/v680.js?v=71.0" defer></script><script src="/learning-center.js?v=93.7" defer></script></body></html>
+<script src="/download-queue.js?v=92.0" defer></script><script src="/image-studio.js?v=81.4" defer></script><script src="/advanced.js?v=92.5" defer></script><script src="/v15.js?v=59.5" defer></script><script src="/v25.js?v=93.0" defer></script><script src="/owner.js?v=92.3" defer></script><script src="/downloader.js?v=92.2" defer></script><script src="/v59.js?v=59.5" defer></script><script src="/editor.js?v=65.0" defer></script><script src="/music-recognition.js?v=71.0" defer></script><script src="/v674.js?v=89.2" defer></script><script src="/v677.js?v=67.7" defer></script><script src="/v680.js?v=71.0" defer></script><script src="/learning-center.js?v=93.7" defer></script><script src="/theme-studio.js?v=94.0" defer></script></body></html>
