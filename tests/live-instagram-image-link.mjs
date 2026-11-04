@@ -73,3 +73,44 @@ try{
   console.log("[INSTAGRAM-USER-LINK-RESULT] "+JSON.stringify(report));
   process.exitCode=1;
 }
+
+const publicReelUrl="https://www.instagram.com/reel/DUtY_OyjMwq/";
+const reelReport={test:"public Instagram Reel video playback and download",sourceUrl:publicReelUrl,status:null,title:null,durationSeconds:null,videoFormats:0,probeAttempts:[],videoReady:false,previewStatus:null,previewMime:null,previewDisposition:null,error:null};
+try{
+  const response=await fetch(base+"/api/platform/info",{method:"POST",headers:{"content-type":"application/json",accept:"application/json"},body:JSON.stringify({url:publicReelUrl,expectedPlatform:"instagram"}),cache:"no-store",signal:AbortSignal.timeout(45000)});
+  reelReport.status=response.status;
+  const info=await response.json().catch(()=>({}));
+  reelReport.title=String(info.title||"").slice(0,120)||null;
+  reelReport.durationSeconds=Number(info.duration)||null;
+  const videos=(info.formats||[]).filter(item=>item?.mode==="video"&&item?.downloadUrl);
+  reelReport.videoFormats=videos.length;
+  const ordered=videos.slice().sort((a,b)=>{
+    const ae=["mp4","m4v"].includes(String(a.ext||"").toLowerCase())?0:1;
+    const be=["mp4","m4v"].includes(String(b.ext||"").toLowerCase())?0:1;
+    return ae-be;
+  }).slice(0,4);
+  for(const [index,candidate] of ordered.entries()){
+    try{
+      const probe=new URL(candidate.downloadUrl);probe.searchParams.set("probe","1");
+      const checked=await fetch(probe.href,{cache:"no-store",signal:AbortSignal.timeout(12000)});
+      const data=await checked.json().catch(()=>({}));
+      const valid=checked.ok&&data.valid===true&&String(data.mimeType||"").startsWith("video/");
+      reelReport.probeAttempts.push({index:index+1,status:checked.status,mime:data.mimeType||null,valid,error:valid?null:String(data.error||"Video signature tidak valid.").slice(0,120)});
+      if(valid){
+        reelReport.videoReady=true;
+        const previewUrl=new URL(candidate.previewUrl);
+        const preview=await fetch(previewUrl.href,{headers:{range:"bytes=0-65535"},cache:"no-store",signal:AbortSignal.timeout(15000)});
+        reelReport.previewStatus=preview.status;
+        reelReport.previewMime=preview.headers.get("content-type");
+        reelReport.previewDisposition=preview.headers.get("content-disposition");
+        await preview.body?.cancel().catch(()=>{});
+        break;
+      }
+    }catch(error){reelReport.probeAttempts.push({index:index+1,error:String(error?.message||error).slice(0,120)})}
+  }
+  if(!reelReport.videoReady&&!reelReport.error)reelReport.error=String(info.error||"Reel tidak menyediakan format video yang lolos validasi.").slice(0,180);
+  console.log("[INSTAGRAM-REEL-RESULT] "+JSON.stringify(reelReport));
+}catch(error){
+  reelReport.error=String(error?.message||error).slice(0,220);
+  console.log("[INSTAGRAM-REEL-RESULT] "+JSON.stringify(reelReport));
+}
