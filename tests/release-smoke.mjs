@@ -30,9 +30,10 @@ for (const match of html.matchAll(/\bid=["']([^"']+)["']/g)) idCounts.set(match[
 const duplicateIds = [...idCounts].filter(([, count]) => count > 1).map(([id]) => id);
 
 const learningCenter = read("../public/learning-center.js");
-const learningCenter = read("../public/learning-center.js");
 const learningCss = read("../public/learning-center.css");
 const checks = [
+  ["Automatic release version generator is wired to the Cloudflare build step", read("../package.json").includes('"build:version": "node scripts/build-version.mjs"') && read("../scripts/build-version.mjs").includes('git", ["rev-list", "--count", "HEAD"]') && read("../src/index.js").includes("version:BUILD_VERSION")],
+  ["Version placeholders cover app UI, PWA manifest and service-worker cache", read("../public/index.html").includes("__ARYANZZ_VERSION__") && read("../public/manifest.webmanifest").includes("__ARYANZZ_VERSION__") && read("../public/sw.js").includes("__ARYANZZ_VERSION__")],
   ["V94.3 places a video tutorial launcher directly inside each supported tool panel", learningCenter.includes('className="lc-inline-launch"') && learningCenter.includes('root.prepend(launch)') && learningCenter.includes('el.scrollIntoView')],
   ["V94.3 inline tutorial launcher has responsive accessible styling", learningCss.includes(".lc-inline-launch") && learningCss.includes("@media(max-width:480px)")],
   ["V94 tutorials cover requested tools and members/visitors", ["linkBypass","mediaStudio","queue","editor","musicFinder","audioStudio","imageTools","pdfTools","fileHash","colorStudio","speed","checker","members"].every(id => learningCenter.includes(id+":"))],
