@@ -193,6 +193,56 @@
     setTimeout(()=>URL.revokeObjectURL(objectUrl),10*60*1000);
     return objectUrl;
   }
+  async function createPhotoSlideshow(imageUrls,container,button,title){
+    if(!Array.isArray(imageUrls)||!imageUrls.length)throw new Error("Galeri foto kosong.");
+    if(typeof MediaRecorder==="undefined")throw new Error("Browser ini belum mendukung pembuatan video langsung.");
+    const canvas=document.createElement("canvas");canvas.width=720;canvas.height=1280;
+    const context=canvas.getContext("2d",{alpha:false});
+    if(!context||typeof canvas.captureStream!=="function")throw new Error("Perekam video canvas tidak tersedia di browser ini.");
+    const stream=canvas.captureStream(24);
+    const choices=["video/mp4;codecs=avc1.42E01E","video/mp4","video/webm;codecs=vp8","video/webm;codecs=vp9","video/webm"];
+    const mimeType=choices.find(type=>MediaRecorder.isTypeSupported?.(type))||"";
+    let recorder;
+    try{recorder=new MediaRecorder(stream,mimeType?{mimeType}:undefined)}catch(error){stream.getTracks().forEach(track=>track.stop());throw new Error("Browser tidak dapat membuat file video: "+String(error?.message||error));}
+    const chunks=[];
+    const stopped=new Promise((resolve,reject)=>{
+      recorder.addEventListener("stop",resolve,{once:true});
+      recorder.addEventListener("error",event=>reject(event.error||new Error("Perekaman slideshow gagal.")),{once:true});
+    });
+    recorder.addEventListener("dataavailable",event=>{if(event.data?.size)chunks.push(event.data)});
+    const originalLabel=button?.textContent||"Buat video slideshow";
+    try{
+      recorder.start(500);
+      for(let index=0;index<imageUrls.length;index++){
+        if(button)button.textContent="Membuat video "+(index+1)+"/"+imageUrls.length+"…";
+        const response=await fetch(imageUrls[index],{cache:"no-store",credentials:"same-origin",signal:downloadTimeoutSignal(90000)});
+        if(!response.ok)throw new Error("Foto ke-"+(index+1)+" gagal dimuat (HTTP "+response.status+").");
+        const blob=await response.blob();
+        if(!String(blob.type||"").startsWith("image/"))throw new Error("Sumber foto ke-"+(index+1)+" bukan file gambar.");
+        const bitmap=await createImageBitmap(blob);
+        context.fillStyle="#050914";context.fillRect(0,0,canvas.width,canvas.height);
+        const scale=Math.min(canvas.width/bitmap.width,canvas.height/bitmap.height);
+        const width=bitmap.width*scale,height=bitmap.height*scale;
+        context.drawImage(bitmap,(canvas.width-width)/2,(canvas.height-height)/2,width,height);
+        bitmap.close?.();
+        await new Promise(resolve=>setTimeout(resolve,1500));
+      }
+      recorder.stop();
+      await stopped;
+      const actualMime=recorder.mimeType||mimeType||"video/webm";
+      const videoBlob=new Blob(chunks,{type:actualMime});
+      if(!videoBlob.size||!actualMime.startsWith("video/"))throw new Error("Hasil slideshow tidak menghasilkan file video yang valid.");
+      const extension=actualMime.includes("mp4")?"mp4":"webm";
+      const safeTitle=String(title||"aryanzz-photo-slideshow").replace(/[\\/:*?"<>|]+/g," ").trim().slice(0,70)||"aryanzz-photo-slideshow";
+      await saveBrowserBlob(videoBlob,safeTitle+"-slideshow."+extension,container,"⬇ Simpan video slideshow");
+      if(button){button.textContent="Video slideshow siap ✓";button.disabled=true;}
+      return {mime:actualMime,extension,size:videoBlob.size};
+    }catch(error){
+      if(recorder.state!=="inactive"){try{recorder.stop();await stopped.catch(()=>{})}catch{}}
+      if(button){button.textContent=originalLabel;button.disabled=false;}
+      throw error;
+    }finally{stream.getTracks().forEach(track=>track.stop())}
+  }
   async function readBrowserChunk(reader,idleMs=60000){
     let timer;
     try{
@@ -1274,13 +1324,15 @@ function socialNetworkPlan(selected=0){
       const imageItems=Array.isArray(imageData.images)?imageData.images.slice(0,35):[];
       const hasVideoFormat=(info.formats||[]).some(item=>item?.mode==="video"||item?.type==="video"||/^video\//i.test(String(item?.mimeType||item?.mime_type||""))||["mp4","m4v","webm","mov","avi","3gp"].includes(String(item?.ext||"").toLowerCase()));
       const hasAnyFormat=Array.isArray(info.formats)&&info.formats.length>0;
-      let imageGallery=null,imageGalleryNote=null;
+      let imageGallery=null,imageGalleryNote=null,imageGalleryAction=null;
       if(imageResult?.ok&&imageData.ok&&imageItems.length){
         const grid=make("div","aryanzz-inline-image-grid");
+        const galleryImageUrls=[];
         imageItems.forEach((item,index)=>{
           const previewUrl=safeUrl(item.previewUrl||item.downloadUrl);
           const downloadUrl=safeUrl(item.downloadUrl||item.previewUrl);
           if(!previewUrl||!downloadUrl||previewUrl.origin!==location.origin||downloadUrl.origin!==location.origin||!["/api/social-image-file","/api/image/file"].includes(previewUrl.pathname)||!["/api/social-image-file","/api/image/file"].includes(downloadUrl.pathname))return;
+          galleryImageUrls.push(previewUrl.href);
           const card=make("article","aryanzz-inline-image-card");
           const preview=make("a","aryanzz-inline-image-open");
           preview.href=previewUrl.href;preview.target="_blank";preview.rel="noopener noreferrer";preview.setAttribute("aria-label","Lihat gambar "+(index+1));
@@ -1316,9 +1368,23 @@ function socialNetworkPlan(selected=0){
         if(grid.childElementCount){
           imageGallery=grid;
           imageGalleryNote=make("small","muted",grid.childElementCount+" foto ditemukan · pilih foto untuk melihat atau mengunduh.");
+          imageGalleryAction=make("button","tag","▶ Buat video slideshow (tanpa audio sumber)");
+          imageGalleryAction.type="button";
+          imageGalleryAction.addEventListener("click",async()=>{
+            imageGalleryAction.disabled=true;
+            try{
+              const result=await createPhotoSlideshow(galleryImageUrls,box,imageGalleryAction,imageData.title||"aryanzz-photo");
+              imageGalleryNote.textContent=grid.childElementCount+" foto · video "+result.extension.toUpperCase()+" siap ("+(result.size/1048576).toFixed(1)+" MB). Audio asli postingan tidak disertakan.";
+            }catch(error){
+              imageGalleryAction.disabled=false;
+              imageGalleryAction.textContent="Coba buat video slideshow lagi";
+              const note=make("small","warning","Video slideshow gagal dibuat: "+String(error?.message||error));
+              box.append(note);
+            }
+          });
           if(!hasAnyFormat){
             box.replaceChildren();
-            box.append(make("b","youtube-title",imageData.title||("Foto dari "+detectedPlatform)),imageGallery,imageGalleryNote);
+            box.append(make("b","youtube-title",imageData.title||("Foto dari "+detectedPlatform)),imageGallery,imageGalleryNote,imageGalleryAction);
             return;
           }
         }
@@ -1352,7 +1418,7 @@ function socialNetworkPlan(selected=0){
       }
       header.append(details);
       box.append(header);
-      if(imageGallery){box.append(imageGallery,imageGalleryNote);}
+      if(imageGallery){box.append(imageGallery,imageGalleryNote,imageGalleryAction);}
       if(isYouTube){
         const videoId=url.hostname.toLowerCase().includes("youtu.be")
           ?url.pathname.split("/").filter(Boolean)[0]||""
