@@ -296,7 +296,7 @@
         let loadTimer;
         try{
           await Promise.race([
-            ffmpeg.load({coreURL,wasmURL,classWorkerURL:new URL("/ffmpeg-worker-bootstrap.js?v=75.0",location.origin).href}),
+            ffmpeg.load({coreURL,wasmURL,classWorkerURL:new URL("/ffmpeg-worker-bootstrap.js?v=92.1",location.origin).href}),
             new Promise((_,reject)=>{loadTimer=setTimeout(()=>reject(new Error("Mesin MP4 belum siap setelah 90 detik. Coba lagi saat jaringan stabil atau pilih kualitas MP4 langsung.")),90000);})
           ]);
         }finally{clearTimeout(loadTimer);}

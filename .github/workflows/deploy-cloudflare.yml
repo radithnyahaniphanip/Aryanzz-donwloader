@@ -1,4 +1,4 @@
-name: ARYANZZ — Validate and deploy V91.0
+name: ARYANZZ — Validate and deploy V92.1
 
 on:
   push:
@@ -16,7 +16,7 @@ concurrency:
 
 jobs:
   test:
-    name: Validate V91.0 release
+    name: Validate V92.1 release
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -53,7 +53,7 @@ jobs:
         run: npm test
 
   deploy:
-    name: Deploy V91.0 to Cloudflare Workers
+    name: Deploy V92.1 to Cloudflare Workers
     needs: test
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest

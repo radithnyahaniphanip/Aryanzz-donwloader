@@ -16,8 +16,10 @@
     "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm",
     "https://unpkg.com/@ffmpeg/core@0.12.10/dist/esm"
   ];
-  const WORKER_URL = "/ffmpeg-worker-local.js?v=92.0";
-  const LOAD_TIMEOUT_MS = 120000;
+  // Use the same upstream FFmpeg class worker as the tested YouTube mux path.
+  // This avoids maintaining a second, subtly incompatible worker protocol on mobile.
+  const WORKER_URL = "/ffmpeg-worker-bootstrap.js?v=92.1";
+  const LOAD_TIMEOUT_MS = 75000;
   const FETCH_TIMEOUT_MS = 45000;
 
   let selectedFile = null, ffmpeg = null, ffmpegPromise = null, controller = null;
@@ -140,84 +142,102 @@
 
   async function fetchBlobUrl(url,mime,signal,label) {
     const timeout=new AbortController();
-    const timer=setTimeout(()=>timeout.abort(),FETCH_TIMEOUT_MS);
+    let timer=null;
+    const armIdleTimeout=()=>{
+      clearTimeout(timer);
+      timer=setTimeout(()=>timeout.abort(),FETCH_TIMEOUT_MS);
+    };
     const abort=()=>timeout.abort();
     signal.addEventListener("abort",abort,{once:true});
+    armIdleTimeout();
     try {
       const response=await fetch(url,{mode:"cors",credentials:"omit",cache:"force-cache",signal:timeout.signal});
       if(!response.ok)throw new Error("HTTP "+response.status);
       const total=Number(response.headers.get("content-length"))||0,reader=response.body?.getReader();
-      if(!reader)return URL.createObjectURL(new Blob([await response.arrayBuffer()],{type:mime}));
+      if(!reader) {
+        const blob=new Blob([await response.arrayBuffer()],{type:mime});
+        return URL.createObjectURL(blob);
+      }
       const chunks=[];let received=0;
       while(true) {
-        const part=await reader.read();if(part.done)break;
+        const part=await reader.read();
+        if(part.done)break;
         chunks.push(part.value);received+=part.value.byteLength;
-        if(total){const base=label==="WASM"?4:2,span=label==="WASM"?14:2;progress(base+Math.min(span,received/total*span));status((label==="WASM"?"Mengunduh komponen mesin MP3 · ":"Memuat komponen FFmpeg · ")+formatSize(received)+" / "+formatSize(total)+"…");}
+        armIdleTimeout();
+        if(total){
+          const base=label==="WASM"?4:2,span=label==="WASM"?14:2;
+          progress(base+Math.min(span,received/total*span));
+          status((label==="WASM"?"Mengunduh komponen mesin MP3 · ":"Memuat komponen FFmpeg · ")+formatSize(received)+" / "+formatSize(total)+"…");
+        } else {
+          status((label==="WASM"?"Mengunduh komponen mesin MP3 · ":"Memuat komponen FFmpeg · ")+formatSize(received)+"…");
+        }
       }
       return URL.createObjectURL(new Blob(chunks,{type:mime}));
     } catch(error) {
       if(signal.aborted)throw new Error("Proses dibatalkan.");
+      if(timeout.signal.aborted)throw new Error("Koneksi CDN tidak mengirim data selama 45 detik. Coba lagi atau gunakan jaringan yang lebih stabil.");
       throw new Error("Gagal mengunduh komponen "+label+": "+String(error?.message||error));
     } finally {
       clearTimeout(timer);signal.removeEventListener("abort",abort);
     }
   }
-  async function fetchWithFallback(paths,mime,signal,label) {
-    let lastError;
-    for(const path of paths) {
-      if(signal.aborted)throw new Error("Proses dibatalkan.");
-      try{return await fetchBlobUrl(path,mime,signal,label);}
-      catch(error){lastError=error;if(signal.aborted)throw error;}
-    }
-    throw lastError||new Error("Komponen "+label+" tidak tersedia.");
-  }
   async function importWithFallback(signal) {
     let lastError;
     for(const url of MODULE_URLS) {
       if(signal.aborted)throw new Error("Proses dibatalkan.");
+      let timer=null;
       try {
         const mod=await Promise.race([
           import(url),
-          new Promise((_,reject)=>setTimeout(()=>reject(new Error("Waktu pemuatan library FFmpeg habis.")),45000))
+          new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error("Waktu pemuatan library FFmpeg habis.")),45000);})
         ]);
         if(mod?.FFmpeg)return mod;
         throw new Error("Library FFmpeg tidak menyediakan kelas FFmpeg.");
-      } catch(error){lastError=error;}
+      } catch(error){lastError=error;if(signal.aborted)throw new Error("Proses dibatalkan.");}
+      finally {clearTimeout(timer);}
     }
-    throw new Error("Library FFmpeg gagal dimuat: "+String(lastError?.message||lastError));
+    throw new Error("Library FFmpeg gagal dimuat dari CDN utama maupun cadangan: "+String(lastError?.message||lastError));
   }
   async function loadEngine(signal) {
     if(ffmpeg?.loaded)return ffmpeg;
     if(ffmpegPromise)return ffmpegPromise;
     ffmpegPromise=(async()=>{
-      let instance=null;
+      let lastError=null;
       try {
         status("Memuat library konversi…");progress(2);
         const mod=await importWithFallback(signal);
         if(signal.aborted)throw new Error("Proses dibatalkan.");
-        instance=new mod.FFmpeg();
-        status("Menghubungkan worker lokal…");progress(12);
         const workerURL=new URL(WORKER_URL,location.origin).href;
-        status("Memuat mesin audio MP3…");progress(18);
-        let timer;
-        try {
-          await Promise.race([
-            instance.load({
-              classWorkerURL:workerURL,
-              coreURL:CORE_BASES[0]+"/ffmpeg-core.js",
-              wasmURL:CORE_BASES[0]+"/ffmpeg-core.wasm",
-              coreFallbackURL:CORE_BASES[1]+"/ffmpeg-core.js",
-              wasmFallbackURL:CORE_BASES[1]+"/ffmpeg-core.wasm"
-            },{signal}),
-            new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error("Mesin audio belum siap setelah 120 detik. Periksa koneksi internet lalu coba lagi.")),LOAD_TIMEOUT_MS);})
-          ]);
-        } finally {clearTimeout(timer);}
-        if(signal.aborted)throw new Error("Proses dibatalkan.");
-        if(!instance.loaded)throw new Error("Worker lokal merespons, tetapi core FFmpeg belum siap.");
-        ffmpeg=instance;
-        return instance;
+        for(let index=0;index<CORE_BASES.length;index++) {
+          if(signal.aborted)throw new Error("Proses dibatalkan.");
+          const base=CORE_BASES[index];
+          let instance=null,timer=null;
+          try {
+            instance=new mod.FFmpeg();
+            status(index===0?"Menghubungkan worker FFmpeg…":"Mencoba CDN cadangan untuk mesin FFmpeg…");
+            progress(index===0?12:16);
+            await Promise.race([
+              instance.load({
+                classWorkerURL:workerURL,
+                coreURL:base+"/ffmpeg-core.js",
+                wasmURL:base+"/ffmpeg-core.wasm"
+              },{signal}),
+              new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error("Mesin FFmpeg belum siap setelah 75 detik pada CDN "+(index===0?"utama":"cadangan")+". ")),LOAD_TIMEOUT_MS);})
+            ]);
+            if(signal.aborted)throw new Error("Proses dibatalkan.");
+            if(!instance.loaded)throw new Error("Worker FFmpeg merespons, tetapi core belum siap.");
+            ffmpeg=instance;
+            status("Mesin FFmpeg siap · siap memproses video.");
+            progress(20);
+            return instance;
+          } catch(error) {
+            lastError=error;
+            if(instance){try{instance.terminate();}catch{}}
+            if(signal.aborted)throw new Error("Proses dibatalkan.");
+          } finally {clearTimeout(timer);}
+        }
+        throw new Error("Mesin FFmpeg gagal dimuat dari CDN utama maupun cadangan: "+String(lastError?.message||lastError));
       } catch(error) {
-        if(instance){try{instance.terminate();}catch{}}
         throw error;
       }
     })().catch(error=>{ffmpegPromise=null;throw error;});
