@@ -1,83 +1,26 @@
 (()=>{"use strict";
 const $=id=>document.getElementById(id);
-const gate=$("aryAuthGate");
-const message=$("aryAuthMessage");
+const gate=$("aryAuthGate"),message=$("aryAuthMessage");
+const USERS_KEY="aryanzz.local.accounts.v94",SESSION_KEY="aryanzz.local.session.v94";
 const say=(text,error=false)=>{if(message){message.textContent=text;message.classList.toggle("is-error",error)}};
-async function api(path,body){
- const response=await fetch(path,{method:body?"POST":"GET",credentials:"same-origin",cache:"no-store",headers:body?{"content-type":"application/json","accept":"application/json"}:{"accept":"application/json"},body:body?JSON.stringify(body):undefined});
- const data=await response.json().catch(()=>({}));
- if(!response.ok||data.ok===false)throw new Error(data.error||"Permintaan gagal. Coba lagi.");
- return data;
-}
-function mode(value){
- const register=value==="register";
- $("aryRegisterForm").hidden=!register;$("aryLoginForm").hidden=register;
- document.querySelectorAll("[data-auth-mode]").forEach(b=>b.classList.toggle("active",b.dataset.authMode===value));
- $("aryAuthTitle").textContent=register?"Buat akun ARYANZZ.":"Selamat datang kembali.";
- say("");
-}
-function togglePassword(inputId,buttonId){
- const input=$(inputId),button=$(buttonId);if(!input||!button)return;
- button.addEventListener("click",()=>{const visible=input.type==="password";input.type=visible?"text":"password";button.textContent=visible?"◌":"◉";button.setAttribute("aria-label",visible?"Sembunyikan password":"Lihat password");});
-}
-function strength(password){
- let score=0;
- if(password.length>=12)score++;
- if(password.length>=16)score++;
- if(/[a-z]/.test(password)&&/[A-Z]/.test(password))score++;
- if(/[0-9]/.test(password))score++;
- if(/[^A-Za-z0-9]/.test(password))score++;
- if(/(.)\1{3,}/.test(password)||/1234|abcd|qwerty|password/i.test(password))score=Math.max(0,score-2);
- return Math.min(4,score);
-}
-function initStrength(){
- const input=$("aryRegPassword"),bar=$("aryStrengthBar"),label=$("aryStrengthLabel");
- const names=["Lemah","Menengah","Kuat","Lebih kuat"],widths=["18%","42%","72%","100%"];
- input?.addEventListener("input",()=>{
-  const s=strength(input.value),index=Math.max(0,s-1);
-  if(bar){bar.style.width=input.value?widths[index]:"0%";bar.dataset.level=String(index+1)}
-  if(label)label.textContent=input.value?"Kekuatan password: "+names[index]:"Kekuatan password: belum diisi";
- });
-}
-function setUser(user){
- window.aryanzzAuthUser=user||null;
- const node=$("profileRandomId"),copy=$("profileCopyId"),logout=$("accountLogout");
- if(user){
-  if(node)node.textContent=user.id;
-  const desc=$("profileIdDescription");if(desc)desc.textContent="ID akun ARYANZZ yang diterbitkan oleh server.";
-  if(copy){copy.onclick=async()=>{try{await navigator.clipboard.writeText(user.id);say("ID akun berhasil disalin.");}catch{say("Tidak dapat menyalin ID pada browser ini.",true)}}}
-  if(logout)logout.hidden=false;
- }else{if(logout)logout.hidden=true;}
- if(gate)gate.hidden=!!user;
- document.body.classList.toggle("ary-authenticated",!!user);
-}
-async function submitForm(form,button,body,path){
- button.disabled=true;const old=button.textContent;button.textContent="Memproses…";
- try{const data=await api(path,body);setUser(data.user);say("Berhasil. Selamat menggunakan ARYANZZ.");}
- catch(error){say(error.message||"Terjadi kesalahan.",true);}
- finally{button.disabled=false;button.textContent=old;}
-}
-async function init(){
- if(!gate)return;
- togglePassword("aryRegPassword","aryRegEye");togglePassword("aryLoginPassword","aryLoginEye");initStrength();
- document.querySelectorAll("[data-auth-mode]").forEach(b=>b.addEventListener("click",()=>mode(b.dataset.authMode)));
- $("aryRegisterForm")?.addEventListener("submit",e=>{
-  e.preventDefault();
-  const fullName=$("aryRegName").value.trim(),email=$("aryRegEmail").value.trim(),password=$("aryRegPassword").value,redeemCode=$("aryRegRedeem").value.trim();
-  if(password.length<12||!/[a-z]/.test(password)||!/[A-Z]/.test(password)||!/[0-9]/.test(password)||!/[^A-Za-z0-9]/.test(password)){say("Gunakan minimal 12 karakter yang memuat huruf besar, huruf kecil, angka, dan simbol.",true);return;}
-  submitForm(e.currentTarget,$("aryRegisterSubmit"),{fullName,email,password,redeemCode},"/api/auth/register");
- });
- $("aryLoginForm")?.addEventListener("submit",e=>{e.preventDefault();submitForm(e.currentTarget,$("aryLoginSubmit"),{email:$("aryLoginEmail").value.trim(),password:$("aryLoginPassword").value},"/api/auth/login")});
- $("accountLogout")?.addEventListener("click",async()=>{try{await api("/api/auth/logout",{});setUser(null);mode("login");$("aryAuthGate").hidden=false;say("Kamu sudah keluar dari akun.");}catch(e){say(e.message,true)}});
- try{
-  const config=await api("/api/auth/config");
-  if(!config.enabled)return;
-  const current=await api("/api/auth/me");
-  if(current.user)setUser(current.user);
-  else{mode("register");gate.hidden=false;}
- }catch(error){
-  gate.hidden=false;mode("login");say("Layanan akun belum siap. Pastikan database D1 dan migrasi akun sudah aktif. "+error.message,true);
- }
-}
+const readUsers=()=>{try{const v=JSON.parse(localStorage.getItem(USERS_KEY)||"[]");return Array.isArray(v)?v:[]}catch{return []}};
+const writeUsers=v=>{try{localStorage.setItem(USERS_KEY,JSON.stringify(v));return true}catch{return false}};
+const randomHex=n=>{const b=crypto.getRandomValues(new Uint8Array(n));return Array.from(b,x=>x.toString(16).padStart(2,"0")).join("")};
+const accountId=()=>{const a="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",b=crypto.getRandomValues(new Uint8Array(10));return "ARY-"+Array.from(b,x=>a[x%a.length]).join("")};
+const toHex=b=>Array.from(new Uint8Array(b),x=>x.toString(16).padStart(2,"0")).join("");
+async function passwordHash(password,saltHex){const salt=Uint8Array.from(saltHex.match(/.{2}/g),x=>parseInt(x,16));const key=await crypto.subtle.importKey("raw",new TextEncoder().encode(password),"PBKDF2",false,["deriveBits"]);return toHex(await crypto.subtle.deriveBits({name:"PBKDF2",hash:"SHA-256",salt,iterations:250000},key,256))}
+function validPassword(p){return typeof p==="string"&&p.length>=12&&p.length<=128&&/[a-z]/.test(p)&&/[A-Z]/.test(p)&&/[0-9]/.test(p)&&/[^A-Za-z0-9]/.test(p)}
+function equal(a,b){if(typeof a!=="string"||typeof b!=="string"||a.length!==b.length)return false;let x=0;for(let i=0;i<a.length;i++)x|=a.charCodeAt(i)^b.charCodeAt(i);return x===0}
+function mode(value){const reg=value==="register";$("aryRegisterForm").hidden=!reg;$("aryLoginForm").hidden=reg;document.querySelectorAll("[data-auth-mode]").forEach(b=>b.classList.toggle("active",b.dataset.authMode===value));$("aryAuthTitle").textContent=reg?"Buat akun ARYANZZ.":"Selamat datang kembali.";say("")}
+function togglePassword(inputId,buttonId){const input=$(inputId),button=$(buttonId);if(!input||!button)return;button.addEventListener("click",()=>{const visible=input.type==="password";input.type=visible?"text":"password";button.textContent=visible?"◌":"◉";button.setAttribute("aria-label",visible?"Sembunyikan password":"Lihat password")})}
+function strength(p){let n=0;if(p.length>=12)n++;if(p.length>=16)n++;if(/[a-z]/.test(p)&&/[A-Z]/.test(p))n++;if(/[0-9]/.test(p))n++;if(/[^A-Za-z0-9]/.test(p))n++;if(/(.)\1{3,}/.test(p)||/1234|abcd|qwerty|password/i.test(p))n=Math.max(0,n-2);return Math.min(4,n)}
+function initStrength(){const input=$("aryRegPassword"),bar=$("aryStrengthBar"),label=$("aryStrengthLabel"),names=["Lemah","Menengah","Kuat","Lebih kuat"],widths=["18%","42%","72%","100%"];input?.addEventListener("input",()=>{const n=strength(input.value),i=Math.max(0,n-1);if(bar){bar.style.width=input.value?widths[i]:"0%";bar.dataset.level=String(i+1)}if(label)label.textContent=input.value?"Kekuatan password: "+names[i]:"Kekuatan password: belum diisi"})}
+function setUser(user){window.aryanzzAuthUser=user||null;const node=$("profileRandomId"),copy=$("profileCopyId"),logout=$("accountLogout"),desc=$("profileIdDescription");if(user){if(node)node.textContent=user.id;if(desc)desc.textContent="ID akun lokal ARYANZZ pada browser ini.";if(copy)copy.onclick=async()=>{try{await navigator.clipboard.writeText(user.id);say("ID akun berhasil disalin.")}catch{say("Tidak dapat menyalin ID pada browser ini.",true)}};if(logout)logout.hidden=false}else if(logout)logout.hidden=true;if(gate)gate.hidden=!!user;document.body.classList.toggle("ary-authenticated",!!user)}
+function getSession(){try{return JSON.parse(localStorage.getItem(SESSION_KEY)||"null")}catch{return null}}
+function saveSession(user){try{localStorage.setItem(SESSION_KEY,JSON.stringify({id:user.id,createdAt:Date.now()}));return true}catch{return false}}
+function showStorageError(){say("Penyimpanan browser penuh atau dibatasi. Aktifkan penyimpanan situs lalu coba lagi.",true)}
+async function register(e){e.preventDefault();const fullName=$("aryRegName").value.trim().replace(/\s+/g," "),email=$("aryRegEmail").value.trim().toLowerCase(),password=$("aryRegPassword").value,redeemCode=$("aryRegRedeem").value.trim().slice(0,64);if(fullName.length<2||fullName.length>80){say("Nama lengkap harus 2–80 karakter.",true);return}if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||email.length>254){say("Masukkan email yang valid.",true);return}if(!validPassword(password)){say("Password minimal 12 karakter, gunakan huruf besar, huruf kecil, angka, dan simbol.",true);return}const button=$("aryRegisterSubmit");button.disabled=true;button.textContent="Membuat akun…";try{const users=readUsers();if(users.some(u=>u.email===email)){say("Email ini sudah terdaftar pada browser ini. Silakan masuk.",true);return}let id;do{id=accountId()}while(users.some(u=>u.id===id));const salt=randomHex(16),hash=await passwordHash(password,salt),user={id,fullName,email,salt,passwordHash:hash,iterations:250000,redeemCode,createdAt:Date.now()};users.push(user);if(!writeUsers(users)){showStorageError();return}if(!saveSession(user)){say("Akun dibuat, tetapi sesi tidak dapat disimpan. Silakan masuk.",true);mode("login");return}setUser(user);say("Akun lokal berhasil dibuat. Selamat datang di ARYANZZ.")}catch(err){say("Tidak dapat membuat akun pada browser ini. Pastikan browser mendukung Web Crypto.",true)}finally{button.disabled=false;button.textContent="Buat akun & masuk"}}
+async function login(e){e.preventDefault();const email=$("aryLoginEmail").value.trim().toLowerCase(),password=$("aryLoginPassword").value,button=$("aryLoginSubmit");button.disabled=true;button.textContent="Memeriksa…";try{const user=readUsers().find(u=>u.email===email);if(!user){say("Email atau password tidak cocok pada browser ini.",true);return}const hash=await passwordHash(password,user.salt);if(!equal(hash,user.passwordHash)){say("Email atau password tidak cocok pada browser ini.",true);return}if(!saveSession(user)){showStorageError();return}setUser(user);say("Berhasil masuk. Selamat menggunakan ARYANZZ.")}catch{say("Tidak dapat memeriksa password pada browser ini.",true)}finally{button.disabled=false;button.textContent="Masuk ke ARYANZZ"}}
+function init(){if(!gate)return;togglePassword("aryRegPassword","aryRegEye");togglePassword("aryLoginPassword","aryLoginEye");initStrength();document.querySelectorAll("[data-auth-mode]").forEach(b=>b.addEventListener("click",()=>mode(b.dataset.authMode)));$("aryRegisterForm")?.addEventListener("submit",register);$("aryLoginForm")?.addEventListener("submit",login);$("accountLogout")?.addEventListener("click",()=>{try{localStorage.removeItem(SESSION_KEY)}catch{}setUser(null);mode("login");say("Kamu sudah keluar dari akun.")});const session=getSession();if(session){const user=readUsers().find(u=>u.id===session.id);if(user)setUser(user);else{try{localStorage.removeItem(SESSION_KEY)}catch{}mode("register")}}else mode(readUsers().length?"login":"register");if(!window.crypto?.subtle||!window.crypto?.getRandomValues){gate.hidden=false;say("Browser ini tidak mendukung Web Crypto. Gunakan Chrome versi terbaru melalui HTTPS.",true)}}
 if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init,{once:true});else init();
 })();
