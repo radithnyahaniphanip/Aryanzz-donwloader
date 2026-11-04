@@ -266,7 +266,7 @@
   }
   function init(){
     if(!$("profile"))return;
-    installAutoSaveObserver();applyDesign();initDeviceHistory();
+    installAutoSaveObserver();setSurface(safeGet(SURFACE_KEY,"aurora"));applyDesign();initDeviceHistory();
     storeImage("profileBanner","banner",1500,520,.78,"Banner");
     storeImage("profilePhoto","avatar",520,520,.8,"Foto profil");
     setupSurface();setupProfilePreview();setupBackupActions();profileCounts();setupReveal();setupPremiumEffects();initRandomProfileId();
