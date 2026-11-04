@@ -189,9 +189,9 @@ const checks = [
   ["Security status endpoint remains available", worker.includes('url.pathname==="/api/security/status"')],
   ["Security middleware wraps Worker requests", worker.includes("export default {fetch:securityFetch};")],
   ["Security Center remains in homepage", html.includes('id="securityCenter"') && searchJs.includes("initSecurityCenter")],
-  ["TikTok Photo Mode routes bypass the video-only metadata filter and inspect hydration JSON", worker.includes("isTikTokPhotoRoute") && worker.includes("__UNIVERSAL_DATA_FOR_REHYDRATION__") && worker.includes("urlList")],
+  ["TikTok Photo Mode routes bypass the video-only metadata filter and inspect hydration JSON", worker.includes("isTikTokPhotoRoute") && worker.includes("__UNIVERSAL_DATA_FOR_REHYDRATION__") && worker.includes("urlList") && worker.includes("images.length>=35")],
   ["Downloader checks photo galleries for image-capable and auto-detect platforms", downloaderJs.includes("shouldTryImageExtraction") && downloaderJs.includes("imageGallery") && downloaderJs.includes("isTikTokPhotoPost")],
-  ["Photo Mode can show image downloads without requiring an MP4 stream", downloaderJs.includes("TikTok Photo Mode belum bisa dibaca") && downloaderJs.includes('("Foto dari "+detectedPlatform)')],
+  ["Photo Mode can show image downloads without requiring an MP4 stream", downloaderJs.includes("TikTok Photo Mode belum bisa dibaca") && downloaderJs.includes('("Foto dari "+detectedPlatform)') && downloaderJs.includes("slice(0,35)")],
   ["Platform cards show media-mode labels instead of the generic Uji coba badge", searchJs.includes("modeLabels.join") && !searchJs.includes('tier.textContent="Uji coba"')],
   ["Platform pager is separated from link/search forms on mobile", read("../public/downloader.css").includes("grid-template-columns:repeat(2,minmax(0,1fr))!important") && read("../public/downloader.css").includes("margin:16px 0 26px!important") && read("../public/downloader.css").includes("#linkModePanel,#titleModePanel{margin-top:8px")]
 ];
