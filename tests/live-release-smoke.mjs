@@ -75,12 +75,25 @@ for(const marker of [
 
 const assetRefs=[...html.matchAll(/(?:src|href)="(\/(?:[^"]+\.(?:js|css))(?:\?[^"]*)?)"/g)].map(match=>match[1]);
 assert.ok(assetRefs.length>=15,"Homepage tidak memuat kumpulan aset aplikasi yang diharapkan");
+let downloaderAsset="",platformPickerAsset="",downloaderCss="";
 for(const path of [...new Set(assetRefs)]){
   const assetUrl=new URL(path,base);
   assert.equal(assetUrl.searchParams.get("v"),version,"Aset tidak memakai versi build yang sama: "+path);
   const response=await request(path);
   assert.equal(response.status,200,"Aset live tidak ditemukan: "+path);
+  const pathname=assetUrl.pathname;
+  if(["/downloader.js","/v674.js","/downloader.css"].includes(pathname)){
+    const body=await response.text();
+    if(pathname==="/downloader.js")downloaderAsset=body;
+    if(pathname==="/v674.js")platformPickerAsset=body;
+    if(pathname==="/downloader.css")downloaderCss=body;
+  }
 }
+assert.ok(downloaderAsset.includes("createPhotoSlideshow"),"Aset downloader.js live belum memuat pembuat video slideshow dari foto.");
+assert.ok(downloaderAsset.includes("isTikTokPhotoPost")&&downloaderAsset.includes("slice(0,35)"),"Aset downloader.js live belum memuat deteksi TikTok Photo Mode dan galeri foto.");
+assert.ok(platformPickerAsset.includes("PLATFORM_GUIDES")&&platformPickerAsset.includes("modeLabels.join"),"Aset v674.js live belum memuat panduan dan label media per platform.");
+assert.ok(platformPickerAsset.includes("Tempel tautan TikTok: video atau Photo Mode"),"Placeholder TikTok belum diperbarui pada aset live.");
+assert.ok(downloaderCss.includes(".v736-platform-pager")&&downloaderCss.includes("margin:16px 0 26px"),"Aset downloader.css live belum memuat jarak pager mobile yang baru.");
 
 const platformMatrixResponse=await request("/api/platform/status");
 assert.equal(platformMatrixResponse.status,200,"Platform status endpoint gagal");
@@ -88,6 +101,12 @@ const platformMatrix=await platformMatrixResponse.json();
 assert.equal(platformMatrix.platformCount,200,"Status platform harus melaporkan seluruh 200 pilihan");
 const expectedPlatforms=["youtube","tiktok","instagram","snackvideo","capcut","pinterest","facebook","x","reddit","vimeo","threads","soundcloud","tiktoklite","facebooklite","snapchat","idnapp","instagramlite","linkedin","wechat","kakaotalk"];
 for(const id of expectedPlatforms)assert.ok(platformMatrix.platforms.some(item=>item.id===id),"Platform tidak terdaftar: "+id);
+for(const id of ["tiktok","tiktoklite"]){
+  const entry=platformMatrix.platforms.find(item=>item.id===id);
+  assert.ok(entry?.mediaModes?.includes("video"),id+" harus tetap mendukung video.");
+  assert.ok(entry?.mediaModes?.includes("image"),id+" belum mengiklankan dukungan Photo Mode/gambar.");
+}
+console.log("✔ TikTok and TikTok Lite advertise both video and image media modes.");
 console.log("✔ Platform status endpoint exposes all 200 platform choices and preserves the original first page.");
 
 const releaseResponse=await request("/release.json");
