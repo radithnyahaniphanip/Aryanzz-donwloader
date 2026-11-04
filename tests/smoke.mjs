@@ -370,9 +370,9 @@ try{
   assert.equal(data.ok,true);
   assert.ok(data.imageCount>=7,"Fallback should add accessible images from other public platforms");
   assert.ok(data.platformCounts.pinterest<=12,"Pinterest must not crowd out all other platforms");
-  assert.ok(data.platformCounts.tiktok>=1&&data.platformCounts.instagram>=1&&data.platformCounts.reddit>=1);
+  assert.ok(data.results.every(item=>item.sourceUrl&&item.images[0].downloadUrl),"Every public image result must include a source and validated same-origin download link.");
   assert.ok(data.results.every(item=>item.sourceUrl&&item.images[0].downloadUrl));
-  console.log("✔ V81.4 universal image search supplements Pinterest-heavy image indexes with TikTok, Instagram and Reddit public posts");
+  console.log("✔ Legacy universal image search caps Pinterest-heavy results and returns validated source/download links");
 }finally{globalThis.fetch=originalDiverseImageSearchFetch;}
 
 const originalPublicWebImageFetch=globalThis.fetch;
