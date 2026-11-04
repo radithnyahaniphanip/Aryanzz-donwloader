@@ -36,7 +36,7 @@ const platforms={
 let selected="all",searchController=null,pageSize=10,currentPage=1;
 const setMode=v=>{const link=v==="link";if(x)x.hidden=!link;if(y)y.hidden=link;if(a){a.classList.toggle("active",link);a.setAttribute("aria-selected",String(link))}if(b){b.classList.toggle("active",!link);b.setAttribute("aria-selected",String(!link))}};
 a?.addEventListener("click",()=>setMode("link"));b?.addEventListener("click",()=>setMode("title"));
-const setPlatform=id=>{const next=(id==="all"||platforms[id])?id:"youtube";if(next!==selected){searchController?.abort();const urlInput=$("url"),downloadResult=$("downloadResult");if(urlInput)urlInput.value="";if(downloadResult){downloadResult.replaceChildren();downloadResult.hidden=true;}if(results){results.replaceChildren();results.hidden=true;}if(help)help.textContent="Platform berubah ke "+platforms[next].name+". Tempel tautan atau mulai pencarian baru.";if(searchInput)searchInput.value="";document.dispatchEvent(new Event("aryanzz:platform-change"));}selected=next;picker?.querySelectorAll("[data-platform]").forEach(btn=>{const active=btn.dataset.platform===selected;btn.classList.toggle("active",active);btn.setAttribute("aria-pressed",String(active))});const name=selected==="all"?"SEMUA 19 PLATFORM":platforms[selected].name.toUpperCase();const label=y?.querySelector("label");if(label)label.textContent="SMART SEARCH · "+name;if(searchInput)searchInput.placeholder="Contoh: DJ Alan Walker, Tabola Bale, gambar kucing…";if(searchType)searchType.value=selected==="pinterest"?"image":"video";updateSearchHelp();};
+const setPlatform=id=>{const next=(id==="all"||platforms[id])?id:"youtube";if(next!==selected){searchController?.abort();const urlInput=$("url"),downloadResult=$("downloadResult");if(urlInput)urlInput.value="";if(downloadResult){downloadResult.replaceChildren();downloadResult.hidden=true;}if(results){results.replaceChildren();results.hidden=true;}if(help)help.textContent="Platform berubah ke "+(next==="all"?"Semua 19 Platform":(platforms[next]?.name||"platform pilihan"))+". Tempel tautan atau mulai pencarian baru.";if(searchInput)searchInput.value="";document.dispatchEvent(new Event("aryanzz:platform-change"));}selected=next;picker?.querySelectorAll("[data-platform]").forEach(btn=>{const active=btn.dataset.platform===selected;btn.classList.toggle("active",active);btn.setAttribute("aria-pressed",String(active))});const name=selected==="all"?"SEMUA 19 PLATFORM":platforms[selected].name.toUpperCase();const label=y?.querySelector("label");if(label)label.textContent="SMART SEARCH · "+name;if(searchInput)searchInput.placeholder="Contoh: DJ Alan Walker, Tabola Bale, gambar kucing…";if(searchType)searchType.value=selected==="pinterest"?"image":"video";updateSearchHelp();};
 picker?.addEventListener("click",e=>{const btn=e.target.closest("[data-platform]");if(btn)setPlatform(btn.dataset.platform)});
 const updateSearchHelp=()=>{if(!help)return;const mode=searchType?.value||"video";const scope=selected==="all"?"seluruh 19 platform":"khusus "+platforms[selected].name;if(mode==="image")help.textContent="Gambar: hasil foto, meme, wallpaper, dan PNG dari "+scope+". Hasil gambar tidak dicampur dengan video.";else help.textContent="Video: cari klip, Green Screen, meme, tutorial, dan topik lainnya dari "+scope+". Hasil dikelompokkan menurut sumber.";};
 searchType?.addEventListener("change",updateSearchHelp);
@@ -86,9 +86,15 @@ pick.addEventListener("click",()=>{if(item.searchOnly){window.open(item.url,"_bl
 info.append(title,meta,snippet,pick);card.append(info);
 if(selected==="all"){
 const key=String(item.platform||"other").toLowerCase();
-let group=mediaGroups.get(key);
-if(!group){group=document.createElement("section");group.className="v674-platform-result-group";const groupTitle=document.createElement("h3");groupTitle.textContent=platforms[key]?.name||key.toUpperCase();group.append(groupTitle);const list=document.createElement("div");list.className="v674-platform-result-list";group.append(list);mediaGroups.set(key,{group,list});}
-group.list.append(card);
+let entry=mediaGroups.get(key);
+if(!entry){
+const group=document.createElement("section");group.className="v674-platform-result-group";
+const groupTitle=document.createElement("h3");groupTitle.textContent=platforms[key]?.name||key.toUpperCase();
+group.append(groupTitle);
+const list=document.createElement("div");list.className="v674-platform-result-list";group.append(list);
+entry={group,list};mediaGroups.set(key,entry);
+}
+entry.list.append(card);
 }else results.append(card);
 });
 if(selected==="all")mediaGroups.forEach(value=>results.append(value.group));
