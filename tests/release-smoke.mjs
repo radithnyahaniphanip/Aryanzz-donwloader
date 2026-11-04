@@ -37,7 +37,7 @@ const checks = [
   ["V92.3 platform-link FFmpeg component timeout resets while chunks arrive", downloaderJs.includes("const resetIdle=()=>") && downloaderJs.includes("resetIdle();") && downloaderJs.includes("controller.abort(),45000")],
   ["V92.3 downloader asset and PWA cache are refreshed", html.includes('/downloader.js?v=92.2') && sw.includes('/downloader.js?v=92.2') && sw.includes('/ffmpeg-worker-bootstrap.js?v=92.2') && sw.includes('aryanzz-v92-5')],
   ["Profile Studio and Owner page share the same V25 profile and design stores", ownerJs.includes('aryanzz.profile.info.v25') && ownerJs.includes('aryanzz.profile.design.v25') && profileJs.includes('const PROFILE_KEY="aryanzz.profile.info.v25"')],
-  ["Owner profile displays the Profile Studio avatar and banner assets", ownerJs.includes('validImage(design.avatar)') && ownerJs.includes('validImage(design.banner)') && ownerJs.includes('id="ownerAvatar"')===false],
+  ["Owner profile displays the Profile Studio avatar and banner assets", ownerJs.includes('validImage(design.avatar)') && ownerJs.includes('validImage(design.banner)') && ownerJs.includes('$("ownerAvatar")')],
   ["Owner profile updates once when profile assets change", (ownerJs.match(/aryanzz:profile-assets-updated/g)||[]).length===1],
   ["Profile membership date parser accepts local YYYY-MM-DD values", profileJs.includes('const parts=/^\\d{4}-\\d{2}-\\d{2}$/.test(since)') && !profileJs.includes('const parts=/^\\\\d{4}')),
   ["Profile Studio protects startup from blocked localStorage access", profileJs.includes('const safeGet=') && profileJs.includes('const safeSet=') && profileJs.includes('setSurface(safeGet(SURFACE_KEY,"aurora"))')],
