@@ -1,6 +1,6 @@
 const base=(process.env.WORKER_URL||"https://aryanzz-donwloader.radithnyahaniphanip.workers.dev").replace(/\/$/,"");
 const sourceUrl="https://www.instagram.com/p/Dek72MYE141/?xtok=OWdvNjR4dmZscnlx";
-const report={test:"user-supplied Instagram post image and video extraction",sourceUrl,status:null,title:null,platform:null,imageCount:0,previewStatus:null,previewMime:null,previewDisposition:null,signatureValid:false,downloadUrlAvailable:false,videoInfoStatus:null,videoFormatCount:0,videoProbeStatus:null,videoProbeMime:null,videoProbeValid:false,videoError:null,error:null};
+const report={test:"user-supplied Instagram post image and video extraction",sourceUrl,status:null,title:null,platform:null,imageCount:0,previewStatus:null,previewMime:null,previewDisposition:null,signatureValid:false,downloadUrlAvailable:false,videoInfoStatus:null,videoFormatCount:0,videoProbeStatus:null,videoProbeMime:null,videoProbeValid:false,videoProbeAttempts:[],videoError:null,error:null};
 try{
   const endpoint=new URL("/api/image/extract",base);endpoint.searchParams.set("url",sourceUrl);
   const response=await fetch(endpoint.href,{headers:{accept:"application/json"},cache:"no-store",signal:AbortSignal.timeout(35000)});
@@ -38,14 +38,31 @@ try{
     const videoFormats=(videoInfo.formats||[]).filter(item=>item?.mode==="video"&&item?.downloadUrl);
     report.videoFormatCount=videoFormats.length;
     if(videoFormats.length){
-      const candidate=videoFormats.find(item=>["mp4","m4v"].includes(String(item.ext||"").toLowerCase()))||videoFormats[0];
-      const probe=new URL(candidate.downloadUrl);probe.searchParams.set("probe","1");
-      const checked=await fetch(probe.href,{cache:"no-store",signal:AbortSignal.timeout(20000)});
-      report.videoProbeStatus=checked.status;
-      const result=await checked.json().catch(()=>({}));
-      report.videoProbeMime=result.mimeType||null;
-      report.videoProbeValid=checked.ok&&result.valid===true&&String(result.mimeType||"").startsWith("video/");
-      if(!report.videoProbeValid)report.videoError=String(result.error||"Video stream gagal validasi.").slice(0,180);
+      const ordered=videoFormats.slice().sort((a,b)=>{
+        const ae=["mp4","m4v"].includes(String(a.ext||"").toLowerCase())?0:1;
+        const be=["mp4","m4v"].includes(String(b.ext||"").toLowerCase())?0:1;
+        return ae-be;
+      }).slice(0,4);
+      for(const [index,candidate] of ordered.entries()){
+        try{
+          const probe=new URL(candidate.downloadUrl);probe.searchParams.set("probe","1");
+          const checked=await fetch(probe.href,{cache:"no-store",signal:AbortSignal.timeout(12000)});
+          const result=await checked.json().catch(()=>({}));
+          const valid=checked.ok&&result.valid===true&&String(result.mimeType||"").startsWith("video/");
+          report.videoProbeAttempts.push({index:index+1,label:String(candidate.label||candidate.ext||"video").slice(0,60),status:checked.status,mime:result.mimeType||null,valid,error:valid?null:String(result.error||"Format tidak lolos validasi.").slice(0,120)});
+          if(valid){
+            report.videoProbeStatus=checked.status;
+            report.videoProbeMime=result.mimeType||null;
+            report.videoProbeValid=true;
+            break;
+          }
+          report.videoProbeStatus=checked.status;
+          report.videoProbeMime=result.mimeType||null;
+        }catch(error){
+          report.videoProbeAttempts.push({index:index+1,status:null,valid:false,error:String(error?.message||error).slice(0,120)});
+        }
+      }
+      if(!report.videoProbeValid)report.videoError=String(report.videoProbeAttempts.at(-1)?.error||"Empat format video pertama tidak lolos validasi.").slice(0,180);
     }else report.videoError=String(videoInfo.error||"Tidak ada stream video pada postingan ini.").slice(0,180);
   }catch(error){report.videoError=String(error?.message||error).slice(0,180)}
   console.log("[INSTAGRAM-USER-LINK-RESULT] "+JSON.stringify(report));
