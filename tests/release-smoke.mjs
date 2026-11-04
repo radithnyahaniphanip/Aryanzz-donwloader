@@ -20,7 +20,7 @@ const checks = [
   ["FFmpeg worker waits for module registration", bootstrap.includes("await import(") && bootstrap.includes("self.onmessage")],
   ["Worker bootstrap reports import errors with the original message ID", bootstrap.includes("id: data?.id") && bootstrap.includes("type: \"ERROR\"")],
   ["MP4 duration fallback parser is present", converterJs.includes("parseMp4Duration") && converterJs.includes("recoverDuration")],
-  ["Preview has unsupported-codec guidance", html.includes("audioStudioPreviewNote") && converterJs.includes("codec tidak didukung")],
+  ["Preview has unsupported-codec guidance", html.includes("audioStudioPreviewNote") && converterJs.includes("Codec video tidak didukung")],
   ["Converter uses a same-origin versioned worker bootstrap", converterJs.includes("/ffmpeg-worker-bootstrap.js?v=90.2")],
   ["Worker CSP permits blob fetch for local WASM resources", worker.includes("connect-src") && worker.includes("wss: blob:;")],
   ["Homepage release label is V90.0", html.includes("V90.2 · GRATIS")],
