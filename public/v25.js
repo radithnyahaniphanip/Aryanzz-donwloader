@@ -260,13 +260,20 @@
     });
   }
 
+  function initRandomProfileId(){
+    const node=$("profileRandomId");if(!node)return;
+    const key="aryanzz.profile.local-id.v94";let id=safeGet(key,"");
+    if(!/^ARY-[A-Z0-9]{8}$/.test(id)){const bytes=new Uint8Array(5);crypto.getRandomValues(bytes);id="ARY-"+Array.from(bytes,b=>b.toString(36).padStart(2,"0")).join("").slice(0,8).toUpperCase();safeSet(key,id);}
+    node.textContent=id;
+    $("profileCopyId")?.addEventListener("click",async()=>{try{await navigator.clipboard.writeText(id);toast("ID profil berhasil disalin.");}catch{toast("Tidak dapat menyalin ID pada browser ini.");}});
+  }
   function init(){
     if(!$("profile"))return;
     installAutoSaveObserver();applyDesign();initDeviceHistory();
     storeImage("profileBanner","banner",1500,520,.78,"Banner");
     storeImage("profileBackground","background",1600,1000,.72,"Background");
     storeImage("profilePhoto","avatar",520,520,.8,"Foto profil");
-    setupSurface();setupProfilePreview();setupBackupActions();setupMotionToggle();profileCounts();setupReveal();setupPremiumEffects();
+    setupSurface();setupProfilePreview();setupBackupActions();setupMotionToggle();profileCounts();setupReveal();setupPremiumEffects();initRandomProfileId();
     window.addEventListener("storage",()=>{profileCounts();applyDesign();});
     window.addEventListener("aryanzz:profile-assets-updated",applyDesign);
     queueAutoSnapshot();
