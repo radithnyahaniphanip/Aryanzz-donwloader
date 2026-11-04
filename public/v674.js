@@ -84,6 +84,11 @@ function renderPlatformPage(nextPage){
    const oldLogo=button.querySelector(".v736-logo");
    if(source&&oldLogo)oldLogo.replaceWith(source.cloneNode(true));
   }
+  const oldTier=button.querySelector(".v736-platform-tier");
+  if(platform.extractorStatus==="experimental"){
+   const tier=oldTier||document.createElement("small");tier.className="v736-platform-tier";tier.textContent="Uji coba";
+   if(!oldTier)button.append(tier);
+  }else oldTier?.remove();
   button.classList.toggle("active",button.dataset.platform===selected);
   button.setAttribute("aria-pressed",String(button.dataset.platform===selected));
   picker.append(button);
@@ -108,7 +113,7 @@ async function loadPlatformCatalog(){
   SEARCH_PLATFORM_DOMAINS=Object.fromEntries(platformCatalog.map(platform=>[platform.id,platform.domains||[]]));
   window.ARYANZZ_PLATFORM_CATALOG=platformCatalog;
   window.aryanzzPlatformForUrl=raw=>{
-   try{const host=new URL(raw).hostname.toLowerCase().replace(/^www\\./,"");const found=platformCatalog.find(platform=>(platform.domains||[]).some(domain=>host===domain||host.endsWith("."+domain)));return found?.aliasOf||found?.id||null}catch{return null}
+   try{const host=new URL(raw).hostname.toLowerCase().replace(/^www\./,"");const found=platformCatalog.find(platform=>(platform.domains||[]).some(domain=>host===domain||host.endsWith("."+domain)));return found?.aliasOf||found?.id||null}catch{return null}
   };
   window.aryanzzPlatformNameForId=id=>platforms[id]?.name||platformCatalog.find(platform=>platform.id===id)?.name||id;
   renderPlatformPage(1);updateSearchHelp();
