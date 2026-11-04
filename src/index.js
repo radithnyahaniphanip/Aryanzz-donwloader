@@ -165,33 +165,82 @@ async function platformMediaInfo(request){
   if(normalizedExpected!==key)return json({ok:false,error:"GAGAL — tautan "+key+" ditolak karena endpoint ini khusus untuk "+normalizedExpected+"."},400);
   return freePublicMediaInfo(parsed.href,request.url);
 }
-async function snackVideoFallbackMediaInfo(rawUrl,requestUrl){
-  const endpoint=new URL("https://backend1.tioo.eu.org/api/downloader/snackvideo");
-  endpoint.searchParams.set("url",rawUrl);
-  const response=await fetch(endpoint.href,{headers:{accept:"application/json"},signal:AbortSignal.timeout(14000),cache:"no-store"});
-  const data=await response.json().catch(()=>null);
-  if(!response.ok||!data||data.status===false||data.success===false)throw new Error("Provider alternatif SnackVideo menjawab HTTP "+response.status+".");
-  const root=data.result&&typeof data.result==="object"?data.result:data.data&&typeof data.data==="object"?data.data:data;
-  const links=Array.isArray(root.links)?root.links:Array.isArray(root.downloads)?root.downloads:[];
-  const candidates=[
-    root.videoUrl,root.video_url,root.download_url,root.downloadUrl,
-    root.result?.videoUrl,root.result?.video_url,root.result?.download_url,
-    ...links.map(item=>typeof item==="string"?item:item?.url||item?.videoUrl||item?.download_url)
-  ].filter(value=>typeof value==="string"&&value.trim());
-  const videoUrl=candidates.find(value=>safePublicMediaUrl(value));
-  if(!videoUrl)throw new Error("Provider alternatif merespons, tetapi tidak memberikan URL video publik.");
-  const title=String(root.title||root.caption||root.description||"Video SnackVideo").slice(0,300);
-  const thumbnail=String(root.thumbnail||root.cover||"");
-  const duration=Number(root.duration||0)||null;
-  const quality=String(root.quality||root.resolution||"MP4");
-  const media=[{type:"video",kind:"video",label:quality+" MP4",url:videoUrl,height:Number(String(quality).match(/(144|240|360|480|540|576|720|900|960|1080|1440|2160)/)?.[1]||0)||undefined}];
-  const normalized=freeProviderMediaInfo({normalized:{title,thumbnail,duration,media}},rawUrl,requestUrl);
-  if(!normalized)throw new Error("Stream dari provider alternatif belum lolos pemeriksaan format media.");
-  normalized.providerName="Tioo SnackVideo fallback";
-  normalized.provider="Free public fallback";
+async function snackVideoNativePageFallback(rawUrl,requestUrl){
+  const response=await fetch(rawUrl,{
+    redirect:"follow",cache:"no-store",signal:AbortSignal.timeout(14000),
+    headers:{
+      "user-agent":"Mozilla/5.0 (Linux; Android 13; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36",
+      "accept":"text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      "accept-language":"id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7"
+    }
+  });
+  if(!response.ok)throw new Error("Halaman SnackVideo menjawab HTTP "+response.status+".");
+  const finalUrl=response.url||rawUrl;
+  const finalHost=new URL(finalUrl).hostname.toLowerCase();
+  if(!/(^|\\.)(snackvideo\\.com|kwai\\.com|kuaishou\\.com)$/.test(finalHost))throw new Error("Redirect keluar dari domain SnackVideo/Kwai ditolak.");
+  let html=await response.text();
+  if(html.length>5_000_000)html=html.slice(0,5_000_000);
+  const decoded=html.replace(/\\\\u002[fF]/g,"/").replace(/\\\\u0026/g,"&").replace(/\\\\\\//g,"/").replace(/&amp;/g,"&").replace(/\\\\u003[dD]/g,"=");
+  const candidates=[];
+  const add=value=>{
+    if(typeof value!=="string"||!value.trim())return;
+    let candidate=value.trim().replace(/\\\\u0026/g,"&").replace(/&amp;/g,"&").replace(/\\\\\\//g,"/");
+    if(candidate.startsWith("//"))candidate="https:"+candidate;
+    if(safePublicMediaUrl(candidate)&&/\\.(?:mp4|m3u8)(?:[?#]|$)/i.test(candidate))candidates.push(candidate);
+  };
+  const patterns=[
+    /"(?:playUrl|play_url|videoUrl|video_url|mainMvUrl|main_mv_url|downloadUrl|download_url)"\\s*:\\s*"((?:https?:)?(?:\\\\/\\\\/|[^"]){10,1600})"/gi,
+    /https?:\\\\/\\\\/[^"\\s<>]{8,1800}?(?:kwai\\.net|snackvideo|kwai-cdn)[^"\\s<>]{0,1200}?(?:\\.mp4|\\.m3u8)(?:\\?[^"\\s<>]*)?/gi,
+    /https?:\\/\\/[^"'\\s<>]{8,1800}?(?:kwai\\.net|snackvideo|kwai-cdn)[^"'\\s<>]{0,1200}?(?:\\.mp4|\\.m3u8)(?:\\?[^"'\\s<>]*)?/gi
+  ];
+  for(const pattern of patterns){for(const match of decoded.matchAll(pattern))add(match[1]||match[0]);}
+  const titleMatch=decoded.match(/<title[^>]*>([^<]{1,300})<\\/title>/i);
+  const ogTitle=decoded.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']{1,300})["']/i);
+  const ogImage=decoded.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']{1,1200})["']/i);
+  const canonical=decoded.match(/<link[^>]+rel=["']canonical["'][^>]+href=["']([^"']+)["']/i);
+  const title=String(ogTitle?.[1]||titleMatch?.[1]||"Video SnackVideo").replace(/\\s*[-|]\\s*SnackVideo.*$/i,"").slice(0,300);
+  const thumbnail=String(ogImage?.[1]||"");
+  const unique=[...new Set(candidates)];
+  if(!unique.length)throw new Error("Halaman publik berhasil dibuka, tetapi URL stream MP4 belum ditemukan pada HTML.");
+  const media=unique.slice(0,12).map((url,index)=>({type:"video",kind:"video",label:"MP4"+(index?" alternatif "+(index+1):""),url}));
+  const normalized=freeProviderMediaInfo({normalized:{title,thumbnail,media}},rawUrl,requestUrl);
+  if(!normalized)throw new Error("Stream dari halaman SnackVideo tidak lolos validasi media.");
+  normalized.providerName="SnackVideo native page fallback";
+  normalized.provider="Direct public page";
   normalized.fallbackUsed=true;
+  normalized.canonicalUrl=canonical?.[1]||finalUrl;
   return json(normalized);
 }
+async function snackVideoFallbackMediaInfo(rawUrl,requestUrl){
+  const errors=[];
+  try{
+    const endpoint=new URL("https://backend1.tioo.eu.org/api/downloader/snackvideo");
+    endpoint.searchParams.set("url",rawUrl);
+    const response=await fetch(endpoint.href,{headers:{accept:"application/json"},signal:AbortSignal.timeout(9000),cache:"no-store"});
+    const data=await response.json().catch(()=>null);
+    if(!response.ok||!data||data.status===false||data.success===false)throw new Error("Provider alternatif Tioo HTTP "+response.status+".");
+    const root=data.result&&typeof data.result==="object"?data.result:data.data&&typeof data.data==="object"?data.data:data;
+    const links=Array.isArray(root.links)?root.links:Array.isArray(root.downloads)?root.downloads:[];
+    const candidates=[root.videoUrl,root.video_url,root.download_url,root.downloadUrl,root.result?.videoUrl,root.result?.video_url,root.result?.download_url,...links.map(item=>typeof item==="string"?item:item?.url||item?.videoUrl||item?.download_url)].filter(value=>typeof value==="string"&&value.trim());
+    const videoUrl=candidates.find(value=>safePublicMediaUrl(value));
+    if(!videoUrl)throw new Error("Provider Tioo tidak memberikan URL video publik.");
+    const title=String(root.title||root.caption||root.description||"Video SnackVideo").slice(0,300);
+    const thumbnail=String(root.thumbnail||root.cover||"");
+    const duration=Number(root.duration||0)||null;
+    const quality=String(root.quality||root.resolution||"MP4");
+    const media=[{type:"video",kind:"video",label:quality+" MP4",url:videoUrl,height:Number(String(quality).match(/(144|240|360|480|540|576|720|900|960|1080|1440|2160)/)?.[1]||0)||undefined}];
+    const normalized=freeProviderMediaInfo({normalized:{title,thumbnail,duration,media}},rawUrl,requestUrl);
+    if(!normalized)throw new Error("Stream Tioo tidak lolos validasi media.");
+    normalized.providerName="Tioo SnackVideo fallback";
+    normalized.provider="Free public fallback";
+    normalized.fallbackUsed=true;
+    return json(normalized);
+  }catch(error){errors.push(String(error?.message||error).slice(0,140));}
+  try{return await snackVideoNativePageFallback(rawUrl,requestUrl)}
+  catch(error){errors.push("Native page: "+String(error?.message||error).slice(0,180));}
+  throw new Error(errors.join(" | "));
+}
+
 async function freePublicMediaInfo(rawUrl,requestUrl){
   const key=freePlatformKey(rawUrl);
   if(!key)return json({error:"Platform belum didukung oleh provider gratis."},400);
