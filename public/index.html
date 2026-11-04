@@ -1020,6 +1020,7 @@ function showPlatformGuide(u,platform){
 window.showYouTubeDownloader=showYouTubeDownloader;window.showPlatformGuide=showPlatformGuide;
 function aryPlatformForUrl(raw){
  try{
+  const dynamic=window.aryanzzPlatformForUrl?.(raw);if(dynamic)return dynamic;
   const host=new URL(raw).hostname.toLowerCase().replace(/^www\./,"");
   const rules=[
    [/^(?:youtube\.com|m\.youtube\.com|music\.youtube\.com|youtu\.be|www\.youtu\.be|youtube-nocookie\.com|www\.youtube-nocookie\.com)$/, "youtube"],
@@ -1036,7 +1037,7 @@ function aryPlatformForUrl(raw){
  }catch{return null}
 }
 function arySelectedPlatform(){const state=window.aryanzzSelectedPlatform?.();if(state)return state;return document.querySelector("#platformPicker")?.getAttribute("data-selected-platform")||document.querySelector("#platformPicker [data-platform].active")?.dataset.platform||"youtube"}
-function aryPlatformLabel(id){return ({youtube:"YouTube",tiktok:"TikTok",instagram:"Instagram",snackvideo:"SnackVideo",capcut:"CapCut",pinterest:"Pinterest",facebook:"Facebook",x:"X",reddit:"Reddit",vimeo:"Vimeo",threads:"Threads",soundcloud:"SoundCloud",snapchat:"Snapchat",idnapp:"IDN App",linkedin:"LinkedIn",wechat:"WeChat",kakaotalk:"KakaoTalk"})[id]||id}
+function aryPlatformLabel(id){return window.aryanzzPlatformNameForId?.(id)||({youtube:"YouTube",tiktok:"TikTok",instagram:"Instagram",snackvideo:"SnackVideo",capcut:"CapCut",pinterest:"Pinterest",facebook:"Facebook",x:"X",reddit:"Reddit",vimeo:"Vimeo",threads:"Threads",soundcloud:"SoundCloud",snapchat:"Snapchat",idnapp:"IDN App",linkedin:"LinkedIn",wechat:"WeChat",kakaotalk:"KakaoTalk"})[id]||id}
 async function showUniversalPlatformDownloader(u,platform){
  const out=$("downloadResult");out.hidden=false;out.replaceChildren();
  const heading=document.createElement("b");heading.textContent=aryPlatformLabel(platform)+" terdeteksi";
