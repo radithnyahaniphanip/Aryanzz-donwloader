@@ -24,6 +24,14 @@ ARYANZZ is a mobile-first creator workspace hosted on Cloudflare Workers. V73.0 
 | V67.6 | Backend health cleanup, title-based YouTube search routed through yt-dlp, clearer AudD/Shazam status, and DJ scan fallback fixes |
 
 
+## V92.5 — Full workspace handler audit
+
+- Removes the obsolete Tools module's second downloader analysis handler so one tap on **Periksa** cannot start two competing extraction flows.
+- Removes the obsolete Tools module's duplicate history/favorites renderer and queue actions; the current Library and Smart Queue modules remain the sole owners of those controls.
+- Removes a duplicate HTML element ID used by Tools notifications.
+- Adds release regression checks for unique HTML IDs and single-owner handlers across Downloader, Library, and Smart Queue.
+- Refreshes the PWA shell cache and versioned Tools asset so installed/mobile sessions receive the corrected handlers.
+
 ## V73.6 — Faster adaptive MP4 preparation and refreshed provider failover
 
 - Starts the local FFmpeg engine while the selected video component is downloading, so engine initialization overlaps media transfer instead of adding a separate wait afterward.
