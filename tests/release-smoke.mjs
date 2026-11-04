@@ -10,6 +10,8 @@ const unifiedCss = read("../public/v89.css");
 const converterJs = read("../public/audio-studio.js");
 const mediaStudioJs = read("../public/media-studio.js");
 const mediaStudioCss = read("../public/media-studio.css");
+const queueJs = read("../public/download-queue.js");
+const queueCss = read("../public/download-queue.css");
 const titleSearchStart = html.indexOf('<select id="titleSearchType"');
 const titleSearchEnd = html.indexOf("</select>", titleSearchStart);
 const titleSearchMarkup = titleSearchStart >= 0 && titleSearchEnd >= 0 ? html.slice(titleSearchStart, titleSearchEnd) : "";
@@ -42,6 +44,13 @@ const checks = [
   ["Media library supports search, filters, favorites and deletion", mediaStudioJs.includes("msSearch") && mediaStudioJs.includes("msFilter") && mediaStudioJs.includes("toggleFavorite") && mediaStudioJs.includes("deleteItem")],
   ["Video Player Pro includes playback speed, PiP, fullscreen and frame capture", mediaStudioJs.includes("playbackRate") && mediaStudioJs.includes("requestPictureInPicture") && mediaStudioJs.includes("requestFullscreen") && mediaStudioJs.includes("drawImage(video")],
   ["Download Manager links to the existing Smart Queue", html.includes('id="queue"') && mediaStudioJs.includes('data-panel="queue"')],
+  ["Smart Queue UI is integrated into the shared tools panel", html.includes('id="queue"') && html.includes('id="queueUrls"') && html.includes('id="queueCounts"')],
+  ["Smart Queue validates and deduplicates URL entries", queueJs.includes("new URL(raw)") && queueJs.includes("duplicates++") && queueJs.includes("MAX_ITEMS=100")],
+  ["Smart Queue persists queue items locally", queueJs.includes("localStorage.setItem(KEY") && queueJs.includes("localStorage.getItem(KEY")],
+  ["Smart Queue hands active links to the existing downloader", queueJs.includes('getElementById("url")') && queueJs.includes('getElementById("analyze")') && queueJs.includes("analyze.click()")],
+  ["Smart Queue supports completion, failure, skip, retry and pause", queueJs.includes('mark(item.id,"done")') && queueJs.includes('mark(item.id,"failed")') && queueJs.includes('mark(item.id,"skipped")') && queueJs.includes("queuePause")],
+  ["Smart Queue mobile stylesheet is wired and cached", html.includes("/download-queue.css?v=91.0") && queueCss.includes("@media(max-width:420px)") && sw.includes("/download-queue.css?v=91.0")],
+  ["Smart Queue script is wired and cached", html.includes("/download-queue.js?v=91.0") && sw.includes("/download-queue.js?v=91.0")],
   ["Storage and performance dashboard uses Storage API", mediaStudioJs.includes("navigator.storage?.estimate") && mediaStudioJs.includes("navigator.storage?.persist")],
   ["Media Studio responsive stylesheet is wired", html.includes("/media-studio.css?v=91.0") && mediaStudioCss.includes("@media(max-width:480px)")],
   ["PWA cache includes current search bundle", sw.includes("/v674.js?v=89.2")],
