@@ -73,16 +73,17 @@ function add(id,d){
   const x=pad+w*.035,innerW=boxW-w*.07;
   ctx.fillStyle="#9bd4c9";ctx.font="900 "+Math.round(w*.021)+"px system-ui";
   ctx.fillText(String(sc.demoTitle||"PANDUAN").toUpperCase(),x,boxY+h*.055);
-  let yy=boxY+h*.11;
-  const lineH=h*(compact?.047:.052);
-  (sc.demoLines||[]).slice(0,4).forEach((line,i)=>{
-   const cardH=Math.max(lineH*1.65,h*.065);
-   roundRect(x,yy,innerW,cardH,Math.min(12,w*.009),"rgba(7,18,38,.72)","rgba(153,197,244,.16)");
-   ctx.fillStyle="#eaf4ff";ctx.font="600 "+Math.round(w*(compact?.023:.022))+"px system-ui";
-   const words=String(line).split(/\\s+/);let row="",textY=yy+cardH*.42,lines=0;
-   for(const word of words){const candidate=row?row+" "+word:word;if(ctx.measureText(candidate).width>innerW-w*.045&&row){ctx.fillText(row,x+w*.022,textY);row=word;textY+=lineH*.56;lines++;}else row=candidate;}
-   if(row)ctx.fillText(row,x+w*.022,textY);
-   yy+=cardH+h*.018;
+  const contentY=boxY+h*.105,contentH=boxH-h*.145;
+  roundRect(x,contentY,innerW,contentH,Math.min(12,w*.009),"rgba(7,18,38,.72)","rgba(153,197,244,.16)");
+  ctx.fillStyle="#eaf4ff";ctx.font="600 "+Math.round(w*(compact?.023:.022))+"px system-ui";
+  const lineHeight=h*(compact?.035:.038),maxLines=compact?8:5;
+  let textY=contentY+lineHeight*1.15;
+  (sc.demoLines||[]).slice(0,3).forEach((line,i)=>{
+   const prefix=(sc.demoLines.length>1?String(i+1)+". ":"");
+   const words=(prefix+String(line)).split(/\s+/);let row="";
+   for(const word of words){const candidate=row?row+" "+word:word;if(ctx.measureText(candidate).width>innerW-w*.05&&row){if(textY<contentY+contentH-lineHeight*.25)ctx.fillText(row,x+w*.022,textY);textY+=lineHeight;row=word;}else row=candidate;}
+   if(row&&textY<contentY+contentH-lineHeight*.25)ctx.fillText(row,x+w*.022,textY);
+   textY+=lineHeight*1.25;
   });
   ctx.fillStyle="#b8cde8";ctx.font="700 "+Math.round(w*.016)+"px system-ui";
   ctx.fillText("ADEGAN "+(index+1)+" / "+sceneData.length,x,boxY+boxH-h*.025);
