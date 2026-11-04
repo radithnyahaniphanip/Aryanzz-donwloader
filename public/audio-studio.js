@@ -18,7 +18,7 @@
   ];
   // Use the same upstream FFmpeg class worker as the tested YouTube mux path.
   // This avoids maintaining a second, subtly incompatible worker protocol on mobile.
-  const WORKER_URL = "/ffmpeg-worker-bootstrap.js?v=92.1";
+  const WORKER_URL = "/ffmpeg-worker-bootstrap.js?v=92.2";
   const LOAD_TIMEOUT_MS = 75000;
   const FETCH_TIMEOUT_MS = 45000;
 
