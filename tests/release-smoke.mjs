@@ -31,9 +31,9 @@ const duplicateIds = [...idCounts].filter(([, count]) => count > 1).map(([id]) =
 
 const checks = [
   ["V93.0 Link Bypass panel and Worker resolver are wired",html.includes('id="linkBypass"')&&html.includes('/link-bypass.js?v=93.0')&&worker.includes('url.pathname==="/api/link-bypass"')&&linkBypassJs.includes('Periksa tujuan')],
-  ["V93.0 Link Bypass styles and PWA cache are wired",html.includes('/link-bypass.css?v=93.0')&&linkBypassCss.includes(".v93-popular-grid")&&sw.includes("/link-bypass.js?v=93.0")&&sw.includes("/link-bypass.css?v=93.0")],
-  ["V93.0 mobile popular tools are two columns and desktop tools are four columns",linkBypassCss.includes("repeat(4,minmax(0,1fr))")&&linkBypassCss.includes("repeat(2,minmax(0,1fr))")],
-  ["V93.0 profile settings are consolidated and About and Help remain accessible",profileJs.includes("consolidateProfileSettings")&&html.includes('class="v93-profile-links"')&&html.includes('data-panel="about"')&&html.includes('data-panel="help"')],
+  ["V93.0 Link Bypass styles and PWA cache are wired",html.includes('/link-bypass.css?v=93.0')&&linkBypassCss.includes(".v93-bypass-hero")&&sw.includes("/link-bypass.js?v=93.0")&&sw.includes("/link-bypass.css?v=93.0")],
+  ["V93.0 restores original home layout while keeping Link Bypass mobile responsive",!html.includes('class="v93-popular-grid"')&&linkBypassCss.includes("@media(max-width:680px)")&&linkBypassCss.includes(".v93-bypass-panel")],
+  ["V93.0 restores original Profile Studio layout",!profileJs.includes("consolidateProfileSettings")&&!html.includes('class="v93-profile-links"')],
   ["V93.0 HTML contains no duplicate element IDs", duplicateIds.length === 0],
   ["Downloader analysis has one controller; legacy Tools does not attach a competing click handler", !advancedJs.includes("analyze.onclick") && !advancedJs.includes("function inspect(url)") && !advancedJs.includes("/api/info") && downloaderJs.includes('button.addEventListener("click"')],
   ["Smart Queue has one controller; legacy Tools does not bind queue actions", !advancedJs.includes("queueAdd") && !advancedJs.includes("queueRun") && !advancedJs.includes("queueClear") && queueJs.includes("queueAdd")],
