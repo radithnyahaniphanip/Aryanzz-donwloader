@@ -71,6 +71,11 @@
     const name = String(profile.name || "").trim() || "ARYANZZ";
     const bio = String(profile.bio || "").trim() || "Merancang, membangun, dan mengembangkan ekosistem digital ARYANZZ.";
     const nameNode = $("ownerName"), bioNode = $("ownerBio"), avatar = $("ownerAvatar"), cover = $("ownerCover");
+    const developerBadge = $("ownerDeveloperBadge");
+    if (developerBadge) {
+      developerBadge.textContent = "♛ DEVELOPER WEBSITE";
+      developerBadge.setAttribute("aria-label", "Developer Website · Pemilik ARYANZZ");
+    }
     if (nameNode) nameNode.textContent = name;
     if (bioNode) bioNode.textContent = bio;
     const avatarData = validImage(design.avatar) || validImage(profile.photo);

@@ -247,3 +247,27 @@ body[data-motion="off"] *,body[data-motion="off"] *:before,body[data-motion="off
   .v25-profile-id-row code{font-size:12px;padding:8px 9px}
   .v25-profile-id-row #profileCopyId{min-width:78px;padding:9px 8px;font-size:11px}
 }
+
+
+/* V95.1 UI repair — Profile stays focused; legacy settings/backups belong elsewhere. */
+#profile .v25-backup-card,
+#profile .ary-theme-studio,
+#profile [data-theme-studio],
+#profile #exportData,
+#profile #importData,
+#profile #restoreAutoBackup,
+#profile #ownerLinkEditor,
+#profile #securityCenter{
+  display:none!important;
+}
+#profile .v25-account-id-card>.v25-muted,
+#profile #profileIdDescription{
+  display:none!important;
+}
+
+#profile [data-panel="colorStudio"],
+#profile [data-panel="mediaStudio"],
+#profile [data-panel="about"],
+#profile [data-panel="help"]{
+  display:none!important;
+}
