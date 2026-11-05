@@ -1227,15 +1227,15 @@ function extractTikTokPublicPageInfo(html,pageUrl,rawUrl,requestUrl){
         if(safe){thumbnail=safe.href;break;}
       }
     }
-    add(video.downloadAddr||video.download_addr,"download");
-    add(video.playAddr||video.play_addr,"stream");
-    add(video.playUrl||video.play_url||video.videoUrl||video.video_url,"video");
     const variants=video.bitrateInfo||video.bitrate_info||[];
-    if(Array.isArray(variants))for(const variant of variants){
+    if(Array.isArray(variants))for(const variant of variants.slice().sort((a,b)=>Number(b?.Bitrate||b?.bitrate||0)-Number(a?.Bitrate||a?.bitrate||0))){
       const quality=String(variant?.GearName||variant?.gear_name||variant?.quality||variant?.QualityType||"");
       const height=Number(quality.match(/(144|240|360|480|540|576|720|900|960|1080|1440|2160)/)?.[1]||variant?.height||0);
       add(variant?.PlayAddr||variant?.playAddr||variant?.play_addr||variant?.UrlList||variant?.url_list,"stream "+(quality||"variant"),height);
     }
+    add(video.downloadAddr||video.download_addr,"download");
+    add(video.playAddr||video.play_addr,"stream");
+    add(video.playUrl||video.play_url||video.videoUrl||video.video_url,"video");
   }
   const meta={};
   for(const match of source.matchAll(/<meta\b[^>]*>/gi)){
