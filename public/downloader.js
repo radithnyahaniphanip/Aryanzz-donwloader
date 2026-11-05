@@ -144,6 +144,7 @@
       const key = "aryanzz.history.v2";
       const old = JSON.parse(localStorage.getItem(key) || "[]");
       localStorage.setItem(key, JSON.stringify([{url,name,mode,quality,at:Date.now()}, ...old.filter(x => x.url !== url)].slice(0,40)));
+      window.dispatchEvent(new Event("aryanzz:history-updated"));
     } catch {}
   }
   function favorite(url, name, button) {
@@ -153,6 +154,7 @@
       const exists = list.some(x => x.url === url);
       const next = exists ? list.filter(x => x.url !== url) : [{url,name,at:Date.now()}, ...list].slice(0,40);
       localStorage.setItem(key, JSON.stringify(next));
+      window.dispatchEvent(new Event("aryanzz:history-updated"));
       button.textContent = exists ? "♡ Favorit" : "♥ Tersimpan";
     } catch { button.textContent = "Favorit tidak tersimpan"; }
   }
