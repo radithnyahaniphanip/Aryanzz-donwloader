@@ -1,5 +1,5 @@
 const CACHE="aryanzz-build-__ARYANZZ_VERSION__";
-const SHELL=["/auth-gate.css?v=94.2","/auth-gate.js?v=94.4","/theme-studio.css?v=94.1","/theme-studio.js?v=94.1","/speed-test.js?v=94.6","/?v=__ARYANZZ_VERSION__","/v89.css?v=93.2","/manifest.webmanifest?v=__ARYANZZ_VERSION__","/v674.css?v=94.25.0","/v674.js?v=94.25.0","/v677.css?v=85.3","/v677.js?v=67.7","/v680.css?v=71.0","/v680.js?v=71.0","/advanced.js?v=92.5","/v15.js?v=59.5","/v15.css?v=59.5","/v25.css?v=94.0","/v25.js?v=94.0","/owner.css?v=94.0","/brand-refresh.css?v=82.1","/owner.js?v=94.0","/downloader.css?v=88.3","/downloader.js?v=94.25.0","/ffmpeg-worker-bootstrap.js?v=92.2","/v59.css?v=59.5","/v59.js?v=59.5","/editor-pro.css?v=65.0","/editor.js?v=65.0","/music-recognition.css?v=71.0","/music-recognition.js?v=71.0","/v690.css?v=71.0","/audio-studio.css?v=92.0","/audio-studio.js?v=92.5","/media-studio.css?v=92.0","/media-studio.js?v=92.0","/download-queue.css?v=92.0","/download-queue.js?v=92.0","/image-studio.css?v=81.4","/image-studio.js?v=81.4","/preview-fix.css?v=1.1","/search-session-fix.css?v=94.12.2","/link-bypass.css?v=94.0","/link-bypass.js?v=94.0"];
+const SHELL=["/auth-gate.css?v=94.2","/auth-gate.js?v=94.4","/update-manager.js?v=__ARYANZZ_VERSION__","/favicon.svg?v=__ARYANZZ_VERSION__","/theme-studio.css?v=94.1","/theme-studio.js?v=94.1","/speed-test.js?v=94.6","/?v=__ARYANZZ_VERSION__","/v89.css?v=93.2","/manifest.webmanifest?v=__ARYANZZ_VERSION__","/v674.css?v=94.25.0","/v674.js?v=94.25.0","/v677.css?v=85.3","/v677.js?v=67.7","/v680.css?v=71.0","/v680.js?v=71.0","/advanced.js?v=92.5","/v15.js?v=59.5","/v15.css?v=59.5","/v25.css?v=94.0","/v25.js?v=94.0","/owner.css?v=94.0","/brand-refresh.css?v=82.1","/owner.js?v=94.0","/downloader.css?v=88.3","/downloader.js?v=94.25.0","/ffmpeg-worker-bootstrap.js?v=92.2","/v59.css?v=59.5","/v59.js?v=59.5","/editor-pro.css?v=65.0","/editor.js?v=65.0","/music-recognition.css?v=71.0","/music-recognition.js?v=71.0","/v690.css?v=71.0","/audio-studio.css?v=92.0","/audio-studio.js?v=92.5","/media-studio.css?v=92.0","/media-studio.js?v=92.0","/download-queue.css?v=92.0","/download-queue.js?v=92.0","/image-studio.css?v=81.4","/image-studio.js?v=81.4","/preview-fix.css?v=1.1","/search-session-fix.css?v=94.12.2","/link-bypass.css?v=94.0","/link-bypass.js?v=94.0"];
 async function browserMediaDownload(request){
   const incoming=new URL(request.url),raw=incoming.searchParams.get("url")||"",instance=incoming.searchParams.get("instance")||"",ext=String(incoming.searchParams.get("ext")||"mp4").toLowerCase(),title=String(incoming.searchParams.get("title")||"aryanzz-media");
   const validationUrl=new URL("/api/youtube/hybrid/validate",self.location.origin);
@@ -45,4 +45,19 @@ async function browserMediaDownload(request){
 }
 self.addEventListener("install",e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting())));
 self.addEventListener("activate",e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
-self.addEventListener("fetch",e=>{if(e.request.method!=="GET")return;const u=new URL(e.request.url);if(u.origin!==location.origin)return;if(u.pathname==="/api/youtube/hybrid/browser-file"){e.respondWith(browserMediaDownload(e.request));return;}if(u.pathname.startsWith("/api/"))return;e.respondWith(fetch(e.request).then(r=>{if(r.ok){const cp=r.clone();e.waitUntil(caches.open(CACHE).then(c=>c.put(e.request,cp)))}return r}).catch(()=>caches.match(e.request).then(r=>r||(/navigate/.test(e.request.mode)?caches.match("/?v=__ARYANZZ_VERSION__"):Response.error()))))});
+self.addEventListener("fetch",e=>{
+ if(e.request.method!=="GET")return;
+ const u=new URL(e.request.url);
+ if(u.origin!==location.origin)return;
+ if(u.pathname==="/api/youtube/hybrid/browser-file"){e.respondWith(browserMediaDownload(e.request));return;}
+ if(u.pathname.startsWith("/api/"))return;
+ const critical=e.request.mode==="navigate"||["/","/index.html","/sw.js","/release.json","/manifest.webmanifest"].includes(u.pathname);
+ if(critical){
+  e.respondWith(fetch(new Request(e.request,{cache:"no-store"})).catch(()=>caches.match(e.request).then(r=>r||(/navigate/.test(e.request.mode)?caches.match("/?v=__ARYANZZ_VERSION__"):Response.error()))));
+  return;
+ }
+ e.respondWith(fetch(e.request).then(r=>{
+  if(r.ok&&r.headers.get("cache-control")!=="no-store"){const cp=r.clone();e.waitUntil(caches.open(CACHE).then(c=>c.put(e.request,cp)))}
+  return r;
+ }).catch(()=>caches.match(e.request).then(r=>r||Response.error())));
+});

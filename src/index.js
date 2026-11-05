@@ -2625,7 +2625,8 @@ const workerHandler = {async fetch(request,env){
   const url=new URL(request.url);
   // Serve crawler files explicitly so Google receives deterministic XML/plain-text MIME types.
   if(url.pathname==="/sitemap.xml"&&request.method==="GET"){
-    const xml='<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n  <url>\n    <loc>https://aryanzz-donwloader.radithnyahaniphanip.workers.dev/</loc>\n    <lastmod>2026-11-03</lastmod>\n  </url>\n</urlset>\n';
+    const lastmod=new Date().toISOString().slice(0,10);
+    const xml='<?xml version="1.0" encoding="UTF-8"?>\\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\\n  <url>\\n    <loc>https://aryanzz-donwloader.radithnyahaniphanip.workers.dev/</loc>\\n    <lastmod>'+lastmod+'</lastmod>\\n  </url>\\n</urlset>\\n';
     return new Response(xml,{status:200,headers:{"content-type":"application/xml; charset=utf-8","cache-control":"public, max-age=3600","x-content-type-options":"nosniff"}});
   }
   if(url.pathname==="/sitemap.txt"&&request.method==="GET"){
@@ -2680,7 +2681,15 @@ const workerHandler = {async fetch(request,env){
   if(url.pathname==="/api/download"&&request.method==="POST"){const proxied=await proxyPlatform(request,env,"/api/download");if(proxied)return proxied;return download(request);}
   if(url.pathname.startsWith("/api/"))return json({error:"Endpoint tidak ditemukan."},404);
 
-  return env.ASSETS.fetch(request);
+  const assetResponse=await env.ASSETS.fetch(request);
+  if(request.method==="GET"&&["/","/index.html","/sw.js","/release.json","/manifest.webmanifest","/robots.txt","/sitemap.xml"].includes(url.pathname)){
+    const headers=new Headers(assetResponse.headers);
+    headers.set("cache-control","no-store, no-cache, must-revalidate, max-age=0");
+    headers.set("pragma","no-cache");
+    headers.set("expires","0");
+    return new Response(assetResponse.body,{status:assetResponse.status,statusText:assetResponse.statusText,headers});
+  }
+  return assetResponse;
 }};
 
 const SECURITY_BUCKETS=new Map();
