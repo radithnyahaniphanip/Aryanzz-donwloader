@@ -27,7 +27,7 @@ function hasLegacyProfileLayout(){
  const title=document.getElementById("ownerDeveloperBadge");
  const titleStack=title?.parentElement?.classList.contains("owner-identity-titles");
  const creator=title?.parentElement?.querySelector(".owner-creator-title");
- return !title||!!(profile&&profile.querySelector(".ary-theme-studio,[data-theme-studio],.v25-backup-card,#exportData,#importData,#restoreAutoBackup,#ownerLinkEditor,#securityCenter,#profileDeveloperBadge,[data-panel="colorStudio"],[data-panel="mediaStudio"]"))||!!(title&&!titleStack)||!!(title&&!creator);
+ return !title||!!(profile&&profile.querySelector(".ary-theme-studio,[data-theme-studio],.v25-backup-card,#exportData,#importData,#restoreAutoBackup,#ownerLinkEditor,#securityCenter,#profileDeveloperBadge,[data-panel=colorStudio],[data-panel=mediaStudio]"))||!!(title&&!titleStack)||!!(title&&!creator);
 }
 function showNotice(version){
  if(document.getElementById("aryanzzUpdateNotice"))return;
