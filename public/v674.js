@@ -278,21 +278,7 @@ const data=await response.json().catch(()=>({}));
 if(!response.ok||data.ok===false)throw new Error(data.error||"Pencarian "+target.name+" belum tersedia.");
 let mediaItems=[],imageItems=[],unavailable=Number(data.unavailableCount)||0;
 if(kind==="image"){
-const aliases={tiktoklite:"tiktok",instagramlite:"instagram",facebooklite:"facebook"};
-const expected=aliases[selected]||selected;
-const domains={
-pinterest:["pinterest.com","pin.it"],tiktok:["tiktok.com","vm.tiktok.com","vt.tiktok.com"],
-instagram:["instagram.com","instagr.am"],facebook:["facebook.com","fb.watch"],x:["x.com","twitter.com"],
-reddit:["reddit.com","redd.it"],threads:["threads.net"],snackvideo:["snackvideo.com"],capcut:["capcut.com"],
-youtube:["youtube.com","youtu.be"],vimeo:["vimeo.com"],soundcloud:["soundcloud.com"],snapchat:["snapchat.com"],
-idnapp:["idntimes.com"],linkedin:["linkedin.com"],wechat:["wechat.com","weixin.qq.com"],kakaotalk:["kakao.com"]
-};
-imageItems=(data.results||[]).flatMap(item=>item.images||[]).filter(item=>{
-const host=(()=>{try{return new URL(item.sourceUrl).hostname.toLowerCase()}catch{return ""}})();
-const sourceKey=aliases[String(item.platform||"").toLowerCase()]||String(item.platform||"").toLowerCase();
-const allowedDomains=expected==="all"?Object.values(domains).flat():domains[expected]||[];
-    return (expected==="all"?!!domains[sourceKey]:sourceKey===expected)&&allowedDomains.some(domain=>host===domain||host.endsWith("."+domain));
-});
+imageItems=(data.results||[]).flatMap(group=>(Array.isArray(group?.images)?group.images:[]).map(item=>({...item,platform:item.platform||group.platform,sourceUrl:item.sourceUrl||group.sourceUrl}))).filter(item=>searchResultBelongsTo({url:item.sourceUrl},selected));
 if(!imageItems.length)throw new Error("Belum ada gambar yang cocok dari "+target.name+". Tidak ada hasil dari platform lain yang akan ditampilkan.");
 }else{
 mediaItems=(Array.isArray(data.results)?data.results:[]).filter(item=>searchResultBelongsTo(item,selected));
