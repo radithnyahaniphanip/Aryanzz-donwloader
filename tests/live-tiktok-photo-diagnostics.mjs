@@ -57,6 +57,8 @@ await probe("post-item-list",postList.href,{"referer":canonicalUrl});
 await probe("oembed", "https://www.tiktok.com/oembed?url="+encodeURIComponent(canonicalUrl));
 await probe("photo-page",canonicalUrl,{"referer":"https://www.tiktok.com/"});
 await probe("embed-v2","https://www.tiktok.com/embed/v2/"+itemId);
+await probe("jina-embed-v2-http","https://r.jina.ai/http://www.tiktok.com/embed/v2/"+itemId);
+await probe("jina-embed-v2-https","https://r.jina.ai/https://www.tiktok.com/embed/v2/"+itemId);
 await probe("official-player","https://www.tiktok.com/player/v1/"+itemId+"?controls=1&timestamp=1&description=1&music_info=1&rel=0");
 await probe("short-link",shortUrl);
 console.log("[TIKTOK-PHOTO-RESOLUTION] "+JSON.stringify({shortUrl,canonicalUrl,itemId,infoStatus:infoResponse.status,providerName:resolvedInfo.providerName||null,embedUrl:resolvedInfo.embedUrl||null}));
