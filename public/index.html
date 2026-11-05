@@ -955,6 +955,12 @@ function normalizePersonalLayout(){
     profilePanel.querySelectorAll('.v25-profile-card').forEach(card=>{
       if(/Tema\s*(?:&|dan)\s*Pengalaman|Backup\s*(?:&|dan)\s*Pemulihan|Media Studio Pro|Atur tautan sosial|Security Center/i.test(card.textContent||''))card.remove();
     });
+    profilePanel.querySelectorAll('button,a,[role="button"]').forEach(node=>{
+      if(/Tema\s*(?:&|dan)\s*Pengalaman|Backup\s*(?:&|dan)\s*Pemulihan|Media Studio Pro|Atur tautan sosial|Security Center/i.test(node.textContent||'')){
+        const card=node.closest('.v25-profile-card,section');
+        if(card&&card!==profilePanel)card.remove();else node.remove();
+      }
+    });
   }
   if(libraryPanel&&mediaStudio&&libraryPanel.contains(mediaStudio)&&toolsArea)toolsArea.insertBefore(mediaStudio,libraryPanel);
 }
