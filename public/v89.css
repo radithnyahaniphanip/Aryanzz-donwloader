@@ -264,3 +264,45 @@ html,body{scroll-behavior:auto!important}
   50%{background-position:100% 50%;filter:drop-shadow(0 0 16px rgba(160,128,255,.42)) drop-shadow(0 5px 20px rgba(0,0,0,.3))}
 }
 @media(prefers-reduced-motion:reduce){.v89-welcome h1 span{animation:none!important;background-position:50% 50%}}
+
+
+/* V95.1.1658 — deterministic panel visibility and no menu-entry motion */
+html,body{scroll-behavior:auto!important}
+#toolsArea>.panel[hidden],
+#toolsArea>.panel:not(.active){display:none!important;visibility:hidden!important}
+#toolsArea>.panel.active{display:block!important;visibility:visible!important;animation:none!important;transition:none!important;transform:none!important;opacity:1!important}
+#toolsArea>.panel.active.v677-enter,
+#toolsArea>.panel.active.v677-panel{animation:none!important;transition:none!important;transform:none!important}
+#toolsArea>.panel.active .v677-reveal,
+#toolsArea>.panel.active .v677-visible,
+#toolsArea>.panel.active .v25-reveal,
+#toolsArea>.panel.active .v25-visible{
+  opacity:1!important;visibility:visible!important;transform:none!important;
+  animation:none!important;transition:none!important;
+}
+#allTools .tool:not([hidden]),
+.v677-panel.v677-enter{animation:none!important;transition:none!important;transform:none!important}
+#allTools .tool,
+#allTools .tool:hover,
+#allTools .tool:active,
+.nav button,
+.nav button:hover,
+.nav button:active{transition:none!important;transform:none!important}
+#profile .ary-theme-studio,
+#profile #colorStudio,
+#profile [data-theme-studio]{display:none!important}
+
+/* Motion is opt-in; navigation remains instant even when decorative motion is enabled. */
+body:not(.ary-motion-enabled) *,
+body:not(.ary-motion-enabled) *::before,
+body:not(.ary-motion-enabled) *::after{
+  animation:none!important;
+  transition:none!important;
+  scroll-behavior:auto!important;
+}
+body:not(.ary-motion-enabled) .v89-welcome h1 span{
+  animation:aryanzzMythicTitle 5.8s ease-in-out infinite!important;
+}
+@media(prefers-reduced-motion:reduce){
+  body *,body *::before,body *::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+}
