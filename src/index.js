@@ -1147,25 +1147,27 @@ function decodeTikTokPageValue(value){
 }
 function tikTokTagAttributes(tag){
   const attrs={};
-  for(const match of String(tag||"").matchAll(/([a-zA-Z_:][-a-zA-Z0-9_:]*)\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s>]+))/g))attrs[match[1].toLowerCase()]=match[2]??match[3]??match[4]??"";
+  for(const match of String(tag||"").matchAll(/([a-zA-Z_:][-a-zA-Z0-9_:]*)\s*=\s*("([^"]*)"|'([^']*)'|([^\s>]+))/g)){
+    attrs[match[1].toLowerCase()]=match[3]??match[4]??match[5]??"";
+  }
   return attrs;
 }
 function extractTikTokCanonicalUrl(html,pageUrl){
   const source=decodeTikTokPageValue(html),candidates=[];
   const add=raw=>{
     let url;try{url=new URL(decodeTikTokPageValue(raw).replace(/^["']|["']$/g,""),pageUrl)}catch{return}
-    if(url.protocol!=="https:"||platformIdForUrl(url.href)!=="tiktok"||/^(?:vt|vm)\\.tiktok\\.com$/i.test(url.hostname))return;
-    if(!(/^\\/@[^/]+\\/video\\/\\d{8,}/i.test(url.pathname)||/^\\/t\\/[^/]+/i.test(url.pathname)))return;
+    if(url.protocol!=="https:"||platformIdForUrl(url.href)!=="tiktok"||/^(?:vt|vm)\.tiktok\.com$/i.test(url.hostname))return;
+    if(!(/^\/@[^/]+\/video\/\d{8,}/i.test(url.pathname)||/^\/t\/[^/]+/i.test(url.pathname)))return;
     url.hash="";
-    if(/^\\/@[^/]+\\/video\\/\\d+/i.test(url.pathname))url.search="";
+    if(/^\/@[^/]+\/video\/\d+/i.test(url.pathname))url.search="";
     if(!candidates.includes(url.href))candidates.push(url.href);
   };
-  for(const match of source.matchAll(/<(?:link|meta)\\b[^>]*>/gi)){
+  for(const match of source.matchAll(/<(?:link|meta)\b[^>]*>/gi)){
     const attrs=tikTokTagAttributes(match[0]);
-    if(match[0].slice(0,5).toLowerCase()==="<link"&&String(attrs.rel||"").toLowerCase().split(/\\s+/).includes("canonical"))add(attrs.href);
+    if(match[0].slice(0,5).toLowerCase()==="<link"&&String(attrs.rel||"").toLowerCase().split(/\s+/).includes("canonical"))add(attrs.href);
     if(match[0].slice(0,5).toLowerCase()==="<meta"&&["og:url","twitter:url","al:ios:url"].includes(String(attrs.property||attrs.name||"").toLowerCase()))add(attrs.content);
   }
-  for(const match of source.matchAll(/"(?:canonicalUrl|webVideoUrl|web_video_url|shareUrl|share_url)"\\s*:\\s*"([^"]{12,1200})"/gi))add(match[1]);
+  for(const match of source.matchAll(/"(?:canonicalUrl|webVideoUrl|web_video_url|shareUrl|share_url)"\s*:\s*"([^"]{12,1200})"/gi))add(match[1]);
   add(pageUrl);
   return candidates[0]||null;
 }
@@ -1189,7 +1191,7 @@ function extractTikTokPublicPageInfo(html,pageUrl,rawUrl,requestUrl){
     else if(!video&&directFields.some(key=>value[key]!==undefined))records.push({item:value,video:value});
     for(const child of Object.values(value))if(child&&typeof child==="object")walk(child,depth+1);
   };
-  for(const match of source.matchAll(/<script\\b([^>]*)>([\\s\\S]*?)<\\/script>/gi)){
+  for(const match of source.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)){
     const attrs=tikTokTagAttributes("<script "+(match[1]||"")+">");
     const body=String(match[2]||"").trim();
     if(!body||body.length>3000000)continue;
@@ -1206,7 +1208,7 @@ function extractTikTokPublicPageInfo(html,pageUrl,rawUrl,requestUrl){
       const value=decodeTikTokPageValue(candidate);
       const safe=safePublicMediaUrl(value);if(!safe||seen.has(safe.href))continue;
       seen.add(safe.href);
-      const pathExt=(safe.pathname.match(/\\.(mp4|webm|mov|m4v)$/i)||[])[1]?.toLowerCase()||"mp4";
+      const pathExt=(safe.pathname.match(/\.(mp4|webm|mov|m4v)$/i)||[])[1]?.toLowerCase()||"mp4";
       const ext=pathExt==="m4v"?"mp4":pathExt;
       const mime=ext==="webm"?"video/webm":ext==="mov"?"video/quicktime":"video/mp4";
       media.push({type:"video",kind:"video",label:"TikTok "+label,url:safe.href,ext,mimeType:mime,height:Number(height)||0});
@@ -1236,7 +1238,7 @@ function extractTikTokPublicPageInfo(html,pageUrl,rawUrl,requestUrl){
     }
   }
   const meta={};
-  for(const match of source.matchAll(/<(?:meta)\\b[^>]*>/gi)){
+  for(const match of source.matchAll(/<meta\b[^>]*>/gi)){
     const attrs=tikTokTagAttributes(match[0]);
     const key=String(attrs.property||attrs.name||"").toLowerCase();
     if(key&&attrs.content)meta[key]=attrs.content;
@@ -1264,7 +1266,7 @@ async function resolveSocialShortLink(rawUrl,key,timeoutMs=11000){
   const canonical=canonicalSocialPostUrl(rawUrl,key);
   let input;try{input=new URL(canonical)}catch{return canonical}
   const host=input.hostname.toLowerCase();
-  const shortLink=(key==="tiktok"&&/^(?:vt|vm)\\.tiktok\\.com$/.test(host))
+  const shortLink=(key==="tiktok"&&/^(?:vt|vm)\.tiktok\.com$/.test(host))
     ||(key==="instagram"&&host==="instagr.am")
     ||(key==="facebook"&&host==="fb.watch")
     ||(key==="pinterest"&&host==="pin.it");
