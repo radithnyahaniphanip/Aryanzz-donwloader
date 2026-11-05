@@ -1676,40 +1676,63 @@ function extractTikTokPhotoProxyImages(text){
   }
   return images;
 }
-async function fetchTikTokPhotoEmbedProxy(canonicalUrl,timeoutMs=9000){
+async function fetchTikTokPhotoEmbedProxy(canonicalUrl,timeoutMs=14000){
   const itemId=extractTikTokItemId(canonicalUrl);
   if(!itemId)throw new Error("ID Photo Mode tidak tersedia untuk jalur proxy.");
   const target="https://www.tiktok.com/embed/v2/"+itemId;
   const encoded=encodeURIComponent(target);
-  const endpoints=[
+  const headers={"accept":"text/html,text/plain,*/*","x-return-format":"html","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"};
+  const jina=[
+    {name:"Jina Reader HTML",url:"https://r.jina.ai/http://www.tiktok.com/embed/v2/"+itemId,headers},
+    {name:"Jina Reader HTTPS",url:"https://r.jina.ai/https://www.tiktok.com/embed/v2/"+itemId,headers}
+  ];
+  const fallbacks=[
     {name:"AllOrigins",url:"https://api.allorigins.win/raw?url="+encoded,headers:{accept:"text/html,*/*"}},
     {name:"CodeTabs",url:"https://api.codetabs.com/v1/proxy?quest="+encoded,headers:{accept:"text/html,*/*"}},
-    {name:"CorsProxy",url:"https://corsproxy.io/?url="+encoded,headers:{accept:"text/html,*/*"}},
-    {name:"Jina Reader",url:"https://r.jina.ai/http://www.tiktok.com/embed/v2/"+itemId,headers:{accept:"text/html,text/plain,*/*","x-return-format":"html","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"}}
+    {name:"CorsProxy",url:"https://corsproxy.io/?url="+encoded,headers:{accept:"text/html,*/*"}}
   ];
-  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),timeoutMs);
-  try{
-    const attempts=endpoints.map(async endpoint=>{
-      const response=await fetch(endpoint.url,{headers:endpoint.headers,redirect:"follow",cache:"no-store",signal:controller.signal});
-      if(!response.ok){await response.body?.cancel().catch(()=>{});throw new Error(endpoint.name+" HTTP "+response.status);}
-      const body=(await response.text()).slice(0,5000000);
-      const parsed=extractSocialImageCandidates(body,target,"tiktok").filter(item=>{try{return /photomode/i.test(new URL(item.url).pathname)}catch{return false}});
-      const discovered=extractTikTokPhotoProxyImages(body);
-      const seen=new Set(),images=[];
-      for(const item of [...parsed,...discovered]){
-        const safe=safePublicMediaUrl(item.url);if(!safe||seen.has(safe.href))continue;
-        seen.add(safe.href);images.push({...item,url:safe.href,type:"image"});
-        if(images.length>=35)break;
+  const deadline=Date.now()+Math.max(5000,timeoutMs);
+  const readEndpoint=async endpoint=>{
+    const remaining=deadline-Date.now();
+    if(remaining<=0)throw new Error("Batas waktu provider habis.");
+    const response=await fetch(endpoint.url,{headers:endpoint.headers,redirect:"follow",cache:"no-store",signal:AbortSignal.timeout(Math.min(remaining,8000))});
+    if(!response.ok){await response.body?.cancel().catch(()=>{});throw new Error(endpoint.name+" HTTP "+response.status);}
+    const body=(await response.text()).slice(0,5000000);
+    const parsed=extractSocialImageCandidates(body,target,"tiktok").filter(item=>{try{return /photomode/i.test(new URL(item.url).pathname)}catch{return false}});
+    const discovered=extractTikTokPhotoProxyImages(body);
+    const seen=new Set(),images=[];
+    for(const item of [...parsed,...discovered]){
+      const safe=safePublicMediaUrl(item.url);if(!safe||seen.has(safe.href))continue;
+      seen.add(safe.href);images.push({...item,url:safe.href,type:"image"});
+      if(images.length>=35)break;
+    }
+    if(!images.length)throw new Error(endpoint.name+" tidak menemukan URL galeri Photo Mode.");
+    return {title:"TikTok Photo Mode",images,source:endpoint.name};
+  };
+  const errors=[];
+  // Jina is the only public route observed returning the full imagePostInfo gallery.
+  for(const endpoint of jina){
+    try{return await readEndpoint(endpoint)}
+    catch(error){
+      const message=String(error?.message||error);
+      errors.push(message.slice(0,100));
+      if(/HTTP 429/.test(message)&&Date.now()<deadline-900){
+        await new Promise(resolve=>setTimeout(resolve,650));
+        try{return await readEndpoint(endpoint)}
+        catch(retryError){errors.push(String(retryError?.message||retryError).slice(0,100))}
       }
-      if(!images.length)throw new Error(endpoint.name+" tidak menemukan URL galeri Photo Mode.");
-      return {title:"TikTok Photo Mode",images,source:endpoint.name};
-    });
+    }
+  }
+  const remaining=deadline-Date.now();
+  if(remaining>500){
+    const attempts=fallbacks.map(readEndpoint);
     try{return await Promise.any(attempts)}
     catch(error){
       const details=Array.isArray(error?.errors)?error.errors.map(item=>String(item?.message||item).slice(0,90)).join(" | "):String(error?.message||error);
-      throw new Error("Jalur proxy publik tidak menemukan foto asli. "+details.slice(0,220));
+      errors.push(details);
     }
-  }finally{clearTimeout(timer);controller.abort();}
+  }
+  throw new Error("Galeri foto TikTok belum bisa diambil dari provider publik. "+errors.join(" | ").slice(0,260));
 }
 async function tikTokItemDetailFallback(rawUrl,requestUrl,timeoutMs=8000){
   const videoId=extractTikTokItemId(rawUrl);
@@ -1980,7 +2003,7 @@ async function resolveSocialImagePost(rawUrl,requestUrl,options={}){
       }
       if((!page||!page.images?.length)&&isTikTokPhotoRoute){
         try{
-          const proxyData=await fetchTikTokPhotoEmbedProxy(canonicalUrl,Number(options.proxyTimeoutMs)||10000);
+          const proxyData=await fetchTikTokPhotoEmbedProxy(canonicalUrl,Number(options.proxyTimeoutMs)||13000);
           providerTitle=providerTitle||proxyData.title;
           page={...(page||{url:canonicalUrl,html:""}),title:proxyData.title,images:proxyData.images};
           if(options.diagnostics)options.diagnostics.value={...(options.diagnostics.value||{}),proxy:{ok:true,source:proxyData.source,imageCount:proxyData.images.length}};

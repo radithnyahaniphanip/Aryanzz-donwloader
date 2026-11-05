@@ -211,7 +211,7 @@ body{background-color:var(--ary-app-bg)}
 @media(prefers-reduced-motion:reduce){#toolsArea>.panel.active{animation:none}html{scroll-behavior:auto}}
 </style><link rel="stylesheet" href="/link-bypass.css?v=94.0"><link rel="stylesheet" href="/theme-studio.css?v=94.1">
 <link rel="stylesheet" href="/auth-gate.css?v=__ARYANZZ_VERSION__">
-</head><body>
+</head><body class="ary-reduced-motion" data-motion="off">
 <div class="wrap">
 <header class="top v674-top"><a class="brand v674-brand" href="/" aria-label="ARYANZZ Home"><span class="logo v674-logo" aria-hidden="true"><svg width="30" height="30" viewBox="0 0 64 64" focusable="false"><defs><linearGradient id="aryanzzHeaderMark" x1="0" y1="1" x2="1" y2="0"><stop stop-color="#35d9df"/><stop offset=".5" stop-color="#5795ff"/><stop offset="1" stop-color="#b078ff"/></linearGradient></defs><path d="M7 53 24 13q2-5 8-5t8 5l17 40H43L32 26 21 53z" fill="url(#aryanzzHeaderMark)"/><path d="M23 39h18l-4-9H27z" fill="#fff"/><path d="m49 5 3 8 8 3-8 3-3 8-3-8-8-3 8-3z" fill="#fff"/></svg></span><span>ARYANZZ<small>RUANG KREATIF</small></span></a><div class="v674-top-actions"><span class="pill v674-version"><i></i> V__ARYANZZ_VERSION__ · GRATIS</span><span class="v674-security-indicator" id="securityStatusIndicator" role="status" aria-live="polite" title="Memeriksa perlindungan website"><i></i><span>Memeriksa keamanan</span></span></div></header>
 <div class="v89-welcome" id="v89Welcome"><div class="v89-welcome-copy"><span class="v89-welcome-kicker">ARYANZZ · RUANG KREATIF</span><h1>Semua berawal<br><span>dari satu tautan</span></h1><p>Satu ruang terpadu untuk mengunduh, mencari, mengolah, dan mengelola media.</p></div><div class="v89-welcome-mark" aria-hidden="true">✦</div></div>
@@ -827,7 +827,7 @@ body{background-color:var(--ary-app-bg)}
     <label><span>Warna aksen</span><input id="aryThemeAccent" type="color" value="#8b5cf6"></label><label><span>Latar website</span><input id="aryThemeBackground" type="color" value="#080d1c"></label><label><span>Warna panel & alat</span><input id="aryThemeSurface" type="color" value="#111c33"></label>
   </div>
   <div class="ary-theme-preview" id="aryThemePreview"><span>PREVIEW TAMPILAN</span><strong>ARYANZZ</strong><small>Semua ruang, satu identitas visual.</small><button type="button" tabindex="-1">Tombol contoh</button></div>
-  <div class="ary-theme-motion"><div><b>Animasi antarmuka</b><small>Efek gerak dan transisi untuk pengalaman ARYANZZ.</small></div><label class="ary-motion-switch"><input id="aryMotionToggle" type="checkbox" checked><span></span><b id="aryMotionState">Aktif</b></label></div>
+  <div class="ary-theme-motion"><div><b>Animasi antarmuka</b><small>Efek gerak dan transisi untuk pengalaman ARYANZZ.</small></div><label class="ary-motion-switch"><input id="aryMotionToggle" type="checkbox"><span></span><b id="aryMotionState">Aktif</b></label></div>
   <div class="ary-theme-actions"><button class="primary" id="aryThemeApply" type="button">Terapkan ke seluruh website</button><button class="tag" id="aryThemeReset" type="button">Kembalikan warna awal</button></div><p class="ary-theme-status" id="aryThemeStatus" role="status" aria-live="polite">Pilih preset atau atur warna sendiri.</p>
 </div>
 <div class="panel card v25-profile-panel" id="profile">
@@ -928,6 +928,10 @@ body{background-color:var(--ary-app-bg)}
 const $=id=>document.getElementById(id);$('year').textContent=new Date().getFullYear();
 function panel(id){
   const home=$('home'),toolsArea=$('toolsArea'),viewHeader=$('appViewHeader'),viewTitle=$('appViewTitle');
+  const profilePanel=$('profile'),colorPanel=$('colorStudio');
+  // Keep Color Studio in Tools even if an older script or cached DOM moved it.
+  if(toolsArea&&profilePanel&&colorPanel)toolsArea.insertBefore(colorPanel,profilePanel);
+  if(profilePanel)profilePanel.querySelectorAll('.ary-theme-studio,[data-theme-studio]').forEach(node=>node.remove());
   document.body.dataset.view=id?(id==='allTools'?'tools':id):'home';
   if(home)home.hidden=!!id;
   if(toolsArea)toolsArea.classList.toggle('v8814-view-active',!!id);
@@ -935,7 +939,9 @@ function panel(id){
     const active=p.id===id;
     p.classList.toggle('active',active);
     p.hidden=!active;
-    p.classList.remove('v677-enter');
+    p.inert=!active;
+    p.setAttribute('aria-hidden',active?'false':'true');
+    p.classList.remove('v677-enter','v677-reveal','v25-reveal');
   });
   const navKey=!id?'home':id==='history'?'history':id==='owner'?'owner':id==='profile'?'profile':'allTools';
   document.querySelectorAll('[data-nav]').forEach(b=>{const active=b.dataset.nav===navKey;b.classList.toggle('active',active);b.setAttribute('aria-current',active?'page':'false');});
