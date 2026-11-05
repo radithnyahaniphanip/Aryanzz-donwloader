@@ -258,7 +258,7 @@ body[data-view="owner"] .nav button[data-nav="owner"]{font-weight:1000}
 
 
 /* OWNER V2 — creator landing page with a new visual hierarchy */
-#owner.ary-owner-v2{display:block;width:100%;max-width:1040px;margin:0 auto;padding:clamp(12px,2.5vw,26px)!important;overflow:visible;color:#edf5ff;background:transparent!important;border:0!important;box-shadow:none!important}
+#owner.ary-owner-v2{width:100%;max-width:1040px;margin:0 auto;padding:clamp(12px,2.5vw,26px)!important;overflow:visible;color:#edf5ff;background:transparent!important;border:0!important;box-shadow:none!important}
 #owner.ary-owner-v2 .ary-owner2-shell{display:grid;gap:18px;max-width:100%;margin:0 auto}
 #owner.ary-owner-v2 .ary-owner2-topbar{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:2px 1px 14px;border-bottom:1px solid rgba(121,164,207,.16)}
 #owner.ary-owner-v2 .ary-owner2-brand{display:flex;align-items:center;gap:10px}
