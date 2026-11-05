@@ -1500,24 +1500,40 @@ function extractTikTokPhotoProxyImages(text){
   }
   return images;
 }
-async function fetchTikTokPhotoEmbedProxy(canonicalUrl,timeoutMs=10000){
+async function fetchTikTokPhotoEmbedProxy(canonicalUrl,timeoutMs=9000){
   const itemId=extractTikTokItemId(canonicalUrl);
   if(!itemId)throw new Error("ID Photo Mode tidak tersedia untuk jalur proxy.");
   const target="https://www.tiktok.com/embed/v2/"+itemId;
-  const endpoints=["https://r.jina.ai/http://www.tiktok.com/embed/v2/"+itemId,"https://r.jina.ai/https://www.tiktok.com/embed/v2/"+itemId];
-  const errors=[];
-  for(const endpoint of endpoints){
-    try{
-      const response=await fetch(endpoint,{headers:{accept:"text/html,text/plain,*/*","x-return-format":"html","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"},redirect:"follow",cache:"no-store",signal:AbortSignal.timeout(timeoutMs)});
-      if(!response.ok){errors.push("proxy HTTP "+response.status);await response.body?.cancel().catch(()=>{});continue;}
+  const encoded=encodeURIComponent(target);
+  const endpoints=[
+    {name:"AllOrigins",url:"https://api.allorigins.win/raw?url="+encoded,headers:{accept:"text/html,*/*"}},
+    {name:"CodeTabs",url:"https://api.codetabs.com/v1/proxy?quest="+encoded,headers:{accept:"text/html,*/*"}},
+    {name:"CorsProxy",url:"https://corsproxy.io/?url="+encoded,headers:{accept:"text/html,*/*"}},
+    {name:"Jina Reader",url:"https://r.jina.ai/http://www.tiktok.com/embed/v2/"+itemId,headers:{accept:"text/html,text/plain,*/*","x-return-format":"html","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"}}
+  ];
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),timeoutMs);
+  try{
+    const attempts=endpoints.map(async endpoint=>{
+      const response=await fetch(endpoint.url,{headers:endpoint.headers,redirect:"follow",cache:"no-store",signal:controller.signal});
+      if(!response.ok){await response.body?.cancel().catch(()=>{});throw new Error(endpoint.name+" HTTP "+response.status);}
       const body=(await response.text()).slice(0,5000000);
-      let images=extractSocialImageCandidates(body,target,"tiktok");
-      if(!images.length)images=extractTikTokPhotoProxyImages(body);
-      if(images.length)return {title:"TikTok Photo Mode",images,source:"Jina public reader proxy"};
-      errors.push("proxy berhasil dibuka tetapi tidak memuat URL galeri foto");
-    }catch(error){errors.push(String(error?.message||error).slice(0,120));}
-  }
-  throw new Error("Jalur proxy embed TikTok tidak menemukan foto asli. "+errors.join(" | ").slice(0,180));
+      const parsed=extractSocialImageCandidates(body,target,"tiktok").filter(item=>{try{return /photomode/i.test(new URL(item.url).pathname)}catch{return false}});
+      const discovered=extractTikTokPhotoProxyImages(body);
+      const seen=new Set(),images=[];
+      for(const item of [...parsed,...discovered]){
+        const safe=safePublicMediaUrl(item.url);if(!safe||seen.has(safe.href))continue;
+        seen.add(safe.href);images.push({...item,url:safe.href,type:"image"});
+        if(images.length>=35)break;
+      }
+      if(!images.length)throw new Error(endpoint.name+" tidak menemukan URL galeri Photo Mode.");
+      return {title:"TikTok Photo Mode",images,source:endpoint.name};
+    });
+    try{return await Promise.any(attempts)}
+    catch(error){
+      const details=Array.isArray(error?.errors)?error.errors.map(item=>String(item?.message||item).slice(0,90)).join(" | "):String(error?.message||error);
+      throw new Error("Jalur proxy publik tidak menemukan foto asli. "+details.slice(0,220));
+    }
+  }finally{clearTimeout(timer);controller.abort();}
 }
 async function tikTokItemDetailFallback(rawUrl,requestUrl,timeoutMs=8000){
   const videoId=extractTikTokItemId(rawUrl);
