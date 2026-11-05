@@ -1,19 +1,37 @@
 {
-  "name": "ARYANZZ Downloader — Pengunduh Video, Audio & Gambar",
+  "id": "/",
+  "name": "ARYANZZ — Ruang Kreatif Digital",
   "short_name": "ARYANZZ",
-  "start_url": "/",
+  "description": "Ruang kreatif digital untuk mencari, mempratinjau, mengunduh, dan mengelola media dari sumber publik yang didukung.",
+  "lang": "id-ID",
+  "start_url": "/?source=install",
   "scope": "/",
   "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
   "background_color": "#070b16",
   "theme_color": "#070b16",
-  "description": "Alat online untuk mengunduh dan mengelola video, audio, serta gambar dari tautan media yang didukung.",
+  "categories": [
+    "utilities",
+    "productivity",
+    "multimedia"
+  ],
   "version": "__ARYANZZ_VERSION__",
   "icons": [
     {
-      "src": "/favicon.svg?v=83.0",
-      "sizes": "any",
+      "src": "/favicon.svg?v=__ARYANZZ_VERSION__",
+      "sizes": "192x192",
       "type": "image/svg+xml",
       "purpose": "any"
+    },
+    {
+      "src": "/favicon.svg?v=__ARYANZZ_VERSION__",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
     }
   ]
 }
