@@ -1524,9 +1524,15 @@ function extractTikTokItemId(value){
 async function fetchTikTokPhotoImageData(rawUrl,timeoutMs=9000){
   const itemId=extractTikTokItemId(rawUrl);
   if(!itemId)throw new Error("ID postingan foto TikTok tidak ditemukan.");
+  const webHeaders={accept:"application/json,text/plain,*/*","accept-language":"en-US,en;q=0.9","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",referer:"https://www.tiktok.com/"};
+  const appHeaders={accept:"application/json,text/plain,*/*","accept-language":"en-US,en;q=0.9","user-agent":"com.zhiliaoapp.musically/350202 (Linux; U; Android 14; en_US; Pixel 7; Build/UP1A.231005.007; Cronet/TTNetVersion:6.0.0.0)",referer:"https://www.tiktok.com/"};
   const variants=[
-    {name:"item-detail",url:new URL("https://www.tiktok.com/api/item/detail/"),params:{itemId,aid:"1988",app_name:"tiktok_web",device_platform:"web_pc"}},
-    {name:"post-item-list",url:new URL("https://www.tiktok.com/api/post/item_list/"),params:{itemId,aid:"1988",app_name:"tiktok_web",device_platform:"web_pc",count:"1",cursor:"0"}}
+    {name:"item-detail",url:new URL("https://www.tiktok.com/api/item/detail/"),params:{itemId,aid:"1988",app_name:"tiktok_web",device_platform:"web_pc"},headers:webHeaders},
+    {name:"post-item-list",url:new URL("https://www.tiktok.com/api/post/item_list/"),params:{itemId,aid:"1988",app_name:"tiktok_web",device_platform:"web_pc",count:"1",cursor:"0"},headers:webHeaders},
+    {name:"tiktokv-aweme-detail-web-us",url:new URL("https://api16-normal-c-useast1a.tiktokv.com/aweme/v1/aweme/detail/"),params:{aweme_id:itemId,aid:"1988",app_name:"tiktok_web",device_platform:"webapp",version_code:"230400"},headers:webHeaders},
+    {name:"tiktokv-aweme-detail-web-alisg",url:new URL("https://api16-normal-c-alisg.tiktokv.com/aweme/v1/aweme/detail/"),params:{aweme_id:itemId,aid:"1988",app_name:"tiktok_web",device_platform:"webapp",version_code:"230400"},headers:webHeaders},
+    {name:"tiktokv-aweme-detail-app-us",url:new URL("https://api16-normal-c-useast1a.tiktokv.com/aweme/v1/aweme/detail/"),params:{aweme_id:itemId,aid:"1988",app_name:"musical_ly",device_platform:"android",version_code:"350202",channel:"googleplay",os_version:"14",device_type:"Pixel 7"},headers:appHeaders},
+    {name:"tiktokv-aweme-detail-app-alisg",url:new URL("https://api16-normal-c-alisg.tiktokv.com/aweme/v1/aweme/detail/"),params:{aweme_id:itemId,aid:"1988",app_name:"musical_ly",device_platform:"android",version_code:"350202",channel:"googleplay",os_version:"14",device_type:"Pixel 7"},headers:appHeaders}
   ];
   let lastDiagnostic="";
   for(let index=0;index<variants.length;index++){
@@ -1535,7 +1541,7 @@ async function fetchTikTokPhotoImageData(rawUrl,timeoutMs=9000){
     const perAttempt=Math.max(2500,Math.floor(timeoutMs/variants.length));
     let response,payload;
     try{
-      response=await fetch(variant.url.href,{headers:{accept:"application/json,text/plain,*/*","accept-language":"en-US,en;q=0.9","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",referer:"https://www.tiktok.com/"},signal:AbortSignal.timeout(perAttempt),cache:"no-store"});
+      response=await fetch(variant.url.href,{headers:variant.headers||webHeaders,signal:AbortSignal.timeout(perAttempt),cache:"no-store"});
       payload=await response.json().catch(()=>null);
     }catch(error){
       lastDiagnostic=variant.name+": "+String(error?.message||error).slice(0,100);
@@ -1545,7 +1551,7 @@ async function fetchTikTokPhotoImageData(rawUrl,timeoutMs=9000){
     const list=Array.isArray(root?.itemList)?root.itemList:Array.isArray(root?.item_list)?root.item_list:Array.isArray(root?.items)?root.items:Array.isArray(root?.aweme_list)?root.aweme_list:[];
     const item=payload?.itemInfo?.itemStruct||payload?.item_info?.item_struct||root?.itemInfo?.itemStruct||root?.item_info?.item_struct||root?.itemStruct||root?.item_struct||root?.aweme_detail||root?.awemeDetail||root?.item||list.find(entry=>entry&&typeof entry==="object")||null;
     const imagePost=item?.imagePost||item?.image_post||item?.photoPost||item?.photo_post||item?.images||item?.imageList||null;
-    const sourceImages=Array.isArray(imagePost)?imagePost:Array.isArray(imagePost?.images)?imagePost.images:Array.isArray(imagePost?.imageList)?imagePost.imageList:Array.isArray(imagePost?.image_list)?imagePost.image_list:Array.isArray(imagePost?.image_post_info?.images)?imagePost.image_post_info.images:[];
+    const sourceImages=Array.isArray(imagePost)?imagePost:Array.isArray(imagePost?.images)?imagePost.images:Array.isArray(imagePost?.imageList)?imagePost.imageList:Array.isArray(imagePost?.image_list)?imagePost.image_list:Array.isArray(item?.image_post_info?.images)?item.image_post_info.images:Array.isArray(item?.imagePostInfo?.images)?item.imagePostInfo.images:Array.isArray(item?.image_post_info?.display_images)?item.image_post_info.display_images:Array.isArray(item?.imagePostInfo?.displayImages)?item.imagePostInfo.displayImages:Array.isArray(imagePost?.image_post_info?.images)?imagePost.image_post_info.images:[];
     if(response.ok&&item&&sourceImages.length){
       const seen=new Set(),images=[];
       for(const entry of sourceImages.slice(0,35)){
