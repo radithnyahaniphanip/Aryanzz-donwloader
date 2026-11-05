@@ -255,12 +255,14 @@ body{background-color:var(--ary-app-bg)}
 <div id="titleModePanel" hidden><label class="label" for="titleSearch">CARI VIDEO / GAMBAR</label><div class="v674-input-row v674-search-type-row"><select id="titleSearchType" class="field" aria-label="Jenis hasil pencarian"><option value="video">Video</option><option value="image">Gambar</option></select></div><div class="inputrow v674-input-row"><input class="field" id="titleSearch" type="search" placeholder="Contoh: DJ Alan Walker, Tabola Bale, gambar kucing…" autocomplete="off"><button class="tag" id="titleSearchMic" type="button" aria-label="Cari dengan suara">🎙</button><button class="primary" id="titleSearchBtn" type="button">Cari ⌕</button></div><p class="v674-title-help" id="titleSearchHelp">Pilih platform dan jenis hasil. Hasil hanya dari platform yang dipilih.</p><div class="v674-search-results" id="titleSearchResults" hidden aria-live="polite"></div></div>
 <div id="downloadResult" class="result v674-result" hidden></div><div id="historyBox" class="result" hidden></div>
 </div>
-<style>
-.seo-copy{max-width:790px;margin:30px auto 24px;padding:20px 4px;color:#aebed4;font-size:14px;line-height:1.75}
-.seo-copy h2{font-size:20px;line-height:1.35;color:#edf4ff;margin:0 0 10px}
-.seo-copy h3{font-size:16px;color:#dce8fa;margin:18px 0 5px}
-.seo-copy p{margin:7px 0}
-</style>
+<section class="ary-android-home" aria-labelledby="aryAndroidHeading">
+  <div class="ary-android-home-top">
+    <span class="ary-android-icon" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M24 5v24m-9-9 9 9 9-9M8 30v8a4 4 0 0 0 4 4h24a4 4 0 0 0 4-4v-8" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+    <div class="ary-android-copy"><span class="ary-android-kicker">ARYANZZ · ANDROID</span><h2 id="aryAndroidHeading">Bawa ARYANZZ ke HP kamu</h2><p>Pasang ARYANZZ di layar utama agar lebih mudah dibuka seperti aplikasi.</p></div>
+  </div>
+  <button id="installBtn" class="ary-android-install" type="button">Pasang ARYANZZ <span aria-hidden="true">↗</span></button>
+  <p id="installMsg" class="ary-android-status" role="status" aria-live="polite">Instalasi melalui Chrome Android · aplikasi web (PWA).</p>
+</section>
 <p class="v674-home-foot">Unduh konten milikmu atau yang diizinkan.</p></section><section id="toolsArea"><div class="panel card all-tools-panel v674-tools-panel" id="allTools">
 <div class="v674-tools-head"><div><span class="section-kicker">RUANG KREATIF · V81.4</span><h2>Pusat Alat</h2><p>Setiap alat punya ruang dan fungsi tersendiri. Cari fitur yang kamu butuhkan.</p></div><div class="v674-tools-orb">✦</div></div>
 <label class="v674-search-label" for="toolSearch">CARI TOOLS</label><input class="field v674-tool-search" id="toolSearch" type="search" placeholder="Cari: editor, warna, QR, PDF, speed test..." autocomplete="off">
@@ -270,7 +272,7 @@ body{background-color:var(--ary-app-bg)}
 <button class="tool" data-panel="checker" data-category="utility"><div class="ico">◎</div><b>Website Checker</b><small>Validasi format tautan dan buka situs.</small><span class="v674-tool-category">UTILITY</span></button>
 <button class="tool" data-panel="linkBypass" data-category="utility"><div class="ico">↗</div><b>Link Bypass</b><small>Periksa pengalihan shortlink SFL dan tampilkan tujuan.</small><span class="v674-tool-category">UTILITY</span></button>
 <button class="tool" data-panel="heart" data-category="utility"><div class="ico">◉</div><b>Camera Lab</b><small>Uji kamera langsung dari browser.</small><span class="v674-tool-category">UTILITY</span></button>
-<button class="tool" data-panel="install" data-category="utility"><div class="ico">⌂</div><b>Install ARYANZZ</b><small>Tambahkan aplikasi ke layar utama.</small><span class="v674-tool-category">UTILITY</span></button>
+
 <button class="tool" data-panel="members" data-category="personal"><div class="ico">♙</div><b>Anggota & Pengunjung</b><small>Lihat sesi aktif dan ringkasan kunjungan.</small><span class="v674-tool-category">PERSONAL</span></button>
 <button class="tool" data-panel="mediaStudio" data-category="media"><div class="ico">▣</div><b>Media Studio Pro</b><small>Pustaka media lokal, pemutar video, antrean unduhan, dan penyimpanan.</small><span class="v674-tool-category">MEDIA · PRO</span></button>
 <button class="tool" data-panel="queue" data-category="media"><div class="ico">⇄</div><b>Smart Queue</b><small>Atur beberapa unduhan dalam antrean.</small><span class="v674-tool-category">MEDIA</span></button>
@@ -513,7 +515,7 @@ body{background-color:var(--ary-app-bg)}
 </div>
 <div class="panel card" id="checker"><h3>🌐 Website Checker</h3><p class="muted">Pemeriksaan HTTP lintas domain dibatasi keamanan browser.</p><div class="inputrow"><input id="siteUrl" class="field" placeholder="https://contoh.com"><button id="checkSite" class="primary">Periksa</button></div><div id="siteResult" class="result" hidden></div></div>
 <div class="panel card" id="heart"><h3>♥ Heart Rate Camera</h3><p class="muted">Eksperimen optik, bukan alat medis dan tidak menghasilkan pengukuran BPM yang tervalidasi.</p><button id="camStart" class="primary">Aktifkan kamera</button><button id="camStop" class="primary" hidden>Hentikan</button><video id="camera" autoplay playsinline muted></video><div id="heartResult" class="result">Kamera hanya aktif setelah kamu memberi izin.</div></div>
-<div class="panel card" id="install"><h3>＋ Install ARYANZZ</h3><p class="muted">Gunakan tombol bila browser mendukung instalasi atau menu browser untuk menambahkan ke layar utama.</p><button id="installBtn" class="primary">Install aplikasi</button><div id="installMsg" class="result">Chrome Android: menu ⋮ → Tambahkan ke layar utama.</div></div>
+
 <div class="panel card v674-feature-panel ary-editorial-panel" id="about">
   <div class="ary-editorial-hero"><span class="section-kicker">CERITA DI BALIK RUANG DIGITAL</span><div class="ary-editorial-symbol">✦</div><h2>Tentang ARYANZZ</h2><p>Satu ruang digital untuk mengunduh, mengelola, dan mengolah media serta membantu kebutuhan harian dari satu tempat.</p><div class="ary-editorial-chips"><span>Gratis digunakan</span><span>Ramah ponsel</span><span>Terus dikembangkan</span></div></div>
   <section class="ary-editorial-section"><span class="ary-editorial-number">01 / ASAL USUL</span><h3>Berawal dari satu gagasan</h3><p>ARYANZZ dibangun dari gagasan sederhana: pengguna seharusnya tidak perlu berpindah-pindah banyak halaman hanya untuk menemukan alat digital yang dibutuhkan. Dari kebutuhan itu, ARYANZZ dikembangkan sebagai ruang serbaguna yang menyatukan pengunduh media, alat kreatif, utilitas, dan pengaturan pribadi dalam satu antarmuka.</p><p>Nama ARYANZZ menjadi identitas proyek ini. Pengembangannya dilakukan bertahap melalui masukan pengguna, pengujian, pembaruan tampilan, dan perbaikan fungsi. Karena itu, fitur yang tersedia dapat berkembang dari waktu ke waktu.</p></section>
@@ -896,13 +898,7 @@ body{background-color:var(--ary-app-bg)}
   </div>
 </div>
 </section>
-<section class="ary-seo-about" aria-labelledby="arySeoHeading" style="max-width:900px;margin:26px auto 20px;padding:20px 18px;border:1px solid rgba(120,157,220,.18);border-radius:20px;background:linear-gradient(145deg,rgba(15,27,46,.86),rgba(9,17,30,.88));color:#dce8fa">
-<span style="display:block;color:#69d8e5;font-size:9px;font-weight:900;letter-spacing:2px;margin-bottom:8px">ARYANZZ · RUANG KREATIF DIGITAL</span>
-<h2 id="arySeoHeading" style="margin:0 0 8px;font-size:clamp(17px,3vw,22px)">Satu ruang untuk mengelola media digital</h2>
-<p style="color:#9fb1cc;font-size:12px;line-height:1.7">ARYANZZ adalah aplikasi web yang membantu pengguna mencari, memeriksa, mempratinjau, dan mengelola media dari tautan publik pada platform yang didukung. Tampilan dirancang responsif agar nyaman digunakan melalui Google Chrome di ponsel maupun komputer.</p>
-<ul style="padding-left:19px;color:#9fb1cc;font-size:12px;line-height:1.7"><li>Pengunduh media untuk video, audio, dan gambar dari sumber yang didukung.</li><li>Pencarian judul untuk menemukan konten lintas platform.</li><li>Pratinjau media, pengelolaan hasil, dan ruang alat kreatif dalam satu aplikasi.</li></ul>
-<p style="margin:12px 0 0;padding-top:10px;border-top:1px solid rgba(120,157,220,.14);color:#9fb1cc;font-size:11px">Gunakan ARYANZZ hanya untuk media milik sendiri atau konten yang penggunaannya telah diizinkan oleh pemilik hak.</p>
-</section>
+
 <footer>© <span id="year"></span> ARYANZZ</footer></div>
 <nav class="nav" aria-label="Navigasi utama"><button class="active" data-nav="home"><span class="nav-icon">⌂</span><span>Beranda</span></button><button data-nav="allTools"><span class="nav-icon">✦</span><span>Alat</span></button><button data-nav="history"><span class="nav-icon">◷</span><span>Pustaka</span></button><button data-nav="owner"><span class="nav-icon">♛</span><span>Pemilik</span></button><button data-nav="profile"><span class="nav-icon">◉</span><span>Profil</span></button></nav>
 <script>
