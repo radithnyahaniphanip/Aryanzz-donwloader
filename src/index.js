@@ -1251,8 +1251,9 @@ function extractTikTokPublicPageInfo(html,pageUrl,rawUrl,requestUrl){
     if(Array.isArray(value)){for(const item of value)walk(item,depth+1);return;}
     const video=value.video&&typeof value.video==="object"?value.video:null;
     const directFields=["playAddr","downloadAddr","play_addr","download_addr","playUrl","downloadUrl","videoUrl","video_url","bitrateInfo","bitrate_info"];
+    const videoSignals=["downloadAddr","download_addr","bitrateInfo","bitrate_info","originCover","origin_cover","dynamicCover","dynamic_cover","cover","ratio","videoQuality","video_quality","width","height"];
     if(video&&directFields.some(key=>video[key]!==undefined))records.push({item:value,video});
-    else if(!video&&directFields.some(key=>value[key]!==undefined))records.push({item:value,video:value});
+    else if(!video&&videoSignals.some(key=>value[key]!==undefined)&&directFields.some(key=>value[key]!==undefined))records.push({item:value,video:value});
     for(const child of Object.values(value))if(child&&typeof child==="object")walk(child,depth+1);
   };
   for(const match of source.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)){
@@ -1382,7 +1383,7 @@ async function fetchTikTokPhotoImageData(rawUrl,timeoutMs=9000){
   return {title:String(item.desc||item.description||"TikTok Photo Mode").slice(0,240),author:String(item.author?.nickname||item.author?.uniqueId||"").slice(0,100),images};
 }
 async function tikTokItemDetailFallback(rawUrl,requestUrl,timeoutMs=8000){
-  const videoId=extractTikTokVideoId(rawUrl);
+  const videoId=extractTikTokItemId(rawUrl);
   if(!videoId)throw new Error("ID video belum tersedia untuk endpoint metadata TikTok.");
   const endpoint=new URL("https://www.tiktok.com/api/item/detail/");
   endpoint.searchParams.set("itemId",videoId);
