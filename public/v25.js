@@ -282,6 +282,7 @@
     setupSurface();setupProfilePreview();setupBackupActions();profileCounts();setupReveal();setupPremiumEffects();initRandomProfileId();
     window.addEventListener("storage",()=>{profileCounts();applyDesign();});
     window.addEventListener("aryanzz:profile-assets-updated",applyDesign);
+    window.addEventListener("aryanzz:history-updated",profileCounts);
     queueAutoSnapshot();
   }
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init,{once:true});else init();
