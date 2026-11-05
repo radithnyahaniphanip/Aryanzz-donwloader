@@ -89,7 +89,7 @@ jobs:
           npm run build:version
           set -o pipefail
           wrangler deploy 2>&1 | tee /tmp/aryanzz-wrangler-deploy.log
-          VERSION_ID=$(sed -nE 's/.*Current Version ID: ([0-9a-f-]+).*/\\1/p' /tmp/aryanzz-wrangler-deploy.log | tail -n 1)
+          VERSION_ID=$(sed -nE 's/.*Current Version ID: ([0-9a-f-]+).*/\1/p' /tmp/aryanzz-wrangler-deploy.log | tail -n 1)
           test -n "$VERSION_ID" || { echo "::error::Wrangler did not report the newly uploaded Worker version ID."; exit 1; }
           echo "Promoting Worker version $VERSION_ID to 100% production traffic."
           wrangler versions deploy "$VERSION_ID@100%" --yes
