@@ -68,8 +68,8 @@ try{
     headers:{"content-type":"application/json","cf-connecting-ip":"198.51.100.34"},
     body:JSON.stringify({url:"https://bsky.app/profile/demo/post/123",expectedPlatform:"bluesky"})
   }),{});
-  assert.equal(videoInfo.status,200,"Generic public-page video metadata should be extracted for an AIO platform");
   const videoInfoData=await videoInfo.json();
+  assert.equal(videoInfo.status,200,"Generic public-page video metadata should be extracted for an AIO platform: "+JSON.stringify(videoInfoData));
   assert.ok(videoInfoData.formats?.some(item=>item.mode==="video"&&item.ext==="mp4"),"Generic public-page fallback should preserve an actual MP4 source");
   console.log("✔ Generic platform video links reach the public-page media metadata fallback");
 
