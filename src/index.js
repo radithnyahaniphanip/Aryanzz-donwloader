@@ -395,11 +395,11 @@ async function freePublicMediaInfo(rawUrl,requestUrl){
       return json({error:"SnackVideo belum dapat diproses. Provider utama: "+(primaryError||"gagal")+"; provider alternatif: "+String(error?.message||error).slice(0,150)+". "+guidance[key],provider:"Fallback cascade",fallbackTried:true},502);
     }
   }
-  const restricted=key==="tiktok"&&/protected|age.?restricted|status\s*10216|login required|requires login|private/i.test(primaryError);
+  const restricted=key==="tiktok"&&/protected|age.?restricted|status\s*10216|login required|requires login|private|Native TikTok metadata/i.test(primaryError);
   const userMessage=restricted
-    ? "TikTok tidak dapat diambil oleh provider publik. Sumber melaporkan video mungkin dibatasi usia/privasi atau memerlukan login. Coba tautan video lain yang dapat diputar publik tanpa login."
+    ? "TikTok tidak mengirim stream video publik untuk tautan ini. Provider juga gagal mengambil metadata; video mungkin dibatasi usia, privasi, wilayah, atau memerlukan login. Coba tautan video lain yang dapat diputar tanpa login."
     : label+" belum bisa diproses oleh provider gratis. "+(primaryError||"Provider tidak mengembalikan hasil.").slice(0,320)+" "+(guidance[key]||"Periksa kembali tautan publik.");
-  return json({ok:false,error:userMessage,diagnostics:primaryError.slice(0,1100),errorType:restricted?"restricted_or_unavailable":"provider_unavailable",provider:"Fallback cascade",fallbackTried:key==="tiktok",canonicalUrl:canonicalUrl!==rawUrl?canonicalUrl:undefined},502);
+  return json({ok:false,error:userMessage,diagnostics:primaryError.slice(0,1100),errorType:restricted?"source_unavailable_or_restricted":"provider_unavailable",provider:"Fallback cascade",fallbackTried:key==="tiktok",canonicalUrl:canonicalUrl!==rawUrl?canonicalUrl:undefined},502);
 }
 
 function mediaAsciiAt(bytes,offset,value){

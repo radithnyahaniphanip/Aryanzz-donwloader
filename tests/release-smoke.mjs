@@ -201,6 +201,8 @@ const checks = [
   ["TikTok short-link resolution reads canonical URLs from public page metadata and hydration JSON",worker.includes("function extractTikTokCanonicalUrl")&&worker.includes("og:url")&&worker.includes("webVideoUrl")&&worker.includes("extractTikTokCanonicalUrl(page.html,page.url)")],
   ["TikTok public page fallback extracts playAddr/downloadAddr and bitrate variants after free providers fail",worker.includes("function extractTikTokPublicPageInfo")&&worker.includes("video.playAddr")&&worker.includes("video.downloadAddr")&&worker.includes("bitrateInfo")&&worker.includes("TikTok public page fallback")&&worker.includes("async function tikTokNativePageFallback(rawUrl,requestUrl,timeoutMs=9000)")&&worker.includes("tikTokNativePageFallback(targetUrl,requestUrl,8000)")],
   ["TikTok public item-detail endpoint can supply video hydration by numeric video ID",worker.includes("function extractTikTokVideoId")&&worker.includes("https://www.tiktok.com/api/item/detail/")&&worker.includes("itemInfo?.itemStruct")&&worker.includes("tikTokItemDetailFallback")],
+  ["TikTok unavailable public metadata is reported as a source-access limitation rather than a generic download failure",worker.includes("Native TikTok metadata")&&worker.includes("video mungkin dibatasi usia, privasi, wilayah")&&worker.includes("source_unavailable_or_restricted")],
+
 
   ["TikTok username-less share redirects normalize to video IDs and retry original short links",worker.includes("const emptyUsername=url.pathname.match")&&worker.includes("function tikTokUrlCandidates")&&worker.includes("https://www.tiktok.com/video/")&&worker.includes("providerUrls.filter(value=>value!==canonicalUrl)")],
 
