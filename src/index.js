@@ -1987,7 +1987,7 @@ async function socialImageInfo(request){
     return json({ok:true,...post});
   }catch(error){return json({error:"Gagal mengambil gambar postingan: "+String(error?.message||error).slice(0,150)},502)}
 }
-function socialImagePlatformKey(raw,fallback){const key=freePlatformKey(raw)||fallback;return key==="twitter"?"x":key;}
+function socialImagePlatformKey(raw,fallback){const id=platformIdForUrl(raw);const key=id?canonicalPlatformId(id):(freePlatformKey(raw)||fallback);return key==="twitter"?"x":key;}
 function socialImageSearchDomainsMatch(raw,platform){
   const safe=safePublicMediaUrl(raw);if(!safe)return null;
   const domains=socialSearchDomains(platform);
@@ -2046,7 +2046,7 @@ function parseSocialImageSearchLinks(html,platform,seen,limit=18){
     let link;try{link=new URL(decodeSearchHtml(hrefMatch[1]),"https://html.duckduckgo.com")}catch{continue}
     if(link.hostname.endsWith("duckduckgo.com")){const target=link.searchParams.get("uddg");if(target){try{link=new URL(target)}catch{continue}}}
     if(link.protocol!=="https:"||!domains.some(domain=>link.hostname===domain||link.hostname.endsWith("."+domain)))continue;
-    const resultPlatform=freePlatformKey(link.href)||platform;
+    const resultPlatform=socialImagePlatformKey(link.href,platform);
     if(resultPlatform==="pinterest"&&!/\/pin\//i.test(link.pathname))continue;
     if(resultPlatform==="tiktok"&&!/\/photo\//i.test(link.pathname))continue;
     if(resultPlatform==="instagram"&&!/(?:\/p\/|\/reel\/|\/tv\/|\/share\/)/i.test(link.pathname))continue;
@@ -2064,7 +2064,15 @@ async function socialImageSearch(request){
   if(query.length<2||query.length>120)return json({error:"Masukkan kata kunci antara 2 sampai 120 karakter."},400);
   if(socialRateLimited(request))return json({error:"Batas pencarian gambar gratis tercapai. Tunggu satu menit lalu coba lagi."},429);
   try{
-    const searchPlatforms=["pinterest","tiktok","instagram","facebook","x","reddit","threads","snackvideo","capcut","youtube","vimeo","soundcloud","snapchat","idnapp","linkedin","wechat","kakaotalk"];
+    // Build result buckets from the full live catalogue. AIO/experimental platforms
+    // must keep their real platform IDs instead of collapsing into the generic "aio" provider key.
+    const imageSearchPlatforms=[...new Set(PLATFORM_CATALOG
+      .filter(item=>Array.isArray(item.mediaModes)&&item.mediaModes.some(mode=>mode==="image"||mode==="video"))
+      .map(item=>canonicalPlatformId(item.id)))];
+    // Keep extra targeted queries bounded; the broad Bing query still checks all catalogue domains.
+    const targetedAllPlatforms=["pinterest","tiktok","instagram","facebook","x","reddit","threads","snackvideo","capcut","youtube","vimeo","soundcloud","snapchat","idnapp","linkedin","wechat","kakaotalk"]
+      .map(canonicalPlatformId).filter((key,index,array)=>imageSearchPlatforms.includes(key)&&array.indexOf(key)===index);
+    const canonicalPlatform=platform==="all"?"all":canonicalPlatformId(platform);
     const fetchBing=async(searchTerm,scope,allowWeb=false,first=1)=>{
       const url=new URL("https://www.bing.com/images/search");
       url.searchParams.set("q",canonicalPublicSearchQuery(searchTerm));url.searchParams.set("form","HDRSC3");url.searchParams.set("count","50");url.searchParams.set("first",String(first));
@@ -2073,15 +2081,15 @@ async function socialImageSearch(request){
         return response.ok?parseBingSocialImageResults(await response.text(),scope,request.url,query,allowWeb):[];
       }catch{return []}
     };
-    const buckets=[...searchPlatforms.map(key=>({platform:key,results:[]})),{platform:"web",results:[]}];
+    const buckets=[...imageSearchPlatforms.map(key=>({platform:key,results:[]})),{platform:"web",results:[]}];
     if(platform==="all"){
       const general=await fetchBing(query,"all",true);
       for(const item of general){
         const bucket=buckets.find(entry=>entry.platform===(item.platform||""));
         if(bucket&&!bucket.results.some(existing=>existing.url===item.url))bucket.results.push(item);
       }
-      for(let offset=0;offset<searchPlatforms.length;offset+=3){
-        const batch=searchPlatforms.slice(offset,offset+3).filter(key=>(buckets.find(entry=>entry.platform===key)?.results.length||0)<6);
+      for(let offset=0;offset<targetedAllPlatforms.length;offset+=3){
+        const batch=targetedAllPlatforms.slice(offset,offset+3).filter(key=>(buckets.find(entry=>entry.platform===key)?.results.length||0)<6);
         const batchResults=await Promise.all(batch.map(async key=>{
           const site=socialSearchDomains(key).map(domain=>"site:"+domain).join(" OR ");
           return {platform:key,results:await fetchBing(site+" "+query,key)};
@@ -2094,7 +2102,7 @@ async function socialImageSearch(request){
       }
     }else{
       const site=domains.map(domain=>"site:"+domain).join(" OR ");
-      const selectedBucket=buckets.find(entry=>entry.platform===platform);
+      const selectedBucket=buckets.find(entry=>entry.platform===canonicalPlatform);
       if(selectedBucket){
         const normalizedQuery=query.replace(/greenscreen/ig,"green screen");
         const terms=[query,normalizedQuery,query+" image",query+" photo",query+" meme",query+" wallpaper",normalizedQuery+" background",normalizedQuery+" template",normalizedQuery+" overlay","chroma key "+normalizedQuery,"meme template "+normalizedQuery,normalizedQuery+" png"];
@@ -2117,7 +2125,7 @@ async function socialImageSearch(request){
         if(!added)break;
       }
     }else{
-      for(const item of (buckets.find(entry=>entry.platform===platform)?.results||[])){
+      for(const item of (buckets.find(entry=>entry.platform===canonicalPlatform)?.results||[])){
         if(seenImages.has(item.url))continue;
         seenImages.add(item.url);results.push(item);platformCounts[item.platform||platform]=(platformCounts[item.platform||platform]||0)+1;
         if(results.length>=100)break;
@@ -2662,21 +2670,24 @@ async function searchYouTube(request,env){
   const query=String(body?.query||"").replace(/\s+/g," ").trim();
   if(query.length<2)return json({error:"Masukkan minimal 2 karakter untuk mencari judul video."},400);
   if(query.length>160)return json({error:"Judul pencarian maksimal 160 karakter."},400);
-  if(!env.PLATFORM_API_ORIGIN||!env.PLATFORM_API_TOKEN){
-    if(socialRateLimited(request))return json({error:"Batas pencarian gratis tercapai. Tunggu satu menit lalu coba lagi."},429);
+  const publicFallback=async()=>{
     const variants=socialSearchQueryVariants(query).slice(0,5);
     const hybridLists=await Promise.all(variants.map(term=>hybridYouTubeSearch(term)));
     const seen=new Set(),hybridResults=[];
     for(const result of hybridLists)for(const item of result?.results||[])if(!seen.has(item.url)){seen.add(item.url);hybridResults.push(item)}
-    if(hybridResults.length)return json({ok:true,query,results:hybridResults.slice(0,20),provider:"Piped + Invidious · pencarian kata kunci terkait"});
+    if(hybridResults.length)return json({ok:true,query,results:hybridResults.slice(0,20),provider:"Piped + Invidious · pencarian kata kunci terkait",fallbackUsed:true});
     return freeYouTubeSearch(query,variants);
+  };
+  if(!env.PLATFORM_API_ORIGIN||!env.PLATFORM_API_TOKEN){
+    if(socialRateLimited(request))return json({error:"Batas pencarian gratis tercapai. Tunggu satu menit lalu coba lagi."},429);
+    return publicFallback();
   }
   let origin;
   try{
     const parsed=new URL(env.PLATFORM_API_ORIGIN);
     if(parsed.protocol!=="https:"||parsed.username||parsed.password)throw new Error("origin tidak aman");
     origin=parsed.origin;
-  }catch{return json({error:"Konfigurasi backend pencarian harus berupa URL HTTPS yang valid."},500)}
+  }catch{return publicFallback()}
   try{
     const response=await fetch(origin+"/api/search",{
       method:"POST",
@@ -2686,10 +2697,14 @@ async function searchYouTube(request,env){
       cache:"no-store"
     });
     const data=await response.json().catch(()=>({}));
-    if(!response.ok)return json({error:data.error||"Backend pencarian menjawab HTTP "+response.status+"."},response.status);
-    const results=Array.isArray(data.results)?data.results.filter(item=>item&&typeof item.title==="string"&&isYouTubeUrl(item.url)).slice(0,8):[];
-    return json({ok:true,query,results});
-  }catch{return json({error:"Backend pencarian judul tidak dapat dijangkau. Periksa layanan yt-dlp dan coba lagi."},502)}
+    if(response.ok){
+      const results=Array.isArray(data.results)?data.results.filter(item=>item&&typeof item.title==="string"&&isYouTubeUrl(item.url)).slice(0,20):[];
+      if(results.length)return json({ok:true,query,results,provider:"ARYANZZ extraction backend"});
+    }
+  }catch{}
+  // A configured backend can still be offline, rate-limited, or return an empty result.
+  // Do not leave title search at a dead end: try public Piped/Invidious and free API routes.
+  return publicFallback();
 }
 function musicRateLimited(request){
   const ip=request.headers.get("cf-connecting-ip")||"unknown",now=Date.now();
