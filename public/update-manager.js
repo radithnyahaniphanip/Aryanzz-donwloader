@@ -17,7 +17,7 @@ function hasStaleLocalAssetReferences(){
   const raw=node.getAttribute("src")||node.getAttribute("href")||"";
   try{
    const url=new URL(raw,location.href);
-   if(url.origin!==location.origin||!/\\.(?:js|css)$/i.test(url.pathname))return false;
+   if(url.origin!==location.origin||!/\.(?:js|css)$/i.test(url.pathname))return false;
    return url.searchParams.get("v")!==localVersion;
   }catch{return true}
  });
@@ -27,7 +27,7 @@ function hasLegacyProfileLayout(){
  const title=document.getElementById("ownerDeveloperBadge");
  const titleStack=title?.parentElement?.classList.contains("owner-identity-titles");
  const creator=title?.parentElement?.querySelector(".owner-creator-title");
- return !!(profile&&profile.querySelector(".ary-theme-studio,[data-theme-studio],.v25-backup-card,#exportData,#importData,#restoreAutoBackup,#ownerLinkEditor,#securityCenter"))||!!(title&&!titleStack)||!!(title&&!creator);
+ return !title||!!(profile&&profile.querySelector(".ary-theme-studio,[data-theme-studio],.v25-backup-card,#exportData,#importData,#restoreAutoBackup,#ownerLinkEditor,#securityCenter,#profileDeveloperBadge,[data-panel=\\"colorStudio\\"]"))||!!(title&&!titleStack)||!!(title&&!creator);
 }
 function showNotice(version){
  if(document.getElementById("aryanzzUpdateNotice"))return;
