@@ -1654,7 +1654,7 @@ async function resolveSocialImagePost(rawUrl,requestUrl,options={}){
   const key=platformIdForUrl(rawUrl)||providerKey;
   if(!key)return null;
   const canonicalUrl=await resolveSocialShortLink(rawUrl,key);
-  let providerTitle="",providerImages=[],tikwmImages=[],tikTokItemImages=[];
+  let providerTitle="",providerImages=[],tikwmImages=[],tikTokItemImages=[],tikTokEmbedImages=[];
   const providerUrl=FREE_MEDIA_API+"/api/download/"+(providerKey||key)+"?url="+encodeURIComponent(canonicalUrl);
   // Experimental catalogue entries still get safe public-page metadata extraction;
   // only established provider keys are sent to the community extractor API.
@@ -1691,6 +1691,14 @@ async function resolveSocialImagePost(rawUrl,requestUrl,options={}){
       providerTitle=providerTitle||data.title;
       tikTokItemImages=data.images;
     }).catch(()=>{}):Promise.resolve(),
+    key==="tiktok"?(async()=>{
+      try{
+        const itemId=extractTikTokItemId(canonicalUrl);
+        if(!itemId)return;
+        const embedPage=await fetchSocialPostHtml("https://www.tiktok.com/embed/v2/"+itemId,10000);
+        tikTokEmbedImages=extractSocialImageCandidates(embedPage.html,embedPage.url,"tiktok").map(item=>({...item,type:"image",source:"TikTok official embed"}));
+      }catch{}
+    })():Promise.resolve(),
     key==="instagram"?(async()=>{
       try{
         const endpoint=new URL("https://www.instagram.com/api/v1/oembed/");
@@ -1714,8 +1722,8 @@ async function resolveSocialImagePost(rawUrl,requestUrl,options={}){
     })():Promise.resolve()
   ];
   const page=await tasks[1];
-  await Promise.all([tasks[0],tasks[2],tasks[3],tasks[4],tasks[5]]);
-  const rawCandidates=[...(page?.images||[]).map(item=>({...item,type:"image",source:item.source||"post-page"})),...providerImages.map(item=>({...item,url:item.url,source:"provider",type:item.type||item.kind||item.media_type||"image",mime_type:item.mime_type||item.mime||item.content_type||"",width:item.width||item.w||0,height:item.height||item.h||0,ext:item.ext||item.extension||""})),...(oembedImage?[oembedImage]:[]),...weirdDlImages,...tikwmImages.map(item=>({...item,url:item.url,source:"TikWM",type:"image"})),...tikTokItemImages];
+  await Promise.all([tasks[0],tasks[2],tasks[3],tasks[4],tasks[5],tasks[6]]);
+  const rawCandidates=[...(page?.images||[]).map(item=>({...item,type:"image",source:item.source||"post-page"})),...providerImages.map(item=>({...item,url:item.url,source:"provider",type:item.type||item.kind||item.media_type||"image",mime_type:item.mime_type||item.mime||item.content_type||"",width:item.width||item.w||0,height:item.height||item.h||0,ext:item.ext||item.extension||""})),...(oembedImage?[oembedImage]:[]),...weirdDlImages,...tikwmImages.map(item=>({...item,url:item.url,source:"TikWM",type:"image"})),...tikTokItemImages,...tikTokEmbedImages];
   const seen=new Set(),images=[];
   for(const item of rawCandidates){
     const safe=safePublicMediaUrl(item.url);if(!safe||seen.has(safe.href))continue;
