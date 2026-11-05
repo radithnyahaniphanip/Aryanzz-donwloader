@@ -8,7 +8,7 @@ assert.ok(expectedVersion,"Deployment must provide EXPECTED_BUILD_VERSION for li
 let health,lastError;
 for(let attempt=0;attempt<24;attempt++){
   try{
-    const response=await request("/api/health");
+    const response=await request("/api/health?release-check="+encodeURIComponent(expectedVersion+"-"+attempt));
     if(response.ok)health=await response.json();
     if(String(health?.version||"")===expectedVersion)break;
     lastError=new Error("Worker masih melayani build "+String(health?.version||"kosong")+"; menunggu "+expectedVersion);

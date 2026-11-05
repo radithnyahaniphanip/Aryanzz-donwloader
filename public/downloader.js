@@ -538,7 +538,7 @@
   }
   function youtubeMuxMemoryBudget(){
     const memory=Number(navigator.deviceMemory)||4;
-    if(memory<=2)return {maxTrack:90*1024*1024,maxCombined:140*1024*1024};
+    if(memory<=2)return {maxTrack:40*1024*1024,maxCombined:64*1024*1024};
     if(memory<=4)return {maxTrack:280*1024*1024,maxCombined:440*1024*1024};
     return {maxTrack:340*1024*1024,maxCombined:540*1024*1024};
   }
@@ -599,11 +599,6 @@
   }
   async function muxYoutubeMp4(videoItem,audioItem,info,bar,progressText,progressMeta,speed){
     const lowMemory=(Number(navigator.deviceMemory)||4)<=2;
-    if(lowMemory){
-      const error=new Error("Memori perangkat terbatas; perakitan lokal dilewati agar browser tetap stabil.");
-      error.code="FFMPEG_SKIPPED_LOW_MEMORY";
-      throw error;
-    }
     const {maxTrack,maxCombined}=youtubeMuxMemoryBudget();
     const videoPrefix=downloadResumePrefix(info.url||"",videoItem),audioPrefix=downloadResumePrefix(info.url||"",audioItem);
     let videoBytes=null,audioBytes=null,completed=false;
@@ -617,6 +612,11 @@
       if(videoTotal>maxTrack)throw new Error("Komponen video berukuran "+formatDownloadSize(videoTotal)+" dan melewati batas aman memori perangkat. Pilih kualitas MP4 lebih rendah.");
       if(audioTotal>maxTrack)throw new Error("Komponen suara berukuran "+formatDownloadSize(audioTotal)+" dan melewati batas aman memori perangkat. Pilih kualitas MP4 lebih rendah.");
       if(videoTotal&&audioTotal&&videoTotal+audioTotal>maxCombined)throw new Error("Gabungan media "+formatDownloadSize(videoTotal+audioTotal)+" melewati batas aman memori HP. ARYANZZ mencoba kualitas lebih rendah.");
+      if(lowMemory&&(!videoTotal||!audioTotal)){
+        const error=new Error("RAM perangkat terbatas dan provider tidak memberikan ukuran kedua komponen. ARYANZZ memilih MP4 langsung yang lebih aman.");
+        error.code="FFMPEG_SKIPPED_LOW_MEMORY";
+        throw error;
+      }
       const measuredSizeNote=videoTotal&&audioTotal?"Ukuran terukur: video "+formatDownloadSize(videoTotal)+" + audio "+formatDownloadSize(audioTotal)+" = "+formatDownloadSize(videoTotal+audioTotal)+".":"Ukuran komponen belum diberikan provider.";
       progressMeta.textContent=measuredSizeNote+" Mode "+({1:"Speed",3:"Max Speed",5:"Mega Speed"}[Number(speed)]||"Max Speed")+" aktif jika sumber mendukung Range.";
       progressText.textContent="Mengunduh video sambil menyiapkan mesin MP4…";

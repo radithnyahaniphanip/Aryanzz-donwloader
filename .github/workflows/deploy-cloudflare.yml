@@ -85,7 +85,15 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: npm run build:version && wrangler deploy
+        run: |
+          npm run build:version
+          set -o pipefail
+          wrangler deploy 2>&1 | tee /tmp/aryanzz-wrangler-deploy.log
+          VERSION_ID=$(sed -nE 's/.*Current Version ID: ([0-9a-f-]+).*/\\1/p' /tmp/aryanzz-wrangler-deploy.log | tail -n 1)
+          test -n "$VERSION_ID" || { echo "::error::Wrangler did not report the newly uploaded Worker version ID."; exit 1; }
+          echo "Promoting Worker version $VERSION_ID to 100% production traffic."
+          wrangler versions deploy "$VERSION_ID@100%" --yes
+          wrangler deployments status
       - name: Preserve existing optional AudD music recognition secret
         run: echo "::notice::Existing AUDD_API_TOKEN secret is preserved and is not rewritten during routine deployments."
       - name: Export exact expected build version
