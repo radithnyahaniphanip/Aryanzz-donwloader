@@ -1334,6 +1334,44 @@ function extractTikTokVideoId(value){
     return path?.[1]||url.searchParams.get("itemId")||url.searchParams.get("item_id")||url.searchParams.get("share_item_id")||null;
   }catch{return null}
 }
+function extractTikTokItemId(value){
+  try{
+    const url=new URL(value);
+    const path=url.pathname.match(/\/(?:@[^/]*\/)?(?:video|photo)\/(\d{8,})/i);
+    return path?.[1]||url.searchParams.get("itemId")||url.searchParams.get("item_id")||url.searchParams.get("share_item_id")||null;
+  }catch{return null}
+}
+async function fetchTikTokPhotoImageData(rawUrl,timeoutMs=9000){
+  const itemId=extractTikTokItemId(rawUrl);
+  if(!itemId)throw new Error("ID postingan foto TikTok tidak ditemukan.");
+  const endpoint=new URL("https://www.tiktok.com/api/item/detail/");
+  endpoint.searchParams.set("itemId",itemId);
+  endpoint.searchParams.set("aid","1988");
+  endpoint.searchParams.set("app_name","tiktok_web");
+  endpoint.searchParams.set("device_platform","web_pc");
+  const response=await fetch(endpoint.href,{headers:{accept:"application/json,text/plain,*/*","accept-language":"en-US,en;q=0.9","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",referer:"https://www.tiktok.com/"},signal:AbortSignal.timeout(timeoutMs),cache:"no-store"});
+  const payload=await response.json().catch(()=>null);
+  const item=payload?.itemInfo?.itemStruct||payload?.item_info?.item_struct||payload?.itemStruct||payload?.item||null;
+  const imagePost=item?.imagePost||item?.image_post||item?.photoPost||item?.photo_post||null;
+  const sourceImages=Array.isArray(imagePost?.images)?imagePost.images:Array.isArray(imagePost?.imageList)?imagePost.imageList:[];
+  if(!response.ok||!item||!sourceImages.length)throw new Error("TikTok item detail tidak mengembalikan galeri foto publik (HTTP "+response.status+").");
+  const seen=new Set(),images=[];
+  for(const entry of sourceImages.slice(0,35)){
+    const candidates=[
+      ...collectTikTokUrlValues(entry?.imageURL||entry?.imageUrl||entry?.displayImage||entry?.display_image||entry?.originImage||entry?.origin_image||entry?.urlList||entry),
+      ...collectTikTokUrlValues(entry?.thumbnail)
+    ];
+    for(const candidate of candidates){
+      const safe=safePublicMediaUrl(decodeTikTokPageValue(candidate));
+      if(!safe||seen.has(safe.href))continue;
+      seen.add(safe.href);
+      images.push({url:safe.href,type:"image",ext:imageExtensionFromUrl(safe.href)||"jpg",source:"TikTok item detail"});
+      break;
+    }
+  }
+  if(!images.length)throw new Error("TikTok Photo Mode tidak mengirim URL foto publik yang aman.");
+  return {title:String(item.desc||item.description||"TikTok Photo Mode").slice(0,240),author:String(item.author?.nickname||item.author?.uniqueId||"").slice(0,100),images};
+}
 async function tikTokItemDetailFallback(rawUrl,requestUrl,timeoutMs=8000){
   const videoId=extractTikTokVideoId(rawUrl);
   if(!videoId)throw new Error("ID video belum tersedia untuk endpoint metadata TikTok.");
@@ -1559,7 +1597,7 @@ async function resolveSocialImagePost(rawUrl,requestUrl,options={}){
   const key=platformIdForUrl(rawUrl)||providerKey;
   if(!key)return null;
   const canonicalUrl=await resolveSocialShortLink(rawUrl,key);
-  let providerTitle="",providerImages=[],tikwmImages=[];
+  let providerTitle="",providerImages=[],tikwmImages=[],tikTokItemImages=[];
   const providerUrl=FREE_MEDIA_API+"/api/download/"+(providerKey||key)+"?url="+encodeURIComponent(canonicalUrl);
   // Experimental catalogue entries still get safe public-page metadata extraction;
   // only established provider keys are sent to the community extractor API.
@@ -1592,6 +1630,10 @@ async function resolveSocialImagePost(rawUrl,requestUrl,options={}){
       providerTitle=providerTitle||String(data.title||"").slice(0,240);
       tikwmImages=providerImageCandidates({normalized:{images:data.images,photos:data.photos,gallery:data.gallery}});
     }).catch(()=>{}):Promise.resolve(),
+    key==="tiktok"?fetchTikTokPhotoImageData(canonicalUrl,9000).then(data=>{
+      providerTitle=providerTitle||data.title;
+      tikTokItemImages=data.images;
+    }).catch(()=>{}):Promise.resolve(),
     key==="instagram"?(async()=>{
       try{
         const endpoint=new URL("https://www.instagram.com/api/v1/oembed/");
@@ -1615,8 +1657,8 @@ async function resolveSocialImagePost(rawUrl,requestUrl,options={}){
     })():Promise.resolve()
   ];
   const page=await tasks[1];
-  await Promise.all([tasks[0],tasks[2],tasks[3],tasks[4]]);
-  const rawCandidates=[...(page?.images||[]).map(item=>({...item,type:"image",source:item.source||"post-page"})),...providerImages.map(item=>({...item,url:item.url,source:"provider",type:item.type||item.kind||item.media_type||"image",mime_type:item.mime_type||item.mime||item.content_type||"",width:item.width||item.w||0,height:item.height||item.h||0,ext:item.ext||item.extension||""})),...(oembedImage?[oembedImage]:[]),...weirdDlImages,...tikwmImages.map(item=>({...item,url:item.url,source:"TikWM",type:"image"}))];
+  await Promise.all([tasks[0],tasks[2],tasks[3],tasks[4],tasks[5]]);
+  const rawCandidates=[...(page?.images||[]).map(item=>({...item,type:"image",source:item.source||"post-page"})),...providerImages.map(item=>({...item,url:item.url,source:"provider",type:item.type||item.kind||item.media_type||"image",mime_type:item.mime_type||item.mime||item.content_type||"",width:item.width||item.w||0,height:item.height||item.h||0,ext:item.ext||item.extension||""})),...(oembedImage?[oembedImage]:[]),...weirdDlImages,...tikwmImages.map(item=>({...item,url:item.url,source:"TikWM",type:"image"})),...tikTokItemImages];
   const seen=new Set(),images=[];
   for(const item of rawCandidates){
     const safe=safePublicMediaUrl(item.url);if(!safe||seen.has(safe.href))continue;

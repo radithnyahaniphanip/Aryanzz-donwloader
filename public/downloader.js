@@ -1366,6 +1366,7 @@ function socialNetworkPlan(selected=0){
       if(runId!==analysisRunId)return;
       const imageData=imageResult?.data||{};
       const imageItems=Array.isArray(imageData.images)?imageData.images.slice(0,35):[];
+      const isTikTokResolvedPhotoPost=isTikTokPlatform&&/\/photo\//i.test(String(info?.canonicalUrl||""));
       const hasVideoFormat=(info.formats||[]).some(item=>item?.mode==="video"||item?.type==="video"||/^video\//i.test(String(item?.mimeType||item?.mime_type||""))||["mp4","m4v","webm","mov","avi","3gp"].includes(String(item?.ext||"").toLowerCase()));
       const hasAnyFormat=Array.isArray(info.formats)&&info.formats.length>0;
       let imageGallery=null,imageGalleryNote=null,imageGalleryAction=null;
@@ -1426,14 +1427,14 @@ function socialNetworkPlan(selected=0){
               box.append(note);
             }
           });
-          if(!hasAnyFormat){
+          if(!hasAnyFormat||isTikTokPhotoPost||isTikTokResolvedPhotoPost){
             box.replaceChildren();
             box.append(make("b","youtube-title",imageData.title||("Foto dari "+detectedPlatform)),imageGallery,imageGalleryNote,imageGalleryAction);
             return;
           }
         }
       }
-      if(isTikTokPhotoPost&&!imageGallery){
+      if((isTikTokPhotoPost||isTikTokResolvedPhotoPost)&&!imageGallery){
         box.replaceChildren(make("b","youtube-title","TikTok Photo Mode belum bisa dibaca"),make("p","warning",imageData.error||info.error||"Postingan foto ini tidak mengirim gambar publik yang dapat diambil. Pastikan tautan Photo Mode dapat dibuka tanpa login atau pembatasan."));
         return;
       }
