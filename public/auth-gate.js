@@ -28,7 +28,6 @@ function setUser(user){
  if(editor)editor.hidden=!isDeveloper;if(security)security.hidden=!isDeveloper;if(ownerEdit)ownerEdit.hidden=!isDeveloper;if(developerBadge)developerBadge.hidden=!isDeveloper;
  document.body.classList.toggle("ary-developer-account",isDeveloper);
  if(gate)gate.hidden=!!user;document.body.classList.toggle("ary-authenticated",!!user);
- window.dispatchEvent(new CustomEvent("aryanzz:auth-changed",{detail:{userId:user?.id||null,isDeveloper}}));
 }
 function getSession(){try{return JSON.parse(localStorage.getItem(SESSION_KEY)||"null")}catch{return null}}
 function saveSession(user){try{localStorage.setItem(SESSION_KEY,JSON.stringify({id:user.id,createdAt:Date.now()}));return true}catch{return false}}
