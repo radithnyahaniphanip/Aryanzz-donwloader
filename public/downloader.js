@@ -4,7 +4,7 @@
   const $ = id => document.getElementById(id);
   const FORMATS = {
     audio: [["mp3","MP3 Audio"],["m4a","M4A Audio"]],
-    video: [[144,"144p"],[240,"240p"],[360,"360p"],[480,"480p"],[720,"720p HD"],[1080,"1080p Full HD"],[1440,"1440p · 2K"],[2160,"2160p · 4K"]]
+    video: [[144,"144p"],[240,"240p"],[360,"360p"],[480,"480p"],[720,"720p HD"],[1080,"1080p Full HD"],[1440,"1440p · 2K"],[2160,"2160p · 4K"],[4320,"4320p · 8K"]]
   };
   const PLATFORM_NAMES = [
     ["youtube.com","YouTube"],["youtu.be","YouTube"],["tiktok.com","TikTok"],
@@ -160,7 +160,9 @@
       method: "POST",
       headers: {"Content-Type":"application/json","Accept":"application/json"},
       body: JSON.stringify(body),
-      cache: "no-store"
+      cache: "no-store",
+      credentials: "same-origin",
+      signal: downloadTimeoutSignal(18000)
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.error || "Server downloader tidak dapat memproses tautan.");
@@ -180,7 +182,7 @@
   function youtubeFormat(mode,quality,audioFormat="mp3"){
     if(mode==="audio")return audioFormat==="m4a"?"m4a":"mp3";
     const q=Number(quality)||720;
-    return q>=2160?"4k":String([360,480,720,1080,1440].includes(q)?q:720);
+    return q>=4320?"8k":q>=2160?"4k":String([360,480,720,1080,1440].includes(q)?q:720);
   }
   function browserMediaContentType(response,mode){
     const type=String(response.headers.get("content-type")||"").toLowerCase();
@@ -189,10 +191,18 @@
     if(mode==="audio"&&type&&!type.includes("audio/")&&!type.includes("application/octet-stream"))throw new Error("Tipe file yang diterima bukan audio.");
   }
   function addReadyDownloadLink(container,href,filename,label){
-    container?.querySelector(".youtube-ready-link")?.remove();
-    const link=make("a","youtube-download youtube-ready-link",label||"⬇ Unduh file sekarang");
-    link.href=href;if(filename)link.download=filename;else link.removeAttribute("download");link.rel="noopener";link.setAttribute("aria-label",filename?"Unduh "+filename:(label||"Unduh media"));
-    container?.append(link);return link;
+    document.querySelector("[data-aryanzz-auto-download]")?.remove();
+    const link=document.createElement("a");
+    link.href=href;
+    if(filename)link.download=filename;
+    link.rel="noopener";
+    link.setAttribute("aria-label",filename?"Unduh "+filename:(label||"Unduh media"));
+    link.dataset.aryanzzAutoDownload="true";
+    link.style.cssText="position:fixed;left:-10000px;top:0;width:1px;height:1px;opacity:0;pointer-events:none;z-index:-1";
+    (document.body||container||document.documentElement).append(link);
+    link.click();
+    setTimeout(()=>link.remove(),1500);
+    return link;
   }
   async function saveBrowserBlob(blob,filename,container,label="⬇ Unduh file sekarang"){
     if(!blob||!blob.size)throw new Error("File kosong.");
@@ -996,43 +1006,30 @@ function socialNetworkPlan(selected=0){
         const key=String(item.downloadUrl||"")+"|"+String(item.mode||"");
         if(!item.downloadUrl||seenCandidates.has(key))return false;
         seenCandidates.add(key);return true;
-      }).slice(0,8);
+      }).slice(0,3);
       if(!orderedCandidates.length)throw new Error(mode==="audio"?"Provider gratis tidak menyediakan audio yang dapat diunduh.":"Provider gratis tidak menyediakan MP4 lengkap dengan suara. Format selain MP4 tidak akan diberi ekstensi MP4 palsu. Coba tautan video publik lain.");
       let selected=null,ready=null,check=null,lastProbeError="";
-      progressText.textContent="Memeriksa ukuran dan isi media…";
-      if(progressMeta)progressMeta.textContent="Memeriksa hingga delapan jalur media. Setiap jalur mencoba Range dan pemeriksaan penuh jika sumber menolak rentang byte.";
-      for(let index=0;index<orderedCandidates.length;index++){
-        const candidate=orderedCandidates[index],candidateUrl=safeUrl(candidate.downloadUrl);
+      progressText.textContent="Memeriksa MP4 terbaik dan ukuran file…";
+      if(progressMeta)progressMeta.textContent="Memeriksa maksimal tiga jalur media secara bersamaan. Jalur yang lolos validasi dipilih otomatis.";
+      const probeResults=await Promise.all(orderedCandidates.map(async candidate=>{
+        const candidateUrl=safeUrl(candidate.downloadUrl);
         if(!candidateUrl||candidateUrl.origin!==location.origin||candidateUrl.pathname!=="/api/social-file"){
-          lastProbeError="Tautan unduhan tidak melewati pemeriksaan keamanan ARYANZZ.";continue;
+          return {candidate,error:"Tautan unduhan tidak melewati pemeriksaan keamanan ARYANZZ."};
         }
         const probeUrl=new URL(candidateUrl.href);probeUrl.searchParams.set("probe","1");
-        let probeStatus=0,candidateCheck={};
         try{
-          progressText.textContent="Memvalidasi format "+(index+1)+" dari "+orderedCandidates.length+"…";
-          const probeResponse=await fetch(probeUrl.href,{cache:"no-store",credentials:"same-origin",signal:downloadTimeoutSignal(12000)});
-          probeStatus=probeResponse.status;
-          candidateCheck=await probeResponse.json().catch(()=>({}));
-          if(probeResponse.ok&&candidateCheck.valid===true){
-            selected=candidate;ready=candidateUrl;check=candidateCheck;break;
-          }
-          lastProbeError=String(candidateCheck.error||"File tidak lolos validasi (HTTP "+probeStatus+").").slice(0,180);
-        }catch(error){lastProbeError=String(error?.message||error).slice(0,180)}
-        const retryWithoutRange=probeStatus===0||[403,415,416,429].includes(probeStatus)||probeStatus>=500||/image\/|bukan video|signature|tipe file|range|rentang byte/i.test(lastProbeError);
-        if(retryWithoutRange){
-          try{
-            const fullProbeUrl=new URL(candidateUrl.href);fullProbeUrl.searchParams.set("probe","full");
-            progressText.textContent="Mencoba pemeriksaan penuh format "+(index+1)+" tanpa Range…";
-            const fullResponse=await fetch(fullProbeUrl.href,{cache:"no-store",credentials:"same-origin",signal:downloadTimeoutSignal(12000)});
-            const fullCheck=await fullResponse.json().catch(()=>({}));
-            if(fullResponse.ok&&fullCheck.valid===true){
-              selected=candidate;ready=candidateUrl;check=fullCheck;break;
-            }
-            lastProbeError=String(fullCheck.error||lastProbeError||"Sumber tidak lolos pemeriksaan penuh.").slice(0,180);
-          }catch(error){lastProbeError=String(error?.message||lastProbeError||error).slice(0,180)}
-        }
+          const probeResponse=await fetch(probeUrl.href,{cache:"no-store",credentials:"same-origin",signal:downloadTimeoutSignal(9000)});
+          const candidateCheck=await probeResponse.json().catch(()=>({}));
+          if(probeResponse.ok&&candidateCheck.valid===true)return {candidate,candidateUrl,check:candidateCheck};
+          return {candidate,error:String(candidateCheck.error||"File tidak lolos validasi (HTTP "+probeResponse.status+").").slice(0,180)};
+        }catch(error){return {candidate,error:String(error?.message||error).slice(0,180)}}
+      }));
+      const selectedResult=probeResults.find(result=>result.check?.valid===true);
+      if(selectedResult){selected=selectedResult.candidate;ready=selectedResult.candidateUrl;check=selectedResult.check;}
+      else{
+        lastProbeError=probeResults.map(result=>result.error).filter(Boolean).slice(0,3).join(" | ");
+        throw new Error("Tidak ada format yang lolos validasi media. "+(lastProbeError||"Semua provider mengirim file yang tidak cocok."));
       }
-      if(!selected||!ready||!check)throw new Error("Tidak ada format yang lolos validasi media. "+(lastProbeError||"Semua provider mengirim file yang tidak cocok."));
       const size=Number(check.bytes)||Number(selected.filesize)||0;
       const filenameBase=safeFilename(info.outputName||info.title||"aryanzz-media").replace(/\.[a-z0-9]{2,5}$/i,"");
       const filename=filenameBase+"."+check.extension;
@@ -1040,11 +1037,11 @@ function socialNetworkPlan(selected=0){
       if(size)downloadUrl.searchParams.set("expected",String(size));
       const container=bar.parentElement?.parentElement;
       const sizeLabel=size?" · "+formatDownloadSize(size):"";
-      if(size>180*1024*1024||!check.rangeSupported){
-        addReadyDownloadLink(container,downloadUrl.href,filename,mode==="audio"?"⬇ Unduh audio melalui Chrome":"⬇ Unduh video melalui Chrome");
+      if(!size||size>180*1024*1024||!check.rangeSupported){
+        addReadyDownloadLink(container,downloadUrl.href,filename,mode==="audio"?"Unduhan audio":"Unduhan video");
         bar.style.width="100%";bar.parentElement?.classList.remove("is-indeterminate");bar.parentElement?.setAttribute("aria-valuenow","100");
-        progressText.textContent=size>180*1024*1024?"File besar · unduhan Chrome siap":"Provider tidak mendukung Range · unduhan Chrome siap";
-        if(progressMeta)progressMeta.textContent=size>180*1024*1024?"Untuk menghemat RAM HP, file di atas 180 MB ditangani langsung oleh pengelola unduhan Chrome.":"Chrome mengelola transfer langsung tanpa menampung seluruh file di memori halaman.";
+        progressText.textContent="Unduhan otomatis dimulai di Chrome · "+filename;
+        if(progressMeta)progressMeta.textContent=size>180*1024*1024?"File besar ditangani langsung oleh pengelola unduhan Chrome agar RAM HP tidak penuh.":"Chrome menerima file MP4 secara langsung tanpa tombol unduhan tambahan.";
         remember(url,filename,mode,quality);
         return filename;
       }
@@ -1059,10 +1056,10 @@ function socialNetworkPlan(selected=0){
         return filename;
       }catch(rangeError){
         if(activeDownloadController?.signal.aborted)throw new Error("Unduhan dibatalkan.");
-        addReadyDownloadLink(container,downloadUrl.href,filename,mode==="audio"?"⬇ Lanjutkan lewat Chrome":"⬇ Lanjutkan lewat Chrome");
+        addReadyDownloadLink(container,downloadUrl.href,filename,mode==="audio"?"Unduhan audio":"Unduhan video");
         bar.style.width="100%";bar.parentElement?.classList.remove("is-indeterminate");bar.parentElement?.setAttribute("aria-valuenow","100");
-        progressText.textContent="Mode paralel tidak didukung · Chrome siap mengunduh";
-        if(progressMeta)progressMeta.textContent=String(rangeError?.message||rangeError).slice(0,160)+" Browser akan menangani transfer langsung tanpa file sementara di memori halaman.";
+        progressText.textContent="Unduhan otomatis dimulai di Chrome · "+filename;
+        if(progressMeta)progressMeta.textContent="Mode transfer paralel tidak didukung sumber; Chrome mengambil file langsung tanpa tombol tambahan. "+String(rangeError?.message||rangeError).slice(0,100);
         remember(url,filename,mode,quality);
         return filename;
       }
@@ -1075,8 +1072,8 @@ function socialNetworkPlan(selected=0){
     const fileUrl="/api/direct-file?url="+encodeURIComponent(url);
     addReadyDownloadLink(bar.parentElement?.parentElement,fileUrl,filename,"⬇ Unduh file sekarang");
     bar.style.width="100%";bar.parentElement?.classList.remove("is-indeterminate");bar.parentElement?.setAttribute("aria-valuenow","100");
-    progressText.textContent="Tautan file siap · "+filename;
-    if(progressMeta)progressMeta.textContent="Persiapan 100% · ketuk tombol unduh di bawah. Chrome akan menangani transfer dan progres unduhan sesungguhnya.";
+    progressText.textContent="Unduhan otomatis dimulai di Chrome · "+filename;
+    if(progressMeta)progressMeta.textContent="Chrome menerima file secara langsung. Periksa notifikasi atau folder Downloads untuk melihat progresnya.";
     remember(url,filename,mode,quality);
     return filename;
   }
@@ -1362,9 +1359,9 @@ function socialNetworkPlan(selected=0){
       const catalogPlatform=(window.ARYANZZ_PLATFORM_CATALOG||[]).find(platform=>platform.id===selectedPlatform);
       const shouldTryImageExtraction=isTikTokPhotoPost||isTikTokShortLink||isYouTubePhotoPost||isPhotoRoute||(!isYouTube&&!isExplicitVideoRoute&&selectedPlatform!=="soundcloud"&&!isTikTokPlatform&&catalogPlatform?.mediaModes?.includes("image"));
       const isSocialImagePostRoute=/\/(?:p|post|posts|status|pin|photo|photos|image|images|album|gallery|share)\//i.test(url.pathname);
-      const imageCheckTimeout=(isTikTokPhotoPost||isTikTokShortLink)?35000:(isYouTubePhotoPost||isPhotoRoute||isSocialImagePostRoute)?22000:6500;
+      const imageCheckTimeout=(isTikTokPhotoPost||isTikTokShortLink)?14000:(isYouTubePhotoPost||isPhotoRoute||isSocialImagePostRoute)?14000:10000;
       const imageExtractionPromise=shouldTryImageExtraction
-        ?fetch("/api/image/extract?url="+encodeURIComponent(url.href),{cache:"no-store",signal:AbortSignal.timeout(imageCheckTimeout)}).then(async response=>({ok:response.ok,data:await response.json().catch(()=>({}))})).catch(error=>({ok:false,data:{error:String(error?.message||error)}}))
+        ?fetch("/api/image/extract?url="+encodeURIComponent(url.href),{cache:"no-store",credentials:"same-origin",signal:AbortSignal.timeout(imageCheckTimeout)}).then(async response=>({ok:response.ok,data:await response.json().catch(()=>({}))})).catch(error=>({ok:false,data:{error:String(error?.message||error)}}))
         :Promise.resolve(null);
       let info;
       try{
@@ -1378,12 +1375,13 @@ function socialNetworkPlan(selected=0){
         info={ok:false,error:String(error?.message||error),title:"",formats:[],type:"image"};
       }
       if(runId!==analysisRunId)return;
-      const imageResult=shouldTryImageExtraction?await imageExtractionPromise:null;
+      const hasVideoFormat=(info.formats||[]).some(item=>item?.mode==="video"||item?.type==="video"||/^video\//i.test(String(item?.mimeType||item?.mime_type||""))||["mp4","m4v","webm","mov","avi","3gp"].includes(String(item?.ext||"").toLowerCase()));
+      const imageNeedsWait=shouldTryImageExtraction&&(!hasVideoFormat||isTikTokPhotoPost||isYouTubePhotoPost||isPhotoRoute||isSocialImagePostRoute);
+      const imageResult=imageNeedsWait?await imageExtractionPromise:null;
       if(runId!==analysisRunId)return;
       const imageData=imageResult?.data||{};
       const imageItems=Array.isArray(imageData.images)?imageData.images.slice(0,35):[];
       const isTikTokResolvedPhotoPost=isTikTokPlatform&&/\/photo\//i.test(String(info?.canonicalUrl||""));
-      const hasVideoFormat=(info.formats||[]).some(item=>item?.mode==="video"||item?.type==="video"||/^video\//i.test(String(item?.mimeType||item?.mime_type||""))||["mp4","m4v","webm","mov","avi","3gp"].includes(String(item?.ext||"").toLowerCase()));
       const hasAnyFormat=Array.isArray(info.formats)&&info.formats.length>0;
       let imageGallery=null,imageGalleryNote=null,imageGalleryAction=null;
       if(imageResult?.ok&&imageData.ok&&imageItems.length){
@@ -1543,22 +1541,71 @@ function socialNetworkPlan(selected=0){
             return aPreferred-bPreferred;
           })
           .filter((item,index,array)=>array.findIndex(candidate=>String(candidate.previewUrl||candidate.downloadUrl)===String(item.previewUrl||item.downloadUrl))===index)
-          .slice(0,8);
+          .slice(0,3);
         const previewFormat=previewCandidates[0]||null;
         if(previewFormat){
           const previewWrap=make("div","ary-video-preview-wrap");
           const preview=make("video","v737-media-preview");
-          preview.controls=true;
-          preview.controlsList="nodownload noplaybackrate";
+          preview.controls=false;
+          preview.removeAttribute("controls");
+          preview.controlsList="nodownload noplaybackrate noremoteplayback";
+          preview.setAttribute("controlslist","nodownload noplaybackrate noremoteplayback");
           preview.disablePictureInPicture=true;
           preview.disableRemotePlayback=true;
           preview.playsInline=true;
           preview.preload="metadata";
+          preview.draggable=false;
           preview.setAttribute("webkit-playsinline","");
           preview.style.cssText="display:block;height:auto;max-width:100%;max-height:70svh;margin:0 auto;object-fit:contain;object-position:center;background:#000;border-radius:12px";
+          preview.addEventListener("contextmenu",event=>event.preventDefault());
+          preview.addEventListener("dragstart",event=>event.preventDefault());
           if(info.thumbnail)preview.poster=info.thumbnail;
           preview.setAttribute("aria-label","Pratinjau video "+(info.title||"media"));
           const previewStatus=make("small","muted","Memuat pratinjau video…");
+          const playerControls=make("div","aryanzz-player-controls");
+          playerControls.setAttribute("role","group");
+          playerControls.setAttribute("aria-label","Kontrol pemutar video");
+          const playToggle=make("button","aryanzz-player-control","▶");
+          playToggle.type="button";playToggle.setAttribute("aria-label","Putar video");
+          const seek=make("input","aryanzz-player-seek");
+          seek.type="range";seek.min="0";seek.max="1000";seek.step="1";seek.value="0";seek.setAttribute("aria-label","Posisi video");
+          const playerTime=make("span","aryanzz-player-time","0:00 / --:--");
+          const muteToggle=make("button","aryanzz-player-control","🔊");
+          muteToggle.type="button";muteToggle.setAttribute("aria-label","Bisukan video");
+          const fullscreenToggle=make("button","aryanzz-player-control","⛶");
+          fullscreenToggle.type="button";fullscreenToggle.setAttribute("aria-label","Layar penuh");
+          playerControls.append(playToggle,seek,playerTime,muteToggle,fullscreenToggle);
+          const playerClock=value=>{
+            const seconds=Math.max(0,Math.floor(Number(value)||0));
+            const hours=Math.floor(seconds/3600),minutes=Math.floor((seconds%3600)/60),remaining=String(seconds%60).padStart(2,"0");
+            return hours?hours+":"+String(minutes).padStart(2,"0")+":"+remaining:minutes+":"+remaining;
+          };
+          const updatePlayerControls=()=>{
+            const total=Number(preview.duration),current=Number(preview.currentTime)||0;
+            seek.value=Number.isFinite(total)&&total>0?String(Math.max(0,Math.min(1000,Math.round(current/total*1000)))):"0";
+            playerTime.textContent=playerClock(current)+" / "+(Number.isFinite(total)&&total>0?playerClock(total):"--:--");
+            playToggle.textContent=preview.paused?"▶":"Ⅱ";
+            playToggle.setAttribute("aria-label",preview.paused?"Putar video":"Jeda video");
+            muteToggle.textContent=preview.muted||preview.volume===0?"🔇":"🔊";
+            muteToggle.setAttribute("aria-label",preview.muted||preview.volume===0?"Aktifkan suara":"Bisukan video");
+          };
+          playToggle.addEventListener("click",()=>{
+            if(preview.paused)preview.play().catch(()=>{previewStatus.textContent="Browser belum dapat memutar stream ini.";previewStatus.className="warning";});
+            else preview.pause();
+          });
+          seek.addEventListener("input",()=>{
+            const total=Number(preview.duration);
+            if(Number.isFinite(total)&&total>0)preview.currentTime=total*(Number(seek.value)||0)/1000;
+            updatePlayerControls();
+          });
+          muteToggle.addEventListener("click",()=>{preview.muted=!preview.muted;updatePlayerControls()});
+          fullscreenToggle.addEventListener("click",()=>{
+            if(document.fullscreenElement===previewWrap){document.exitFullscreen?.().catch?.(()=>{});return;}
+            if(typeof previewWrap.requestFullscreen==="function")previewWrap.requestFullscreen().catch(()=>{});
+            else if(typeof preview.webkitEnterFullscreen==="function")preview.webkitEnterFullscreen();
+          });
+          previewWrap.addEventListener("contextmenu",event=>event.preventDefault());
+          ["loadedmetadata","durationchange","timeupdate","play","pause","ended","volumechange"].forEach(name=>preview.addEventListener(name,updatePlayerControls));
           let previewCandidateIndex=0,previewDirectFallbackTried=false,previewWatchdog=null;
           const clearPreviewWatchdog=()=>{if(previewWatchdog){clearTimeout(previewWatchdog);previewWatchdog=null;}};
           const previewSourceFor=(candidate,direct=false)=>{
@@ -1619,7 +1666,7 @@ function socialNetworkPlan(selected=0){
             if(!source)return false;
             previewCandidateIndex=index;
             preview.src=source.href;preview.load();
-            if(reason){previewStatus.textContent=reason+" · mencoba stream "+(index+1)+" dari "+previewCandidates.length+"…";previewStatus.className="muted";}
+            if(reason){previewStatus.textContent=reason+" · mencoba jalur pemutaran yang kompatibel…";previewStatus.className="muted";}
             clearPreviewWatchdog();
             previewWatchdog=setTimeout(()=>{
               if(preview.readyState>=1)return;
@@ -1628,13 +1675,12 @@ function socialNetworkPlan(selected=0){
                 if(setPreviewCandidate(previewCandidateIndex,true,"Proxy belum mengirim metadata; mencoba CDN sumber"))return;
               }
               if(!tryNextPreviewCandidate("Waktu tunggu metadata habis")&&!showTikTokOfficialPlayer())showUnavailablePreview();
-            },12000);
+            },6500);
             return true;
           };
           const tryNextPreviewCandidate=reason=>{
             if(previewCandidateIndex+1>=previewCandidates.length)return false;
             const next=previewCandidateIndex+1;
-            previewDirectFallbackTried=false;
             return setPreviewCandidate(next,false,reason||"Stream sebelumnya gagal");
           };
           const applyIntrinsicRatio=()=>{
@@ -1646,7 +1692,7 @@ function socialNetworkPlan(selected=0){
                preview.style.aspectRatio=width+" / "+height;
                preview.style.width=ratio<1?Math.min(box.clientWidth||720,window.innerHeight*.70*ratio)+"px":"100%";
                preview.style.maxWidth="100%";preview.style.maxHeight="70svh";preview.style.marginInline="auto";
-               previewStatus.textContent="Rasio asli "+width+" × "+height+" px · "+(ratio<0.92?"Vertikal":ratio>1.08?"Horizontal":"Persegi")+" · "+(Number.isFinite(Number(preview.duration))?Number(preview.duration).toFixed(1)+" detik":"durasi belum tersedia");
+               previewStatus.textContent="Rasio asli "+width+" × "+height+" px · "+(ratio<0.92?"Vertikal":ratio>1.08?"Horizontal":"Persegi")+" · "+(Number.isFinite(Number(preview.duration))?playerClock(preview.duration):"durasi belum tersedia");
              }else if(preview.readyState<1)previewStatus.textContent="Menunggu metadata video dari sumber…";
            };
            preview.addEventListener("loadedmetadata",()=>{
@@ -1683,11 +1729,12 @@ function socialNetworkPlan(selected=0){
                  if(setPreviewCandidate(previewCandidateIndex,true,"Metadata belum tiba; mencoba CDN sumber"))return;
                }
                if(!tryNextPreviewCandidate("Waktu tunggu metadata habis")&&!showTikTokOfficialPlayer())showUnavailablePreview();
-             },12000);
+             },6500);
            };
            setPreviewCandidate(0,false,"Memuat pratinjau video");
            window.addEventListener("resize",applyIntrinsicRatio,{passive:true});
-           previewWrap.append(preview);
+           previewWrap.append(preview,playerControls);
+           updatePlayerControls();
            box.append(previewWrap,previewStatus);
         }else{
           const audioPreview=(info.formats||[]).find(item=>item.mode==="audio"&&item.url);
@@ -1730,7 +1777,7 @@ function socialNetworkPlan(selected=0){
       const outputNameLabel=make("label","label","NAMA FILE HASIL");
       outputNameLabel.style.marginTop="12px";
       const outputName=make("input","field");outputName.id="aryOutputName";outputName.type="text";outputName.maxLength=90;outputName.value=info.title||"aryanzz-media";outputName.autocomplete="off";outputName.placeholder="Nama file MP4 / MP3";
-      const outputNameHint=make("small","muted","Nama ini hanya mengubah file yang disimpan di perangkat. Judul, deskripsi, dan tag YouTube tetap diatur saat mengunggah video.");
+
       const directMedia=!!info.extension&&!info.extractor;
       const qualityFormats=hasProviderDownloadFormats?(info.formats||[]).filter(item=>item.mode==="video"&&item.downloadUrl&&!item.videoOnly&&["mp4","m4v"].includes(String(item.ext||"").toLowerCase())):info.formats||[];
       const heights = Array.isArray(qualityFormats)
@@ -1779,14 +1826,22 @@ function socialNetworkPlan(selected=0){
       }
       const updateQualityHint=()=>{
         const height=Number(quality.value)||0,estimate=youtubeQualityEstimate(info,height);
-        qualityHint.hidden=mode.value==="audio"||(!isYouTube&&!(hasProviderDownloadFormats&&heights.length));
+        qualityHint.hidden=mode.value==="audio"||(!isYouTube&&!hasProviderDownloadFormats&&!directMedia);
         if(qualityHint.hidden)return;
+        if(directMedia){
+          qualityHint.textContent="Resolusi mengikuti file sumber. 4K/8K hanya tersedia jika sumber benar-benar menyediakan resolusi tersebut; upscaling tidak menambah detail asli.";
+          return;
+        }
         if(!isYouTube){
+          if(!heights.length){
+            qualityHint.textContent="Provider hanya mengirim kualitas asli. 4K/8K tidak bisa dipaksakan saat mengunduh; resolusi lebih tinggi memerlukan stream sumber atau proses upscaling.";
+            return;
+          }
           const candidates=(qualityFormats||[]).filter(item=>Number(item.height)===height);
           const best=candidates.slice().sort((a,b)=>(Number(b.bitrate)||0)-(Number(a.bitrate)||0))[0];
           const estimate=best?estimateFormatBytes(best,info.duration):{bytes:0,exact:false};
           const size=estimate.bytes?(estimate.exact?"Ukuran sumber: ":"Perkiraan ukuran: ±")+formatDownloadSize(estimate.bytes)+". ":"";
-          qualityHint.textContent="Pilihan kualitas berasal dari format media yang tersedia. "+size+"Ukuran pasti diperiksa lagi sebelum unduhan dimulai.";
+          qualityHint.textContent="Resolusi yang tersedia dari sumber. "+size+"4K/8K hanya muncul jika provider benar-benar menyediakan stream tersebut.";
           return;
         }
         if(!estimate){qualityHint.textContent="Ukuran belum diberikan provider; ukuran asli akan terbaca saat stream diperiksa.";return;}
@@ -1805,7 +1860,7 @@ function socialNetworkPlan(selected=0){
       const audioHint = make("p", "muted", directMedia?(info.type==="audio"?"File audio langsung diunduh melalui Chrome; pengelola unduhan browser menangani kecepatan dan percobaan ulang.":"File video langsung diunduh melalui Chrome; sumber yang mendukung Range dapat dilanjutkan oleh pengelola unduhan."):isYouTube?(info.providerReady?(progressiveHeights.length?"MP4 langsung diprioritaskan. Chrome mengelola unduhan di latar belakang; mode kecepatan berlaku pada stream terpisah yang mendukung Range.":"Sumber memisahkan video dan suara; ARYANZZ merakitnya menjadi satu MP4. Potongan 1 MB disimpan lokal. Jika halaman tertutup, buka link yang sama, periksa lagi, lalu tekan Unduh untuk melanjutkan. Tab harus tetap terbuka saat tahap perakitan MP4. Mode kecepatan memakai 1, 3, atau 5 jalur bila server mendukung Range."):"Provider belum menyediakan stream saat ini; coba lagi nanti."):"Tautan platform perlu provider yang mendukung ekstraksi. Tautan file langsung memakai pengelola unduhan Chrome.");
       const note = make("p", "youtube-note", "Hanya unduh konten milikmu atau yang diizinkan.");
       audioHint.hidden=true;
-      box.append(formatLabel, mode, qualityLabel, quality, qualityHint, outputNameLabel, outputName, outputNameHint, speedLabel, speedSelect, speedHint, note);
+      box.append(formatLabel, mode, qualityLabel, quality, qualityHint, outputNameLabel, outputName, speedLabel, speedSelect, speedHint, note);
       outputName.addEventListener("input",()=>{info.outputName=outputName.value.trim().slice(0,90);});
       info.outputName=outputName.value.trim();
 
@@ -1884,7 +1939,7 @@ function socialNetworkPlan(selected=0){
         try {
           const downloadInfo={...info,outputName:safeFilename(outputName.value||info.title||"aryanzz-media")};
           const filename = isYouTube&&downloadInfo.providerName!=="Public API" ? await downloadYouTube(url.href,mode.value,Number(quality.value)||480,bar,progressText,progressMeta,downloadInfo,audioFormat.value,Number(speedSelect.value)||3) : await downloadFile(url.href, mode.value, Number(quality.value) || 0, bar, progressText, downloadInfo, audioFormat.value,progressMeta);
-          start.textContent = "File siap ✓";start.disabled=true;box.classList.add("v851-download-complete");const complete=make("div","v851-complete-panel");complete.append(make("span","v851-complete-icon","✓"),make("div","v851-complete-copy", "Unduhan berhasil disiapkan"),make("small","",filename));box.insertBefore(complete,actions);progressText.textContent="Selesai · file siap disimpan ke perangkat.";progressMeta.textContent="Periksa nama dan ukuran file, lalu gunakan tombol unduh yang muncul di atas.";cancel.hidden=true;
+          start.textContent = "Unduhan dimulai ✓";start.disabled=true;box.classList.add("v851-download-complete");const complete=make("div","v851-complete-panel");complete.append(make("span","v851-complete-icon","✓"),make("div","v851-complete-copy", "Unduhan dikirim ke Chrome"),make("small","",filename));box.insertBefore(complete,actions);progressText.textContent="Unduhan dimulai otomatis di Chrome.";progressMeta.textContent="Nama file: "+filename+" · periksa notifikasi atau folder Downloads Chrome.";cancel.hidden=true;
         } catch (error) {
           progress.classList.remove("is-indeterminate");progress.classList.add("is-failed");
           bar.style.width="0%";progress.setAttribute("aria-valuenow","0");

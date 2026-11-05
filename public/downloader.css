@@ -338,3 +338,14 @@ body[data-motion="off"] .youtube-result .progress-fill{animation:none!important;
   #platformPageLabel{font-size:10px!important}
   .v736-platform-pager button{font-size:10px!important;padding:8px 5px!important}
 }
+
+
+/* V95.0.1613 — custom mobile video controls; suppress Chrome's native video context menu */
+.ary-video-preview-wrap{position:relative;width:100%;max-width:100%;overflow:hidden;border:1px solid #294663;border-radius:14px;background:#02060c}
+.ary-video-preview-wrap .v737-media-preview{width:100%;max-width:100%;border:0;border-radius:0;touch-action:pan-y;-webkit-touch-callout:none;user-select:none}
+.aryanzz-player-controls{display:flex;align-items:center;gap:8px;width:100%;box-sizing:border-box;padding:9px 10px;border-top:1px solid #294663;background:linear-gradient(110deg,#0c1a2b,#10243a)}
+.aryanzz-player-control{display:grid;place-items:center;flex:0 0 38px;width:38px;height:36px;padding:0;border:1px solid #35516e;border-radius:10px;background:#142a43;color:#eaf5ff;font-size:16px;font-weight:900;cursor:pointer}
+.aryanzz-player-control:active{transform:scale(.96)}
+.aryanzz-player-seek{flex:1;min-width:40px;width:100%;margin:0;accent-color:#25c9b1;cursor:pointer}
+.aryanzz-player-time{flex:0 0 auto;min-width:78px;color:#d2e5f7;font-size:11px;font-variant-numeric:tabular-nums;text-align:center;white-space:nowrap}
+@media(max-width:380px){.aryanzz-player-controls{gap:5px;padding:8px 6px}.aryanzz-player-control{flex-basis:33px;width:33px;height:34px}.aryanzz-player-time{min-width:68px;font-size:10px}}
