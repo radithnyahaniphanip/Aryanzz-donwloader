@@ -380,3 +380,18 @@ The older `/api/youtube/*` SaveNow endpoints remain in the Worker for backward c
 - Removes unused D1 authentication endpoints and migration. This local mode does not synchronize accounts between devices and browser site-data deletion can erase accounts.
 - Adds a global minimalist Color Studio and removes legacy profile personalization controls.
 - Changes the Developer profile title and enables editing social links.
+
+
+## Indonesia compliance and incident-response checklist
+
+ARYANZZ cannot technically guarantee immunity from regulatory access restrictions. Do not rotate domains, proxies, or hosting to evade a lawful access-blocking order. Reduce operational risk through documented compliance and prompt handling of valid reports:
+
+- **Assess PSE Lingkup Privat status.** Review the current official criteria and complete registration when the service meets an applicable criterion. The official criteria include certain search and electronic-information services; do not claim registration until it has been completed and verified: https://pse.komdigi.go.id/panduan/kriteria-pendaftaran-pse-lingkup-privat
+- **Keep operator information accurate.** Maintain a responsible operator contact, service description, terms of use, privacy notice, and a working channel for complaints and official notices.
+- **Handle rights and safety reports.** Record the reported URL, report category, claimant authority, evidence, received time, review outcome, and any access restriction or removal. Collect only the information needed to assess the report.
+- **Respect source controls.** Process only public media that users own or are authorized to use. Do not bypass private-account restrictions, paywalls, DRM, CAPTCHA, or other access controls.
+- **Protect user data.** Minimize logs and personal data, keep secrets in Worker environment bindings, rotate exposed credentials, and never place API tokens in client-side assets.
+- **Strengthen edge controls.** Keep the existing security headers, origin validation, method allowlist, request-size checks, and endpoint rate limits. Add Cloudflare dashboard WAF and rate-limiting rules for account-wide protection; the in-memory Worker counters are per isolate and are not a global rate-limit system.
+- **Review official notices promptly.** Preserve the notice and response record, verify the sender and legal scope, and comply with applicable deadlines and lawful instructions. Obtain Indonesian legal advice for the service's precise PSE, copyright, and personal-data obligations.
+
+Relevant references: Permenkominfo No. 5 Tahun 2020 (as amended), https://jdih.komdigi.go.id/produk_hukum/view/id/759/t/pera ; UU No. 27 Tahun 2022 tentang Pelindungan Data Pribadi, https://peraturan.bpk.go.id/Details/229798/uu-no-27-tahun-2022.
