@@ -142,6 +142,43 @@ function freeProviderMediaInfo(data,rawUrl,requestUrl){
   const mp4Formats=formats.filter(item=>item.mode==="video"&&!item.videoOnly&&["mp4","m4v"].includes(item.ext));
   return {ok:true,providerName:"Public API",providerReady:true,provider:"Free public provider",platform:platformKey,title,filename:title,duration,thumbnail,type:formats.some(x=>x.mode==="video")?"video":"audio",formats,capabilities:{linkAccepted:true,preview:formats.some(item=>item.mode==="video"||item.mode==="audio"),mp4:mp4Formats.length>0,audio:formats.some(item=>item.mode==="audio"),mp4Qualities:[...new Set(mp4Formats.map(item=>item.height).filter(Boolean))]}};
 }
+
+async function verifyTikTokPhotoVideoFormats(info,canonicalUrl){
+  let photoRoute=false;
+  try{photoRoute=/\/photo\//i.test(new URL(canonicalUrl).pathname)}catch{}
+  if(!photoRoute||!info||!Array.isArray(info.formats))return info;
+  const candidates=info.formats.filter(item=>item?.mode==="video"&&item?.downloadUrl).slice(0,6);
+  const verified=[];
+  for(const item of candidates){
+    try{
+      const probeUrl=new URL(item.downloadUrl);
+      if(probeUrl.origin!==new URL(item.downloadUrl).origin||probeUrl.pathname!=="/api/social-file")continue;
+      probeUrl.searchParams.set("probe","1");
+      const response=await socialMediaFile(new Request(probeUrl.href));
+      const data=await response.json().catch(()=>({}));
+      if(response.ok&&data.valid===true&&String(data.mimeType||"").startsWith("video/")){
+        verified.push({...item,ext:data.extension||item.ext,mimeType:data.mimeType,verified:true});
+      }
+    }catch{}
+  }
+  const verifiedUrls=new Set(verified.map(item=>item.downloadUrl));
+  info.formats=[...verified,...info.formats.filter(item=>item?.mode!=="video"||verifiedUrls.has(item.downloadUrl))];
+  if(!verified.length){
+    info.directDownloadAvailable=false;
+    info.downloadMessage="TikTok Photo Mode dapat dibuka melalui pemutar resmi, tetapi provider publik tidak memberikan stream video MP4 yang lolos pemeriksaan. ARYANZZ tidak akan mengganti gambar/audio menjadi MP4 palsu.";
+    try{
+      const embed=await fetchTikTokOEmbed(canonicalUrl,6500);
+      info.embedUrl=embed.embedUrl;
+      info.embedId=embed.id;
+      info.embedAuthor=embed.author||null;
+      info.title=info.title||embed.title;
+      info.thumbnail=info.thumbnail||embed.thumbnail||null;
+      info.providerName="TikTok Photo Mode · official embed";
+    }catch{}
+  }
+  return info;
+}
+
 async function platformMediaInfo(request){
   let body;try{body=await request.json()}catch{return json({error:"Body JSON tidak valid."},400)}
   const raw=String(body?.url||"").trim();
@@ -369,6 +406,7 @@ async function freePublicMediaInfo(rawUrl,requestUrl){
             normalized.title=normalized.title||fallback.title;
             normalized.duration=Number(normalized.duration)||Number(fallback.duration)||null;
           }catch(error){normalized.fallbackDiagnostic=String(error?.message||error).slice(0,180)}
+          await verifyTikTokPhotoVideoFormats(normalized,canonicalUrl);
           await enrichTikTokDuration(normalized,canonicalUrl);
         }
         return json({...normalized,canonicalUrl:canonicalUrl!==rawUrl?canonicalUrl:undefined});
@@ -382,6 +420,7 @@ async function freePublicMediaInfo(rawUrl,requestUrl){
   if(key==="tiktok"){
     try{
       const fallback=await tikwmFallbackMediaInfo(canonicalUrl,requestUrl,providerUrls.filter(value=>value!==canonicalUrl));
+      await verifyTikTokPhotoVideoFormats(fallback,canonicalUrl);
       await enrichTikTokDuration(fallback,canonicalUrl);
       return json({...fallback,canonicalUrl:canonicalUrl!==rawUrl?canonicalUrl:undefined});
     }catch(error){
@@ -1541,7 +1580,7 @@ async function tikwmFallbackMediaInfo(rawUrl,requestUrl,alternateUrls=[]){
   const nativeResults=await Promise.allSettled(urls.slice(0,2).map(targetUrl=>tikTokNativePageFallback(targetUrl,requestUrl,8000)));
   for(let index=0;index<nativeResults.length;index++){
     const result=nativeResults[index],targetUrl=urls[index];
-    if(result.status==="fulfilled")return result.value;
+    if(result.status==="fulfilled"){await verifyTikTokPhotoVideoFormats(result.value,targetUrl);return result.value;}
     nativeErrors.push(new URL(targetUrl).hostname+": "+String(result.reason?.message||result.reason).slice(0,180));
   }
   const providerSummary=errors.slice(0,8).join("; ").slice(0,260);
