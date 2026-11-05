@@ -1654,7 +1654,8 @@ async function resolveSocialImagePost(rawUrl,requestUrl,options={}){
   const key=platformIdForUrl(rawUrl)||providerKey;
   if(!key)return null;
   const canonicalUrl=await resolveSocialShortLink(rawUrl,key);
-  let providerTitle="",providerImages=[],tikwmImages=[],tikTokItemImages=[],tikTokEmbedImages=[];
+  let providerTitle="",providerImages=[],tikwmImages=[],tikTokItemImages=[];
+  const isTikTokPhotoRoute=key==="tiktok"&&(()=>{try{return /\/photo\//i.test(new URL(canonicalUrl).pathname)}catch{return false}})();
   const providerUrl=FREE_MEDIA_API+"/api/download/"+(providerKey||key)+"?url="+encodeURIComponent(canonicalUrl);
   // Experimental catalogue entries still get safe public-page metadata extraction;
   // only established provider keys are sent to the community extractor API.
@@ -1669,7 +1670,9 @@ async function resolveSocialImagePost(rawUrl,requestUrl,options={}){
       providerImages=providerImageCandidates(data);
     }).catch(()=>{}):Promise.resolve(),
     (async()=>{
-      let page=await fetchSocialPostHtml(canonicalUrl,Number(options.timeoutMs)||12000).then(result=>({...result,images:extractSocialImageCandidates(result.html,result.url,key)})).catch(()=>null);
+      const itemId=isTikTokPhotoRoute?extractTikTokItemId(canonicalUrl):null;
+      const pageTarget=itemId?"https://www.tiktok.com/embed/v2/"+itemId:canonicalUrl;
+      let page=await fetchSocialPostHtml(pageTarget,Number(options.timeoutMs)||12000).then(result=>({...result,images:extractSocialImageCandidates(result.html,result.url,key)})).catch(()=>null);
       if((!page||!page.images?.length)&&key==="instagram"){
         const postMatch=canonicalUrl.match(/\/(p|reel|reels|tv)\/([^/]+)/i);
         if(postMatch){
@@ -1683,14 +1686,11 @@ async function resolveSocialImagePost(rawUrl,requestUrl,options={}){
       }
       return page;
     })(),
-    key==="tiktok"?fetchTikwmData(canonicalUrl,9000).then(data=>{
+    key==="tiktok"&&!isTikTokPhotoRoute?fetchTikwmData(canonicalUrl,9000).then(data=>{
       providerTitle=providerTitle||String(data.title||"").slice(0,240);
       tikwmImages=providerImageCandidates({normalized:{images:data.images,photos:data.photos,gallery:data.gallery}});
     }).catch(()=>{}):Promise.resolve(),
-    key==="tiktok"?fetchTikTokPhotoImageData(canonicalUrl,9000).then(data=>{
-      providerTitle=providerTitle||data.title;
-      tikTokItemImages=data.images;
-    }).catch(()=>{}):Promise.resolve(),
+    Promise.resolve(),
     key==="tiktok"?(async()=>{
       try{
         const itemId=extractTikTokItemId(canonicalUrl);
@@ -1722,8 +1722,15 @@ async function resolveSocialImagePost(rawUrl,requestUrl,options={}){
     })():Promise.resolve()
   ];
   const page=await tasks[1];
-  await Promise.all([tasks[0],tasks[2],tasks[3],tasks[4],tasks[5],tasks[6]]);
-  const rawCandidates=[...(page?.images||[]).map(item=>({...item,type:"image",source:item.source||"post-page"})),...providerImages.map(item=>({...item,url:item.url,source:"provider",type:item.type||item.kind||item.media_type||"image",mime_type:item.mime_type||item.mime||item.content_type||"",width:item.width||item.w||0,height:item.height||item.h||0,ext:item.ext||item.extension||""})),...(oembedImage?[oembedImage]:[]),...weirdDlImages,...tikwmImages.map(item=>({...item,url:item.url,source:"TikWM",type:"image"})),...tikTokItemImages,...tikTokEmbedImages];
+  await Promise.all([tasks[0],tasks[2],tasks[3],tasks[4],tasks[5]]);
+  if(key==="tiktok"&&isTikTokPhotoRoute&&!(page?.images||[]).length){
+    try{
+      const data=await fetchTikTokPhotoImageData(canonicalUrl,6500);
+      providerTitle=providerTitle||data.title;
+      tikTokItemImages=data.images;
+    }catch{}
+  }
+  const rawCandidates=[...(page?.images||[]).map(item=>({...item,type:"image",source:item.source||"post-page"})),...providerImages.map(item=>({...item,url:item.url,source:"provider",type:item.type||item.kind||item.media_type||"image",mime_type:item.mime_type||item.mime||item.content_type||"",width:item.width||item.w||0,height:item.height||item.h||0,ext:item.ext||item.extension||""})),...(oembedImage?[oembedImage]:[]),...weirdDlImages,...tikwmImages.map(item=>({...item,url:item.url,source:"TikWM",type:"image"})),...tikTokItemImages];
   const seen=new Set(),images=[];
   for(const item of rawCandidates){
     const safe=safePublicMediaUrl(item.url);if(!safe||seen.has(safe.href))continue;
@@ -1747,7 +1754,7 @@ async function resolveSocialImagePost(rawUrl,requestUrl,options={}){
   }
   if(!images.length)return null;
   const title=providerTitle||decodeSearchHtml((page?.html||"").match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1]||"Postingan gambar").slice(0,240);
-  const canonicalSourceUrl=page?.url||canonicalUrl;
+  const canonicalSourceUrl=key==="tiktok"?canonicalUrl:(page?.url||canonicalUrl);
   for(const image of images){image.sourceUrl=canonicalSourceUrl;image.previewUrl=socialImageProxyUrl(image.url,requestUrl,image.filename,false,canonicalSourceUrl);image.downloadUrl=socialImageProxyUrl(image.url,requestUrl,image.filename,true,canonicalSourceUrl)}
   return {title,url:canonicalSourceUrl,platform:key,provider:providerKey==="aio"?"public-page-metadata":"provider-and-public-page",verified:true,images};
 }
