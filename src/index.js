@@ -216,19 +216,20 @@ function extractGenericPublicMediaCandidates(html,pageUrl){
     for(const match of String(tag||"").matchAll(/([a-zA-Z_:][-a-zA-Z0-9_:]*)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/g))attrs[match[1].toLowerCase()]=match[2]??match[3]??match[4]??"";
     return attrs;
   };
-  const meta={};
+  const meta=Object.create(null);
   for(const tag of html.match(/<meta\b[^>]*>/gi)||[]){
-    // Keep Open Graph parsing independent from the broader HTML attribute parser.
-    // Some public pages reorder attributes or use punctuation-heavy OG property names.
-    const keyMatch=tag.match(/\b(?:property|name)\s*=\s*["']([^"']+)["']/i);
-    const contentMatch=tag.match(/\bcontent\s*=\s*["']([^"']*)["']/i);
-    const key=String(keyMatch?.[1]||"").toLowerCase();
-    if(key&&contentMatch?.[1])meta[key]=contentMatch[1];
+    const attrs=readAttrs(tag),key=String(attrs.property||attrs.name||"").toLowerCase();
+    if(key&&attrs.content){
+      if(!Array.isArray(meta[key]))meta[key]=[];
+      meta[key].push(attrs.content);
+    }
   }
+  const metaValues=key=>Array.isArray(meta[key])?meta[key]:meta[key]?[meta[key]]:[];
+  const metaFirst=key=>metaValues(key)[0]||"";
   const videoKeys=["og:video","og:video:url","og:video:secure_url","twitter:player:stream","twitter:player:stream:url"];
   const audioKeys=["og:audio","og:audio:url","og:audio:secure_url","twitter:audio:src"];
-  for(const key of videoKeys)if(meta[key])add(meta[key],"video",meta["og:video:type"]||meta["twitter:player:stream:content_type"]||"","Video");
-  for(const key of audioKeys)if(meta[key])add(meta[key],"audio",meta["og:audio:type"]||"","Audio");
+  for(const key of videoKeys)for(const raw of metaValues(key))add(raw,"video",metaFirst("og:video:type")||metaFirst("twitter:player:stream:content_type"),"Video");
+  for(const key of audioKeys)for(const raw of metaValues(key))add(raw,"audio",metaFirst("og:audio:type"),"Audio");
   for(const tag of html.match(/<(?:video|audio|source)\b[^>]*>/gi)||[]){
     const attrs=readAttrs(tag),tagName=String(tag.match(/^<\s*(video|audio|source)/i)?.[1]||"").toLowerCase();
     const src=attrs.src||attrs["data-src"]||attrs["data-url"]||attrs["data-original"]||"";
