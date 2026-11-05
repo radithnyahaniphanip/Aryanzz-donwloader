@@ -262,8 +262,17 @@
     const node=$("profileRandomId");if(!node)return;
     const key="aryanzz.profile.local-id.v94";let id=safeGet(key,"");
     if(!/^ARY-[A-Z0-9]{8}$/.test(id)){const bytes=new Uint8Array(5);crypto.getRandomValues(bytes);id="ARY-"+Array.from(bytes,b=>b.toString(36).padStart(2,"0")).join("").slice(0,8).toUpperCase();safeSet(key,id);}
-    node.textContent=id;
-    $("profileCopyId")?.addEventListener("click",async()=>{try{await navigator.clipboard.writeText(id);toast("ID profil berhasil disalin.");}catch{toast("Tidak dapat menyalin ID pada browser ini.");}});
+    const accountId=String(window.aryanzzAuthUser?.id||"").trim();
+    node.textContent=/^ARY-[A-Z0-9]{8,}$/.test(accountId)?accountId:id;
+    const copy=$("profileCopyId");
+    if(copy&&!copy.dataset.profileCopyBound){
+      copy.dataset.profileCopyBound="true";
+      copy.addEventListener("click",async()=>{
+        const current=String(node.textContent||"").trim();
+        try{await navigator.clipboard.writeText(current);toast("ID akun berhasil disalin.");}
+        catch{toast("Tidak dapat menyalin ID pada browser ini.");}
+      });
+    }
   }
   function init(){
     if(!$("profile"))return;
