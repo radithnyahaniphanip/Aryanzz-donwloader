@@ -218,8 +218,12 @@ function extractGenericPublicMediaCandidates(html,pageUrl){
   };
   const meta={};
   for(const tag of html.match(/<meta\b[^>]*>/gi)||[]){
-    const attrs=readAttrs(tag),key=String(attrs.property||attrs.name||"").toLowerCase();
-    if(key&&attrs.content)meta[key]=attrs.content;
+    // Keep Open Graph parsing independent from the broader HTML attribute parser.
+    // Some public pages reorder attributes or use punctuation-heavy OG property names.
+    const keyMatch=tag.match(/\b(?:property|name)\s*=\s*["']([^"']+)["']/i);
+    const contentMatch=tag.match(/\bcontent\s*=\s*["']([^"']*)["']/i);
+    const key=String(keyMatch?.[1]||"").toLowerCase();
+    if(key&&contentMatch?.[1])meta[key]=contentMatch[1];
   }
   const videoKeys=["og:video","og:video:url","og:video:secure_url","twitter:player:stream","twitter:player:stream:url"];
   const audioKeys=["og:audio","og:audio:url","og:audio:secure_url","twitter:audio:src"];
