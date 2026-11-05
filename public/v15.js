@@ -2,7 +2,7 @@
 (() => {
   "use strict";
   const $ = id => document.getElementById(id);
-  const KEY = {history:"aryanzz.history.v2", favorites:"aryanzz.favorites.v2", theme:"aryanzz.theme.v15", motion:"aryanzz.motion.v15"};
+  const KEY = {history:"aryanzz.history.v2", favorites:"aryanzz.favorites.v2"};
   const mediaExtension = /\.(mp4|webm|mov|m4v|mp3|m4a|aac|wav|ogg|oga|flac)$/i;
   const audioExtensions = new Set(["mp3","m4a","aac","wav","ogg","oga","flac"]);
   const formatSize = n => Number(n)>0 ? (Number(n)/(1024*1024)).toFixed(2)+" MB" : "Ukuran tidak diketahui";
@@ -20,56 +20,36 @@
     clearTimeout(toastTimer);toastTimer=setTimeout(()=>bar.classList.remove("shown"),3200);
   }
   function goto(id){
-    const panelId=id==="home"||!id?"":id;
+    const controller=window.aryanzzShowPanel;
+    if(typeof controller==="function"&&controller!==goto)return controller(id);
+    const panelId=id==="home"||!id?"":String(id);
+    const home=$("home"),toolsArea=$("toolsArea"),welcome=$("v89Welcome"),viewHeader=$("appViewHeader");
     document.body.dataset.view=panelId==="owner"?"owner":panelId?"tool":"home";
-    document.querySelectorAll("#toolsArea .panel").forEach(p=>p.classList.toggle("active",!!panelId&&p.id===panelId));
-    document.querySelectorAll("[data-nav]").forEach(b=>{
-      const target=b.dataset.nav;
-      b.classList.toggle("active",target===(panelId?(panelId==="allTools"?"allTools":["history","profile","owner"].includes(panelId)?panelId:"allTools"):"home"));
-    });
-    (panelId?$("toolsArea"):$("home"))?.scrollIntoView({behavior:document.body.dataset.motion==="off"?"auto":"smooth",block:"start"});
-  }
-  window.aryanzzShowPanel=goto;
-  function bindNavigation(){
+    if(home)home.hidden=!!panelId;
+    if(welcome)welcome.hidden=!!panelId;
+    if(viewHeader)viewHeader.hidden=!panelId;
+    if(toolsArea)toolsArea.hidden=!panelId;
+    document.querySelectorAll("#toolsArea>.panel").forEach(p=>{
+      const active=!!panelId&&p.id===panelId;
+      p.classList.toggle("active",activfunction bindNavigation(){
     document.querySelectorAll("[data-nav], [data-panel]").forEach(btn=>{
       btn.onclick=null;
       btn.addEventListener("click",()=>{goto(btn.dataset.nav||btn.dataset.panel||"")});
     });
     document.querySelectorAll("#toolsArea > .panel:not(#allTools)").forEach(p=>{
+      if(["history","owner","profile"].includes(p.id)||p.querySelector(".back-home"))return;
       const back=node("button","back-home","← Semua Tools");
       back.type="button";
       back.addEventListener("click",()=>goto("allTools"));
       p.append(back);
     });
-    document.body.dataset.view="home";
-  }
-
-  /* V7 theme & V14 motion preferences. */
-  const ACCENTS={blue:["#4287ff","#30d4e8"],purple:["#835dff","#e16ddb"],emerald:["#159f90","#59e5ba"],sunset:["#f37068","#f6b14c"]};
-  function applyTheme(name){const theme=Object.hasOwn(ACCENTS,name)?name:"blue";document.body.dataset.accent=theme;try{localStorage.setItem(KEY.theme,theme)}catch{}document.querySelectorAll(".v15-swatch").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.value===theme)));}
-  function applyMotion(enabled){document.body.dataset.motion=enabled?"on":"off";try{localStorage.setItem(KEY.motion,String(enabled))}catch{}const b=$("motionToggle");if(b)b.checked=enabled;}
-  function setupProfile(){
-    const panel=$("profile");if(!panel)return;
-    const box=node("section","v15-box v15-settings");
-    const title=node("div","v15-title","Tema & pengalaman");box.append(title);
-    box.append(node("p","v15-subtle","Pilih aksen warna favorit. Tersimpan di browser ini."));
-    const swatches=node("div","v15-row");
-    Object.entries(ACCENTS).forEach(([name,colors])=>{
-      const b=node("button","v15-swatch");b.type="button";b.title="Tema "+name;b.setAttribute("aria-label","Tema "+name);b.dataset.value=name;b.style.setProperty("--sw1",colors[0]);b.style.setProperty("--sw2",colors[1]);
-      b.addEventListener("click",()=>{applyTheme(name);toast("Tema "+name+" diterapkan")});swatches.append(b);
-    });
-    box.append(swatches);
-    const label=node("label","v15-toggle");const input=document.createElement("input");input.type="checkbox";input.id="motionToggle";
-    label.append(input,node("span","","Animasi dan efek gerak"));input.addEventListener("change",()=>applyMotion(input.checked));box.append(label);
-    const share=node("button","v15-action","Bagikan ARYANZZ");share.type="button";
-    share.addEventListener("click",async()=>{try{if(navigator.share)await navigator.share({title:"ARYANZZ",text:"ARYANZZ — All in One",url:location.origin});else if(navigator.clipboard){await navigator.clipboard.writeText(location.origin);toast("Link ARYANZZ disalin");}else toast("Buka link melalui alamat browser.")}catch(e){if(e?.name!=="AbortError")toast("Gagal membagikan link.")}});
-    box.append(share);const anchor=panel.querySelector(".v15-settings");if(!anchor)panel.append(box);
-    applyTheme(localStorage.getItem(KEY.theme)||"blue");applyMotion(localStorage.getItem(KEY.motion)!=="false");
+    if(typeof window.aryanzzShowPanel==="function")window.aryanzzShowPanel("home");
+    else goto("home");
   }
 
   /* V8 filter/search and fast tool discovery. */
   function setupToolSearch(){
-    const parent=$("allTools"),grid=parent?.querySelector(".all-tools-grid");if(!parent||!grid)return;
+    const parent=$("allTools"),grid=parent?.querySelector(".all-tools-grid");if(!parent||!grid||parent.querySelector("#toolSearch")||parent.querySelector("#toolFilters"))return;
     const category={
       speed:"network",checker:"network",heart:"network",
       queue:"media",history:"media",
@@ -231,141 +211,90 @@
   let libraryQuery="";
   function renderLibrary(){
     const history=$("historyList"),fav=$("favoriteList");if(!history||!fav)return;
-    const values=[...readArray(KEY.history),...readArray("aryanzz-download-history-v1")].filter((x,i,arr)=>x&&x.url&&arr.findIndex(y=>y.url===x.url)===i).slice(0,80);
-    const favorites=readArray(KEY.favorites);
+    const values=[...readArray(KEY.history),...readArray("aryanzz-download-history-v1")]
+      .filter((x,i,arr)=>x&&x.url&&arr.findIndex(y=>y&&y.url===x.url)===i)
+      .sort((a,b)=>Number(b.at||0)-Number(a.at||0)).slice(0,80);
+    const favorites=readArray(KEY.favorites).filter(x=>x&&x.url);
     const render=(root,items,isFavorite)=>{
-      root.replaceChildren();const filtered=items.filter(x=>(String(x.name||"")+" "+String(x.url||"")).toLocaleLowerCase("id").includes(libraryQuery));
-      if(!filtered.length){root.append(node("p","v15-subtle","Belum ada media yang cocok."));return}
+      root.replaceChildren();
+      const filtered=items.filter(x=>(String(x.name||"")+" "+String(x.url||"")).toLocaleLowerCase("id").includes(libraryQuery));
+      if(!filtered.length){root.append(node("p","ary-library-empty",isFavorite?"Belum ada favorit.":"Belum ada riwayat."));return}
       for(const item of filtered){
         let url;try{url=safeURL(item.url).href}catch{continue}
         const row=node("div","v15-library-row"),info=node("div","v15-library-info");
         info.append(node("b","",item.name||"Media"),node("small","",new Date(item.at||Date.now()).toLocaleDateString("id-ID")));
         const open=node("button","v15-action","Buka");open.type="button";open.addEventListener("click",()=>window.open(url,"_blank","noopener,noreferrer"));
-        const action=node("button","v15-action",isFavorite?"Hapus":"♡");action.type="button";action.addEventListener("click",()=>{setFavorite({name:item.name||url,url});toast(isFavorite?"Favorit dihapus":"Disimpan ke favorit")});
+        const action=node("button","v15-action",isFavorite?"Hapus":"♡");action.type="button";
+        action.addEventListener("click",()=>{setFavorite({name:item.name||url,url});toast(isFavorite?"Favorit dihapus":"Disimpan ke favorit")});
         row.append(info,open,action);root.append(row);
       }
     };
     render(history,values,false);render(fav,favorites,true);
-    const count=$("v15HistoryCount"),fcount=$("v15FavoriteCount");if(count)count.textContent=String(values.length);if(fcount)fcount.textContent=String(favorites.length);
+    const counts={
+      history:["aryLibraryHistoryCount","aryLibraryHistoryBadge","v15HistoryCount"],
+      favorites:["aryLibraryFavoriteCount","aryLibraryFavoriteBadge","v15FavoriteCount"]
+    };
+    counts.history.forEach(id=>{const el=$(id);if(el)el.textContent=String(values.length)});
+    counts.favorites.forEach(id=>{const el=$(id);if(el)el.textContent=String(favorites.length)});
   }
   function setupLibrary(){
-    const panel=$("history");if(!panel)return;
-    const stats=node("div","v15-stats");
-    for(const [id,label,value] of [["v15HistoryCount","Riwayat","0"],["v15FavoriteCount","Favorit","0"],["v15LocalStatus","Penyimpanan","Lokal"]]){const box=node("div","v15-stat");const b=node("b","",value);b.id=id;box.append(b,node("small","",label));stats.append(box)}
-    const search=node("input","v15-control");search.type="search";search.placeholder="Cari di library…";search.style.width="100%";search.style.marginTop="13px";
-    search.addEventListener("input",()=>{libraryQuery=search.value.trim().toLocaleLowerCase("id");renderLibrary()});
-    panel.insertBefore(stats,panel.querySelector("#historyList"));stats.after(search);
-    for(const id of ["clearHistoryV2","clearFavoritesV2"])$(id)?.addEventListener("click",()=>setTimeout(renderLibrary,0));
-    window.addEventListener("storage",renderLibrary);
-    renderLibrary();
-  }
-
-  /* V15.1: Wi-Fi + mobile-data speed test using Cloudflare's public speed-test endpoints. */
-  function setupSpeedTest(){
-    const panel=$("speed");if(!panel)return;
-    const $s=id=>$(id);
-    const btn=$s("speedBtn"),cancel=$s("speedCancel"),mode=$s("speedMode");
-    const conn=navigator.connection||navigator.mozConnection||navigator.webkitConnection;
-    let controller=null;
-    const bytesLabel=n=>n>=1000000?(n/1000000).toFixed(0)+" MB":Math.round(n/1000)+" KB";
-    const setStep=(label,pct)=>{const step=$s("speedStep"),percent=$s("speedPercent"),bar=$s("speedProgressBar");if(step)step.textContent=label;if(percent)percent.textContent=pct+"%";if(bar)bar.style.width=pct+"%";};
-    function updateNetwork(){
-      const type=String(conn?.type||"").toLowerCase();
-      const known=type==="wifi"||type==="cellular";
-      const wifi=type==="wifi",mobile=type==="cellular";
-      $s("wifiTile")?.classList.toggle("is-active",wifi);
-      $s("mobileTile")?.classList.toggle("is-active",mobile);
-      if($s("wifiState"))$s("wifiState").textContent=wifi?"Terhubung":known?"Tidak aktif":"Didukung";
-      if($s("mobileState"))$s("mobileState").textContent=mobile?"Terhubung":known?"Tidak aktif":"Didukung";
-      const name=$s("speedNetworkName"),detail=$s("speedNetworkDetail");
-      if(name)name.textContent=!navigator.onLine?"Tidak ada koneksi":wifi?"Wi-Fi terdeteksi":mobile?"Data seluler terdeteksi":type&&type!=="unknown"?type.toUpperCase():"Wi-Fi / Data Seluler";
-      if(detail)detail.textContent=known?"Speed test akan memakai jaringan "+(wifi?"Wi-Fi":"data seluler")+" yang aktif.": "Browser tidak membuka detail jenis jaringan. Tes tetap mengikuti koneksi aktif HP.";
-      const online=$s("speedOnline");if(online){online.textContent=navigator.onLine?"ONLINE":"OFFLINE";online.classList.toggle("is-offline",!navigator.onLine);}
-      const extra=[];
-      if(conn?.effectiveType)extra.push(String(conn.effectiveType).toUpperCase());
-      if(Number.isFinite(conn?.downlink))extra.push("perkiraan "+conn.downlink+" Mbps");
-      if(Number.isFinite(conn?.rtt))extra.push("RTT browser "+conn.rtt+" ms");
-      if(conn?.saveData)extra.push("Data Saver aktif");
-      const networkDetail=$s("speedNetworkDetail");
-      if(networkDetail&&extra.length)networkDetail.textContent+=(known?" · ":" ")+extra.join(" · ");
-    }
-    function updateEstimate(){
-      if(!$s("speedDataEstimate"))return;
-      const down=mode.value==="full"?8000000:2000000,up=mode.value==="full"?3000000:1000000;
-      $s("speedDataEstimate").textContent="Perkiraan pemakaian kuota sekitar "+bytesLabel(down+up)+" (download + upload).";
-    }
-    async function request(url,options={},timeout=18000){
-      if(!controller)throw new Error("Pengujian tidak aktif.");
-      const local=controller,timer=setTimeout(()=>local.abort(),timeout);
-      try{return await fetch(url,{cache:"no-store",...options,signal:local.signal})}
-      finally{clearTimeout(timer)}
-    }
-    function median(values){const sorted=[...values].sort((a,b)=>a-b);return sorted[Math.floor(sorted.length/2)]}
-    function speedText(bytes,ms){const mbps=(bytes*8)/(ms/1000)/1000000;return Number.isFinite(mbps)&&mbps>0?mbps.toFixed(2):"0.00"}
-    async function run(){
-      if(controller)return;
-      if(!navigator.onLine){$s("speedMsg").textContent="HP sedang offline. Sambungkan Wi-Fi atau data seluler terlebih dahulu.";return}
-      const downloadBytes=mode.value==="full"?8000000:2000000;
-      const uploadBytes=mode.value==="full"?3000000:1000000;
-      controller=new AbortController();btn.disabled=true;btn.textContent="Sedang menguji…";cancel.hidden=false;
-      for(const id of ["downVal","pingVal","uploadVal","jitterVal"])if($s(id))$s(id).innerHTML="—"+(id==="downVal"?"":"");
-      $s("speedMsg").textContent="Mengukur latensi ke Cloudflare Edge…";setStep("Mengukur ping",5);
-      try{
-        const pings=[];
-        for(let i=0;i<4;i++){
-          const start=performance.now();
-          const response=await request("https://speed.cloudflare.com/__down?bytes=0&cb="+Date.now()+"-"+i,{method:"GET"},12000);
-          if(!response.ok)throw new Error("Server tes ping menjawab HTTP "+response.status);
-          await response.arrayBuffer();pings.push(performance.now()-start);
-          if($s("pingVal"))$s("pingVal").innerHTML=Math.round(median(pings))+" <em>ms</em>";
-          setStep("Mengukur ping · "+(i+1)+"/4",5+Math.round((i+1)/4*15));
-        }
-        const ping=median(pings),jitter=pings.length>1?pings.slice(1).reduce((sum,v,i)=>sum+Math.abs(v-pings[i]),0)/(pings.length-1):0;
-        $s("pingVal").innerHTML=Math.round(ping)+" <em>ms</em>";
-        $s("jitterVal").innerHTML=Math.round(jitter)+" <em>ms</em>";
-        $s("speedMsg").textContent="Ping selesai. Mengukur kecepatan download…";setStep("Mengukur download · "+bytesLabel(downloadBytes),25);
-        const downStart=performance.now();
-        const downResponse=await request("https://speed.cloudflare.com/__down?bytes="+downloadBytes+"&cb="+Date.now(),{method:"GET"},25000);
-        if(!downResponse.ok)throw new Error("Server download menjawab HTTP "+downResponse.status);
-        const downBuffer=await downResponse.arrayBuffer(),downDuration=performance.now()-downStart;
-        const actualDown=downBuffer.byteLength||downloadBytes;
-        if(!actualDown)throw new Error("Server tidak mengirim data pengujian.");
-        $s("downVal").textContent=speedText(actualDown,downDuration);
-        $s("speedMsg").textContent="Download "+$s("downVal").textContent+" Mbps. Mengukur upload…";setStep("Mengukur upload · "+bytesLabel(uploadBytes),60);
-        try{
-          const payload=new Uint8Array(uploadBytes);
-          const upStart=performance.now();
-          const upResponse=await request("https://speed.cloudflare.com/__up?cb="+Date.now(),{method:"POST",headers:{"content-type":"application/octet-stream"},body:payload},25000);
-          if(!upResponse.ok)throw new Error("Server upload menjawab HTTP "+upResponse.status);
-          await upResponse.arrayBuffer();
-          $s("uploadVal").innerHTML=speedText(uploadBytes,performance.now()-upStart)+" <em>Mbps</em>";
-          setStep("Pengujian selesai",100);
-          $s("speedMsg").textContent="Selesai! Hasil diukur melalui jaringan yang sedang aktif.";
-        }catch(uploadError){
-          if(controller?.signal.aborted)throw uploadError;
-          $s("uploadVal").innerHTML="Gagal <em>—</em>";
-          setStep("Download selesai · upload gagal",85);
-          $s("speedMsg").textContent="Ping dan download berhasil. Upload tidak dapat diukur oleh jaringan/server saat ini.";
-        }
-      }catch(error){
-        const aborted=controller?.signal.aborted;
-        $s("speedMsg").textContent=aborted?"Pengujian dibatalkan.":(error.message||"Tes gagal. Periksa koneksi lalu coba lagi.");
-        if(!aborted)setStep("Tes tidak selesai",0);
-      }finally{
-        controller=null;btn.disabled=false;btn.textContent="Ulangi Speed Test ↻";cancel.hidden=true;
+    const panel=$("history");if(!panel||panel.dataset.v15LibraryBound==="1")return;
+    panel.dataset.v15LibraryBound="1";
+    const existingStats=panel.querySelector(".ary-library-stats");
+    if(!existingStats){
+      const stats=node("div","v15-stats");
+      for(const [id,label,value] of [["v15HistoryCount","Riwayat","0"],["v15FavoriteCount","Favorit","0"],["v15LocalStatus","Penyimpanan","Lokal"]]){
+        const box=node("div","v15-stat"),b=node("b","",value);b.id=id;box.append(b,node("small","",label));stats.append(box);
       }
+      panel.insertBefore(stats,panel.querySelector("#historyList"));
     }
-    btn?.addEventListener("click",run);
-    cancel?.addEventListener("click",()=>controller?.abort());
-    mode?.addEventListener("change",updateEstimate);
-    window.addEventListener("online",updateNetwork);window.addEventListener("offline",updateNetwork);
-    conn?.addEventListener?.("change",updateNetwork);
-    updateNetwork();updateEstimate();
+    let search=panel.querySelector("#v15LibrarySearch");
+    if(!search){
+      search=node("input","v15-control ary-library-search");
+      search.id="v15LibrarySearch";search.type="search";search.placeholder="Cari di pustaka…";
+      search.setAttribute("aria-label","Cari riwayat dan favorit");search.style.width="100%";search.style.marginTop="12px";
+      search.addEventListener("input",()=>{libraryQuery=search.value.trim().toLocaleLowerCase("id");renderLibrary()});
+      const tabs=panel.querySelector(".ary-library-switch");
+      if(tabs)tabs.after(search);else panel.insertBefore(search,panel.querySelector("#historyList"));
+    }
+    const historyTab=$("aryLibraryHistoryTab"),favoriteTab=$("aryLibraryFavoriteTab");
+    const historyView=$("aryLibraryHistoryView"),favoriteView=$("aryLibraryFavoriteView");
+    const showTab=favorite=>{
+      if(historyTab){historyTab.classList.toggle("active",!favorite);historyTab.setAttribute("aria-selected",String(!favorite));}
+      if(favoriteTab){favoriteTab.classList.toggle("active",favorite);favoriteTab.setAttribute("aria-selected",String(favorite));}
+      if(historyView)historyView.hidden=favorite;
+      if(favoriteView)favoriteView.hidden=!favorite;
+    };
+    historyTab?.addEventListener("click",()=>showTab(false));
+    favoriteTab?.addEventListener("click",()=>showTab(true));
+    const clearHistory=$("clearHistoryV2");
+    if(clearHistory&&!clearHistory.dataset.v15Bound){
+      clearHistory.dataset.v15Bound="1";
+      clearHistory.addEventListener("click",()=>{
+        if(!window.confirm("Hapus seluruh riwayat unduhan dari perangkat ini?"))return;
+        try{localStorage.removeItem(KEY.history);localStorage.removeItem("aryanzz-download-history-v1");}
+        catch{toast("Riwayat tidak dapat dihapus. Periksa penyimpanan browser.");return;}
+        renderLibrary();window.dispatchEvent(new Event("aryanzz:history-updated"));toast("Seluruh riwayat unduhan dihapus.");
+      });
+    }
+    const clearFavorites=$("clearFavoritesV2");
+    if(clearFavorites&&!clearFavorites.dataset.v15Bound){
+      clearFavorites.dataset.v15Bound="1";
+      clearFavorites.addEventListener("click",()=>{
+        if(!window.confirm("Hapus seluruh media favorit dari perangkat ini?"))return;
+        try{localStorage.removeItem(KEY.favorites);}
+        catch{toast("Favorit tidak dapat dihapus. Periksa penyimpanan browser.");return;}
+        renderLibrary();window.dispatchEvent(new Event("aryanzz:history-updated"));toast("Seluruh media favorit dihapus.");
+      });
+    }
+    window.addEventListener("storage",renderLibrary);
+    window.addEventListener("aryanzz:history-updated",renderLibrary);
+    renderLibrary();
   }
 
   /* V15 finish. */
   function init(){
-    bindNavigation();setupProfile();setupToolSearch();setupDownloader();setupImageLab();setupTextExtras();setupLibrary();setupSpeedTest();
+    bindNavigation();setupToolSearch();setupDownloader();setupImageLab();setupTextExtras();setupLibrary();
     if("serviceWorker" in navigator)navigator.serviceWorker.ready.then(r=>r.update().catch(()=>{})).catch(()=>{});
     document.querySelector(".pill")?.setAttribute("title","ARYANZZ V25 Premium Experience");
   }
