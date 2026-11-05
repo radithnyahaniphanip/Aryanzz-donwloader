@@ -70,7 +70,17 @@ for(const marker of [
   'id="audioStudioFormat"',
   'id="audioStudioTestEngine"',
   'id="audioStudioDiagnosticsResult"',
-  'id="v89Welcome"'
+  'id="v89Welcome"',
+  'ary-profile-v2',
+  'ary-profile2-header',
+  'ary-profile2-device',
+  'ary-owner-v2',
+  'ary-owner2-hero',
+  'ary-owner2-social-grid',
+  'id="ownerDeveloperBadge"',
+  'id="profileRandomId"',
+  'id="profileCopyId"',
+  'id="deviceHistoryList"'
 ])assert.ok(html.includes(marker),"Homepage kehilangan elemen/asset: "+marker);
 
 const assetRefs=[...html.matchAll(/(?:src|href)="(\/(?:[^"]+\.(?:js|css))(?:\?[^"]*)?)"/g)].map(match=>match[1]);
