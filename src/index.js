@@ -2003,7 +2003,7 @@ async function resolveSocialImagePost(rawUrl,requestUrl,options={}){
       }
       if((!page||!page.images?.length)&&isTikTokPhotoRoute){
         try{
-          const proxyData=await fetchTikTokPhotoEmbedProxy(canonicalUrl,Number(options.proxyTimeoutMs)||10000);
+          const proxyData=await fetchTikTokPhotoEmbedProxy(canonicalUrl,Number(options.proxyTimeoutMs)||13000);
           providerTitle=providerTitle||proxyData.title;
           page={...(page||{url:canonicalUrl,html:""}),title:proxyData.title,images:proxyData.images};
           if(options.diagnostics)options.diagnostics.value={...(options.diagnostics.value||{}),proxy:{ok:true,source:proxyData.source,imageCount:proxyData.images.length}};
