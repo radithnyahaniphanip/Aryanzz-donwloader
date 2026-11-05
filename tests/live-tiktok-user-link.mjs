@@ -33,7 +33,6 @@ try{
       report.embedStatus=player.status;
       await player.body?.cancel().catch(()=>{});
       report.playbackReady=player.ok;
-      console.log("[TIKTOK-USER-LINK-RESULT] "+JSON.stringify(report));
       if(!player.ok)process.exitCode=1;
       throw new Error("__TIKTOK_EMBED_PLAYBACK_HANDLED__");
     }
@@ -44,6 +43,20 @@ try{
   if(report.durationSeconds){const total=Math.floor(report.durationSeconds);report.durationLabel=Math.floor(total/60)+":"+String(total%60).padStart(2,"0");}
   const videos=info.formats.filter(item=>item?.mode==="video"&&item?.previewUrl&&item?.downloadUrl);
   report.videoFormats=videos.length;
+  if(!videos.length&&info.embedUrl){
+    const embed=new URL(info.embedUrl);
+    if(embed.origin!=="https://www.tiktok.com"||!/^\/player\/v1\/\d{8,}$/.test(embed.pathname))throw new Error("TikTok embed URL tidak valid.");
+    report.providerName=info.providerName||"TikTok Embed Player";
+    report.embedUrl=embed.href;
+    report.error=info.downloadMessage||"Player resmi TikTok tersedia, tetapi provider publik tidak memberikan MP4 yang lolos validasi.";
+    const player=await fetch(embed.href,{cache:"no-store",signal:AbortSignal.timeout(15000)});
+    report.embedStatus=player.status;
+    await player.body?.cancel().catch(()=>{});
+    report.playbackReady=player.ok;
+    report.downloadReady=false;
+    if(!player.ok)throw new Error("Pemutar resmi TikTok menjawab HTTP "+player.status+".");
+    throw new Error("__TIKTOK_EMBED_PLAYBACK_HANDLED__");
+  }
   if(!videos.length)throw new Error("Metadata ditemukan, tetapi provider tidak memberi URL pratinjau dan unduhan video.");
   const selected=videos.find(item=>!item.videoOnly&&["mp4","m4v"].includes(String(item.ext||"").toLowerCase()))||videos.find(item=>["mp4","m4v"].includes(String(item.ext||"").toLowerCase()))||videos[0];
   report.selectedFormat=String(selected.label||selected.ext||"video").slice(0,80);
@@ -79,9 +92,13 @@ try{
   console.log("[TIKTOK-USER-LINK-RESULT] "+JSON.stringify(report));
   if(!report.durationSeconds)console.log("[TIKTOK-USER-LINK-NOTE] Provider tidak mengirim durasi pada metadata; pemutar HP harus mengambil durasi asli melalui event loadedmetadata.");
 }catch(error){
-  report.error=String(error?.message||error).slice(0,320);
-  console.log("[TIKTOK-USER-LINK-RESULT] "+JSON.stringify(report));
-  process.exitCode=1;
+  if(String(error?.message||error)==="__TIKTOK_EMBED_PLAYBACK_HANDLED__"){
+    console.log("[TIKTOK-USER-LINK-RESULT] "+JSON.stringify(report));
+  }else{
+    report.error=String(error?.message||error).slice(0,320);
+    console.log("[TIKTOK-USER-LINK-RESULT] "+JSON.stringify(report));
+    process.exitCode=1;
+  }
 }
 
 const publicTikTokUrl="https://vm.tiktok.com/ZMkyTWLpV/";

@@ -166,15 +166,24 @@ async function verifyTikTokPhotoVideoFormats(info,canonicalUrl){
   if(!verified.length){
     info.directDownloadAvailable=false;
     info.downloadMessage="TikTok Photo Mode dapat dibuka melalui pemutar resmi, tetapi provider publik tidak memberikan stream video MP4 yang lolos pemeriksaan. ARYANZZ tidak akan mengganti gambar/audio menjadi MP4 palsu.";
-    try{
-      const embed=await fetchTikTokOEmbed(canonicalUrl,6500);
-      info.embedUrl=embed.embedUrl;
-      info.embedId=embed.id;
-      info.embedAuthor=embed.author||null;
-      info.title=info.title||embed.title;
-      info.thumbnail=info.thumbnail||embed.thumbnail||null;
+    const photoItemId=extractTikTokItemId(canonicalUrl);
+    if(photoItemId&&/^\d{8,}$/.test(photoItemId)){
+      const player=new URL("https://www.tiktok.com/player/v1/"+photoItemId);
+      for(const [key,value] of Object.entries({controls:"1",timestamp:"1",description:"1",music_info:"1",rel:"0"}))player.searchParams.set(key,value);
+      info.embedUrl=player.href;
+      info.embedId=photoItemId;
       info.providerName="TikTok Photo Mode · official embed";
-    }catch{}
+    }else{
+      try{
+        const embed=await fetchTikTokOEmbed(canonicalUrl,6500);
+        info.embedUrl=embed.embedUrl;
+        info.embedId=embed.id;
+        info.embedAuthor=embed.author||null;
+        info.title=info.title||embed.title;
+        info.thumbnail=info.thumbnail||embed.thumbnail||null;
+        info.providerName="TikTok Photo Mode · official embed";
+      }catch{}
+    }
   }
   return info;
 }
