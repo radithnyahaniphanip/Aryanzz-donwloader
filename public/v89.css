@@ -214,3 +214,53 @@ html,body{scroll-behavior:auto!important}
 .v736-platform-search-wrap .v736-platform-search:focus{border-color:#76cfff;box-shadow:0 0 0 3px rgba(73,177,255,.14)}
 .v736-platform-search-wrap .v736-platform-search-count{position:absolute;right:13px;top:50%;transform:translateY(-50%);color:#8fa7cb;font-size:10px;font-weight:900;pointer-events:none}
 .v736-platform-empty{grid-column:1/-1;margin:0;padding:20px 10px;text-align:center;color:#aabbd7;font-size:12px}
+
+
+/* V95.1.1656 — hard-stop every panel-entry and scroll-reveal motion */
+html,body{scroll-behavior:auto!important}
+#toolsArea>.panel.active,
+#toolsArea>.panel.active.v677-panel,
+#toolsArea>.panel.active.v677-enter{animation:none!important;transition:none!important;transform:none!important}
+#toolsArea>.panel:not(.active){display:none!important}
+#toolsArea>.panel.active .v677-reveal,
+#toolsArea>.panel.active .v677-reveal.v677-visible,
+#toolsArea>.panel.active .v25-reveal,
+#toolsArea>.panel.active .v25-reveal.v25-visible{
+  opacity:1!important;
+  transform:none!important;
+  transition:none!important;
+  animation:none!important;
+}
+
+/* V95.1.1656 — premium ARYANZZ home headline */
+.v89-welcome{position:relative;isolation:isolate;overflow:hidden}
+.v89-welcome-copy{position:relative;z-index:1}
+.v89-welcome h1{
+  color:#f7fbff;
+  letter-spacing:-1.5px;
+  text-shadow:0 8px 28px rgba(0,0,0,.38),0 0 24px rgba(89,159,255,.12);
+}
+.v89-welcome h1 span{
+  display:inline-block;
+  color:transparent!important;
+  background:linear-gradient(100deg,#8eeaff 0%,#ffffff 24%,#c3a7ff 48%,#74f0e7 72%,#fff0bd 100%);
+  background-size:280% 100%;
+  background-clip:text;
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+  filter:drop-shadow(0 0 10px rgba(111,197,255,.22)) drop-shadow(0 5px 18px rgba(0,0,0,.24));
+  animation:aryanzzMythicTitle 5.8s ease-in-out infinite;
+}
+.v89-welcome:after{
+  content:"";
+  position:absolute;
+  inset:0;
+  z-index:-1;
+  pointer-events:none;
+  background:radial-gradient(ellipse at 78% 12%,rgba(151,113,255,.16),transparent 46%),radial-gradient(ellipse at 12% 100%,rgba(63,222,232,.12),transparent 48%);
+}
+@keyframes aryanzzMythicTitle{
+  0%,100%{background-position:0% 50%;filter:drop-shadow(0 0 8px rgba(111,197,255,.18)) drop-shadow(0 5px 18px rgba(0,0,0,.24))}
+  50%{background-position:100% 50%;filter:drop-shadow(0 0 16px rgba(160,128,255,.42)) drop-shadow(0 5px 20px rgba(0,0,0,.3))}
+}
+@media(prefers-reduced-motion:reduce){.v89-welcome h1 span{animation:none!important;background-position:50% 50%}}

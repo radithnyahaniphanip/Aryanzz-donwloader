@@ -195,7 +195,7 @@ body{background-color:var(--ary-app-bg)}
 #toolsArea{min-height:55vh}
 #toolsArea.v8814-view-active{display:block}
 #toolsArea>.panel{width:100%;max-width:920px;margin:0 auto 24px}
-#toolsArea>.panel.active{display:block;animation:v8814ViewIn .22s ease both}
+#toolsArea>.panel.active{display:block;animation:none!important;transition:none!important;transform:none!important}
 #toolsArea>.panel:not(.active){display:none!important}
 #toolsArea>.panel.active:not(.owner-panel){border:1px solid var(--ary-app-border);border-radius:21px;background:linear-gradient(145deg,#111e32,#0b1423);box-shadow:0 16px 44px #0003;padding:clamp(14px,3vw,22px)}
 #toolsArea>.panel.active.owner-panel{padding:0;background:transparent;border:0;box-shadow:none}
@@ -214,7 +214,7 @@ body{background-color:var(--ary-app-bg)}
 </head><body>
 <div class="wrap">
 <header class="top v674-top"><a class="brand v674-brand" href="/" aria-label="ARYANZZ Home"><span class="logo v674-logo" aria-hidden="true"><svg width="30" height="30" viewBox="0 0 64 64" focusable="false"><defs><linearGradient id="aryanzzHeaderMark" x1="0" y1="1" x2="1" y2="0"><stop stop-color="#35d9df"/><stop offset=".5" stop-color="#5795ff"/><stop offset="1" stop-color="#b078ff"/></linearGradient></defs><path d="M7 53 24 13q2-5 8-5t8 5l17 40H43L32 26 21 53z" fill="url(#aryanzzHeaderMark)"/><path d="M23 39h18l-4-9H27z" fill="#fff"/><path d="m49 5 3 8 8 3-8 3-3 8-3-8-8-3 8-3z" fill="#fff"/></svg></span><span>ARYANZZ<small>RUANG KREATIF</small></span></a><div class="v674-top-actions"><span class="pill v674-version"><i></i> V__ARYANZZ_VERSION__ · GRATIS</span><span class="v674-security-indicator" id="securityStatusIndicator" role="status" aria-live="polite" title="Memeriksa perlindungan website"><i></i><span>Memeriksa keamanan</span></span></div></header>
-<div class="v89-welcome" id="v89Welcome"><div class="v89-welcome-copy"><span class="v89-welcome-kicker">ARYANZZ · RUANG KREATIF</span><h1>Semua berawal<br><span>dari satu tautan.</span></h1><p>Satu ruang terpadu untuk mengunduh, mencari, mengolah, dan mengelola media.</p></div><div class="v89-welcome-mark" aria-hidden="true">✦</div></div>
+<div class="v89-welcome" id="v89Welcome"><div class="v89-welcome-copy"><span class="v89-welcome-kicker">ARYANZZ · RUANG KREATIF</span><h1>Semua berawal<br><span>dari satu tautan</span></h1><p>Satu ruang terpadu untuk mengunduh, mencari, mengolah, dan mengelola media.</p></div><div class="v89-welcome-mark" aria-hidden="true">✦</div></div>
 <div class="v8814-view-header" id="appViewHeader" hidden><span class="v8814-view-mark">A+</span><div><small>ARYANZZ · RUANG KREATIF</small><b id="appViewTitle">Pusat Alat</b></div><span class="v8814-view-state">TERHUBUNG</span></div>
 <section id="home" class="v674-home">
 <div class="card download v6-download v674-download">
@@ -931,7 +931,12 @@ function panel(id){
   document.body.dataset.view=id?(id==='allTools'?'tools':id):'home';
   if(home)home.hidden=!!id;
   if(toolsArea)toolsArea.classList.toggle('v8814-view-active',!!id);
-  document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active',p.id===id));
+  document.querySelectorAll('#toolsArea>.panel').forEach(p=>{
+    const active=p.id===id;
+    p.classList.toggle('active',active);
+    p.hidden=!active;
+    p.classList.remove('v677-enter');
+  });
   const navKey=!id?'home':id==='history'?'history':id==='owner'?'owner':id==='profile'?'profile':'allTools';
   document.querySelectorAll('[data-nav]').forEach(b=>{const active=b.dataset.nav===navKey;b.classList.toggle('active',active);b.setAttribute('aria-current',active?'page':'false');});
   const target=id?$(id):home;
