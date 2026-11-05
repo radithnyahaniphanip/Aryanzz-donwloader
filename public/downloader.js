@@ -1015,7 +1015,7 @@ function socialNetworkPlan(selected=0){
             selected=candidate;ready=candidateUrl;check=candidateCheck;break;
           }
           lastProbeError=String(candidateCheck.error||"File tidak lolos validasi (HTTP "+probeResponse.status+").").slice(0,180);
-          if(probeResponse.status===415||/image\\/|bukan video|signature|tipe file/i.test(lastProbeError)){
+          if(probeResponse.status===415||lastProbeError.includes("image/")||/bukan video|signature|tipe file/i.test(lastProbeError)){
             const fullProbeUrl=new URL(candidateUrl.href);fullProbeUrl.searchParams.set("probe","full");
             progressText.textContent="Memeriksa ulang sumber tanpa rentang byte…";
             const fullResponse=await fetch(fullProbeUrl.href,{cache:"no-store",credentials:"same-origin",signal:downloadTimeoutSignal(15000)});
