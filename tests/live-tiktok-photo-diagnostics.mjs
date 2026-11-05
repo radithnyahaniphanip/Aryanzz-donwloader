@@ -31,7 +31,11 @@ async function probe(name,url,extraHeaders={}){
       result.kind="html-or-text";
       const ids=[...text.matchAll(/<script\b[^>]*\bid=["']([^"']+)["']/gi)].map(m=>m[1]).slice(0,25);
       const urls=[...new Set((text.match(/https?:\/\/[^"' \t\r\n<>]+/g)||[]).map(value=>{try{return new URL(value).hostname}catch{return ""}}).filter(x=>/tiktok|tiktokcdn|byteoversea|ibytedtos|muscdn|akamaized/i.test(x)))].slice(0,10);
-      result.details={title:text.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1]?.slice(0,180)||null,scriptIds:ids,hasImagePost:/imagePost|image_post|photoPost|photo_post/i.test(text),hasImageURL:/imageURL|imageUrl|urlList/i.test(text),hasUniversalData:text.includes("__UNIVERSAL_DATA_FOR_REHYDRATION__"),hasSigiState:text.includes("SIGI_STATE"),hasCaptcha:/captcha|verify to continue|access denied/i.test(text),urlHosts:urls,snippet:text.slice(0,350).replace(/\s+/g," ")};
+      const excerptAt=pattern=>{const index=text.search(pattern);return index<0?null:text.slice(Math.max(0,index-350),Math.min(text.length,index+1100)).replace(/\s+/g," ").slice(0,1450)};
+      const stateMatch=text.match(/<script\b[^>]*id=["']__FRONTITY_CONNECT_STATE__["'][^>]*>([\s\S]*?)<\/script>/i);
+      const stateBody=stateMatch?.[1]||"";
+      const statePreview=stateBody?{length:stateBody.length,start:stateBody.slice(0,450),imagePostAt:stateBody.search(/imagePost|image_post|photoPost|photo_post/i),imageURLAt:stateBody.search(/imageURL|imageUrl|urlList/i)}:null;
+      result.details={title:text.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1]?.slice(0,180)||null,scriptIds:ids,hasImagePost:/imagePost|image_post|photoPost|photo_post/i.test(text),hasImageURL:/imageURL|imageUrl|urlList/i.test(text),hasUniversalData:text.includes("__UNIVERSAL_DATA_FOR_REHYDRATION__"),hasSigiState:text.includes("SIGI_STATE"),hasCaptcha:/captcha|verify to continue|access denied/i.test(text),urlHosts:urls,statePreview,imagePostExcerpt:excerptAt(/imagePost|image_post|photoPost|photo_post/i),imageURLExcerpt:excerptAt(/imageURL|imageUrl|urlList/i),urlHosts:urls,snippet:text.slice(0,350).replace(/\s+/g," ")};
     }
   }catch(error){result.error=String(error?.message||error).slice(0,200)}
   console.log("[TIKTOK-PHOTO-ENDPOINT] "+JSON.stringify(result));
