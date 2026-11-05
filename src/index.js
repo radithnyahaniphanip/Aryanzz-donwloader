@@ -1697,6 +1697,17 @@ async function resolveSocialImagePost(rawUrl,requestUrl,options={}){
         if(key==="tiktok"&&options.diagnostics)options.diagnostics.value={source:"official-embed-v2",error:String(error?.message||error).slice(0,180)};
         return null;
       });
+      if((!page||!page.images?.length)&&isTikTokPhotoRoute){
+        try{
+          const photoData=await fetchTikTokPhotoImageData(canonicalUrl,Number(options.photoTimeoutMs)||7500);
+          providerTitle=providerTitle||photoData.title;
+          const images=photoData.images.map(item=>({...item,type:"image",source:"TikTok item detail"}));
+          page={...(page||{url:canonicalUrl,html:""}),title:photoData.title,images};
+          if(options.diagnostics)options.diagnostics.value={...(options.diagnostics.value||{}),itemDetail:{ok:true,imageCount:images.length,author:photoData.author||null}};
+        }catch(error){
+          if(options.diagnostics)options.diagnostics.value={...(options.diagnostics.value||{}),itemDetail:{ok:false,error:String(error?.message||error).slice(0,180)}};
+        }
+      }
       if((!page||!page.images?.length)&&key==="instagram"){
         const postMatch=canonicalUrl.match(/\/(p|reel|reels|tv)\/([^/]+)/i);
         if(postMatch){
