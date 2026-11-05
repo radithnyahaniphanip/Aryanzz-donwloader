@@ -197,12 +197,12 @@
     link.href=href;
     if(filename)link.download=filename;
     link.rel="noopener";
+    link.className="youtube-ready-link";
     link.setAttribute("aria-label",filename?"Unduh "+filename:(label||"Unduh media"));
     link.dataset.aryanzzAutoDownload="true";
-    link.style.cssText="position:fixed;left:-10000px;top:0;width:1px;height:1px;opacity:0;pointer-events:none;z-index:-1";
-    (document.body||container||document.documentElement).append(link);
-    link.click();
-    setTimeout(()=>link.remove(),1500);
+    link.textContent=label||"⬇ Unduh file sekarang";
+    const target=container||document.body||document.documentElement;
+    target.append(link);
     return link;
   }
   async function saveBrowserBlob(blob,filename,container,label="⬇ Unduh file sekarang"){
@@ -1945,7 +1945,7 @@ function socialNetworkPlan(selected=0){
         try {
           const downloadInfo={...info,outputName:safeFilename(outputName.value||info.title||"aryanzz-media")};
           const filename = isYouTube&&downloadInfo.providerName!=="Public API" ? await downloadYouTube(url.href,mode.value,Number(quality.value)||480,bar,progressText,progressMeta,downloadInfo,audioFormat.value,Number(speedSelect.value)||3) : await downloadFile(url.href, mode.value, Number(quality.value) || 0, bar, progressText, downloadInfo, audioFormat.value,progressMeta);
-          start.textContent = "⬇ Unduh lagi";start.disabled=false;mode.disabled=directMedia;quality.disabled=mode.value==="audio"||directMedia||quality.options.length<=1;audioFormat.disabled=false;audioBitrate.disabled=false;speedSelect.disabled=false;box.classList.add("v851-download-complete");const complete=make("div","v851-complete-panel");complete.append(make("span","v851-complete-icon","✓"),make("div","v851-complete-copy", "Unduhan dikirim ke Chrome"),make("small","",filename));box.insertBefore(complete,actions);progressText.textContent="Unduhan dimulai otomatis di Chrome. Kamu bisa mengubah format atau kualitas dan mengunduh lagi dari tautan yang sama.";progressMeta.textContent="Nama file: "+filename+" · periksa notifikasi atau folder Downloads Chrome.";cancel.hidden=true;
+          start.textContent = "⬇ Unduh lagi";start.disabled=false;mode.disabled=directMedia;quality.disabled=mode.value==="audio"||directMedia||quality.options.length<=1;audioFormat.disabled=false;audioBitrate.disabled=false;speedSelect.disabled=false;box.classList.add("v851-download-complete");const complete=make("div","v851-complete-panel");complete.append(make("span","v851-complete-icon","✓"),make("div","v851-complete-copy", "File siap diunduh"),make("small","",filename));box.insertBefore(complete,actions);progressText.textContent="File siap. Tekan tautan unduh di bawah untuk menyimpan ke perangkat.";progressMeta.textContent="Nama file: "+filename+" · gunakan tautan unduh di bawah.";cancel.hidden=true;
         } catch (error) {
           progress.classList.remove("is-indeterminate");progress.classList.add("is-failed");
           bar.style.width="0%";progress.setAttribute("aria-valuenow","0");
