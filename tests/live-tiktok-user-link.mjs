@@ -17,7 +17,7 @@ try{
     if(firstPhoto?.previewUrl){
       try{
         const previewUrl=new URL(firstPhoto.previewUrl);
-        if(previewUrl.origin!==base||previewUrl.pathname!=="/api/image/file")throw new Error("URL preview foto tidak melewati proxy ARYANZZ.");
+        if(previewUrl.origin!==base||previewUrl.pathname!=="/api/social-image-file")throw new Error("URL preview foto tidak melewati proxy ARYANZZ.");
         const photoPreview=await request(previewUrl.pathname+previewUrl.search);
         report.photoPreviewStatus=photoPreview.status;report.photoPreviewMime=photoPreview.headers.get("content-type");
         await photoPreview.body?.cancel().catch(()=>{});
