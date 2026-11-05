@@ -1297,11 +1297,18 @@ function extractTikTokCanonicalUrl(html,pageUrl){
   return candidates[0]||null;
 }
 function collectTikTokUrlValues(value,output=[],depth=0){
-  if(depth>5||value==null)return output;
-  if(typeof value==="string"){output.push(value);return output;}
-  if(Array.isArray(value)){for(const item of value.slice(0,30))collectTikTokUrlValues(item,output,depth+1);return output;}
+  if(depth>7||value==null)return output;
+  if(typeof value==="string"){
+    const text=decodeTikTokPageValue(value).trim();
+    if(/^https?:\\/\\//i.test(text)||text.startsWith("//"))output.push(text);
+    else if((text.startsWith("[")||text.startsWith("{"))&&text.length<120000){
+      try{collectTikTokUrlValues(JSON.parse(text),output,depth+1)}catch{}
+    }
+    return output;
+  }
+  if(Array.isArray(value)){for(const item of value.slice(0,50))collectTikTokUrlValues(item,output,depth+1);return output;}
   if(typeof value==="object"){
-    for(const key of ["UrlList","urlList","url_list","urls","url","uri","src"])if(value[key]!==undefined)collectTikTokUrlValues(value[key],output,depth+1);
+    for(const key of ["UrlList","urlList","url_list","urls","url","uri","src","imageURL","imageUrl","displayImage","display_image","originImage","origin_image","downloadUrl","download_url","image","images","thumbnail","thumbnailUrl","thumbnail_url","cover","dynamicCover","dynamic_cover"])if(value[key]!==undefined)collectTikTokUrlValues(value[key],output,depth+1);
   }
   return output;
 }
@@ -1432,10 +1439,11 @@ async function fetchTikTokPhotoImageData(rawUrl,timeoutMs=9000){
       lastDiagnostic=variant.name+": "+String(error?.message||error).slice(0,100);
       continue;
     }
-    const list=Array.isArray(payload?.itemList)?payload.itemList:Array.isArray(payload?.item_list)?payload.item_list:Array.isArray(payload?.items)?payload.items:[];
-    const item=payload?.itemInfo?.itemStruct||payload?.item_info?.item_struct||payload?.itemStruct||payload?.item||list.find(entry=>entry&&typeof entry==="object")||null;
-    const imagePost=item?.imagePost||item?.image_post||item?.photoPost||item?.photo_post||null;
-    const sourceImages=Array.isArray(imagePost?.images)?imagePost.images:Array.isArray(imagePost?.imageList)?imagePost.imageList:[];
+    const root=payload?.data&&typeof payload.data==="object"?payload.data:payload;
+    const list=Array.isArray(root?.itemList)?root.itemList:Array.isArray(root?.item_list)?root.item_list:Array.isArray(root?.items)?root.items:Array.isArray(root?.aweme_list)?root.aweme_list:[];
+    const item=payload?.itemInfo?.itemStruct||payload?.item_info?.item_struct||root?.itemInfo?.itemStruct||root?.item_info?.item_struct||root?.itemStruct||root?.item_struct||root?.aweme_detail||root?.awemeDetail||root?.item||list.find(entry=>entry&&typeof entry==="object")||null;
+    const imagePost=item?.imagePost||item?.image_post||item?.photoPost||item?.photo_post||item?.images||item?.imageList||null;
+    const sourceImages=Array.isArray(imagePost)?imagePost:Array.isArray(imagePost?.images)?imagePost.images:Array.isArray(imagePost?.imageList)?imagePost.imageList:Array.isArray(imagePost?.image_list)?imagePost.image_list:Array.isArray(imagePost?.image_post_info?.images)?imagePost.image_post_info.images:[];
     if(response.ok&&item&&sourceImages.length){
       const seen=new Set(),images=[];
       for(const entry of sourceImages.slice(0,35)){
@@ -1717,7 +1725,8 @@ async function resolveSocialImagePost(rawUrl,requestUrl,options={}){
         if(key==="tiktok"&&options.diagnostics)options.diagnostics.value={source:"official-embed-v2",error:String(error?.message||error).slice(0,180)};
         return null;
       });
-      if((!page||!page.images?.length)&&isTikTokPhotoRoute){
+      const tikTokPhotoSignals=key==="tiktok"&&(/photo.?mode|imagePost|image_post|photoPost|photo_post|imageURL|imageUrl|multi.?photo|carousel|image_post_info/i.test(page?.html||"")||isTikTokPhotoRoute);
+      if((!page||!page.images?.length)&&tikTokPhotoSignals){
         try{
           const photoData=await fetchTikTokPhotoImageData(canonicalUrl,Number(options.photoTimeoutMs)||7500);
           providerTitle=providerTitle||photoData.title;
