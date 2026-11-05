@@ -2703,7 +2703,7 @@ async function searchYouTube(request,env){
       method:"POST",
       headers:{"content-type":"application/json","accept":"application/json","authorization":"Bearer "+env.PLATFORM_API_TOKEN},
       body:JSON.stringify({query}),
-      signal:AbortSignal.timeout(90000),
+      signal:AbortSignal.timeout(18000),
       cache:"no-store"
     });
     const data=await response.json().catch(()=>({}));
