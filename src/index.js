@@ -278,11 +278,19 @@ function tikTokUrlCandidates(rawUrl,canonicalUrl){
     if(!safe||platformIdForUrl(safe.href)!=="tiktok"||seen.has(safe.href))return;
     seen.add(safe.href);candidates.push(safe.href);
   };
+  const canonical=String(canonicalUrl||"");
+  const photoMatch=canonical.match(/^https:\/\/www\.tiktok\.com\/@([^/]+)\/photo\/(\d{8,})/i)||canonical.match(/^https:\/\/www\.tiktok\.com\/photo\/(\d{8,})/i);
+  if(photoMatch){
+    const username=photoMatch.length===3?photoMatch[1]:"";
+    const itemId=photoMatch.length===3?photoMatch[2]:photoMatch[1];
+    if(username)add("https://www.tiktok.com/@"+username+"/video/"+itemId);
+    add("https://www.tiktok.com/video/"+itemId);
+  }
   add(canonicalUrl);
   add(rawUrl);
   for(const value of candidates.slice()){
     let url;try{url=new URL(value)}catch{continue}
-    const match=url.pathname.match(/^\/(?:@[^/]*\/)?video\/(\d{8,})/i);
+    const match=url.pathname.match(/^\/(?:@[^/]*\/)?(?:video|photo)\/(\d{8,})/i);
     if(match){
       add("https://www.tiktok.com/video/"+match[1]);
       add("https://www.tiktok.com/@/video/"+match[1]);
@@ -313,7 +321,7 @@ async function freePublicMediaInfo(rawUrl,requestUrl){
   let primaryError="";
   try{
     let response=null,data={},attempts=key==="instagram"?2:1;
-    const primaryTargets=key==="tiktok"?providerUrls.slice(0,2):[canonicalUrl];
+    const primaryTargets=key==="tiktok"?providerUrls.slice(0,4):[canonicalUrl];
     const primaryResults=await Promise.allSettled(primaryTargets.map(async targetUrl=>{
       let candidateResponse=null,candidateData={};
       for(let attempt=0;attempt<attempts;attempt++){
@@ -330,7 +338,8 @@ async function freePublicMediaInfo(rawUrl,requestUrl){
       return {response:candidateResponse,data:candidateData,targetUrl};
     }));
     const fulfilled=primaryResults.filter(item=>item.status==="fulfilled").map(item=>item.value);
-    const chosen=fulfilled.find(item=>item.response?.ok||item.response&&item.response.status<500)||fulfilled[0];
+    const videoRouteResult=key==="tiktok"?fulfilled.find(item=>{let path="";try{path=new URL(item.targetUrl).pathname}catch{}return /\/(?:@[^/]+\/)?video\/\d{8,}/i.test(path)&&item.response?.ok&&item.data?.success!==false&&freeProviderMediaInfo(item.data,item.targetUrl,request.url)?.formats?.some(format=>format.mode==="video")}):null;
+    const chosen=videoRouteResult||fulfilled.find(item=>item.response?.ok||item.response&&item.response.status<500)||fulfilled[0];
     if(chosen){response=chosen.response;data=chosen.data;}
     else if(primaryResults.length)primaryError=String(primaryResults[0].reason?.message||primaryResults[0].reason||"Provider utama gagal").slice(0,180);
     if(response?.ok&&data?.success!==false){
