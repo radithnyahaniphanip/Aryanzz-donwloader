@@ -31,7 +31,20 @@
     if(toolsArea)toolsArea.hidden=!panelId;
     document.querySelectorAll("#toolsArea>.panel").forEach(p=>{
       const active=!!panelId&&p.id===panelId;
-      p.classList.toggle("active",activfunction bindNavigation(){
+      p.classList.toggle("active",active);
+      p.hidden=!active;
+      p.inert=!active;
+      p.setAttribute("aria-hidden",active?"false":"true");
+    });
+    document.querySelectorAll("[data-nav]").forEach(b=>{
+      const active=b.dataset.nav===(panelId?(panelId==="allTools"?"allTools":["history","profile","owner"].includes(panelId)?panelId:"allTools"):"home");
+      b.classList.toggle("active",active);
+    });
+    const root=document.documentElement;
+    root.style.scrollBehavior="auto";
+    root.scrollTop=0;document.body.scrollTop=0;window.scrollTo(0,0);
+  }
+  function bindNavigation(){
     document.querySelectorAll("[data-nav], [data-panel]").forEach(btn=>{
       btn.onclick=null;
       btn.addEventListener("click",()=>{goto(btn.dataset.nav||btn.dataset.panel||"")});
