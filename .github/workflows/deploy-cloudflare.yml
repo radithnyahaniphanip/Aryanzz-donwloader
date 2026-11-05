@@ -37,6 +37,7 @@ jobs:
           node --check tests/live-release-smoke.mjs
           node --check tests/live-platform-matrix.mjs
           node --check tests/live-tiktok-user-link.mjs
+          node --check tests/live-tiktok-photo-diagnostics.mjs
           node --check tests/tiktok-native-fallback.mjs
           node --check tests/live-instagram-image-link.mjs
           node --check tests/live-provider-fallbacks.mjs
@@ -107,6 +108,11 @@ jobs:
         env:
           WORKER_URL: https://aryanzz-donwloader.radithnyahaniphanip.workers.dev
         run: node tests/live-tiktok-user-link.mjs
+      - name: Diagnose TikTok Photo Mode public image endpoints
+        if: success()
+        continue-on-error: true
+        timeout-minutes: 3
+        run: node tests/live-tiktok-photo-diagnostics.mjs
       - name: Diagnose user-supplied Instagram post image extraction and download
         if: success()
         continue-on-error: true
