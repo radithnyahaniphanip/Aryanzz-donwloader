@@ -797,18 +797,18 @@ function canonicalPlatformId(id){
   return platform?.aliasOf||id;
 }
 function socialSearchQueryVariants(query){
-  const original=String(query||"").replace(/\\s+/g," ").trim();
-  const normalized=original.normalize("NFKC").replace(/[#_]+/g," ").replace(/\\s+/g," ").trim();
+  const original=String(query||"").replace(/\s+/g," ").trim();
+  const normalized=original.normalize("NFKC").replace(/[#_]+/g," ").replace(/\s+/g," ").trim();
   const variants=[original,normalized];
   const lower=normalized.toLowerCase();
-  const green=/green\\s*screen|greenscreen|layar\\s*hijau|chroma\\s*key/.test(lower);
-  const meme=/\\bmeme(s)?\\b|memes|meme lucu/.test(lower);
-  const cat=/meme\\s+kucing|kucing\\s+meme|meme\\s+cat|cat\\s+meme|kucing/.test(lower);
-  const audio=/\\b(audio|lagu|musik|music|song|sound|suara|remix|dj|instrumental|ost)\\b/.test(lower);
-  const image=/\\b(gambar|foto|image|photo|wallpaper|png|sticker|stiker)\\b/.test(lower);
+  const green=/green\s*screen|greenscreen|layar\s*hijau|chroma\s*key/.test(lower);
+  const meme=/\bmeme(s)?\b|memes|meme lucu/.test(lower);
+  const cat=/meme\s+kucing|kucing\s+meme|meme\s+cat|cat\s+meme|kucing/.test(lower);
+  const audio=/\b(audio|lagu|musik|music|song|sound|suara|remix|dj|instrumental|ost)\b/.test(lower);
+  const image=/\b(gambar|foto|image|photo|wallpaper|png|sticker|stiker)\b/.test(lower);
   const add=(...terms)=>variants.push(...terms);
   if(green){
-    add(normalized.replace(/greenscreen/ig,"green screen").replace(/layar\\s*hijau/ig,"green screen"));
+    add(normalized.replace(/greenscreen/ig,"green screen").replace(/layar\s*hijau/ig,"green screen"));
     if(meme)add("green screen meme","green screen meme template","chroma key meme","greenscreen meme template","green screen reaction meme");
     else add("green screen video","green screen template","chroma key video","green screen overlay","green background video");
     if(cat)add("green screen cat meme","green screen meme kucing","cat green screen meme");
