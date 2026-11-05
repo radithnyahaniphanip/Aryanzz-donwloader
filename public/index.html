@@ -192,7 +192,7 @@ body{background-color:var(--ary-app-bg)}
 .v8814-view-header b{font-size:15px;color:#f2f6ff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .v8814-view-state{font-size:8px;letter-spacing:.7px;color:#71e7b0;border:1px solid #246a52;background:#0c2a22;padding:6px 8px;border-radius:30px;font-weight:900}
 #home[hidden]{display:none!important}
-#toolsArea{min-height:55vh}
+#toolsArea{min-height:0}
 #toolsArea.v8814-view-active{display:block}
 #toolsArea>.panel{width:100%;max-width:920px;margin:0 auto 24px}
 #toolsArea>.panel.active{display:block;animation:none!important;transition:none!important;transform:none!important}
@@ -1118,6 +1118,7 @@ function panel(id){
 }
 window.aryanzzShowPanel=panel;
 normalizePersonalLayout();
+panel("home");
 document.querySelectorAll('[data-panel]').forEach(b=>b.onclick=()=>panel(b.dataset.panel));document.querySelectorAll('[data-nav]').forEach(b=>b.onclick=()=>panel(b.dataset.nav==='home'?'':b.dataset.nav));
 const API=(window.ARYANZZ_API_BASE||'').replace(new RegExp("/+$"),"");let activeUrl='',activeName='aryanzz-media';
 const historyKey='aryanzz-download-history-v1';
