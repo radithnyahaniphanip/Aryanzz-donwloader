@@ -274,7 +274,7 @@ body[data-motion="off"] *,body[data-motion="off"] *:before,body[data-motion="off
 
 
 /* PROFILE V2 — account dashboard */
-#profile.ary-profile-v2{display:block;width:100%;max-width:1040px;margin:0 auto;padding:clamp(12px,2.5vw,26px)!important;color:#edf5ff;background:transparent!important;border:0!important;box-shadow:none!important;overflow:visible}
+#profile.ary-profile-v2{width:100%;max-width:1040px;margin:0 auto;padding:clamp(12px,2.5vw,26px)!important;color:#edf5ff;background:transparent!important;border:0!important;box-shadow:none!important;overflow:visible}
 #profile.ary-profile-v2 .ary-profile2-header{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:0 0 20px;padding:0 2px}
 #profile.ary-profile-v2 .ary-profile2-eyebrow,#profile.ary-profile-v2 .ary-profile2-card-heading>div>span{display:block;color:#78b8f7;font-size:10px;font-weight:900;letter-spacing:2px}
 #profile.ary-profile-v2 .ary-profile2-header h1{margin:5px 0 3px;color:#f6f9ff;font-size:clamp(25px,4vw,34px);font-weight:950;letter-spacing:-1px}
