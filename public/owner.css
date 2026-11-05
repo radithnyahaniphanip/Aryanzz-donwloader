@@ -193,3 +193,65 @@ body[data-view="owner"] .nav button[data-nav="owner"]{font-weight:1000}
   .owner-stats b{font-size:17px}
   .owner-stats span{font-size:8px;letter-spacing:.7px}
 }
+
+
+/* V95.1 UI repair — make the Developer Website title unmistakable and vertically ordered. */
+.owner-badges.owner-identity-titles{
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:flex-start!important;
+  justify-content:flex-start;
+  gap:9px;
+  min-height:0;
+  margin:5px 0 18px;
+  padding-left:118px;
+}
+.owner-badges.owner-identity-titles .owner-badge{
+  max-width:100%;
+  min-height:35px;
+  line-height:1.2;
+}
+.owner-badges.owner-identity-titles .owner-developer-title{
+  color:#fff!important;
+  -webkit-text-fill-color:#fff!important;
+  background:linear-gradient(105deg,#6b3c0a 0%,#b87918 24%,#ffe4a0 48%,#a66b16 73%,#56300a 100%)!important;
+  background-size:260% 100%!important;
+  border:1.5px solid #ffe9b4!important;
+  border-radius:12px;
+  padding:10px 15px;
+  font-size:11px;
+  font-weight:1000;
+  letter-spacing:1.8px;
+  text-shadow:0 1px 5px rgba(51,27,0,.8),0 0 12px rgba(255,231,170,.35);
+  box-shadow:0 0 0 1px rgba(255,229,166,.14),0 0 24px rgba(242,190,78,.46),0 4px 0 #020711!important;
+}
+.owner-badges.owner-identity-titles .owner-creator-title{
+  color:#eafff6!important;
+  -webkit-text-fill-color:#eafff6!important;
+  background:linear-gradient(110deg,#075a50,#13a77d 55%,#07564d)!important;
+  border:1px solid #83f6ce!important;
+  box-shadow:0 0 16px rgba(20,210,157,.2),0 4px 0 #020711!important;
+}
+.owner-profile-content h2{margin-top:8px}
+@media(max-width:600px){
+  .owner-badges.owner-identity-titles{padding-left:98px;gap:8px;margin-bottom:15px}
+  .owner-badges.owner-identity-titles .owner-developer-title{font-size:10px;letter-spacing:1.35px;padding:9px 12px}
+  .owner-badges.owner-identity-titles .owner-creator-title{font-size:8px;padding:7px 10px}
+}
+@media(max-width:380px){
+  .owner-badges.owner-identity-titles{padding-left:90px}
+}
+
+/* Keep the Owner identity motion independent from the general interface-motion switch.
+   Respect the operating-system reduced-motion preference. */
+@media(prefers-reduced-motion:no-preference){
+  body.ary-reduced-motion .owner-panel .owner-developer-title{
+    animation:developerBadgeShimmer 3.8s linear infinite,developerBadgeGlow 2.4s ease-in-out infinite alternate!important;
+  }
+  body.ary-reduced-motion .owner-panel .owner-cover{
+    animation:ownerLuxuryFlow 12s ease-in-out infinite alternate!important;
+  }
+  body.ary-reduced-motion .owner-panel .owner-cover-orbit{
+    animation:ownerLuxurySweep 5.8s ease-in-out infinite!important;
+  }
+}
