@@ -367,7 +367,7 @@ async function freePublicMediaInfo(rawUrl,requestUrl){
       }
       primaryError="Provider utama tidak mengembalikan stream video/audio yang valid.";
     }else{
-      const detail=data?.error?.message||data?.error||"HTTP "+response.status;
+      const detail=data?.error?.message||data?.error||"HTTP "+(response?.status||502);
       primaryError=String(detail).slice(0,140);
     }
   }catch(error){primaryError=String(error?.message||error).slice(0,140)}
