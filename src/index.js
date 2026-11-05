@@ -223,12 +223,18 @@ function extractGenericPublicMediaCandidates(html,pageUrl){
     const keyMatch=tag.match(/\b(?:property|name)\s*=\s*["']([^"']+)["']/i);
     const contentMatch=tag.match(/\bcontent\s*=\s*["']([^"']*)["']/i);
     const key=String(keyMatch?.[1]||"").toLowerCase();
-    if(key&&contentMatch?.[1])meta[key]=contentMatch[1];
+    if(key&&contentMatch?.[1]){
+      if(!meta[key])meta[key]=[];
+      meta[key].push(contentMatch[1]);
+    }
   }
+  const metaValues=value=>Array.isArray(value)?value:(value?[value]:[]);
   const videoKeys=["og:video","og:video:url","og:video:secure_url","twitter:player:stream","twitter:player:stream:url"];
   const audioKeys=["og:audio","og:audio:url","og:audio:secure_url","twitter:audio:src"];
-  for(const key of videoKeys)if(meta[key])add(meta[key],"video",meta["og:video:type"]||meta["twitter:player:stream:content_type"]||"","Video");
-  for(const key of audioKeys)if(meta[key])add(meta[key],"audio",meta["og:audio:type"]||"","Audio");
+  const videoMime=metaValues(meta["og:video:type"])[0]||metaValues(meta["twitter:player:stream:content_type"])[0]||"";
+  const audioMime=metaValues(meta["og:audio:type"])[0]||"";
+  for(const key of videoKeys)for(const raw of metaValues(meta[key]))add(raw,"video",videoMime,"Video");
+  for(const key of audioKeys)for(const raw of metaValues(meta[key]))add(raw,"audio",audioMime,"Audio");
   for(const tag of html.match(/<(?:video|audio|source)\b[^>]*>/gi)||[]){
     const attrs=readAttrs(tag),tagName=String(tag.match(/^<\s*(video|audio|source)/i)?.[1]||"").toLowerCase();
     const src=attrs.src||attrs["data-src"]||attrs["data-url"]||attrs["data-original"]||"";
@@ -1292,7 +1298,7 @@ function extractSocialImageCandidates(html,pageUrl,platform){
     if(parsed)collectImageUrls(parsed,jsonImages);
   }
   for(const raw of jsonImages)add(raw,"jsonld");
-  const hasVideoMeta=!!(meta["og:video"]||meta["og:video:url"]||meta["twitter:player"]||meta["og:type"]==="video.other"||meta["og:type"]==="video");
+  const hasVideoMeta=!!(meta["og:video"]||meta["og:video:url"]||meta["twitter:player"]||metaValues(meta["og:type"]).some(value=>value==="video.other"||value==="video"));
   const isTikTokPhotoRoute=platform==="tiktok"&&((()=>{try{return /\/photo\//i.test(new URL(pageUrl).pathname)}catch{return false}})()||/imagePostInfo|image_post_info|photomode-image/i.test(String(html||"")));
   if(isTikTokPhotoRoute)for(const image of extractTikTokPhotoProxyImages(html))add(image.url,"jsonld");
   const imageTags=html.match(/<img\b[^>]*>/gi)||[];
