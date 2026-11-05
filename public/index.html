@@ -1070,23 +1070,29 @@ $('analyze').onclick=async()=>{
  catch(e){out.textContent=e.message||'Masukkan URL yang valid.';return}
  const detected=aryPlatformForUrl(u.href),chosen=arySelectedPlatform();
  const aliases={tiktoklite:"tiktok",instagramlite:"instagram",facebooklite:"facebook"};
- const normalizedChosen=aliases[chosen]||chosen;
+ let normalizedChosen=aliases[chosen]||chosen;
  const isLinkMode=!$("linkModePanel")?.hidden;
- if(isLinkMode&&chosen==="all"){
-  const p=document.createElement("p");p.className="warning";p.textContent="Pilih satu platform khusus terlebih dahulu. Mode Semua 200 hanya tersedia untuk AI Search lintas platform.";out.append(p);return;
+ // In link mode, the URL is authoritative. Auto-correct the picker instead of rejecting
+ // valid links because a stale selection or "All 200" state remained active.
+ if(isLinkMode&&detected){
+  if(normalizedChosen!==detected){
+   const picker=document.getElementById("platformPicker");
+   const targetButton=picker?.querySelector('[data-platform="'+detected+'"]');
+   if(targetButton)targetButton.click();
+   else document.dispatchEvent(new CustomEvent("aryanzz:platform-autodetected",{detail:{platform:detected}}));
+   normalizedChosen=detected;
+  }
  }
- if(isLinkMode&&(!detected||normalizedChosen!==detected)){
+ if(isLinkMode&&!detected){
   const b=document.createElement("b"),p=document.createElement("p");
-  b.textContent="GAGAL — PLATFORM TIDAK SESUAI";
+  b.textContent="Platform belum dikenali";
   p.className="warning";
-  p.textContent=detected
-   ?"Kamu memilih "+aryPlatformLabel(normalizedChosen)+", tetapi tautan berasal dari "+aryPlatformLabel(detected)+". Tautan ditolak. Pilih "+aryPlatformLabel(detected)+" untuk memprosesnya."
-   :"Domain tautan tidak dikenali sebagai "+aryPlatformLabel(normalizedChosen)+". Tautan ditolak. Tempel tautan asli dari platform yang dipilih.";
+  p.textContent="Domain tautan belum dikenali oleh katalog ARYANZZ. Periksa tautan publik atau pilih platform yang sesuai. Tautan tidak akan dikirim ke extractor platform lain.";
   out.append(b,p);return;
  }
  const ext=extOf(u);
  if(detected==="youtube"){showYouTubeDownloader(u);return}
- if(detected){await showUniversalPlatformDownloader(u,normalizedChosen);return}
+ if(detected){await showUniversalPlatformDownloader(u,detected);return}
  if(ext){const p=document.createElement("p");p.className="warning";p.textContent="GAGAL — tautan file langsung bukan tautan asli "+aryPlatformLabel(normalizedChosen)+". Gunakan AI Search untuk pencarian lintas platform.";out.append(p);return}
  if(API){
   out.textContent='Memeriksa tautan ke backend…';
