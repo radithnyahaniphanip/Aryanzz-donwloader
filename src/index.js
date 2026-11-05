@@ -1415,33 +1415,53 @@ function extractTikTokItemId(value){
 async function fetchTikTokPhotoImageData(rawUrl,timeoutMs=9000){
   const itemId=extractTikTokItemId(rawUrl);
   if(!itemId)throw new Error("ID postingan foto TikTok tidak ditemukan.");
-  const endpoint=new URL("https://www.tiktok.com/api/item/detail/");
-  endpoint.searchParams.set("itemId",itemId);
-  endpoint.searchParams.set("aid","1988");
-  endpoint.searchParams.set("app_name","tiktok_web");
-  endpoint.searchParams.set("device_platform","web_pc");
-  const response=await fetch(endpoint.href,{headers:{accept:"application/json,text/plain,*/*","accept-language":"en-US,en;q=0.9","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",referer:"https://www.tiktok.com/"},signal:AbortSignal.timeout(timeoutMs),cache:"no-store"});
-  const payload=await response.json().catch(()=>null);
-  const item=payload?.itemInfo?.itemStruct||payload?.item_info?.item_struct||payload?.itemStruct||payload?.item||null;
-  const imagePost=item?.imagePost||item?.image_post||item?.photoPost||item?.photo_post||null;
-  const sourceImages=Array.isArray(imagePost?.images)?imagePost.images:Array.isArray(imagePost?.imageList)?imagePost.imageList:[];
-  if(!response.ok||!item||!sourceImages.length)throw new Error("TikTok item detail tidak mengembalikan galeri foto publik (HTTP "+response.status+").");
-  const seen=new Set(),images=[];
-  for(const entry of sourceImages.slice(0,35)){
-    const candidates=[
-      ...collectTikTokUrlValues(entry?.imageURL||entry?.imageUrl||entry?.displayImage||entry?.display_image||entry?.originImage||entry?.origin_image||entry?.urlList||entry),
-      ...collectTikTokUrlValues(entry?.thumbnail)
-    ];
-    for(const candidate of candidates){
-      const safe=safePublicMediaUrl(decodeTikTokPageValue(candidate));
-      if(!safe||seen.has(safe.href))continue;
-      seen.add(safe.href);
-      images.push({url:safe.href,type:"image",ext:imageExtensionFromUrl(safe.href)||"jpg",source:"TikTok item detail"});
-      break;
+  const variants=[
+    {name:"item-detail",url:new URL("https://www.tiktok.com/api/item/detail/"),params:{itemId,aid:"1988",app_name:"tiktok_web",device_platform:"web_pc"}},
+    {name:"post-item-list",url:new URL("https://www.tiktok.com/api/post/item_list/"),params:{itemId,aid:"1988",app_name:"tiktok_web",device_platform:"web_pc",count:"1",cursor:"0"}}
+  ];
+  let lastDiagnostic="";
+  for(let index=0;index<variants.length;index++){
+    const variant=variants[index];
+    for(const [key,value] of Object.entries(variant.params))variant.url.searchParams.set(key,value);
+    const perAttempt=Math.max(2500,Math.floor(timeoutMs/variants.length));
+    let response,payload;
+    try{
+      response=await fetch(variant.url.href,{headers:{accept:"application/json,text/plain,*/*","accept-language":"en-US,en;q=0.9","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",referer:"https://www.tiktok.com/"},signal:AbortSignal.timeout(perAttempt),cache:"no-store"});
+      payload=await response.json().catch(()=>null);
+    }catch(error){
+      lastDiagnostic=variant.name+": "+String(error?.message||error).slice(0,100);
+      continue;
     }
+    const list=Array.isArray(payload?.itemList)?payload.itemList:Array.isArray(payload?.item_list)?payload.item_list:Array.isArray(payload?.items)?payload.items:[];
+    const item=payload?.itemInfo?.itemStruct||payload?.item_info?.item_struct||payload?.itemStruct||payload?.item||list.find(entry=>entry&&typeof entry==="object")||null;
+    const imagePost=item?.imagePost||item?.image_post||item?.photoPost||item?.photo_post||null;
+    const sourceImages=Array.isArray(imagePost?.images)?imagePost.images:Array.isArray(imagePost?.imageList)?imagePost.imageList:[];
+    if(response.ok&&item&&sourceImages.length){
+      const seen=new Set(),images=[];
+      for(const entry of sourceImages.slice(0,35)){
+        const candidates=[
+          ...collectTikTokUrlValues(entry?.imageURL||entry?.imageUrl||entry?.displayImage||entry?.display_image||entry?.originImage||entry?.origin_image||entry?.urlList||entry),
+          ...collectTikTokUrlValues(entry?.thumbnail)
+        ];
+        for(const candidate of candidates){
+          const safe=safePublicMediaUrl(decodeTikTokPageValue(candidate));
+          if(!safe||seen.has(safe.href))continue;
+          seen.add(safe.href);
+          images.push({url:safe.href,type:"image",ext:imageExtensionFromUrl(safe.href)||"jpg",source:"TikTok "+variant.name});
+          break;
+        }
+      }
+      if(images.length)return {title:String(item.desc||item.description||"TikTok Photo Mode").slice(0,240),author:String(item.author?.nickname||item.author?.uniqueId||"").slice(0,100),images,source:variant.name};
+      lastDiagnostic=variant.name+": imagePost tidak berisi URL foto publik yang aman.";
+      continue;
+    }
+    const statusCode=payload?.statusCode??payload?.status_code??"unknown";
+    const statusMessage=String(payload?.statusMsg||payload?.status_msg||payload?.message||payload?.error||"").slice(0,90);
+    const keys=Object.keys(payload||{}).slice(0,9).join(",");
+    const itemKeys=Object.keys(item||{}).slice(0,10).join(",");
+    lastDiagnostic=variant.name+" HTTP "+response.status+" status "+statusCode+(statusMessage?" "+statusMessage:"")+" keys="+keys+(itemKeys?" item="+itemKeys:"");
   }
-  if(!images.length)throw new Error("TikTok Photo Mode tidak mengirim URL foto publik yang aman.");
-  return {title:String(item.desc||item.description||"TikTok Photo Mode").slice(0,240),author:String(item.author?.nickname||item.author?.uniqueId||"").slice(0,100),images};
+  throw new Error("TikTok tidak mengembalikan galeri foto publik. "+lastDiagnostic.slice(0,170));
 }
 async function tikTokItemDetailFallback(rawUrl,requestUrl,timeoutMs=8000){
   const videoId=extractTikTokItemId(rawUrl);
