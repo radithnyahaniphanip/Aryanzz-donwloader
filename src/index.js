@@ -1071,8 +1071,9 @@ async function imageExtractV81(request){
     const direct=await imagePostMetadata(input.href,request.url);
     return direct.ok?json(direct):json(direct,502);
   }
-  const post=await resolveSocialImagePost(input.href,request.url);
-  if(!post)return json({ok:false,error:"Belum ditemukan file gambar asli pada postingan publik ini. Postingan mungkin berisi video, privat, memerlukan login, atau membatasi akses gambar."},404);
+  const diagnostics={};
+  const post=await resolveSocialImagePost(input.href,request.url,{diagnostics});
+  if(!post)return json({ok:false,error:"Belum ditemukan file gambar asli pada postingan publik ini. Postingan mungkin berisi video, privat, memerlukan login, atau membatasi akses gambar.",diagnostics:diagnostics.value||null},404);
   const canonicalSourceUrl=post.url||input.href;
   const images=post.images.map(image=>({...image,sourceUrl:canonicalSourceUrl,platform:post.platform,title:post.title}));
   return json({ok:true,title:post.title,platform:post.platform,sourceUrl:canonicalSourceUrl,images});
@@ -1714,14 +1715,6 @@ async function resolveSocialImagePost(rawUrl,requestUrl,options={}){
       tikwmImages=providerImageCandidates({normalized:{images:data.images,photos:data.photos,gallery:data.gallery}});
     }).catch(()=>{}):Promise.resolve(),
     Promise.resolve(),
-    key==="tiktok"?(async()=>{
-      try{
-        const itemId=extractTikTokItemId(canonicalUrl);
-        if(!itemId)return;
-        const embedPage=await fetchSocialPostHtml("https://www.tiktok.com/embed/v2/"+itemId,10000);
-        tikTokEmbedImages=extractSocialImageCandidates(embedPage.html,embedPage.url,"tiktok").map(item=>({...item,type:"image",source:"TikTok official embed"}));
-      }catch{}
-    })():Promise.resolve(),
     key==="instagram"?(async()=>{
       try{
         const endpoint=new URL("https://www.instagram.com/api/v1/oembed/");
