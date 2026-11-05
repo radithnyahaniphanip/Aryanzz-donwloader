@@ -48,7 +48,7 @@ if(!itemId)throw new Error("TikTok item ID tidak ditemukan untuk Photo Mode.");
 try{
   const extractUrl=new URL("/api/image/extract",workerBase);
   extractUrl.searchParams.set("url",canonicalUrl);
-  const extractResponse=await fetch(extractUrl.href,{cache:"no-store",headers:{accept:"application/json"},signal:AbortSignal.timeout(24000)});
+  const extractResponse=await fetch(extractUrl.href,{cache:"no-store",headers:{accept:"application/json"},signal:AbortSignal.timeout(30000)});
   const extractData=await extractResponse.json().catch(()=>({}));
   console.log("[TIKTOK-PHOTO-WORKER-IMAGE-EXTRACT] "+JSON.stringify({
     status:extractResponse.status,
