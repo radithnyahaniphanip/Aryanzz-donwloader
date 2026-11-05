@@ -1419,8 +1419,8 @@ function socialNetworkPlan(selected=0){
         box.replaceChildren(make("b","youtube-title","TikTok Photo Mode belum bisa dibaca"),make("p","warning",imageData.error||info.error||"Postingan foto ini tidak mengirim gambar publik yang dapat diambil. Pastikan tautan Photo Mode dapat dibuka tanpa login atau pembatasan."));
         return;
       }
-      if(!hasAnyFormat&&!imageGallery&&info.ok===false){
-        box.replaceChildren(make("b","youtube-title","Media belum dapat diambil"),make("p","warning",info.error||"Provider tidak mengirim file media yang dapat diunduh."));
+      if(!hasAnyFormat&&!imageGallery){
+        box.replaceChildren(make("b","youtube-title","Media belum dapat diambil"),make("p","warning",info.error||"Provider tidak mengirim format video/audio yang dapat diunduh. Tidak ada file yang disiapkan."));
         return;
       }
       box.replaceChildren();

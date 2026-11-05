@@ -377,7 +377,7 @@ async function freePublicMediaInfo(rawUrl,requestUrl){
       await enrichTikTokDuration(fallback,canonicalUrl);
       return json({...fallback,canonicalUrl:canonicalUrl!==rawUrl?canonicalUrl:undefined});
     }catch(error){
-      primaryError+="; TikTok fallback: "+String(error?.message||error).slice(0,520);
+      primaryError+="; TikTok fallback: "+String(error?.message||error).slice(0,900);
     }
   }
   if(key==="instagram"){
@@ -395,7 +395,11 @@ async function freePublicMediaInfo(rawUrl,requestUrl){
       return json({error:"SnackVideo belum dapat diproses. Provider utama: "+(primaryError||"gagal")+"; provider alternatif: "+String(error?.message||error).slice(0,150)+". "+guidance[key],provider:"Fallback cascade",fallbackTried:true},502);
     }
   }
-  return json({error:label+" belum bisa diproses oleh provider gratis. "+(primaryError||"Provider tidak mengembalikan hasil.").slice(0,320)+" "+(guidance[key]||"Periksa kembali tautan publik."),diagnostics:primaryError.slice(0,1100),provider:"Fallback cascade",fallbackTried:key==="tiktok",canonicalUrl:canonicalUrl!==rawUrl?canonicalUrl:undefined},502);
+  const restricted=key==="tiktok"&&/protected|age.?restricted|status\s*10216|login required|requires login|private/i.test(primaryError);
+  const userMessage=restricted
+    ? "TikTok tidak dapat diambil oleh provider publik. Sumber melaporkan video mungkin dibatasi usia/privasi atau memerlukan login. Coba tautan video lain yang dapat diputar publik tanpa login."
+    : label+" belum bisa diproses oleh provider gratis. "+(primaryError||"Provider tidak mengembalikan hasil.").slice(0,320)+" "+(guidance[key]||"Periksa kembali tautan publik.");
+  return json({ok:false,error:userMessage,diagnostics:primaryError.slice(0,1100),errorType:restricted?"restricted_or_unavailable":"provider_unavailable",provider:"Fallback cascade",fallbackTried:key==="tiktok",canonicalUrl:canonicalUrl!==rawUrl?canonicalUrl:undefined},502);
 }
 
 function mediaAsciiAt(bytes,offset,value){
@@ -1428,13 +1432,16 @@ async function tikwmFallbackMediaInfo(rawUrl,requestUrl,alternateUrls=[]){
     try{return normalizeTikTokFallbackPayload(result.value,task.targetUrl,requestUrl,task.name)}
     catch(error){errors.push(task.name+": "+String(error?.message||error).slice(0,95));}
   }
+  const nativeErrors=[];
   const nativeResults=await Promise.allSettled(urls.slice(0,2).map(targetUrl=>tikTokNativePageFallback(targetUrl,requestUrl,8000)));
   for(let index=0;index<nativeResults.length;index++){
     const result=nativeResults[index],targetUrl=urls[index];
     if(result.status==="fulfilled")return result.value;
-    errors.push("TikTok public page ("+new URL(targetUrl).hostname+"): "+String(result.reason?.message||result.reason).slice(0,130));
+    nativeErrors.push(new URL(targetUrl).hostname+": "+String(result.reason?.message||result.reason).slice(0,180));
   }
-  throw new Error(errors.join("; ").slice(0,520)||"Semua provider alternatif TikTok gagal.");
+  const providerSummary=errors.slice(0,8).join("; ").slice(0,260);
+  const nativeSummary=nativeErrors.join("; ").slice(0,300);
+  throw new Error((providerSummary?"Providers: "+providerSummary+"; ":"")+"Native TikTok metadata: "+(nativeSummary||"no public metadata response"));
 }
 function providerImageCandidates(data){
   const output=[],n=data?.normalized||{},r=data?.result||{};
