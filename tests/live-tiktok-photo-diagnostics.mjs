@@ -1,7 +1,11 @@
-const workerBase="https://aryanzz-donwloader.radithnyahaniphanip.workers.dev";
+const workerBase=(process.env.WORKER_URL||"https://aryanzz-donwloader.radithnyahaniphanip.workers.dev").replace(/\/$/,"");
 const shortUrl="https://vt.tiktok.com/ZSpY4TkPP/";
-const itemId="7692687238634769682";
-const canonicalUrl="https://www.tiktok.com/@taechi4.5/photo/"+itemId;
+const infoResponse=await fetch(workerBase+"/api/platform/info",{method:"POST",headers:{"content-type":"application/json",accept:"application/json"},body:JSON.stringify({url:shortUrl,expectedPlatform:"tiktok"}),cache:"no-store",signal:AbortSignal.timeout(30000)});
+const resolvedInfo=await infoResponse.json().catch(()=>({}));
+const canonicalUrl=resolvedInfo.canonicalUrl||shortUrl;
+const itemId=canonicalUrl.match(/\/(?:video|photo)\/(\d{8,})/i)?.[1]||null;
+if(!itemId)throw new Error("TikTok short link tidak menghasilkan ID video/foto. "+String(resolvedInfo.error||""));
+
 const headers={
   accept:"application/json,text/plain,text/html,*/*",
   "accept-language":"en-US,en;q=0.9,id;q=0.8",
@@ -40,6 +44,7 @@ async function probe(name,url,extraHeaders={}){
   }catch(error){result.error=String(error?.message||error).slice(0,200)}
   console.log("[TIKTOK-PHOTO-ENDPOINT] "+JSON.stringify(result));
 }
+if(!itemId)throw new Error("TikTok item ID tidak ditemukan untuk Photo Mode.");
 const apiBase=new URL("https://www.tiktok.com/api/item/detail/");
 const variants=[
   ["minimal",new URLSearchParams({itemId,aid:"1988",app_name:"tiktok_web",device_platform:"web_pc"})],
@@ -54,3 +59,4 @@ await probe("photo-page",canonicalUrl,{"referer":"https://www.tiktok.com/"});
 await probe("embed-v2","https://www.tiktok.com/embed/v2/"+itemId);
 await probe("official-player","https://www.tiktok.com/player/v1/"+itemId+"?controls=1&timestamp=1&description=1&music_info=1&rel=0");
 await probe("short-link",shortUrl);
+console.log("[TIKTOK-PHOTO-RESOLUTION] "+JSON.stringify({shortUrl,canonicalUrl,itemId,infoStatus:infoResponse.status,providerName:resolvedInfo.providerName||null,embedUrl:resolvedInfo.embedUrl||null}));
