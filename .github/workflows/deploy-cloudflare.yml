@@ -86,18 +86,8 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: npm run build:version && wrangler deploy
-      - name: Configure optional AudD music recognition secret
-        continue-on-error: true
-        env:
-          AUDD_API_TOKEN: ${{ secrets.AUDD_API_TOKEN }}
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: |
-          if [ -z "$AUDD_API_TOKEN" ]; then
-            echo "::notice::AUDD_API_TOKEN is not set; music recognition remains unavailable, but deployment is unaffected."
-          else
-            printf '%s' "$AUDD_API_TOKEN" | wrangler secret put AUDD_API_TOKEN
-          fi
+      - name: Preserve existing optional AudD music recognition secret
+        run: echo "::notice::Existing AUDD_API_TOKEN secret is preserved and is not rewritten during routine deployments."
       - name: Export exact expected build version
         run: |
           node --input-type=module -e 'import { BUILD_VERSION } from "./src/build-version.js"; process.stdout.write("EXPECTED_BUILD_VERSION=" + BUILD_VERSION + "\n")' >> "$GITHUB_ENV"
