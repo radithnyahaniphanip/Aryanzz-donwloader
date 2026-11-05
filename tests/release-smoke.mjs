@@ -194,7 +194,7 @@ const checks = [
   ["Mobile navigation stays fixed inside viewport", unifiedCss.includes(".nav{position:fixed!important")],
   ["Security status endpoint remains available", worker.includes('url.pathname==="/api/security/status"')],
   ["Security middleware wraps Worker requests", worker.includes("export default {fetch:securityFetch};")],
-  ["V94.31 release line is selected", read("../package.json").includes('"version": "94.31.0"')],
+  ["V95.0 browser release line is selected", read("../package.json").includes('"version": "95.0.0"')],
   ["Automatic release updater polls the no-store health endpoint and refreshes stale app versions", html.includes("/update-manager.js?v=__ARYANZZ_VERSION__") && read("../public/update-manager.js").includes("/api/health?version_check=") && read("../public/update-manager.js").includes("aryanzz:auto-update-target") && read("../public/update-manager.js").includes("reg.unregister()")],
   ["Service worker always checks the network for navigation and release-control assets", sw.includes('e.request.mode==="navigate"') && sw.includes('new Request(e.request,{cache:"no-store"})') && sw.includes('"/release.json"')],
   ["Worker disables browser caching for the app shell and release metadata", worker.includes('"/release.json"') && worker.includes("no-store, no-cache, must-revalidate, max-age=0")],
