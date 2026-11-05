@@ -157,7 +157,7 @@ jobs:
           WORKER_URL: https://aryanzz-donwloader.radithnyahaniphanip.workers.dev
         run: node tests/live-provider-fallbacks.mjs
       - name: Optional manual diagnostic matrix for the 20 dedicated provider choices
-        if: github.event_name == 'workflow_dispatch' && success()
+        if: success() && (github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && contains(github.event.head_commit.message, 'RUN FULL PLATFORM MATRIX')))
         continue-on-error: true
         timeout-minutes: 18
         env:

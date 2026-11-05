@@ -8,7 +8,7 @@ const rows=[];
 for(const platform of platforms){
   const row={platform,searchStatus:"not-run",searchResults:0,sourceUrl:null,extractStatus:"not-run",extractFormats:0,extractDuration:null,providerDiagnostics:null,detail:""};
   try{
-    const search=await fetch(base+"/api/social/search",{method:"POST",headers:{"content-type":"application/json","accept":"application/json"},body:JSON.stringify({platform,query:"Tabola Bale",mediaType:"video"}),cache:"no-store",signal:AbortSignal.timeout(45000)});
+    const search=await fetch(base+"/api/social/search",{method:"POST",headers:{"content-type":"application/json","accept":"application/json"},body:JSON.stringify({platform,query:"Tabola Bale",mediaType:"video"}),cache:"no-store",signal:AbortSignal.timeout(25000)});
     const data=await search.json().catch(()=>({}));
     row.searchStatus=search.ok?"ok":"http-"+search.status;
     row.searchResults=Array.isArray(data.results)?data.results.length:0;
@@ -21,7 +21,7 @@ for(const platform of platforms){
         let response,info;
         if(platform==="youtube"){
           const u=new URL("/api/youtube/hybrid/info",base);u.searchParams.set("url",candidate.url);
-          response=await fetch(u,{cache:"no-store",signal:AbortSignal.timeout(18000)});
+          response=await fetch(u,{cache:"no-store",signal:AbortSignal.timeout(12000)});
         }else{
           response=await fetch(base+"/api/platform/info",{method:"POST",headers:{"content-type":"application/json","accept":"application/json"},body:JSON.stringify({url:candidate.url,expectedPlatform:platform}),cache:"no-store",signal:AbortSignal.timeout(18000)});
         }
@@ -38,7 +38,7 @@ for(const platform of platforms){
   }catch(error){row.searchStatus="timeout-or-network";row.detail=String(error?.message||error).slice(0,180)}
   rows.push(row);
   console.log("[PLATFORM-MATRIX] "+JSON.stringify(row));
-  await wait(2200);
+  await wait(1500);
 }
 const summary={generatedAt:new Date().toISOString(),platformCount:platforms.length,titleSearchOk:rows.filter(row=>row.searchStatus==="ok").length,titleSearchWithResults:rows.filter(row=>row.searchResults>0).length,extractionOk:rows.filter(row=>row.extractStatus==="ok").length,rows};
 writeFileSync("platform-matrix.json",JSON.stringify(summary,null,2)+"\n");
