@@ -77,8 +77,8 @@ try{
   const imageInfo=await worker.fetch(new Request("https://aryanzz.example/api/image/extract?url="+encodeURIComponent("https://bsky.app/profile/demo/post/456"),{
     headers:{"cf-connecting-ip":"198.51.100.35"}
   }),{});
-  assert.equal(imageInfo.status,200,"Generic public-page image extraction should work for an AIO platform");
   const imageInfoData=await imageInfo.json();
+  assert.equal(imageInfo.status,200,"Generic public-page image extraction should work for an AIO platform: "+JSON.stringify(imageInfoData));
   assert.equal(imageInfoData.platform,"bluesky");
   assert.ok(imageInfoData.images?.some(item=>item.previewUrl?.includes("/api/social-image-file")),"Generic platform image links should return a verified ARYANZZ image proxy");
   console.log("✔ Generic platform image links reach the public-page image extraction fallback");
