@@ -1281,8 +1281,11 @@ function normalizeWeirdDlInstagramData(data,rawUrl,requestUrl){
   const media=Array.isArray(data?.media)?data.media:[];
   const videos=media.filter(item=>String(item?.type||item?.kind||"").toLowerCase()==="video"||String(item?.mime_type||item?.mime||"").toLowerCase().startsWith("video/"));
   const images=media.filter(item=>String(item?.type||item?.kind||"").toLowerCase()==="image"||String(item?.mime_type||item?.mime||"").toLowerCase().startsWith("image/")||["jpg","jpeg","png","webp","avif","gif"].includes(String(item?.ext||item?.extension||"").toLowerCase()));
+  const durationValue=data?.durationMs??data?.duration_ms??data?.durationSeconds??data?.duration_seconds??data?.videoDuration??data?.video_duration??data?.duration??data?.video?.duration??data?.result?.duration??data?.normalized?.duration;
+  const rawDuration=Number(durationValue);
+  const duration=Number.isFinite(rawDuration)&&rawDuration>0?(data?.durationMs!=null||data?.duration_ms!=null||rawDuration>86400?rawDuration/1000:rawDuration):null;
   if(videos.length){
-    const normalized=freeProviderMediaInfo({normalized:{title:data.title||"Instagram video",thumbnail:data.thumbnail,media:videos}},rawUrl,requestUrl);
+    const normalized=freeProviderMediaInfo({normalized:{title:data.title||"Instagram video",thumbnail:data.thumbnail,duration,media:videos}},rawUrl,requestUrl);
     if(normalized){normalized.providerName="WeirdDL Instagram fallback";normalized.provider="Public Instagram media API";normalized.fallbackUsed=true;return normalized;}
   }
   if(images.length&&!videos.length){
