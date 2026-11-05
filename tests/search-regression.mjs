@@ -5,6 +5,7 @@ const originalFetch=globalThis.fetch;
 const imageSearchHtml='<a class="iusc" m=\'{"purl":"https://bsky.app/profile/demo/post/123","murl":"https://cdn.example/cat.jpg","desc":"cat photo","w":640,"h":480}\'></a>';
 const videoSearchHtml='<a class="result__a" href="https://bsky.app/profile/demo/post/123">Cat video</a><div class="result__snippet">Cat video from a public post</div>';
 const publicPostHtml='<html><head><title>Cat video post</title><meta property="og:title" content="Cat video post"><meta property="og:image" content="https://cdn.example/cat.jpg"><meta property="og:video" content="https://cdn.example/clip.mp4"><meta property="og:video:type" content="video/mp4"></head><body></body></html>';
+const publicImagePostHtml='<html><head><title>Cat image post</title><meta property="og:title" content="Cat image post"><meta property="og:image" content="https://cdn.example/cat.jpg"></head><body></body></html>';
 
 globalThis.fetch=async(input,init={})=>{
   const url=new URL(typeof input==="string"?input:input instanceof URL?input.href:input.url);
@@ -17,7 +18,7 @@ globalThis.fetch=async(input,init={})=>{
   if(url.hostname==="www.google.com")
     return new Response("",{status:200,headers:{"content-type":"text/html; charset=utf-8"}});
   if(url.hostname==="bsky.app")
-    return new Response(publicPostHtml,{status:200,headers:{"content-type":"text/html; charset=utf-8"}});
+    return new Response(url.pathname.endsWith("/456")?publicImagePostHtml:publicPostHtml,{status:200,headers:{"content-type":"text/html; charset=utf-8"}});
   throw new Error("Unexpected mocked search fetch: "+url.href);
 };
 
@@ -73,7 +74,7 @@ try{
   assert.ok(videoInfoData.formats?.some(item=>item.mode==="video"&&item.ext==="mp4"),"Generic public-page fallback should preserve an actual MP4 source");
   console.log("✔ Generic platform video links reach the public-page media metadata fallback");
 
-  const imageInfo=await worker.fetch(new Request("https://aryanzz.example/api/image/extract?url="+encodeURIComponent("https://bsky.app/profile/demo/post/123"),{
+  const imageInfo=await worker.fetch(new Request("https://aryanzz.example/api/image/extract?url="+encodeURIComponent("https://bsky.app/profile/demo/post/456"),{
     headers:{"cf-connecting-ip":"198.51.100.35"}
   }),{});
   assert.equal(imageInfo.status,200,"Generic public-page image extraction should work for an AIO platform");
