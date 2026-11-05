@@ -1018,7 +1018,7 @@ function socialNetworkPlan(selected=0){
           }
           lastProbeError=String(candidateCheck.error||"File tidak lolos validasi (HTTP "+probeStatus+").").slice(0,180);
         }catch(error){lastProbeError=String(error?.message||error).slice(0,180)}
-        const retryWithoutRange=probeStatus===0||[403,415,416,429].includes(probeStatus)||probeStatus>=500||/image\\/|bukan video|signature|tipe file|range|rentang byte/i.test(lastProbeError);
+        const retryWithoutRange=probeStatus===0||[403,415,416,429].includes(probeStatus)||probeStatus>=500||/image\/|bukan video|signature|tipe file|range|rentang byte/i.test(lastProbeError);
         if(retryWithoutRange){
           try{
             const fullProbeUrl=new URL(candidateUrl.href);fullProbeUrl.searchParams.set("probe","full");
