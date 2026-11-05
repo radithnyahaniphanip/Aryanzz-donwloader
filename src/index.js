@@ -1298,7 +1298,7 @@ function extractSocialImageCandidates(html,pageUrl,platform){
     if(parsed)collectImageUrls(parsed,jsonImages);
   }
   for(const raw of jsonImages)add(raw,"jsonld");
-  const hasVideoMeta=!!(meta["og:video"]||meta["og:video:url"]||meta["twitter:player"]||metaValues(meta["og:type"]).some(value=>value==="video.other"||value==="video"));
+  const hasVideoMeta=!!(meta["og:video"]||meta["og:video:url"]||meta["twitter:player"]||meta["og:type"]==="video.other"||meta["og:type"]==="video");
   const isTikTokPhotoRoute=platform==="tiktok"&&((()=>{try{return /\/photo\//i.test(new URL(pageUrl).pathname)}catch{return false}})()||/imagePostInfo|image_post_info|photomode-image/i.test(String(html||"")));
   if(isTikTokPhotoRoute)for(const image of extractTikTokPhotoProxyImages(html))add(image.url,"jsonld");
   const imageTags=html.match(/<img\b[^>]*>/gi)||[];
