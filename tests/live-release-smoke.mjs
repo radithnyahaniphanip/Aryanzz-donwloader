@@ -99,7 +99,7 @@ for(const path of [...new Set(assetRefs)]){
   const response=await request(path);
   assert.equal(response.status,200,"Aset live tidak ditemukan: "+path);
   const pathname=assetUrl.pathname;
-  if(["/downloader.js","/v674.js","/downloader.css","/update-manager.js"].includes(pathname)){
+  if(["/downloader.js","/v15.js","/v674.js","/downloader.css","/update-manager.js"].includes(pathname)){
     const body=await response.text();
     if(pathname==="/downloader.js")downloaderAsset=body;
     if(pathname==="/v15.js")v15Asset=body;
