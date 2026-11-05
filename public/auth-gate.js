@@ -15,7 +15,21 @@ function mode(value){const reg=value==="register";$("aryRegisterForm").hidden=!r
 function togglePassword(inputId,buttonId){const input=$(inputId),button=$(buttonId);if(!input||!button)return;button.addEventListener("click",()=>{const visible=input.type==="password";input.type=visible?"text":"password";button.textContent=visible?"◌":"◉";button.setAttribute("aria-label",visible?"Sembunyikan password":"Lihat password")})}
 function strength(p){let n=0;if(p.length>=12)n++;if(p.length>=16)n++;if(/[a-z]/.test(p)&&/[A-Z]/.test(p))n++;if(/[0-9]/.test(p))n++;if(/[^A-Za-z0-9]/.test(p))n++;if(/(.)\1{3,}/.test(p)||/1234|abcd|qwerty|password/i.test(p))n=Math.max(0,n-2);return Math.min(4,n)}
 function initStrength(){const input=$("aryRegPassword"),bar=$("aryStrengthBar"),label=$("aryStrengthLabel"),names=["Lemah","Menengah","Kuat","Lebih kuat"],widths=["18%","42%","72%","100%"];input?.addEventListener("input",()=>{const n=strength(input.value),i=Math.max(0,n-1);if(bar){bar.style.width=input.value?widths[i]:"0%";bar.dataset.level=String(i+1)}if(label)label.textContent=input.value?"Kekuatan password: "+names[i]:"Kekuatan password: belum diisi"})}
-function setUser(user){window.aryanzzAuthUser=user||null;const node=$("profileRandomId"),copy=$("profileCopyId"),logout=$("accountLogout"),desc=$("profileIdDescription");if(user){if(node)node.textContent=user.id;if(desc)desc.textContent="ID akun lokal ARYANZZ pada browser ini.";if(copy)copy.onclick=async()=>{try{await navigator.clipboard.writeText(user.id);say("ID akun berhasil disalin.")}catch{say("Tidak dapat menyalin ID pada browser ini.",true)}};if(logout)logout.hidden=false}else if(logout)logout.hidden=true;if(gate)gate.hidden=!!user;document.body.classList.toggle("ary-authenticated",!!user)}
+function setUser(user){
+ window.aryanzzAuthUser=user||null;
+ const isDeveloper=!!user&&String(user.id||"").toUpperCase()==="ARY-ZFTLQPEX92";
+ window.aryanzzIsDeveloper=isDeveloper;
+ const node=$("profileRandomId"),copy=$("profileCopyId"),logout=$("accountLogout"),desc=$("profileIdDescription");
+ if(node){if(user)node.textContent=user.id;node.classList.toggle("ary-developer-id",isDeveloper);node.setAttribute("aria-label",isDeveloper?"ID developer website":"ID akun ARYANZZ");}
+ if(desc)desc.textContent=isDeveloper?"ID developer website · akses pengelola ARYANZZ.":"ID akun lokal ARYANZZ pada browser ini.";
+ if(copy&&user)copy.onclick=async()=>{try{await navigator.clipboard.writeText(user.id);say("ID akun berhasil disalin.")}catch{say("Tidak dapat menyalin ID pada browser ini.",true)}};
+ if(logout)logout.hidden=!user;
+ const editor=$("ownerLinkEditor"),security=$("securityCenter"),ownerEdit=$("ownerEditProfile"),developerBadge=$("profileDeveloperBadge");
+ if(editor)editor.hidden=!isDeveloper;if(security)security.hidden=!isDeveloper;if(ownerEdit)ownerEdit.hidden=!isDeveloper;if(developerBadge)developerBadge.hidden=!isDeveloper;
+ document.body.classList.toggle("ary-developer-account",isDeveloper);
+ if(gate)gate.hidden=!!user;document.body.classList.toggle("ary-authenticated",!!user);
+ window.dispatchEvent(new CustomEvent("aryanzz:auth-changed",{detail:{userId:user?.id||null,isDeveloper}}));
+}
 function getSession(){try{return JSON.parse(localStorage.getItem(SESSION_KEY)||"null")}catch{return null}}
 function saveSession(user){try{localStorage.setItem(SESSION_KEY,JSON.stringify({id:user.id,createdAt:Date.now()}));return true}catch{return false}}
 function showStorageError(){say("Penyimpanan akun browser tidak dapat dibaca atau ditulis. Aktifkan penyimpanan situs; data akun lama tidak dihapus.",true)}

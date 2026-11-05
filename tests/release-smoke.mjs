@@ -28,6 +28,9 @@ const bootstrap = read("../public/ffmpeg-worker-bootstrap.js");
 const htmlAssetRefs = [...html.matchAll(/\b(?:src|href)="([^"]+\.(?:js|css)(?:\?[^"]*)?)"/g)].map(match => match[1]).filter(ref => ref.startsWith("/"));
 const downloaderJs = read("../public/downloader.js");
 const ownerJs = read("../public/owner.js");
+const authGateJs = read("../public/auth-gate.js");
+const themeStudioJs = read("../public/theme-studio.js");
+const ownerCss = read("../public/owner.css");
 
 const idCounts = new Map();
 for (const match of html.matchAll(/\bid=["']([^"']+)["']/g)) idCounts.set(match[1], (idCounts.get(match[1]) || 0) + 1);
@@ -305,6 +308,18 @@ const checks = [
   ["Photo-only posts can generate a local slideshow video without claiming original audio", downloaderJs.includes("createPhotoSlideshow") && downloaderJs.includes("canvas.captureStream(24)") && downloaderJs.includes("Buat video slideshow (tanpa audio sumber)") && downloaderJs.includes("Audio asli postingan tidak disertakan.")],
   ["Platform cards show media-mode labels instead of the generic Uji coba badge", searchJs.includes("modeLabels.join") && !searchJs.includes('tier.textContent="Uji coba"')],
   ["Platform pager is separated from link/search forms on mobile", read("../public/downloader.css").includes("grid-template-columns:repeat(2,minmax(0,1fr))!important") && read("../public/downloader.css").includes("margin:16px 0 26px!important") && read("../public/downloader.css").includes("#linkModePanel,#titleModePanel{margin-top:8px")]
+
+  ["YouTube browser checks use the same-origin Worker hybrid endpoint and no longer call stale community providers", downloaderJs.includes("/api/youtube/hybrid/info?url=") && !downloaderJs.includes("yt.chocolatemoo53.com") && downloaderJs.includes("signal:downloadTimeoutSignal(25000)")],
+  ["YouTube 2K supports MP4 or WebM formats with compatible audio pairing and mux output", worker.includes('mime.includes("video/webm")') && worker.includes("maxCommunityHeight<1440") && downloaderJs.includes('["mp4","webm"].includes(item.ext)') && downloaderJs.includes('if(outputExt==="mp4")muxArgs.push("-movflags","+faststart")') && downloaderJs.includes('selected.ext==="webm"?["webm","opus"]:["m4a"]')],
+  ["YouTube live and upcoming streams use the official player while live archives remain downloadable as normal media", worker.includes("liveBroadcastDetails") && worker.includes("liveManifestAvailable") && downloaderJs.includes("info.isLive||info.isUpcoming") && downloaderJs.includes("youtube-nocookie.com/embed/") && downloaderJs.includes("info.isLiveArchive")],
+  ["About ARYANZZ and Help Center are home shortcuts, not entries in the Tools catalog", html.includes('class="home-shortcuts"') && html.includes('data-panel="about"') && html.includes('data-panel="help"') && !html.includes('data-panel="about" data-category="personal"') && !html.includes('data-panel="help" data-category="personal"')],
+  ["Media Studio Pro is accessible from Tools but removed from the Library surface", html.includes('data-panel="mediaStudio" data-category="media"') && !html.includes("ms-library-entry")],
+  ["Backup and restore controls live inside Library, not Profile", html.indexOf('id="history"')<html.indexOf('id="exportData"') && html.indexOf('id="exportData"')<html.indexOf('id="profile"') && !html.slice(html.indexOf('id="profile"'),html.indexOf('id="owner"')).includes('id="exportData"')],
+  ["Profile and owner cover backgrounds no longer carry decorative text labels", !html.includes("YOUR DIGITAL SPACE</span><b>ARYANZZ MEMBER") && !html.includes("THE CREATOR BEHIND") && !html.includes("ALL IN ONE DIGITAL SPACE</span>")],
+  ["Only the specified developer ID reveals owner editing and Security Center controls", authGateJs.includes('==="ARY-ZFTLQPEX92"') && authGateJs.includes('editor.hidden=!isDeveloper') && authGateJs.includes('security.hidden=!isDeveloper') && html.includes('id="ownerLinkEditor" hidden') && html.includes('id="securityCenter" hidden')],
+  ["Developer ID and badge receive a dedicated animated visual treatment", html.includes('id="profileDeveloperBadge"') && ownerCss.includes("#profileRandomId.ary-developer-id") && ownerCss.includes("@keyframes developerBadgeShimmer")],
+  ["Theme and experience settings are consolidated in Color Studio with a persistent animation toggle", html.includes("<h2>Tema &amp; pengalaman</h2>") && html.includes('id="aryMotionToggle"') && themeStudioJs.includes("MOTION_KEY") && themeStudioJs.includes("applyMotion") && html.includes('data-panel="colorStudio" data-category="creative"')],
+  ["Security Center visibility is changed without removing Worker security protections", html.includes('id="securityCenter" hidden') && worker.includes("security") && authGateJs.includes('security.hidden=!isDeveloper')],
 ];
 
 for (const [name, ok] of checks) {

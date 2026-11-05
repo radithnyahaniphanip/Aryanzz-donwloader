@@ -255,6 +255,11 @@ body{background-color:var(--ary-app-bg)}
 <div id="titleModePanel" hidden><label class="label" for="titleSearch">CARI VIDEO / GAMBAR</label><div class="v674-input-row v674-search-type-row"><select id="titleSearchType" class="field" aria-label="Jenis hasil pencarian"><option value="video">Video</option><option value="image">Gambar</option></select></div><div class="inputrow v674-input-row"><input class="field" id="titleSearch" type="search" placeholder="Contoh: DJ Alan Walker, Tabola Bale, gambar kucing…" autocomplete="off"><button class="tag" id="titleSearchMic" type="button" aria-label="Cari dengan suara">🎙</button><button class="primary" id="titleSearchBtn" type="button">Cari ⌕</button></div><p class="v674-title-help" id="titleSearchHelp">Pilih platform dan jenis hasil. Hasil hanya dari platform yang dipilih.</p><div class="v674-search-results" id="titleSearchResults" hidden aria-live="polite"></div></div>
 <div id="downloadResult" class="result v674-result" hidden></div><div id="historyBox" class="result" hidden></div>
 </div>
+<div class="home-shortcuts" aria-label="Akses cepat">
+  <button class="shortcut shortcut-featured" type="button" data-panel="about"><span class="shortcut-icon">✧</span><span><b>Tentang ARYANZZ</b><small>Fitur, versi, dan informasi</small></span><span class="shortcut-arrow">›</span></button>
+  <button class="shortcut" type="button" data-panel="help"><span class="shortcut-icon">?</span><span><b>Pusat Bantuan</b><small>Panduan dan solusi kendala</small></span><span class="shortcut-arrow">›</span></button>
+  <button class="shortcut" type="button" data-panel="allTools"><span class="shortcut-icon">✦</span><span><b>Jelajahi Alat</b><small>Buka semua fitur ARYANZZ</small></span><span class="shortcut-arrow">›</span></button>
+</div>
 <section class="ary-android-home" aria-labelledby="aryAndroidHeading">
   <div class="ary-android-home-top">
     <span class="ary-android-icon" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M24 5v24m-9-9 9 9 9-9M8 30v8a4 4 0 0 0 4 4h24a4 4 0 0 0 4-4v-8" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
@@ -286,11 +291,9 @@ body{background-color:var(--ary-app-bg)}
 <button class="tool" data-panel="securityTools" data-category="utility"><div class="ico">⌘</div><b>Password Generator</b><small>Buat password acak secara lokal.</small><span class="v674-tool-category">UTILITY</span></button>
 <button class="tool" data-panel="gradientStudio" data-category="creative"><div class="ico">◈</div><b>Gradient Studio</b><small>Buat gradasi warna, salin CSS, dan ekspor PNG.</small><span class="v674-tool-category">CREATIVE</span></button>
 <button class="tool" data-panel="fileHash" data-category="utility"><div class="ico">⌗</div><b>File Hash Checker</b><small>Periksa fingerprint SHA-256/384/512 secara lokal.</small><span class="v674-tool-category">UTILITY</span></button>
-<button class="tool" data-panel="colorStudio" data-category="creative"><div class="ico">◈</div><b>Color Studio</b><small>Eksplorasi palet, gradasi, dan warna unik.</small><span class="v674-tool-category">CREATIVE</span></button>
+<button class="tool" data-panel="colorStudio" data-category="creative"><div class="ico">◈</div><b>Tema &amp; pengalaman</b><small>Color Studio · warna, animasi, dan tampilan ARYANZZ.</small><span class="v674-tool-category">CREATIVE</span></button>
 <button class="tool" data-panel="profile" data-category="personal"><div class="ico">◉</div><b>My Profile</b><small>Profil, ID akun, dan data pribadi.</small><span class="v674-tool-category">PERSONAL</span></button>
 <button class="tool" data-panel="owner" data-category="personal"><div class="ico">♛</div><b>Owner Profile</b><small>Profil kreator dan tautan sosial.</small><span class="v674-tool-category">PERSONAL</span></button>
-<button class="tool" data-panel="about" data-category="personal"><div class="ico">✧</div><b>About ARYANZZ</b><small>Versi, fitur, privasi, dan roadmap.</small><span class="v674-tool-category">PERSONAL</span></button>
-<button class="tool" data-panel="help" data-category="personal"><div class="ico">?</div><b>Pusat Bantuan</b><small>Panduan fitur dan batas layanan.</small><span class="v674-tool-category">PERSONAL</span></button>
 </div><p class="v674-no-tools" id="toolEmpty" hidden>Tools tidak ditemukan. Coba kata kunci lain.</p></div>
 <div class="panel card v93-bypass-panel" id="linkBypass">
   <div class="v93-bypass-hero"><span class="section-kicker">ARYANZZ · LINK TOOLS</span><div class="v93-bypass-mark">↗</div><h2>Lewati link SFL, langsung ke tujuan.</h2><p>Tempel tautan sf1.gl atau sfl.gl. ARYANZZ akan memeriksa pengalihan yang tersedia dan menampilkan alamat tujuan jika dapat ditemukan.</p></div>
@@ -708,7 +711,6 @@ body{background-color:var(--ary-app-bg)}
 <div class="panel card ary-library-panel" id="history">
   <div class="ary-library-hero"><div><span class="section-kicker">RUANG PRIBADI</span><h2>Pustaka</h2><p>Semua aktivitas dan koleksi favoritmu, tersusun dalam satu tampilan.</p></div><div class="ary-library-mark">▤</div></div>
   <div class="ary-library-stats"><div><span>RIWAYAT</span><b id="aryLibraryHistoryCount">0</b></div><div><span>FAVORIT</span><b id="aryLibraryFavoriteCount">0</b></div><div><span>PENYIMPANAN</span><b>LOKAL</b></div></div>
-  <div class="ms-library-entry"><b>Media Studio Pro</b><span>File video, gambar, dan audio yang disimpan secara lokal.</span><button type="button" data-panel="mediaStudio">Buka pustaka media →</button></div>
   <div class="ary-library-switch" role="tablist" aria-label="Kategori pustaka">
     <button type="button" class="active" id="aryLibraryHistoryTab" role="tab" aria-selected="true" aria-controls="aryLibraryHistoryView">◷ Riwayat <span id="aryLibraryHistoryBadge">0</span></button>
     <button type="button" id="aryLibraryFavoriteTab" role="tab" aria-selected="false" aria-controls="aryLibraryFavoriteView">♡ Favorit <span id="aryLibraryFavoriteBadge">0</span></button>
@@ -722,6 +724,12 @@ body{background-color:var(--ary-app-bg)}
     <div id="favoriteList" class="ary-library-list result"><span class="ary-library-empty">Belum ada favorit.</span></div>
   </section>
   <div class="ary-library-note"><b>Disimpan di perangkat ini</b><p>Riwayat dan favorit tersimpan di browser ini, tidak otomatis tersinkron ke perangkat lain.</p></div>
+  <section class="v25-profile-card v25-backup-card">
+    <div class="v25-section-heading"><div><span class="v25-kicker">YOUR DATA</span><h3>Backup & pemulihan</h3></div><span class="v25-heading-icon">⬡</span></div>
+    <p class="v25-muted">Ekspor profil, riwayat, dan favorit untuk dipindahkan atau dipulihkan di perangkat lain.</p>
+    <div class="v25-backup-actions"><button class="tag" id="exportData" type="button">↓ Ekspor backup</button><label class="tag v25-import-label">↑ Pulihkan backup<input id="importData" type="file" accept="application/json" hidden></label><button class="tag" id="restoreAutoBackup" type="button">↺ Pulihkan cadangan otomatis</button></div>
+    <small class="v25-privacy-note">Auto-save dan cadangan otomatis tersimpan di browser perangkat ini. Ekspor file backup untuk memindahkan data ke perangkat lain; penyimpanan browser yang dihapus akan menghapus cadangan lokal.</small>
+  </section>
 </div><div class="panel card image-studio-panel" id="imageTools">
   <div class="image-studio-heading"><div><span class="section-kicker">ARYANZZ CREATIVE LAB</span><h3>▧ Image Studio</h3></div><span class="image-studio-mark">✦</span></div>
   <div class="image-studio-tabs" role="tablist" aria-label="Mode Image Studio"><button type="button" class="active" id="imageEditTab" aria-selected="true">✦ Editor gambar</button><button type="button" id="imageDownloadTab" aria-selected="false">↓ Image Downloader</button></div>
@@ -783,7 +791,7 @@ body{background-color:var(--ary-app-bg)}
   <div class="v680-actions"><button class="tag" id="hashCopy" type="button" disabled>Salin hash</button></div><span class="v680-status" id="hashStatus" role="status" aria-live="polite">File diproses lokal menggunakan Web Crypto.</span>
 </div>
 <div class="panel card v674-feature-panel ary-theme-studio" id="colorStudio">
-  <div class="ary-theme-hero"><div><span class="section-kicker">ARYANZZ · APPEARANCE STUDIO</span><h2>Color Studio</h2><p>Atur warna seluruh ruang ARYANZZ. Perubahan diterapkan ke beranda, navigasi, profil, kartu, dan semua alat.</p></div><span class="ary-theme-orb">◈</span></div>
+  <div class="ary-theme-hero"><div><span class="section-kicker">ARYANZZ · APPEARANCE STUDIO</span><h2>Tema &amp; pengalaman</h2><p>Color Studio untuk warna, animasi, dan pengalaman visual seluruh ruang ARYANZZ.</p></div><span class="ary-theme-orb">◈</span></div>
   <div class="ary-theme-presets" role="group" aria-label="Preset warna">
     <button type="button" data-theme-preset="midnight"><i></i><span>Midnight</span></button><button type="button" data-theme-preset="ocean"><i></i><span>Ocean</span></button><button type="button" data-theme-preset="violet"><i></i><span>Violet</span></button><button type="button" data-theme-preset="emerald"><i></i><span>Emerald</span></button>
   </div>
@@ -791,13 +799,11 @@ body{background-color:var(--ary-app-bg)}
     <label><span>Warna aksen</span><input id="aryThemeAccent" type="color" value="#8b5cf6"></label><label><span>Latar website</span><input id="aryThemeBackground" type="color" value="#080d1c"></label><label><span>Warna panel & alat</span><input id="aryThemeSurface" type="color" value="#111c33"></label>
   </div>
   <div class="ary-theme-preview" id="aryThemePreview"><span>PREVIEW TAMPILAN</span><strong>ARYANZZ</strong><small>Semua ruang, satu identitas visual.</small><button type="button" tabindex="-1">Tombol contoh</button></div>
+  <div class="ary-theme-motion"><div><b>Animasi antarmuka</b><small>Efek gerak dan transisi untuk pengalaman ARYANZZ.</small></div><label class="ary-motion-switch"><input id="aryMotionToggle" type="checkbox" checked><span></span><b id="aryMotionState">Aktif</b></label></div>
   <div class="ary-theme-actions"><button class="primary" id="aryThemeApply" type="button">Terapkan ke seluruh website</button><button class="tag" id="aryThemeReset" type="button">Kembalikan warna awal</button></div><p class="ary-theme-status" id="aryThemeStatus" role="status" aria-live="polite">Pilih preset atau atur warna sendiri.</p>
 </div>
 <div class="panel card v25-profile-panel" id="profile">
-  <div class="v25-profile-cover" id="profileBannerPreview">
-    <div class="v25-cover-glow"></div>
-    <div class="v25-cover-label"><span class="v25-kicker">YOUR DIGITAL SPACE</span><b>ARYANZZ MEMBER</b></div>
-  </div>
+  <div class="v25-profile-cover" id="profileBannerPreview"><div class="v25-cover-glow"></div></div>
   <div class="v25-cover-actions" aria-label="Kontrol banner profil"><label class="v25-cover-action">✦ Ubah banner<input id="profileBanner" type="file" accept="image/*" hidden></label><button class="v25-cover-remove" id="clearProfileBanner" type="button" hidden>Hapus banner</button></div>
   <div class="v25-profile-identity">
     <div class="v25-avatar-shell"><div class="avatar v25-avatar" id="profileAvatar">A</div><label class="v25-avatar-edit" aria-label="Ubah foto profil">＋<input id="profilePhoto" type="file" accept="image/*" hidden></label>
@@ -817,14 +823,8 @@ body{background-color:var(--ary-app-bg)}
       <div class="v25-form-foot"><small id="profileCharCount">0/160 karakter</small><button class="primary" id="profileSave" type="button">Simpan perubahan</button></div>
       <button class="v25-text-button" id="profileReset" type="button">Reset informasi profil</button><small class="v25-privacy-note" id="profileAutoSaveStatus" role="status" aria-live="polite">Menyiapkan penyimpanan otomatis…</small>
     </section>
-    <section class="v25-profile-card v25-account-id-card"><div class="v25-section-heading"><div><span class="v25-kicker">PROFILE IDENTIFIER</span><h3>ID profil</h3></div><span class="v25-heading-icon">⌁</span></div><p class="v25-muted">ID profil sementara pada perangkat ini. ID akun resmi akan diterbitkan server setelah registrasi akun diaktifkan.</p><div class="v25-profile-id-row"><code id="profileRandomId">ARY-••••••••</code><button class="tag" id="profileCopyId" type="button">Salin ID</button></div><small class="v25-privacy-note" id="profileIdDescription">ID profil sementara pada perangkat ini.</small><button class="v25-text-button" id="accountLogout" type="button" hidden>Keluar dari akun</button></section>
+    <section class="v25-profile-card v25-account-id-card"><div class="v25-section-heading"><div><span class="v25-kicker">PROFILE IDENTIFIER</span><h3>ID profil</h3></div><span class="v25-heading-icon">⌁</span></div><p class="v25-muted">ID profil sementara pada perangkat ini. ID akun resmi akan diterbitkan server setelah registrasi akun diaktifkan.</p><div class="v25-profile-id-row"><code id="profileRandomId">ARY-••••••••</code><span id="profileDeveloperBadge" class="v25-member-badge ary-profile-developer-badge" hidden>♛ DEVELOPER WEBSITE</span><button class="tag" id="profileCopyId" type="button">Salin ID</button></div><small class="v25-privacy-note" id="profileIdDescription">ID profil sementara pada perangkat ini.</small><button class="v25-text-button" id="accountLogout" type="button" hidden>Keluar dari akun</button></section>
   </div>
-  <section class="v25-profile-card v25-backup-card">
-    <div class="v25-section-heading"><div><span class="v25-kicker">YOUR DATA</span><h3>Backup & pemulihan</h3></div><span class="v25-heading-icon">⬡</span></div>
-    <p class="v25-muted">Ekspor profil, riwayat, dan favorit untuk dipindahkan atau dipulihkan di perangkat lain.</p>
-    <div class="v25-backup-actions"><button class="tag" id="exportData" type="button">↓ Ekspor backup</button><label class="tag v25-import-label">↑ Pulihkan backup<input id="importData" type="file" accept="application/json" hidden></label><button class="tag" id="restoreAutoBackup" type="button">↺ Pulihkan cadangan otomatis</button></div>
-    <small class="v25-privacy-note">Auto-save dan cadangan otomatis tersimpan di browser perangkat ini. Ekspor file backup untuk memindahkan data ke perangkat lain; penyimpanan browser yang dihapus akan menghapus cadangan lokal.</small>
-  </section>
   <section class="v25-profile-card v25-device-card">
     <div class="v25-section-heading"><div><span class="v25-kicker">DEVICE & PRIVACY</span><h3>Riwayat perangkat & lokasi</h3></div><span class="v25-heading-icon">⌖</span></div>
     <p class="v25-muted">Informasi perangkat dan sesi disimpan hanya di browser ini. Lokasi hanya diambil jika kamu menekan tombol dan mengizinkan Chrome.</p>
@@ -846,19 +846,14 @@ body{background-color:var(--ary-app-bg)}
       <div class="owner-top-actions"><button type="button" data-panel="history" aria-label="Buka riwayat unduhan">◷</button><button type="button" data-panel="profile" aria-label="Buka profil ARYANZZ">✦</button></div>
     </header>
     <article class="owner-profile-card">
-      <div class="owner-cover" id="ownerCover">
-        <div class="owner-cover-orbit"></div>
-        <span class="owner-cover-kicker">THE CREATOR BEHIND</span>
-        <strong>ARYANZZ</strong>
-        <span class="owner-cover-caption">ALL IN ONE DIGITAL SPACE</span>
-      </div>
+      <div class="owner-cover" id="ownerCover" aria-label="Latar visual pemilik"><div class="owner-cover-orbit"></div></div>
       <div class="owner-avatar-row"><div class="owner-avatar" id="ownerAvatar">A</div></div>
       <div class="owner-profile-content">
         <div class="owner-badges"><span class="owner-badge owner-badge-gold">♛ DEVELOPER WEBSITE</span><span class="owner-badge owner-badge-green">✦ ARYANZZ CREATOR</span></div>
         <h2 id="ownerName">ARYANZZ</h2>
         <p class="owner-handle" id="ownerHandle">@ARYANZZ</p>
         <p class="owner-bio" id="ownerBio">Merancang, membangun, dan mengembangkan ekosistem digital ARYANZZ.</p>
-        <button class="owner-edit-button" id="ownerEditProfile" type="button">✎ Edit foto &amp; banner</button>
+        <button class="owner-edit-button" id="ownerEditProfile" type="button" hidden>✎ Edit foto &amp; banner</button>
       </div>
       <div class="owner-stats">
         <div><b id="ownerToolsCount">13</b><span>FITUR</span></div>
@@ -881,7 +876,7 @@ body{background-color:var(--ary-app-bg)}
         <span class="owner-social-icon owner-tiktok">♪</span><b>TikTok</b><span class="owner-social-action">Follow di TikTok <i>→</i></span>
       </a>
     </div>
-    <section class="owner-link-editor">
+    <section class="owner-link-editor" id="ownerLinkEditor" hidden>
       <details open>
         <summary>⚙ Atur tautan sosial</summary>
         <p>Masukkan tautan milikmu. Pengaturan ini tersimpan di browser perangkat ini.</p>
@@ -893,7 +888,7 @@ body{background-color:var(--ary-app-bg)}
         <small>Tautan yang kamu atur akan ditampilkan pada kartu sosial di halaman ini dan disimpan pada browser perangkat ini.</small>
       </details>
     </section>
-    <section class="v8813-security-center" id="securityCenter"><div class="v8813-security-head"><div><span>SECURITY STATUS · PUBLIC SUMMARY</span><h3>Security Center</h3><p>Ringkasan perlindungan Worker ARYANZZ.</p></div><span class="v8813-shield">◈</span></div><div class="v8813-security-state" id="securityCenterState">Memeriksa status keamanan…</div><div class="v8813-security-metrics"><div><b id="securityBlockedOrigin">—</b><small>Origin diblokir</small></div><div><b id="securityRateLimited">—</b><small>Rate limited</small></div><div><b id="securityOversized">—</b><small>Request besar</small></div><div><b id="securityMethods">—</b><small>Metode ditolak</small></div></div><div class="v8813-security-foot"><span>Counter per Worker isolate · bukan log global</span><button type="button" id="securityCenterRefresh">↻ Perbarui</button></div></section>
+    <section class="v8813-security-center" id="securityCenter" hidden><div class="v8813-security-head"><div><span>SECURITY STATUS · PUBLIC SUMMARY</span><h3>Security Center</h3><p>Ringkasan perlindungan Worker ARYANZZ.</p></div><span class="v8813-shield">◈</span></div><div class="v8813-security-state" id="securityCenterState">Memeriksa status keamanan…</div><div class="v8813-security-metrics"><div><b id="securityBlockedOrigin">—</b><small>Origin diblokir</small></div><div><b id="securityRateLimited">—</b><small>Rate limited</small></div><div><b id="securityOversized">—</b><small>Request besar</small></div><div><b id="securityMethods">—</b><small>Metode ditolak</small></div></div><div class="v8813-security-foot"><span>Counter per Worker isolate · bukan log global</span><button type="button" id="securityCenterRefresh">↻ Perbarui</button></div></section>
 <footer class="owner-footer">© <span id="ownerYear">2026</span> <b>ARYANZZ</b> · Built with care.</footer>
   </div>
 </div>
@@ -915,6 +910,7 @@ function panel(id){
   if(viewHeader){viewHeader.hidden=!id;if(viewTitle&&target){const heading=target.querySelector('h1,h2,h3');viewTitle.textContent=heading?heading.textContent.trim():({history:'Pustaka',owner:'Pemilik',profile:'Profil'}[id]||'Ruang Kreatif');}}
   window.scrollTo({top:0,behavior:'smooth'});
 }
+window.aryanzzShowPanel=panel;
 document.querySelectorAll('[data-panel]').forEach(b=>b.onclick=()=>panel(b.dataset.panel));document.querySelectorAll('[data-nav]').forEach(b=>b.onclick=()=>panel(b.dataset.nav==='home'?'':b.dataset.nav));
 const API=(window.ARYANZZ_API_BASE||'').replace(new RegExp("/+$"),"");let activeUrl='',activeName='aryanzz-media';
 const historyKey='aryanzz-download-history-v1';

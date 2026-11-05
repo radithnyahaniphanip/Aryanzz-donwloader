@@ -60,3 +60,29 @@ body[data-view="owner"] .nav button[data-nav="owner"]{font-weight:1000}
 @keyframes aryOwnerBorder{0%{background-position:0% 50%}100%{background-position:260% 50%}}
 @keyframes aryOwnerOrbit{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){.owner-badge-gold,.owner-profile-card:before,.owner-cover-orbit,.owner-profile-content h2{animation:none!important}.owner-social-card{transition:none}}
+
+/* ARYANZZ V95.0 — owner and developer identity polish */
+.owner-cover{height:178px;background:radial-gradient(circle at 18% 115%,#18d8c855,transparent 42%),radial-gradient(circle at 85% 8%,#8b5cf688,transparent 37%),linear-gradient(125deg,#07142a,#0d2b4a 45%,#211344 100%);background-size:180% 180%;animation:ownerLuxuryFlow 12s ease-in-out infinite alternate}
+.owner-cover-orbit{background:linear-gradient(110deg,transparent 12%,#ffffff0c 38%,#c6f6ff44 50%,#ffffff0b 62%,transparent 88%);background-size:260% 100%;animation:ownerLuxurySweep 5.8s ease-in-out infinite}
+.owner-cover:before{border-color:#8be7ff55;box-shadow:0 0 0 18px #ffffff0c,0 0 0 40px #9b75ff12,0 0 48px #36d9e855}
+.owner-cover:after{border-color:#d7b8ff55;box-shadow:0 0 0 18px #ffffff0a,0 0 38px #9874ff33}
+.owner-badge-gold{color:#17100a;background:linear-gradient(110deg,#ffe6a1 0%,#fff9d8 24%,#f0b93f 48%,#fff0b5 72%,#ffe6a1 100%);background-size:260% 100%;border-color:#fff2bd;box-shadow:0 0 0 1px #f6d88b55,0 0 18px #f2c75c88,0 4px 0 #020711;animation:developerBadgeShimmer 3.8s linear infinite,developerBadgeGlow 2.4s ease-in-out infinite alternate}
+.ary-profile-developer-badge{color:#fff1b5;background:linear-gradient(110deg,#4c2b0b,#a46a17,#ffe6a1,#895214,#4c2b0b);background-size:260% 100%;border-color:#ffe4a0;box-shadow:0 0 18px #f0bd4b88;animation:developerBadgeShimmer 3.8s linear infinite,developerBadgeGlow 2.4s ease-in-out infinite alternate}
+#profileRandomId.ary-developer-id{display:inline-block;color:#fff0a8;background:linear-gradient(110deg,#1d1740,#553a12,#b27b20,#553a12,#1d1740);background-size:260% 100%;border:1px solid #ffe39a;border-radius:10px;padding:8px 12px;text-shadow:0 0 12px #ffe39a;box-shadow:0 0 22px #f5c65c77;animation:developerBadgeShimmer 3.8s linear infinite,developerBadgeGlow 2.4s ease-in-out infinite alternate}
+.ary-developer-account .owner-link-editor{border-color:#e8c66d}
+.ary-developer-account .v8813-security-center{border-color:#e8c66d}
+.ary-theme-motion{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:16px 0;padding:14px 16px;border:1px solid #304b6b;border-radius:15px;background:linear-gradient(120deg,#11243a,#101b30)}
+.ary-theme-motion>div{display:grid;gap:3px}.ary-theme-motion>div b{font-size:13px;color:#f3f7ff}.ary-theme-motion>div small{font-size:10px;color:#9eb2cc;line-height:1.5}
+.ary-motion-switch{display:flex;align-items:center;gap:8px;cursor:pointer;color:#7de3dc;font-size:10px;font-weight:900;white-space:nowrap}
+.ary-motion-switch input{position:absolute;opacity:0;width:1px;height:1px}
+.ary-motion-switch span{width:38px;height:22px;border-radius:20px;background:#263a55;position:relative;border:1px solid #52708e;transition:background .2s}
+.ary-motion-switch span:after{content:"";position:absolute;width:14px;height:14px;left:3px;top:3px;border-radius:50%;background:#dceaff;transition:transform .2s}
+.ary-motion-switch input:checked+span{background:#087f83;border-color:#4ed9d4}
+.ary-motion-switch input:checked+span:after{transform:translateX(16px);background:#fff}
+.ary-reduced-motion *, .ary-reduced-motion *:before, .ary-reduced-motion *:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+@keyframes ownerLuxuryFlow{0%{background-position:0% 50%;filter:saturate(.92)}100%{background-position:100% 50%;filter:saturate(1.22)}}
+@keyframes ownerLuxurySweep{0%,100%{background-position:-150% 0}50%{background-position:150% 0}}
+@keyframes developerBadgeShimmer{0%{background-position:100% 50%}100%{background-position:-160% 50%}}
+@keyframes developerBadgeGlow{from{filter:brightness(1);transform:translateY(0)}to{filter:brightness(1.18);transform:translateY(-1px)}}
+@media(max-width:600px){.owner-cover{height:154px}.ary-theme-motion{align-items:flex-start;flex-direction:column}.ary-motion-switch{align-self:flex-end}}
+@media(prefers-reduced-motion:reduce){.owner-cover,.owner-cover-orbit,.owner-badge-gold,.ary-profile-developer-badge,#profileRandomId.ary-developer-id{animation:none!important}}
