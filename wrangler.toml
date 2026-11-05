@@ -18,3 +18,6 @@ new_sqlite_classes = ["DownloaderContainer"]
 [[migrations]]
 tag = "v2"
 deleted_classes = ["DownloaderContainer"]
+
+[vars]
+ARYANZZ_BUILD_VERSION = "__ARYANZZ_VERSION__"

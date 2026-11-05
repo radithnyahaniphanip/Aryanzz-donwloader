@@ -4,6 +4,8 @@ import { readFileSync } from "node:fs";
 const read = path => readFileSync(new URL(path, import.meta.url), "utf8");
 const html = read("../public/index.html");
 const worker = read("../src/index.js");
+const buildVersionScript = read("../scripts/build-version.mjs");
+const wranglerConfig = read("../wrangler.toml");
 const platformCatalog = read("../src/platform-catalog.js");
 const sw = read("../public/sw.js");
 const searchJs = read("../public/v674.js");
@@ -35,6 +37,7 @@ const checks = [
   ["Adaptive network profiles cover automatic Wi-Fi/cellular mode and five manual levels", read("../public/index.html").includes('id="networkProfile"') && read("../public/downloader.js").includes("window.ARYANZZ_NETWORK_PROFILE") && ["Otomatis","Hemat","Stabil","Normal","Cepat","Maksimal"].every(x => read("../public/downloader.js").includes(x))],
   ["Incomplete video transfers offer Chrome-managed download fallback", downloaderJs.includes("addReadyDownloadLink(container,downloadUrl.href,filename") && downloaderJs.includes("Chrome siap mengunduh") && downloaderJs.includes("Lanjutkan lewat Chrome")],
 
+  ["Cloudflare Worker health reads the exact build version injected by Wrangler", worker.includes("version:env.ARYANZZ_BUILD_VERSION||BUILD_VERSION") && wranglerConfig.includes('ARYANZZ_BUILD_VERSION = "__ARYANZZ_VERSION__"') && buildVersionScript.includes('replaceAll("__ARYANZZ_VERSION__", version)') && buildVersionScript.includes("Wrangler build version variable was not generated")],
   ["Automatic release version generator is wired to the Cloudflare build step", read("../package.json").includes('"build:version": "node scripts/build-version.mjs"') && read("../scripts/build-version.mjs").includes("GITHUB_RUN_NUMBER") && read("../scripts/build-version.mjs").includes("const version = major + \".\" + minor + \".\" + buildNumber") && read("../scripts/build-version.mjs").includes('replaceAll("__ARYANZZ_VERSION__", version)') && read("../src/index.js").includes('const BUILD_VERSION = "__ARYANZZ_VERSION__"') && read("../scripts/build-version.mjs").includes("serviceWorker\\.register") && read("../scripts/build-version.mjs").includes("same release query") && read("../src/index.js").includes("version:BUILD_VERSION")],
   ["Every deployment gets a three-part monotonic build version and refreshes all local JS/CSS caches", read("../scripts/build-version.mjs").includes("GITHUB_RUN_NUMBER") && read("../scripts/build-version.mjs").includes("serviceWorker\\.register") && read("../scripts/build-version.mjs").includes("same release query")],
   ["Release metadata is generated and versioned alongside the app", read("../scripts/build-version.mjs").includes("public/release.json") && read("../public/manifest.webmanifest").includes("\"version\": \"__ARYANZZ_VERSION__\"")],

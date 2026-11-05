@@ -15,6 +15,10 @@ const commit = String(process.env.GITHUB_SHA || process.env.CF_COMMIT_SHA || "lo
 const workerPath = resolve(root, "src/index.js");
 let worker = readFileSync(workerPath, "utf8").replaceAll("__ARYANZZ_VERSION__", version);
 writeFileSync(workerPath, worker);
+const wranglerPath = resolve(root, "wrangler.toml");
+const wrangler = readFileSync(wranglerPath, "utf8").replaceAll("__ARYANZZ_VERSION__", version);
+if (!wrangler.includes('ARYANZZ_BUILD_VERSION = "' + version + '"\n')) throw new Error("Wrangler build version variable was not generated.");
+writeFileSync(wranglerPath, wrangler);
 writeFileSync(resolve(root, "src/build-version.js"), 'export const BUILD_VERSION = "' + version + '";\nexport const BUILD_COMMIT = "' + commit + '";\n');
 
 const htmlPath = resolve(root, "public/index.html");
