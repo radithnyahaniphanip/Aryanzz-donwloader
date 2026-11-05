@@ -1239,7 +1239,7 @@ function socialImageProxyUrl(raw,requestUrl,filename,download=false,sourceUrl=""
 function collectImageUrls(value,output,depth=0,forceImage=false){
   if(depth>12||value==null)return;
   if(typeof value==="string"){
-    const candidate=value.replace(/\\u0026/g,"&").replace(/\\u003d/g,"=").replace(/\\//g,"/");
+    const candidate=value.replace(/\\u0026/g,"&").replace(/\\u003d/g,"=").replace(/\\\//g,"/");
     if(/^https?:\/\//i.test(candidate)&&(forceImage||/\.(?:jpe?g|png|webp|gif|avif|bmp)(?:[?#]|$)/i.test(candidate)||/image|photo|picture/i.test(candidate)))output.push(candidate);
     return;
   }
@@ -1254,7 +1254,7 @@ function collectImageUrls(value,output,depth=0,forceImage=false){
 function extractSocialImageCandidates(html,pageUrl,platform){
   const found=[],seen=new Set(),jsonImages=[];
   const add=(raw,source="metadata")=>{
-    const value=String(raw||"").replace(/&amp;/g,"&").replace(/\\u0026/g,"&").replace(/\\//g,"/").trim();
+    const value=String(raw||"").replace(/&amp;/g,"&").replace(/\\u0026/g,"&").replace(/\\\//g,"/").trim();
     const safe=safePublicMediaUrl(value);if(!safe||seen.has(safe.href))return;
     if(!imageExtensionFromUrl(safe.href)&&source==="html-image"&&!/image|photo|picture|media/i.test(safe.hostname+safe.pathname))return;
     if(/\.(?:svg|ico)(?:[?#]|$)/i.test(safe.href))return;
