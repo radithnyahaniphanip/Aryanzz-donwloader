@@ -31,7 +31,20 @@
     if(toolsArea)toolsArea.hidden=!panelId;
     document.querySelectorAll("#toolsArea>.panel").forEach(p=>{
       const active=!!panelId&&p.id===panelId;
-      p.classList.toggle("active",activfunction bindNavigation(){
+      p.classList.toggle("active",active);
+      p.hidden=!active;
+      p.inert=!active;
+      p.setAttribute("aria-hidden",active?"false":"true");
+    });
+    document.querySelectorAll("[data-nav]").forEach(b=>{
+      const active=b.dataset.nav===(panelId?(panelId==="allTools"?"allTools":["history","profile","owner"].includes(panelId)?panelId:"allTools"):"home");
+      b.classList.toggle("active",active);
+    });
+    const root=document.documentElement;
+    root.style.scrollBehavior="auto";
+    root.scrollTop=0;document.body.scrollTop=0;window.scrollTo(0,0);
+  }
+  function bindNavigation(){
     document.querySelectorAll("[data-nav], [data-panel]").forEach(btn=>{
       btn.onclick=null;
       btn.addEventListener("click",()=>{goto(btn.dataset.nav||btn.dataset.panel||"")});
@@ -43,8 +56,6 @@
       back.addEventListener("click",()=>goto("allTools"));
       p.append(back);
     });
-    if(typeof window.aryanzzShowPanel==="function")window.aryanzzShowPanel("home");
-    else goto("home");
   }
 
   /* V8 filter/search and fast tool discovery. */
@@ -93,8 +104,10 @@
     renderLibrary();window.dispatchEvent(new Event("aryanzz:history-updated"));
   }
   function setFavorite(item){
-    const values=readArray(KEY.favorites);const has=values.some(v=>v.url===item.url);
+    const current=readArray(KEY.favorites),values=current.length?current:readArray("aryanzz.favorites.v1");
+    const has=values.some(v=>v.url===item.url);
     saveArray(KEY.favorites,has?values.filter(v=>v.url!==item.url):[{...item,at:Date.now()},...values].slice(0,40));
+    try{localStorage.removeItem("aryanzz.favorites.v1")}catch{}
     renderLibrary();window.dispatchEvent(new Event("aryanzz:history-updated"));return !has;
   }
   async function startDownload(url,data,mode,quality,bar,label,btn,cancel){
@@ -211,10 +224,12 @@
   let libraryQuery="";
   function renderLibrary(){
     const history=$("historyList"),fav=$("favoriteList");if(!history||!fav)return;
-    const values=[...readArray(KEY.history),...readArray("aryanzz-download-history-v1")]
+    const currentHistory=readArray(KEY.history),legacyHistory=readArray("aryanzz-download-history-v1");
+    const values=(currentHistory.length?currentHistory:legacyHistory)
       .filter((x,i,arr)=>x&&x.url&&arr.findIndex(y=>y&&y.url===x.url)===i)
       .sort((a,b)=>Number(b.at||0)-Number(a.at||0)).slice(0,80);
-    const favorites=readArray(KEY.favorites).filter(x=>x&&x.url);
+    const currentFavorites=readArray(KEY.favorites),legacyFavorites=readArray("aryanzz.favorites.v1");
+    const favorites=(currentFavorites.length?currentFavorites:legacyFavorites).filter((x,i,arr)=>x&&x.url&&arr.findIndex(y=>y&&y.url===x.url)===i);
     const render=(root,items,isFavorite)=>{
       root.replaceChildren();
       const filtered=items.filter(x=>(String(x.name||"")+" "+String(x.url||"")).toLocaleLowerCase("id").includes(libraryQuery));
@@ -267,6 +282,7 @@
     };
     historyTab?.addEventListener("click",()=>showTab(false));
     favoriteTab?.addEventListener("click",()=>showTab(true));
+    showTab(false);
     const clearHistory=$("clearHistoryV2");
     if(clearHistory&&!clearHistory.dataset.v15Bound){
       clearHistory.dataset.v15Bound="1";
@@ -282,7 +298,7 @@
       clearFavorites.dataset.v15Bound="1";
       clearFavorites.addEventListener("click",()=>{
         if(!window.confirm("Hapus seluruh media favorit dari perangkat ini?"))return;
-        try{localStorage.removeItem(KEY.favorites);}
+        try{localStorage.removeItem(KEY.favorites);localStorage.removeItem("aryanzz.favorites.v1");}
         catch{toast("Favorit tidak dapat dihapus. Periksa penyimpanan browser.");return;}
         renderLibrary();window.dispatchEvent(new Event("aryanzz:history-updated"));toast("Seluruh media favorit dihapus.");
       });
