@@ -87,6 +87,7 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: npm run build:version && wrangler deploy
       - name: Configure optional AudD music recognition secret
+        continue-on-error: true
         env:
           AUDD_API_TOKEN: ${{ secrets.AUDD_API_TOKEN }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
