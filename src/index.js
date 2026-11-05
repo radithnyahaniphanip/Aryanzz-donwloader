@@ -677,9 +677,9 @@ async function proxyPlatform(request,env,path){
 async function platformStatus(env){
   const platforms=PLATFORM_CATALOG.map(platform=>({
     id:platform.id,name:platform.name,domains:platform.domains,aliasOf:platform.aliasOf||null,
-    pasteLink:true,titleSearch:true,preview:platform.preview,mediaModes:platform.mediaModes,
+    pasteLink:platform.pasteLink,titleSearch:platform.titleSearch,inputModes:platform.inputModes,preview:platform.preview,mediaModes:platform.mediaModes,
     mp4:platform.mp4,providerKey:platform.providerKey,extractorStatus:platform.extractorStatus,
-    searchEnabled:true
+    searchEnabled:platform.searchEnabled
   }));
   const dedicated=platforms.filter(platform=>platform.extractorStatus==="dedicated").length;
   return json({
