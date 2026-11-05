@@ -51,6 +51,8 @@ jobs:
   deploy:
     name: Deploy V94.27.x to Cloudflare Workers
     needs: test
+    permissions:
+      contents: write
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -101,6 +103,29 @@ jobs:
         env:
           WORKER_URL: https://aryanzz-donwloader.radithnyahaniphanip.workers.dev
         run: node tests/live-release-smoke.mjs
+      - name: Create automatic recovery checkpoint
+        if: success()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const sha = context.sha;
+            const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z');
+            const tag = `checkpoint-${stamp}-${sha.slice(0, 7)}`;
+            try {
+              await github.rest.git.createRef({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: `refs/tags/${tag}`,
+                sha
+              });
+              core.notice(`Recovery checkpoint created: ${tag} -> ${sha}`);
+            } catch (error) {
+              if (error.status === 422) {
+                core.notice(`Checkpoint ${tag} already exists; nothing to overwrite.`);
+              } else {
+                throw error;
+              }
+            }
       - name: Diagnose user-supplied TikTok link playback, duration and download
         if: success()
         continue-on-error: true
