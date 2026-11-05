@@ -134,9 +134,11 @@ jobs:
           WORKER_URL: https://aryanzz-donwloader.radithnyahaniphanip.workers.dev
         run: node tests/live-tiktok-user-link.mjs
       - name: Diagnose TikTok Photo Mode public image endpoints
-        if: github.event_name == 'workflow_dispatch' && success()
+        if: success()
         continue-on-error: true
         timeout-minutes: 3
+        env:
+          WORKER_URL: https://aryanzz-donwloader.radithnyahaniphanip.workers.dev
         run: node tests/live-tiktok-photo-diagnostics.mjs
       - name: Diagnose user-supplied Instagram post image extraction and download
         if: success()
