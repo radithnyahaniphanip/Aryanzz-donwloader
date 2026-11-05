@@ -2015,7 +2015,7 @@ function parseBingSocialImageResults(html,platform,requestUrl,query,allowWeb=fal
   const results=[],seen=new Set(),domains=socialSearchDomains(platform);
   const tags=String(html||"").matchAll(/<a\b[^>]*class=["'][^"']*\biusc\b[^"']*["'][^>]*>/gi);
   for(const match of tags){
-    const attrs=match[0],metaMatch=attrs.match(/\bm=["']([^"']+)["']/i);if(!metaMatch)continue;
+    const attrs=match[0],metaMatch=attrs.match(/\bm\s*=\s*'([^']*)'/i)||attrs.match(/\bm\s*=\s*"((?:&quot;|[^"])*)"/i);if(!metaMatch)continue;
     let meta;try{meta=JSON.parse(decodeSearchHtml(metaMatch[1]).replace(/\\u0026/g,"&"))}catch{continue}
     const source=allowWeb?safePublicMediaUrl(meta.purl||meta.surl||meta.url||""):socialImageSearchDomainsMatch(meta.purl||meta.surl||meta.url||"",platform);
     const image=safePublicMediaUrl(String(meta.murl||meta.mediaUrl||meta.turl||"").replace(/&amp;/g,"&"));
