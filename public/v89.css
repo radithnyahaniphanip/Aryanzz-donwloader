@@ -306,3 +306,5 @@ body:not(.ary-motion-enabled) .v89-welcome h1 span{
 @media(prefers-reduced-motion:reduce){
   body *,body *::before,body *::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
 }
+
+.nav button:active{transition:none!important;transform:none!important}
