@@ -1419,6 +1419,44 @@ function socialNetworkPlan(selected=0){
         box.replaceChildren(make("b","youtube-title","TikTok Photo Mode belum bisa dibaca"),make("p","warning",imageData.error||info.error||"Postingan foto ini tidak mengirim gambar publik yang dapat diambil. Pastikan tautan Photo Mode dapat dibuka tanpa login atau pembatasan."));
         return;
       }
+      if(!hasAnyFormat&&!imageGallery&&info.embedUrl&&detectedPlatform==="tiktok"){
+        box.replaceChildren();
+        const title=make("b","youtube-title",info.title||"Video TikTok");
+        const meta=make("small","muted",["TikTok Embed Player",info.embedAuthor||""].filter(Boolean).join(" · "));
+        const wrap=make("div","ary-video-preview-wrap");
+        const frame=make("iframe","youtube-embed-frame");
+        const embed=new URL(info.embedUrl);
+        if(embed.origin!=="https://www.tiktok.com"||!/^\/player\/v1\/\d{8,}$/.test(embed.pathname))throw new Error("Alamat player TikTok tidak valid.");
+        frame.src=embed.href;
+        frame.title="Pemutar resmi TikTok · "+(info.title||"video");
+        frame.loading="lazy";frame.referrerPolicy="strict-origin-when-cross-origin";
+        frame.allow="accelerometer; autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture; web-share";
+        frame.allowFullscreen=true;
+        frame.style.cssText="display:block;width:min(100%,380px);height:min(680px,78svh);min-height:420px;margin:0 auto;border:0;border-radius:14px;background:#000;aspect-ratio:9/16";
+        const status=make("small","muted","Memuat pemutar resmi TikTok · durasi akan muncul saat player mengirim metadata.");
+        const onPlayerMessage=event=>{
+          if(event.origin!=="https://www.tiktok.com"||event.source!==frame.contentWindow)return;
+          const message=event.data;
+          if(!message||message["x-tiktok-player"]!==true)return;
+          if(message.type==="onCurrentTime"&&message.value&&typeof message.value==="object"){
+            const current=Number(message.value.currentTime),total=Number(message.value.duration);
+            if(Number.isFinite(total)&&total>0){
+              const fmt=value=>Math.floor(value/60)+":"+String(Math.floor(value%60)).padStart(2,"0");
+              status.textContent="Player TikTok aktif · "+(Number.isFinite(current)?fmt(Math.max(0,current))+" / ":"")+fmt(total);
+            }
+          }else if(message.type==="onPlayerReady")status.textContent="Player TikTok siap · tekan putar untuk memulai video.";
+          else if(message.type==="onStateChange"&&Number(message.value)===1)status.textContent="Video TikTok sedang diputar.";
+          else if(message.type==="onPlayerError")status.textContent="Player TikTok tidak dapat memutar video ini. Periksa akses publik di TikTok.";
+        };
+        window.addEventListener("message",onPlayerMessage);
+        wrap.append(frame);
+        const note=make("p","warning",info.downloadMessage||"Video dapat diputar melalui player resmi TikTok, tetapi file MP4 langsung belum tersedia dari provider publik.");
+        const source=make("a","tag","Buka video di TikTok ↗");
+        source.href="https://www.tiktok.com/video/"+encodeURIComponent(info.embedId||"");
+        source.target="_blank";source.rel="noopener noreferrer";
+        box.append(title,meta,wrap,status,note,source);
+        return;
+      }
       if(!hasAnyFormat&&!imageGallery){
         box.replaceChildren(make("b","youtube-title","Media belum dapat diambil"),make("p","warning",info.error||"Provider tidak mengirim format video/audio yang dapat diunduh. Tidak ada file yang disiapkan."));
         return;

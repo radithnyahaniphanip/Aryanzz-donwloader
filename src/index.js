@@ -380,6 +380,25 @@ async function freePublicMediaInfo(rawUrl,requestUrl){
       primaryError+="; TikTok fallback: "+String(error?.message||error).slice(0,900);
     }
   }
+  if(key==="tiktok"){
+    const embedTargets=[...new Set([rawUrl,canonicalUrl,...providerUrls])].slice(0,3);
+    const embedResults=await Promise.allSettled(embedTargets.map(target=>fetchTikTokOEmbed(target,6500)));
+    const available=embedResults.find(item=>item.status==="fulfilled");
+    if(available){
+      const embed=available.value;
+      return json({
+        ok:true,platform:"tiktok",title:embed.title||"Video TikTok",extractor:"TikTok Embed Player",
+        thumbnail:embed.thumbnail||null,duration:null,formats:[],embedUrl:embed.embedUrl,embedId:embed.id,
+        embedAuthor:embed.author||null,providerName:"TikTok Embed Player",providerReady:true,
+        directDownloadAvailable:false,
+        downloadMessage:"Player resmi TikTok tersedia, tetapi provider publik belum memberikan file MP4 langsung untuk tautan ini.",
+        canonicalUrl:canonicalUrl!==rawUrl?canonicalUrl:undefined,
+        diagnostics:primaryError.slice(0,900)
+      },200);
+    }
+    const embedErrors=embedResults.filter(item=>item.status==="rejected").map(item=>String(item.reason?.message||item.reason).slice(0,100));
+    if(embedErrors.length)primaryError+="; TikTok oEmbed: "+embedErrors.join(" | ").slice(0,260);
+  }
   if(key==="instagram"){
     try{
       const fallback=normalizeWeirdDlInstagramData(await fetchWeirdDlInstagramData(canonicalUrl,9000),canonicalUrl,requestUrl);
@@ -1291,6 +1310,21 @@ function extractTikTokPublicPageInfo(html,pageUrl,rawUrl,requestUrl){
   normalized.author=author;
   normalized.canonicalUrl=extractTikTokCanonicalUrl(source,pageUrl)||pageUrl;
   return normalized;
+}
+async function fetchTikTokOEmbed(rawUrl,timeoutMs=6500){
+  const endpoint=new URL("https://www.tiktok.com/oembed");
+  endpoint.searchParams.set("url",rawUrl);
+  const response=await fetch(endpoint.href,{headers:{accept:"application/json","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/130.0.0.0 Safari/537.36"},signal:AbortSignal.timeout(timeoutMs),cache:"no-store"});
+  const payload=await response.json().catch(()=>null);
+  if(!response.ok||!payload||!["video","rich"].includes(String(payload.type||"").toLowerCase()))throw new Error("TikTok oEmbed HTTP "+response.status+": "+String(payload?.error||payload?.message||"metadata embed tidak tersedia").slice(0,100));
+  const html=String(payload.html||"");
+  const id=String(payload.embed_product_id||html.match(/\/player\/v1\/(\d{8,})/i)?.[1]||html.match(/data-video-id=[\"'](\d{8,})[\"']/i)?.[1]||"");
+  if(!/^\d{8,}$/.test(id))throw new Error("TikTok oEmbed tidak mengembalikan ID player yang valid.");
+  const player=new URL("https://www.tiktok.com/player/v1/"+id);
+  for(const [key,value] of Object.entries({controls:"1",timestamp:"1",description:"1",music_info:"1",rel:"0"}))player.searchParams.set(key,value);
+  let thumbnail=null;
+  try{const safe=safePublicMediaUrl(payload.thumbnail_url);if(safe)thumbnail=safe.href}catch{}
+  return {id,title:String(payload.title||"Video TikTok").slice(0,240),author:String(payload.author_name||"").slice(0,120),thumbnail,embedUrl:player.href};
 }
 function extractTikTokVideoId(value){
   try{

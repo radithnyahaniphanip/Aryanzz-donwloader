@@ -33,6 +33,16 @@ try{
     const url=new URL(typeof input==="string"?input:input instanceof URL?input.href:input.url);
     if(url.hostname==="vt.tiktok.com"||url.hostname==="www.tiktok.com"&&(url.pathname==="/video/1234567890123456789"||url.pathname==="/@/video/1234567890123456789"))
       return new Response(pageHtml,{status:200,headers:{"content-type":"text/html; charset=utf-8"}});
+    if(url.hostname==="www.tiktok.com"&&url.pathname==="/oembed"){
+      const target=new URL(url.searchParams.get("url")||"https://www.tiktok.com/video/9876543210987654321");
+      const id=(target.pathname.match(/video\/(\d{8,})/)||[])[1]||"9876543210987654321";
+      if(id==="9876543210987654321")return new Response(JSON.stringify({
+        type:"video",title:"TikTok oEmbed playback regression",author_name:"ARYANZZ Test",
+        embed_product_id:id,thumbnail_url:"https://cdn.example/tiktok-cover.jpg",
+        html:'<iframe src="https://www.tiktok.com/player/v1/'+id+'"></iframe>'
+      }),{status:200,headers:{"content-type":"application/json"}});
+      return new Response(JSON.stringify({error:"Video unavailable"}),{status:404,headers:{"content-type":"application/json"}});
+    }
     if(url.hostname==="www.tiktok.com"&&url.pathname==="/api/item/detail/"){
       const id=url.searchParams.get("itemId");
       if(id==="1234567890123456789")return new Response(JSON.stringify({statusCode:10216,itemInfo:null}),{status:403,headers:{"content-type":"application/json"}});
@@ -79,6 +89,18 @@ try{
   assert.equal(checked.extension,"mp4");
   assert.equal(checked.bytes,videoBytes.length);
   console.log("✔ TikTok short-link canonical metadata, public hydration extraction and MP4 signature preflight pass");
+  const embedResponse=await worker.fetch(new Request("https://aryanzz.example/api/platform/info",{
+    method:"POST",
+    headers:{"content-type":"application/json","cf-connecting-ip":"192.0.2.222"},
+    body:JSON.stringify({url:"https://www.tiktok.com/video/9876543210987654321",expectedPlatform:"tiktok"})
+  }),{});
+  assert.equal(embedResponse.status,200,"public TikTok oEmbed should provide a playback-only fallback");
+  const embedInfo=await embedResponse.json();
+  assert.equal(embedInfo.providerName,"TikTok Embed Player");
+  assert.equal(embedInfo.directDownloadAvailable,false);
+  assert.equal(embedInfo.formats.length,0);
+  assert.equal(embedInfo.embedUrl,"https://www.tiktok.com/player/v1/9876543210987654321?controls=1&timestamp=1&description=1&music_info=1&rel=0");
+  console.log("✔ TikTok oEmbed returns a validated official player fallback without inventing an MP4 download");
   const apiInfoResponse=await worker.fetch(new Request("https://aryanzz.example/api/platform/info",{
     method:"POST",
     headers:{"content-type":"application/json","cf-connecting-ip":"192.0.2.221"},
