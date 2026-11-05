@@ -1485,6 +1485,40 @@ async function fetchTikTokPhotoImageData(rawUrl,timeoutMs=9000){
   }
   throw new Error("TikTok tidak mengembalikan galeri foto publik. "+lastDiagnostic.slice(0,170));
 }
+function extractTikTokPhotoProxyImages(text){
+  const normalized=decodeTikTokPageValue(String(text||"")).replace(/&amp;/gi,"&").replace(/\\u0026/gi,"&").replace(/\\u003d/gi,"=").replace(/\\\//g,"/");
+  const urls=[...normalized.matchAll(/https?:\\/\\/[^\\s"'<>\\\\)]+/g)].map(match=>match[0].replace(/[),.;\\]}]+$/g,""));
+  const seen=new Set(),images=[];
+  for(const raw of urls){
+    const safe=safePublicMediaUrl(raw);if(!safe||seen.has(safe.href))continue;
+    if(!/(?:tiktokcdn|byteoversea|ibytedtos|muscdn|tiktokv)/i.test(safe.hostname))continue;
+    const ext=imageExtensionFromUrl(safe.href);
+    if(!SOCIAL_IMAGE_EXTENSIONS.has(ext)&&!/photomode-image/i.test(safe.pathname))continue;
+    seen.add(safe.href);
+    images.push({url:safe.href,type:"image",ext:ext||"jpg",source:"TikTok official embed proxy"});
+    if(images.length>=35)break;
+  }
+  return images;
+}
+async function fetchTikTokPhotoEmbedProxy(canonicalUrl,timeoutMs=10000){
+  const itemId=extractTikTokItemId(canonicalUrl);
+  if(!itemId)throw new Error("ID Photo Mode tidak tersedia untuk jalur proxy.");
+  const target="https://www.tiktok.com/embed/v2/"+itemId;
+  const endpoints=["https://r.jina.ai/http://www.tiktok.com/embed/v2/"+itemId,"https://r.jina.ai/https://www.tiktok.com/embed/v2/"+itemId];
+  const errors=[];
+  for(const endpoint of endpoints){
+    try{
+      const response=await fetch(endpoint,{headers:{accept:"text/html,text/plain,*/*","x-return-format":"html","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"},redirect:"follow",cache:"no-store",signal:AbortSignal.timeout(timeoutMs)});
+      if(!response.ok){errors.push("proxy HTTP "+response.status);await response.body?.cancel().catch(()=>{});continue;}
+      const body=(await response.text()).slice(0,5000000);
+      let images=extractSocialImageCandidates(body,target,"tiktok");
+      if(!images.length)images=extractTikTokPhotoProxyImages(body);
+      if(images.length)return {title:"TikTok Photo Mode",images,source:"Jina public reader proxy"};
+      errors.push("proxy berhasil dibuka tetapi tidak memuat URL galeri foto");
+    }catch(error){errors.push(String(error?.message||error).slice(0,120));}
+  }
+  throw new Error("Jalur proxy embed TikTok tidak menemukan foto asli. "+errors.join(" | ").slice(0,180));
+}
 async function tikTokItemDetailFallback(rawUrl,requestUrl,timeoutMs=8000){
   const videoId=extractTikTokItemId(rawUrl);
   if(!videoId)throw new Error("ID video belum tersedia untuk endpoint metadata TikTok.");
@@ -1749,6 +1783,16 @@ async function resolveSocialImagePost(rawUrl,requestUrl,options={}){
           if(options.diagnostics)options.diagnostics.value={...(options.diagnostics.value||{}),itemDetail:{ok:true,imageCount:images.length,author:photoData.author||null}};
         }catch(error){
           if(options.diagnostics)options.diagnostics.value={...(options.diagnostics.value||{}),itemDetail:{ok:false,error:String(error?.message||error).slice(0,180)}};
+        }
+      }
+      if((!page||!page.images?.length)&&isTikTokPhotoRoute){
+        try{
+          const proxyData=await fetchTikTokPhotoEmbedProxy(canonicalUrl,Number(options.proxyTimeoutMs)||10000);
+          providerTitle=providerTitle||proxyData.title;
+          page={...(page||{url:canonicalUrl,html:""}),title:proxyData.title,images:proxyData.images};
+          if(options.diagnostics)options.diagnostics.value={...(options.diagnostics.value||{}),proxy:{ok:true,source:proxyData.source,imageCount:proxyData.images.length}};
+        }catch(error){
+          if(options.diagnostics)options.diagnostics.value={...(options.diagnostics.value||{}),proxy:{ok:false,error:String(error?.message||error).slice(0,200)}};
         }
       }
       if((!page||!page.images?.length)&&key==="instagram"){
