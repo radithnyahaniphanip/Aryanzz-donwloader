@@ -1,7 +1,7 @@
 const base=(process.env.WORKER_URL||"https://aryanzz-donwloader.radithnyahaniphanip.workers.dev").replace(/\/$/,"");
 const sourceUrl="https://vt.tiktok.com/ZSpYA7VKa/";
 const request=(path,init={})=>fetch(base+path,{cache:"no-store",signal:AbortSignal.timeout(45000),...init});
-const report={test:"user-supplied TikTok short link",sourceUrl,photoImageCount:0,photoImageError:null,infoStatus:null,canonicalUrl:null,providerName:null,provider:null,fallbackUsed:false,errorType:null,diagnostics:null,title:null,durationSeconds:null,durationLabel:null,videoFormats:0,formatCandidates:[],selectedFormat:null,probeStatus:null,probeMime:null,previewStatus:null,previewMime:null,previewDisposition:null,downloadUrlAvailable:false,playbackReady:false,downloadReady:false,embedUrl:null,embedStatus:null,error:null};
+const report={test:"user-supplied TikTok short link",sourceUrl,photoImageCount:0,photoImageError:null,photoDiagnostics:null,infoStatus:null,canonicalUrl:null,providerName:null,provider:null,fallbackUsed:false,errorType:null,diagnostics:null,title:null,durationSeconds:null,durationLabel:null,videoFormats:0,formatCandidates:[],selectedFormat:null,probeStatus:null,probeMime:null,previewStatus:null,previewMime:null,previewDisposition:null,downloadUrlAvailable:false,playbackReady:false,downloadReady:false,embedUrl:null,embedStatus:null,error:null};
 try{
   const infoPromise=request("/api/platform/info",{method:"POST",headers:{"content-type":"application/json","accept":"application/json"},body:JSON.stringify({url:sourceUrl,expectedPlatform:"tiktok"})});
   const photoPromise=request("/api/image/extract?url="+encodeURIComponent(sourceUrl));
@@ -11,7 +11,7 @@ try{
   try{
     const photoData=await photoResponse.json().catch(()=>({}));
     report.photoImageCount=Array.isArray(photoData.images)?photoData.images.length:0;
-    report.photoImageError=photoData.error||null;
+    report.photoImageError=photoData.error||null;report.photoDiagnostics=photoData.diagnostics||null;
   }catch(error){report.photoImageError=String(error?.message||error).slice(0,160)}
   report.canonicalUrl=info.canonicalUrl||null;
   report.providerName=info.providerName||null;

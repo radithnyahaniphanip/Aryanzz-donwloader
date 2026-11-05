@@ -1235,7 +1235,7 @@ async function fetchSocialPostHtml(pageUrl,timeoutMs=18000){
     if(contentType&&!contentType.includes("text/html")&&!contentType.includes("application/xhtml"))throw new Error("Sumber bukan halaman postingan HTML.");
     const length=Number(response.headers.get("content-length")||0);
     if(length>5*1024*1024){await response.body?.cancel().catch(()=>{});throw new Error("Halaman sumber terlalu besar untuk diproses.");}
-    if(!response.body)return {html:"",url:current.href};
+    if(!response.body)return {html:"",url:current.href,status:response.status};
     const reader=response.body.getReader(),chunks=[];let total=0;
     try{
       while(total<5*1024*1024){
@@ -1246,7 +1246,7 @@ async function fetchSocialPostHtml(pageUrl,timeoutMs=18000){
     }finally{reader.releaseLock?.()}
     const bytes=new Uint8Array(Math.min(total,5*1024*1024));let offset=0;
     for(const chunk of chunks){const part=chunk.subarray(0,Math.max(0,bytes.length-offset));bytes.set(part,offset);offset+=part.byteLength;if(offset>=bytes.length)break}
-    return {html:new TextDecoder().decode(bytes),url:current.href};
+    return {html:new TextDecoder().decode(bytes),url:current.href,status:response.status};
   }
   throw new Error("Terlalu banyak pengalihan dari halaman postingan.");
 }
@@ -1685,7 +1685,17 @@ async function resolveSocialImagePost(rawUrl,requestUrl,options={}){
     (async()=>{
       const itemId=isTikTokPhotoRoute?extractTikTokItemId(canonicalUrl):null;
       const pageTarget=itemId?"https://www.tiktok.com/embed/v2/"+itemId:canonicalUrl;
-      let page=await fetchSocialPostHtml(pageTarget,Number(options.timeoutMs)||12000).then(result=>({...result,images:extractSocialImageCandidates(result.html,result.url,key)})).catch(()=>null);
+      let page=await fetchSocialPostHtml(pageTarget,Number(options.timeoutMs)||12000).then(result=>{
+        const images=extractSocialImageCandidates(result.html,result.url,key);
+        if(key==="tiktok"&&options.diagnostics){
+          const excerpt=pattern=>{const index=result.html.search(pattern);return index<0?null:result.html.slice(Math.max(0,index-180),Math.min(result.html.length,index+520)).replace(/\s+/g," ").slice(0,700)};
+          options.diagnostics.value={source:"official-embed-v2",status:result.status,bytes:result.html.length,imageCount:images.length,hasImagePost:/imagePost|image_post|photoPost|photo_post/i.test(result.html),hasImageURL:/imageURL|imageUrl|urlList/i.test(result.html),hasCaptcha:/captcha|verify to continue|access denied/i.test(result.html),imageURLExcerpt:excerpt(/imageURL|imageUrl|urlList/i)};
+        }
+        return {...result,images};
+      }).catch(error=>{
+        if(key==="tiktok"&&options.diagnostics)options.diagnostics.value={source:"official-embed-v2",error:String(error?.message||error).slice(0,180)};
+        return null;
+      });
       if((!page||!page.images?.length)&&key==="instagram"){
         const postMatch=canonicalUrl.match(/\/(p|reel|reels|tv)\/([^/]+)/i);
         if(postMatch){
@@ -1770,8 +1780,9 @@ async function socialImageInfo(request){
   if(!isPlatformLink(raw)||!freePlatformKey(raw))return json({error:"Tempel tautan postingan publik dari platform yang didukung."},400);
   if(socialRateLimited(request))return json({error:"Batas permintaan gambar gratis tercapai. Tunggu satu menit lalu coba lagi."},429);
   try{
-    const post=await resolveSocialImagePost(raw,request.url);
-    if(!post)return json({error:"Belum ditemukan file gambar asli pada postingan ini. Bisa jadi postingan berisi video, privat, memerlukan login, atau platform membatasi akses publik."},404);
+    const diagnostics={};
+    const post=await resolveSocialImagePost(raw,request.url,{diagnostics});
+    if(!post)return json({error:"Belum ditemukan file gambar asli pada postingan ini. Bisa jadi postingan berisi video, privat, memerlukan login, atau platform membatasi akses publik.",diagnostics:diagnostics.value||null},404);
     return json({ok:true,...post});
   }catch(error){return json({error:"Gagal mengambil gambar postingan: "+String(error?.message||error).slice(0,150)},502)}
 }
