@@ -14,7 +14,7 @@ function summarizeJson(payload){
   const first=images[0]||null;
   const firstKeys=first&&typeof first==="object"?Object.keys(first):[];
   const serialized=JSON.stringify(payload||{});
-  const urlHosts=[...new Set([...serialized.matchAll(/https?:\\?\/\\?\/([^/\\\s"']+)/g)].map(m=>m[1]).filter(host=>/tiktok|tiktokcdn|byteoversea|ibytedtos|muscdn|akamaized/i.test(host)).slice(0,8))];
+  const urlHosts=[...new Set((serialized.match(/https?:\/\/[^"' \t\r\n]+/g)||[]).map(value=>{try{return new URL(value).hostname}catch{return ""}}).filter(host=>/tiktok|tiktokcdn|byteoversea|ibytedtos|muscdn|akamaized/i.test(host)).slice(0,8))];
   return {topKeys:Object.keys(payload||{}).slice(0,30),statusCode:payload?.statusCode??payload?.status_code??null,hasItem:!!item,itemKeys:item?Object.keys(item).slice(0,40):[],imagePostKeys:imagePost?Object.keys(imagePost).slice(0,30):[],imageCount:images.length,firstImageKeys:firstKeys,firstImagePreview:first?JSON.stringify(first).slice(0,700):null,mentionsImagePost:serialized.includes("imagePost"),mentionsImageURL:serialized.includes("imageURL"),mentionsUrlList:serialized.includes("urlList"),urlHosts};
 }
 async function probe(name,url,extraHeaders={}){
@@ -23,14 +23,14 @@ async function probe(name,url,extraHeaders={}){
     const response=await fetch(url,{headers:{...headers,...extraHeaders},redirect:"follow",cache:"no-store",signal:AbortSignal.timeout(18000)});
     result.status=response.status;result.contentType=response.headers.get("content-type");result.finalUrl=new URL(response.url).origin+new URL(response.url).pathname;
     const text=await response.text();result.bytes=Buffer.byteLength(text);
-    if((result.contentType||"").includes("json")||/^[\\s]*[\\[{]/.test(text)){
+    if((result.contentType||"").includes("json")||/^[\s]*[\[{]/.test(text)){
       result.kind="json";
       try{result.details=summarizeJson(JSON.parse(text))}catch{result.details={snippet:text.slice(0,700)}}
     }else{
       result.kind="html-or-text";
-      const ids=[...text.matchAll(/<script\\b[^>]*\\bid=["']([^"']+)["']/gi)].map(m=>m[1]).slice(0,25);
-      const urls=[...new Set([...text.matchAll(/https?:\\/\\/[^"'\\s<>]+/g)].map(m=>{try{return new URL(m[0]).hostname}catch{return ""}}).filter(x=>/tiktok|tiktokcdn|byteoversea|ibytedtos|muscdn|akamaized/i.test(x)))].slice(0,10);
-      result.details={title:text.match(/<title[^>]*>([\\s\\S]*?)<\\/title>/i)?.[1]?.slice(0,180)||null,scriptIds:ids,hasImagePost:/imagePost|image_post|photoPost|photo_post/i.test(text),hasImageURL:/imageURL|imageUrl|urlList/i.test(text),hasUniversalData:text.includes("__UNIVERSAL_DATA_FOR_REHYDRATION__"),hasSigiState:text.includes("SIGI_STATE"),hasCaptcha:/captcha|verify to continue|access denied/i.test(text),urlHosts:urls,snippet:text.slice(0,350).replace(/\\s+/g," ")};
+      const ids=[...text.matchAll(/<script\b[^>]*\bid=["']([^"']+)["']/gi)].map(m=>m[1]).slice(0,25);
+      const urls=[...new Set((text.match(/https?:\/\/[^"' \t\r\n<>]+/g)||[]).map(value=>{try{return new URL(value).hostname}catch{return ""}}).filter(x=>/tiktok|tiktokcdn|byteoversea|ibytedtos|muscdn|akamaized/i.test(x)))].slice(0,10);
+      result.details={title:text.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1]?.slice(0,180)||null,scriptIds:ids,hasImagePost:/imagePost|image_post|photoPost|photo_post/i.test(text),hasImageURL:/imageURL|imageUrl|urlList/i.test(text),hasUniversalData:text.includes("__UNIVERSAL_DATA_FOR_REHYDRATION__"),hasSigiState:text.includes("SIGI_STATE"),hasCaptcha:/captcha|verify to continue|access denied/i.test(text),urlHosts:urls,snippet:text.slice(0,350).replace(/\s+/g," ")};
     }
   }catch(error){result.error=String(error?.message||error).slice(0,200)}
   console.log("[TIKTOK-PHOTO-ENDPOINT] "+JSON.stringify(result));
