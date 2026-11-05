@@ -1207,9 +1207,11 @@ function extractSocialImageCandidates(html,pageUrl,platform){
 async function fetchSocialPostHtml(pageUrl,timeoutMs=18000){
   let current=safePublicMediaUrl(pageUrl);if(!current)throw new Error("Tautan postingan harus HTTPS dan tidak boleh mengarah ke jaringan lokal.");
   for(let hop=0;hop<6;hop++){
+    const isTikTokHost=current.hostname==="tiktok.com"||current.hostname.endsWith(".tiktok.com");
     const response=await fetchSocialHeaders(current.href,{headers:{
       accept:"text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-      "user-agent":"Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 Chrome/130.0.0.0 Mobile Safari/537.36"
+      "user-agent":"Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 Chrome/130.0.0.0 Mobile Safari/537.36",
+      ...(isTikTokHost?{referer:"https://www.tiktok.com/",origin:"https://www.tiktok.com"}:{})
     },redirect:"manual",cache:"no-store"},timeoutMs);
     if([301,302,303,307,308].includes(response.status)){
       const location=response.headers.get("location");if(!location)throw new Error("Pengalihan postingan tidak memiliki alamat tujuan.");
@@ -1654,7 +1656,7 @@ async function resolveSocialImagePost(rawUrl,requestUrl,options={}){
   const key=platformIdForUrl(rawUrl)||providerKey;
   if(!key)return null;
   const canonicalUrl=await resolveSocialShortLink(rawUrl,key);
-  let providerTitle="",providerImages=[],tikwmImages=[],tikTokItemImages=[];
+  let providerTitle="",providerImages=[],tikwmImages=[];
   const isTikTokPhotoRoute=key==="tiktok"&&(()=>{try{return /\/photo\//i.test(new URL(canonicalUrl).pathname)}catch{return false}})();
   const providerUrl=FREE_MEDIA_API+"/api/download/"+(providerKey||key)+"?url="+encodeURIComponent(canonicalUrl);
   // Experimental catalogue entries still get safe public-page metadata extraction;
@@ -1723,14 +1725,7 @@ async function resolveSocialImagePost(rawUrl,requestUrl,options={}){
   ];
   const page=await tasks[1];
   await Promise.all([tasks[0],tasks[2],tasks[3],tasks[4],tasks[5]]);
-  if(key==="tiktok"&&isTikTokPhotoRoute&&!(page?.images||[]).length){
-    try{
-      const data=await fetchTikTokPhotoImageData(canonicalUrl,6500);
-      providerTitle=providerTitle||data.title;
-      tikTokItemImages=data.images;
-    }catch{}
-  }
-  const rawCandidates=[...(page?.images||[]).map(item=>({...item,type:"image",source:item.source||"post-page"})),...providerImages.map(item=>({...item,url:item.url,source:"provider",type:item.type||item.kind||item.media_type||"image",mime_type:item.mime_type||item.mime||item.content_type||"",width:item.width||item.w||0,height:item.height||item.h||0,ext:item.ext||item.extension||""})),...(oembedImage?[oembedImage]:[]),...weirdDlImages,...tikwmImages.map(item=>({...item,url:item.url,source:"TikWM",type:"image"})),...tikTokItemImages];
+  const rawCandidates=[...(page?.images||[]).map(item=>({...item,type:"image",source:item.source||"post-page"})),...providerImages.map(item=>({...item,url:item.url,source:"provider",type:item.type||item.kind||item.media_type||"image",mime_type:item.mime_type||item.mime||item.content_type||"",width:item.width||item.w||0,height:item.height||item.h||0,ext:item.ext||item.extension||""})),...(oembedImage?[oembedImage]:[]),...weirdDlImages,...tikwmImages.map(item=>({...item,url:item.url,source:"TikWM",type:"image"}))];
   const seen=new Set(),images=[];
   for(const item of rawCandidates){
     const safe=safePublicMediaUrl(item.url);if(!safe||seen.has(safe.href))continue;

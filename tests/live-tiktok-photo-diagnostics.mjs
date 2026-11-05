@@ -54,9 +54,3 @@ await probe("photo-page",canonicalUrl,{"referer":"https://www.tiktok.com/"});
 await probe("embed-v2","https://www.tiktok.com/embed/v2/"+itemId);
 await probe("official-player","https://www.tiktok.com/player/v1/"+itemId+"?controls=1&timestamp=1&description=1&music_info=1&rel=0");
 await probe("short-link",shortUrl);
-const workerImageUrl=workerBase+"/api/image/extract?url="+encodeURIComponent("https://www.tiktok.com/embed/v2/"+itemId);
-try{
-  const response=await fetch(workerImageUrl,{cache:"no-store",signal:AbortSignal.timeout(45000)});
-  const data=await response.json().catch(()=>({}));
-  console.log("[TIKTOK-EMBED-IMAGE-EXTRACTION] "+JSON.stringify({status:response.status,ok:data.ok===true,imageCount:Array.isArray(data.images)?data.images.length:0,title:String(data.title||"").slice(0,140),error:data.error||null,firstImageSource:data.images?.[0]?.source||null}));
-}catch(error){console.log("[TIKTOK-EMBED-IMAGE-EXTRACTION] "+JSON.stringify({error:String(error?.message||error).slice(0,180)}))}
