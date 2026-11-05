@@ -338,8 +338,7 @@ async function freePublicMediaInfo(rawUrl,requestUrl){
       return {response:candidateResponse,data:candidateData,targetUrl};
     }));
     const fulfilled=primaryResults.filter(item=>item.status==="fulfilled").map(item=>item.value);
-    const videoRouteResult=key==="tiktok"?fulfilled.find(item=>{let path="";try{path=new URL(item.targetUrl).pathname}catch{}return /\/(?:@[^/]+\/)?video\/\d{8,}/i.test(path)&&item.response?.ok&&item.data?.success!==false&&freeProviderMediaInfo(item.data,item.targetUrl,request.url)?.formats?.some(format=>format.mode==="video")}):null;
-    const chosen=videoRouteResult||fulfilled.find(item=>item.response?.ok||item.response&&item.response.status<500)||fulfilled[0];
+    const chosen=fulfilled.find(item=>item.response?.ok||item.response&&item.response.status<500)||fulfilled[0];
     if(chosen){response=chosen.response;data=chosen.data;}
     else if(primaryResults.length)primaryError=String(primaryResults[0].reason?.message||primaryResults[0].reason||"Provider utama gagal").slice(0,180);
     if(response?.ok&&data?.success!==false){
