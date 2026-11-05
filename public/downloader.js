@@ -1010,11 +1010,21 @@ function socialNetworkPlan(selected=0){
         try{
           progressText.textContent="Memvalidasi format "+(index+1)+" dari "+orderedCandidates.length+"…";
           const probeResponse=await fetch(probeUrl.href,{cache:"no-store",credentials:"same-origin",signal:downloadTimeoutSignal(15000)});
-          const candidateCheck=await probeResponse.json().catch(()=>({}));
+          let candidateCheck=await probeResponse.json().catch(()=>({}));
           if(probeResponse.ok&&candidateCheck.valid===true){
             selected=candidate;ready=candidateUrl;check=candidateCheck;break;
           }
           lastProbeError=String(candidateCheck.error||"File tidak lolos validasi (HTTP "+probeResponse.status+").").slice(0,180);
+          if(probeResponse.status===415||/image\\/|bukan video|signature|tipe file/i.test(lastProbeError)){
+            const fullProbeUrl=new URL(candidateUrl.href);fullProbeUrl.searchParams.set("probe","full");
+            progressText.textContent="Memeriksa ulang sumber tanpa rentang byte…";
+            const fullResponse=await fetch(fullProbeUrl.href,{cache:"no-store",credentials:"same-origin",signal:downloadTimeoutSignal(15000)});
+            const fullCheck=await fullResponse.json().catch(()=>({}));
+            if(fullResponse.ok&&fullCheck.valid===true){
+              selected=candidate;ready=candidateUrl;check=fullCheck;break;
+            }
+            lastProbeError=String(fullCheck.error||lastProbeError||"Sumber tidak lolos pemeriksaan penuh.").slice(0,180);
+          }
         }catch(error){lastProbeError=String(error?.message||error).slice(0,180)}
       }
       if(!selected||!ready||!check)throw new Error("Tidak ada format yang lolos validasi media. "+(lastProbeError||"Semua provider mengirim file yang tidak cocok."));

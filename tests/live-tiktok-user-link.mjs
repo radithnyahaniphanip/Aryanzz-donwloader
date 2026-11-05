@@ -45,11 +45,21 @@ try{
   const downloadProbe=new URL(selected.downloadUrl);
   if(downloadProbe.origin!==base||downloadProbe.pathname!=="/api/social-file")throw new Error("URL unduhan tidak memakai proxy ARYANZZ yang aman.");
   downloadProbe.searchParams.set("probe","1");
-  const probeResponse=await request(downloadProbe.pathname+downloadProbe.search);
+  let probeResponse=await request(downloadProbe.pathname+downloadProbe.search);
+  let probe=await probeResponse.json().catch(()=>({}));
   report.probeStatus=probeResponse.status;
-  const probe=await probeResponse.json().catch(()=>({}));
   report.probeMime=probe.mimeType||null;
-  if(!probeResponse.ok||probe.valid!==true||!String(probe.mimeType||"").startsWith("video/"))throw new Error(String(probe.error||"Stream gagal melewati pemeriksaan signature video.").slice(0,260));
+  if(!probeResponse.ok||probe.valid!==true||!String(probe.mimeType||"").startsWith("video/")){
+    report.rangeProbeError=String(probe.error||"Range probe gagal.").slice(0,180);
+    downloadProbe.searchParams.set("probe","full");
+    probeResponse=await request(downloadProbe.pathname+downloadProbe.search);
+    probe=await probeResponse.json().catch(()=>({}));
+    report.fullProbeStatus=probeResponse.status;
+    report.fullProbeMime=probe.mimeType||null;
+  }
+  if(!probeResponse.ok||probe.valid!==true||!String(probe.mimeType||"").startsWith("video/"))throw new Error(String(probe.error||"Stream gagal melewati pemeriksaan signature video, termasuk pemeriksaan penuh.").slice(0,260));
+  report.probeStatus=probeResponse.status;
+  report.probeMime=probe.mimeType||null;
   report.downloadReady=true;
   const previewUrl=new URL(selected.previewUrl);
   if(previewUrl.origin!==base||previewUrl.pathname!=="/api/social-file")throw new Error("URL pratinjau tidak memakai proxy ARYANZZ yang aman.");

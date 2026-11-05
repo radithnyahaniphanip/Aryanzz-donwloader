@@ -487,7 +487,8 @@ async function socialMediaFile(request){
   if(!isPlatformLink(source))return json({error:"Tautan sumber platform tidak valid."},400);
   if(!["mp4","webm","mov","m4v","avi","3gp","mp3","m4a","aac","opus","ogg","wav","flac"].includes(requestedExt))return json({error:"Ekstensi media tidak didukung."},400);
   const browserRange=request.headers.get("range");
-  const rangeToRequest=browserRange||(probe?"bytes=0-65535":null);
+  const probeMode=String(u.searchParams.get("probe")||"");
+  const rangeToRequest=browserRange||(probe&&probeMode!=="full"?"bytes=0-65535":null);
   const expectedHint=Math.floor(Number(u.searchParams.get("expected"))||0);
   if(expectedHint<0||expectedHint>500*1024*1024)return json({error:"Ukuran file yang diminta tidak valid."},400);
   let upstream=null,lastError="";
