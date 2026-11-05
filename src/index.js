@@ -1676,16 +1676,21 @@ function extractTikTokPhotoProxyImages(text){
   }
   return images;
 }
-async function fetchTikTokPhotoEmbedProxy(canonicalUrl,timeoutMs=9000){
+async function fetchTikTokPhotoEmbedProxy(canonicalUrl,timeoutMs=14000){
   const itemId=extractTikTokItemId(canonicalUrl);
   if(!itemId)throw new Error("ID Photo Mode tidak tersedia untuk jalur proxy.");
   const target="https://www.tiktok.com/embed/v2/"+itemId;
   const encoded=encodeURIComponent(target);
+  const jinaHtmlHeaders={accept:"text/html,text/plain,*/*","x-return-format":"html","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"};
+  const jinaTextHeaders={accept:"text/plain,text/html,*/*","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"};
   const endpoints=[
+    {name:"Jina Reader HTML",url:"https://r.jina.ai/http://www.tiktok.com/embed/v2/"+itemId,headers:jinaHtmlHeaders},
+    {name:"Jina Reader HTTPS HTML",url:"https://r.jina.ai/https://www.tiktok.com/embed/v2/"+itemId,headers:jinaHtmlHeaders},
+    {name:"Jina Reader text",url:"https://r.jina.ai/http://www.tiktok.com/embed/v2/"+itemId,headers:jinaTextHeaders},
+    {name:"Jina Reader HTTPS text",url:"https://r.jina.ai/https://www.tiktok.com/embed/v2/"+itemId,headers:jinaTextHeaders},
     {name:"AllOrigins",url:"https://api.allorigins.win/raw?url="+encoded,headers:{accept:"text/html,*/*"}},
     {name:"CodeTabs",url:"https://api.codetabs.com/v1/proxy?quest="+encoded,headers:{accept:"text/html,*/*"}},
-    {name:"CorsProxy",url:"https://corsproxy.io/?url="+encoded,headers:{accept:"text/html,*/*"}},
-    {name:"Jina Reader",url:"https://r.jina.ai/http://www.tiktok.com/embed/v2/"+itemId,headers:{accept:"text/html,text/plain,*/*","x-return-format":"html","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"}}
+    {name:"CorsProxy",url:"https://corsproxy.io/?url="+encoded,headers:{accept:"text/html,*/*"}}
   ];
   const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),timeoutMs);
   try{
@@ -1980,7 +1985,7 @@ async function resolveSocialImagePost(rawUrl,requestUrl,options={}){
       }
       if((!page||!page.images?.length)&&isTikTokPhotoRoute){
         try{
-          const proxyData=await fetchTikTokPhotoEmbedProxy(canonicalUrl,Number(options.proxyTimeoutMs)||10000);
+          const proxyData=await fetchTikTokPhotoEmbedProxy(canonicalUrl,Number(options.proxyTimeoutMs)||14000);
           providerTitle=providerTitle||proxyData.title;
           page={...(page||{url:canonicalUrl,html:""}),title:proxyData.title,images:proxyData.images};
           if(options.diagnostics)options.diagnostics.value={...(options.diagnostics.value||{}),proxy:{ok:true,source:proxyData.source,imageCount:proxyData.images.length}};
