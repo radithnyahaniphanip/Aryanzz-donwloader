@@ -2,14 +2,17 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 const root = process.cwd();
-const packageJson = JSON.parse(readFileSync(resolve(root, "package.json"), "utf8"));
-const [major, minor, patch] = String(packageJson.version || "94.14.0").split(".").map(value => Number(value) || 0);
+const packagePath = resolve(root, "package.json");
+const packageJson = JSON.parse(readFileSync(packagePath, "utf8"));
+const [major, minor, patch] = String(packageJson.version || "95.0.0").split(".").map(value => Number(value) || 0);
 
-// Keep the release line in package.json; use the workflow run number as the
-// monotonically increasing build component so every successful push gets a new version.
+// GitHub Actions supplies a monotonically increasing run number for every deployment.
+// Local builds increment the patch component instead of silently reusing an old version.
 const runNumber = Number(process.env.GITHUB_RUN_NUMBER || process.env.CF_BUILD_NUMBER || 0);
-const buildNumber = runNumber > 0 ? runNumber : patch;
+const buildNumber = Number.isSafeInteger(runNumber) && runNumber > 0 ? runNumber : patch + 1;
 const version = major + "." + minor + "." + buildNumber;
+packageJson.version = version;
+writeFileSync(packagePath, JSON.stringify(packageJson, null, 2) + "\n");
 const commit = String(process.env.GITHUB_SHA || process.env.CF_COMMIT_SHA || "local").slice(0, 8);
 
 const workerPath = resolve(root, "src/index.js");

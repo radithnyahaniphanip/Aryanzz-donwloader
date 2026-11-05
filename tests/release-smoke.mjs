@@ -5,6 +5,7 @@ const read = path => readFileSync(new URL(path, import.meta.url), "utf8");
 const html = read("../public/index.html");
 const worker = read("../src/index.js");
 const buildVersionScript = read("../scripts/build-version.mjs");
+const updateManager = read("../public/update-manager.js");
 const wranglerConfig = read("../wrangler.toml");
 const platformCatalog = read("../src/platform-catalog.js");
 const sw = read("../public/sw.js");
@@ -43,6 +44,8 @@ const checks = [
   ["Release metadata is generated and versioned alongside the app", read("../scripts/build-version.mjs").includes("public/release.json") && read("../public/manifest.webmanifest").includes("\"version\": \"__ARYANZZ_VERSION__\"")],
   ["Live deployment verification checks the exact expected version, waits for release metadata propagation, and verifies every JS/CSS asset cache key", read("../tests/live-release-smoke.mjs").includes("EXPECTED_BUILD_VERSION") && read("../tests/live-release-smoke.mjs").includes("assetUrl.searchParams.get(\"v\"),version") && read("../tests/live-release-smoke.mjs").includes('waitForVersionedJson("/release.json"') && read("../tests/live-release-smoke.mjs").includes('waitForVersionedJson("/manifest.webmanifest?v="+version')],
   ["Version placeholders cover app UI, PWA manifest and service-worker cache", read("../public/index.html").includes("__ARYANZZ_VERSION__") && read("../public/manifest.webmanifest").includes("__ARYANZZ_VERSION__") && read("../public/sw.js").includes("__ARYANZZ_VERSION__")],
+  ["Browser auto-update retries stale cached builds, unregisters old service workers, and provides a recovery action", updateManager.includes("maxAutoRefreshAttempts=3") && updateManager.includes("aryanzz_refresh") && updateManager.includes("getRegistrations") && updateManager.includes("clearOldCaches") && updateManager.includes("Muat versi terbaru")],
+  ["Build generator synchronizes package metadata and increments local builds when no CI run number exists", buildVersionScript.includes("packageJson.version = version") && buildVersionScript.includes("patch + 1") && buildVersionScript.includes("GITHUB_RUN_NUMBER")],
   ["V93 Link Bypass panel, form, controller, and Worker resolver are wired",html.includes('id="linkBypass"')&&html.includes('id="sflBypassForm"')&&html.includes('/link-bypass.js?v=94.0')&&worker.includes('url.pathname==="/api/link-bypass"')&&linkBypassJs.includes('Periksa tujuan')],
   ["V93 Link Bypass panel stylesheet is wired",html.includes('/link-bypass.css?v=94.0')&&linkBypassCss.includes(".v93-bypass-hero")&&linkBypassCss.includes("@media(max-width:680px)")],
   ["V93.0 restores original home layout while keeping Link Bypass mobile responsive",!html.includes('class="v93-popular-grid"')&&linkBypassCss.includes("@media(max-width:680px)")&&linkBypassCss.includes(".v93-bypass-panel")],

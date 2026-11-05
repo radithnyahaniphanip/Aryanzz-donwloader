@@ -2,36 +2,77 @@
 const meta=document.querySelector('meta[name="aryanzz-version"]');
 const localVersion=String(meta?.content||"").trim();
 const updateKey="aryanzz:auto-update-target";
+const maxAutoRefreshAttempts=3;
 let checking=false;
+function readUpdateState(){
+ try{const value=JSON.parse(sessionStorage.getItem(updateKey)||"null");if(value&&typeof value==="object")return value;}catch{}
+ return {version:"",attempts:0};
+}
+function writeUpdateState(value){try{sessionStorage.setItem(updateKey,JSON.stringify(value));return true;}catch{return false;}}
+function clearUpdateState(){try{sessionStorage.removeItem(updateKey)}catch{}}
 function showNotice(version){
  if(document.getElementById("aryanzzUpdateNotice"))return;
- const bar=document.createElement("div");bar.id="aryanzzUpdateNotice";bar.setAttribute("role","status");
+ const bar=document.createElement("div");bar.id="aryanzzUpdateNotice";bar.setAttribute("role","status");bar.setAttribute("aria-live","polite");
  bar.style.cssText="position:fixed;z-index:99999;left:12px;right:12px;top:12px;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border:1px solid #6f8dff;border-radius:14px;background:#101b32;color:#f4f7ff;box-shadow:0 12px 35px #0008;font:600 13px/1.4 system-ui,sans-serif";
- const message=document.createElement("span");message.textContent="ARYANZZ versi "+version+" sudah tersedia.";
- const button=document.createElement("button");button.type="button";button.textContent="Muat ulang";
+ const message=document.createElement("span");message.textContent="Versi terbaru V"+version+" sudah tersedia, tetapi browser masih membuka build lama.";
+ const button=document.createElement("button");button.type="button";button.textContent="Muat versi terbaru";
  button.style.cssText="border:0;border-radius:10px;padding:9px 12px;background:linear-gradient(110deg,#9160ff,#328dff);color:white;font-weight:800;white-space:nowrap";
- button.addEventListener("click",()=>location.reload());bar.append(message,button);document.body.append(bar);
+ button.addEventListener("click",()=>{
+  const retry=new URL(location.href);
+  retry.searchParams.set("aryanzz_update",version);
+  retry.searchParams.set("aryanzz_attempt","0");
+  retry.searchParams.set("aryanzz_refresh",String(Date.now()));
+  location.replace(retry.href);
+ });
+ bar.append(message,button);document.body.append(bar);
 }
 async function clearOldCaches(){
  if(!("caches" in window))return;
  const keys=await caches.keys();
  await Promise.all(keys.filter(key=>key.startsWith("aryanzz-build-")).map(key=>caches.delete(key)));
 }
+async function unregisterServiceWorkers(){
+ if(!("serviceWorker" in navigator))return;
+ const registrations=await navigator.serviceWorker.getRegistrations();
+ await Promise.all(registrations.map(registration=>registration.unregister()));
+}
 async function applyUpdate(version){
- let previous="";try{previous=sessionStorage.getItem(updateKey)||""}catch{}
- if(previous===version){showNotice(version);return}
- try{sessionStorage.setItem(updateKey,version)}catch{}
- try{if("serviceWorker" in navigator){const regs=await navigator.serviceWorker.getRegistrations();await Promise.all(regs.map(reg=>reg.unregister()))}}catch{}
+ const previous=readUpdateState();
+ const state=previous.version===version?previous:{version,attempts:0};
+ const currentUrl=new URL(location.href);
+ const urlVersion=currentUrl.searchParams.get("aryanzz_update")||"";
+ const urlAttempts=urlVersion===version?Number(currentUrl.searchParams.get("aryanzz_attempt")||0):0;
+ const attemptsSoFar=Math.max(Number(state.attempts||0),Number.isSafeInteger(urlAttempts)&&urlAttempts>0?urlAttempts:0);
+ if(attemptsSoFar>=maxAutoRefreshAttempts){showNotice(version);return}
+ const attempts=attemptsSoFar+1;
+ writeUpdateState({version,attempts});
+ try{await unregisterServiceWorkers()}catch{}
  try{await clearOldCaches()}catch{}
- const next=new URL(location.href);next.searchParams.set("aryanzz_update",version);location.replace(next.href);
+ const next=new URL(location.href);
+ next.searchParams.set("aryanzz_update",version);
+ next.searchParams.set("aryanzz_attempt",String(attempts));
+ next.searchParams.set("aryanzz_refresh",String(Date.now()));
+ location.replace(next.href);
 }
 async function checkVersion(){
- if(checking||!localVersion)return;checking=true;
+ if(checking)return;
+ checking=true;
  try{
   const response=await fetch("/api/health?version_check="+Date.now(),{cache:"no-store",credentials:"same-origin",headers:{"cache-control":"no-cache","pragma":"no-cache"}});
-  if(!response.ok)return;const data=await response.json();const latest=String(data?.version||"").trim();if(!latest)return;
-  let previous="";try{previous=sessionStorage.getItem(updateKey)||""}catch{}
-  if(latest===localVersion){if(previous===latest){try{sessionStorage.removeItem(updateKey)}catch{}}return}
+  if(!response.ok)return;
+  const data=await response.json();
+  const latest=String(data?.version||"").trim();
+  if(!/^\d+\.\d+\.\d+$/.test(latest))return;
+  if(latest===localVersion){
+   const state=readUpdateState();
+   if(state.version===latest)clearUpdateState();
+   const current=new URL(location.href);
+   if(current.searchParams.has("aryanzz_update")||current.searchParams.has("aryanzz_refresh")||current.searchParams.has("aryanzz_attempt")){
+    current.searchParams.delete("aryanzz_update");current.searchParams.delete("aryanzz_refresh");current.searchParams.delete("aryanzz_attempt");
+    history.replaceState(null,"",current.pathname+current.search+current.hash);
+   }
+   return;
+  }
   await applyUpdate(latest);
  }catch{}finally{checking=false}
 }
