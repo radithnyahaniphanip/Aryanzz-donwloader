@@ -1320,20 +1320,31 @@ function socialNetworkPlan(selected=0){
       const detectedPlatform=platformName(url);
       const selectedRaw=String(window.aryanzzSelectedPlatform?.()||$("platformPicker")?.getAttribute("data-selected-platform")||$("platformPicker")?.querySelector("[data-platform].active")?.dataset.platform||"youtube").toLowerCase();
       const aliases={tiktoklite:"tiktok",instagramlite:"instagram",facebooklite:"facebook",twitter:"x"};
-      const selectedPlatform=aliases[selectedRaw]||selectedRaw;
+      let selectedPlatform=aliases[selectedRaw]||selectedRaw;
       const selectedNames=Object.fromEntries((window.ARYANZZ_PLATFORM_CATALOG||[]).map(platform=>[platform.id,platform.name]));
-      const expectedName=selectedNames[selectedPlatform]||window.aryanzzPlatformNameForId?.(selectedPlatform)||"";
       const detectedAliases={"idn app":"idnapp"};
       const detectedKey=window.aryanzzPlatformForUrl?.(url.href)||(detectedPlatform==="Direct Media URL"?"":(detectedAliases[detectedPlatform.toLowerCase()]||detectedPlatform.toLowerCase()));
-      if(!expectedName||detectedKey!==selectedPlatform){
-        const expectedLabel=expectedName||"satu platform khusus";
+      const detectedEntry=(window.ARYANZZ_PLATFORM_CATALOG||[]).find(platform=>platform.id===detectedKey);
+      if(!detectedKey||!detectedEntry){
         const message=detectedPlatform==="Direct Media URL"
-          ?"Domain tautan tidak dikenali sebagai tautan platform yang dipilih."
-          :"Kamu memilih "+expectedLabel+", tetapi tautan berasal dari "+detectedPlatform+". Tautan ditolak.";
-        box.replaceChildren(make("b","","GAGAL — PLATFORM TIDAK SESUAI"),make("p","warning",message+" Pilih platform yang sesuai lalu tempel tautannya kembali."));
+          ?"Tautan ini merupakan URL file langsung atau CDN yang belum terdaftar sebagai tautan postingan platform."
+          :"Domain tautan belum dikenali dalam katalog platform ARYANZZ.";
+        box.replaceChildren(make("b","","GAGAL — PLATFORM BELUM DIKENALI"),make("p","warning",message+" Gunakan tautan postingan publik dari platform yang didukung."));
         button.disabled=false;
         button.textContent=oldText;
         return;
+      }
+      if(detectedKey!==selectedPlatform){
+        if(typeof window.aryanzzAutoSelectPlatform==="function"){
+          window.aryanzzAutoSelectPlatform(detectedKey);
+          selectedPlatform=detectedKey;
+          intro.textContent="Platform terdeteksi otomatis: "+(selectedNames[detectedKey]||detectedEntry.name||detectedPlatform)+". Memeriksa tautan video dan gambar…";
+        }else{
+          box.replaceChildren(make("b","","GAGAL — PLATFORM BELUM SIAP"),make("p","warning","Katalog platform masih dimuat. Tunggu sebentar lalu periksa tautan kembali."));
+          button.disabled=false;
+          button.textContent=oldText;
+          return;
+        }
       }
       const host=url.hostname.toLowerCase();
       const isYouTube=["youtube.com","www.youtube.com","m.youtube.com","music.youtube.com","youtu.be","www.youtu.be"].includes(host);
