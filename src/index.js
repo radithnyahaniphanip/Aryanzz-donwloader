@@ -1300,7 +1300,7 @@ function collectTikTokUrlValues(value,output=[],depth=0){
   if(depth>7||value==null)return output;
   if(typeof value==="string"){
     const text=decodeTikTokPageValue(value).trim();
-    if(/^https?:\\/\\//i.test(text)||text.startsWith("//"))output.push(text);
+    if(/^https?:\/\//i.test(text)||text.startsWith("//"))output.push(text);
     else if((text.startsWith("[")||text.startsWith("{"))&&text.length<120000){
       try{collectTikTokUrlValues(JSON.parse(text),output,depth+1)}catch{}
     }
