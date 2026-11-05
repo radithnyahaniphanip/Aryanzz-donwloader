@@ -1052,10 +1052,10 @@ function socialNetworkPlan(selected=0){
       const container=bar.parentElement?.parentElement;
       const sizeLabel=size?" · "+formatDownloadSize(size):"";
       if(!size||size>180*1024*1024||!check.rangeSupported){
-        addReadyDownloadLink(container,downloadUrl.href,filename,mode==="audio"?"Unduhan audio":"Unduhan video");
+        addReadyDownloadLink(container,downloadUrl.href,filename,mode==="audio"?"⬇ Unduh audio sekarang":"⬇ Unduh "+String(check.extension||selected.ext||"mp4").toUpperCase()+" sekarang");
         bar.style.width="100%";bar.parentElement?.classList.remove("is-indeterminate");bar.parentElement?.setAttribute("aria-valuenow","100");
-        progressText.textContent="Unduhan otomatis dimulai di Chrome · "+filename;
-        if(progressMeta)progressMeta.textContent=size>180*1024*1024?"File besar ditangani langsung oleh pengelola unduhan Chrome agar RAM HP tidak penuh.":"Chrome menerima file MP4 secara langsung tanpa tombol unduhan tambahan.";
+        progressText.textContent="Tautan unduh siap · "+filename;
+        if(progressMeta)progressMeta.textContent=size>180*1024*1024?"File besar siap diambil oleh pengelola unduhan Chrome agar RAM HP tidak penuh.":"Tekan tautan unduh di bawah untuk menyimpan file MP4 ke perangkat.";
         remember(url,filename,mode,quality);
         return filename;
       }
@@ -1070,10 +1070,10 @@ function socialNetworkPlan(selected=0){
         return filename;
       }catch(rangeError){
         if(activeDownloadController?.signal.aborted)throw new Error("Unduhan dibatalkan.");
-        addReadyDownloadLink(container,downloadUrl.href,filename,mode==="audio"?"Unduhan audio":"Unduhan video");
+        addReadyDownloadLink(container,downloadUrl.href,filename,mode==="audio"?"⬇ Unduh audio sekarang":"⬇ Unduh "+String(check.extension||selected.ext||"mp4").toUpperCase()+" sekarang");
         bar.style.width="100%";bar.parentElement?.classList.remove("is-indeterminate");bar.parentElement?.setAttribute("aria-valuenow","100");
-        progressText.textContent="Unduhan otomatis dimulai di Chrome · "+filename;
-        if(progressMeta)progressMeta.textContent="Mode transfer paralel tidak didukung sumber; Chrome mengambil file langsung tanpa tombol tambahan. "+String(rangeError?.message||rangeError).slice(0,100);
+        progressText.textContent="Tautan unduh siap · "+filename;
+        if(progressMeta)progressMeta.textContent="Mode transfer paralel tidak didukung sumber; gunakan tautan unduh di bawah. "+String(rangeError?.message||rangeError).slice(0,100);
         remember(url,filename,mode,quality);
         return filename;
       }
@@ -1086,8 +1086,8 @@ function socialNetworkPlan(selected=0){
     const fileUrl="/api/direct-file?url="+encodeURIComponent(url);
     addReadyDownloadLink(bar.parentElement?.parentElement,fileUrl,filename,"⬇ Unduh file sekarang");
     bar.style.width="100%";bar.parentElement?.classList.remove("is-indeterminate");bar.parentElement?.setAttribute("aria-valuenow","100");
-    progressText.textContent="Unduhan otomatis dimulai di Chrome · "+filename;
-    if(progressMeta)progressMeta.textContent="Chrome menerima file secara langsung. Periksa notifikasi atau folder Downloads untuk melihat progresnya.";
+    progressText.textContent="Tautan unduh siap · "+filename;
+    if(progressMeta)progressMeta.textContent="Tekan tautan unduh di bawah untuk menyimpan file; periksa notifikasi atau folder Downloads setelah unduhan dimulai.";
     remember(url,filename,mode,quality);
     return filename;
   }
