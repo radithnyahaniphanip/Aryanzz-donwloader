@@ -996,36 +996,41 @@ function socialNetworkPlan(selected=0){
         const key=String(item.downloadUrl||"")+"|"+String(item.mode||"");
         if(!item.downloadUrl||seenCandidates.has(key))return false;
         seenCandidates.add(key);return true;
-      }).slice(0,4);
+      }).slice(0,8);
       if(!orderedCandidates.length)throw new Error(mode==="audio"?"Provider gratis tidak menyediakan audio yang dapat diunduh.":"Provider gratis tidak menyediakan MP4 lengkap dengan suara. Format selain MP4 tidak akan diberi ekstensi MP4 palsu. Coba tautan video publik lain.");
       let selected=null,ready=null,check=null,lastProbeError="";
       progressText.textContent="Memeriksa ukuran dan isi media…";
-      if(progressMeta)progressMeta.textContent="Memeriksa hingga enam jalur media. Jika satu provider mengirim file rusak, ARYANZZ otomatis mencoba jalur berikutnya.";
+      if(progressMeta)progressMeta.textContent="Memeriksa hingga delapan jalur media. Setiap jalur mencoba Range dan pemeriksaan penuh jika sumber menolak rentang byte.";
       for(let index=0;index<orderedCandidates.length;index++){
         const candidate=orderedCandidates[index],candidateUrl=safeUrl(candidate.downloadUrl);
         if(!candidateUrl||candidateUrl.origin!==location.origin||candidateUrl.pathname!=="/api/social-file"){
           lastProbeError="Tautan unduhan tidak melewati pemeriksaan keamanan ARYANZZ.";continue;
         }
         const probeUrl=new URL(candidateUrl.href);probeUrl.searchParams.set("probe","1");
+        let probeStatus=0,candidateCheck={};
         try{
           progressText.textContent="Memvalidasi format "+(index+1)+" dari "+orderedCandidates.length+"…";
-          const probeResponse=await fetch(probeUrl.href,{cache:"no-store",credentials:"same-origin",signal:downloadTimeoutSignal(15000)});
-          let candidateCheck=await probeResponse.json().catch(()=>({}));
+          const probeResponse=await fetch(probeUrl.href,{cache:"no-store",credentials:"same-origin",signal:downloadTimeoutSignal(12000)});
+          probeStatus=probeResponse.status;
+          candidateCheck=await probeResponse.json().catch(()=>({}));
           if(probeResponse.ok&&candidateCheck.valid===true){
             selected=candidate;ready=candidateUrl;check=candidateCheck;break;
           }
-          lastProbeError=String(candidateCheck.error||"File tidak lolos validasi (HTTP "+probeResponse.status+").").slice(0,180);
-          if(probeResponse.status===415||lastProbeError.includes("image/")||/bukan video|signature|tipe file/i.test(lastProbeError)){
+          lastProbeError=String(candidateCheck.error||"File tidak lolos validasi (HTTP "+probeStatus+").").slice(0,180);
+        }catch(error){lastProbeError=String(error?.message||error).slice(0,180)}
+        const retryWithoutRange=probeStatus===0||[403,415,416,429].includes(probeStatus)||probeStatus>=500||/image\\/|bukan video|signature|tipe file|range|rentang byte/i.test(lastProbeError);
+        if(retryWithoutRange){
+          try{
             const fullProbeUrl=new URL(candidateUrl.href);fullProbeUrl.searchParams.set("probe","full");
-            progressText.textContent="Memeriksa ulang sumber tanpa rentang byte…";
-            const fullResponse=await fetch(fullProbeUrl.href,{cache:"no-store",credentials:"same-origin",signal:downloadTimeoutSignal(15000)});
+            progressText.textContent="Mencoba pemeriksaan penuh format "+(index+1)+" tanpa Range…";
+            const fullResponse=await fetch(fullProbeUrl.href,{cache:"no-store",credentials:"same-origin",signal:downloadTimeoutSignal(12000)});
             const fullCheck=await fullResponse.json().catch(()=>({}));
             if(fullResponse.ok&&fullCheck.valid===true){
               selected=candidate;ready=candidateUrl;check=fullCheck;break;
             }
             lastProbeError=String(fullCheck.error||lastProbeError||"Sumber tidak lolos pemeriksaan penuh.").slice(0,180);
-          }
-        }catch(error){lastProbeError=String(error?.message||error).slice(0,180)}
+          }catch(error){lastProbeError=String(error?.message||lastProbeError||error).slice(0,180)}
+        }
       }
       if(!selected||!ready||!check)throw new Error("Tidak ada format yang lolos validasi media. "+(lastProbeError||"Semua provider mengirim file yang tidak cocok."));
       const size=Number(check.bytes)||Number(selected.filesize)||0;
@@ -1518,12 +1523,20 @@ function socialNetworkPlan(selected=0){
         }
       }
       if(!isYouTube){
-        const previewFormat=(info.formats||[]).find(item=>item.mode==="video"&&!item.videoOnly&&["mp4","m4v"].includes(item.ext)&&item.url)||(info.formats||[]).find(item=>item.mode==="video"&&item.url);
+        const previewCandidates=(info.formats||[])
+          .filter(item=>item.mode==="video"&&item.url&&(item.previewUrl||item.downloadUrl))
+          .slice()
+          .sort((a,b)=>{
+            const aPreferred=!a.videoOnly&&["mp4","m4v"].includes(String(a.ext||"").toLowerCase())?0:1;
+            const bPreferred=!b.videoOnly&&["mp4","m4v"].includes(String(b.ext||"").toLowerCase())?0:1;
+            return aPreferred-bPreferred;
+          })
+          .filter((item,index,array)=>array.findIndex(candidate=>String(candidate.previewUrl||candidate.downloadUrl)===String(item.previewUrl||item.downloadUrl))===index)
+          .slice(0,8);
+        const previewFormat=previewCandidates[0]||null;
         if(previewFormat){
           const previewWrap=make("div","ary-video-preview-wrap");
           const preview=make("video","v737-media-preview");
-          const previewSource=safeUrl(previewFormat.previewUrl);
-          if(!previewSource||previewSource.origin!==location.origin||previewSource.pathname!=="/api/social-file")throw new Error("Pratinjau media tidak melewati proxy ARYANZZ.");
           preview.controls=true;
           preview.controlsList="nodownload noplaybackrate";
           preview.disablePictureInPicture=true;
@@ -1535,6 +1548,84 @@ function socialNetworkPlan(selected=0){
           if(info.thumbnail)preview.poster=info.thumbnail;
           preview.setAttribute("aria-label","Pratinjau video "+(info.title||"media"));
           const previewStatus=make("small","muted","Memuat pratinjau video…");
+          let previewCandidateIndex=0,previewDirectFallbackTried=false,previewWatchdog=null;
+          const clearPreviewWatchdog=()=>{if(previewWatchdog){clearTimeout(previewWatchdog);previewWatchdog=null;}};
+          const previewSourceFor=(candidate,direct=false)=>{
+            const source=safeUrl(direct?candidate?.url:(candidate?.previewUrl||candidate?.downloadUrl));
+            if(!source)return null;
+            if(direct)return source.protocol==="https:"?source:null;
+            if(source.origin!==location.origin||source.pathname!=="/api/social-file")return null;
+            source.searchParams.set("preview","1");
+            return source;
+          };
+          const showTikTokOfficialPlayer=()=>{
+            let embedUrl=String(info.embedUrl||"");
+            if(!embedUrl){
+              let canonical=null;try{canonical=safeUrl(info.canonicalUrl||url.href)}catch{}
+              const itemId=String(info.embedId||canonical?.pathname.match(/\/(?:video|photo)\/(\d{8,})/i)?.[1]||url.pathname.match(/\/(?:video|photo)\/(\d{8,})/i)?.[1]||"");
+              if(itemId){
+                const embed=new URL("https://www.tiktok.com/player/v1/"+itemId);
+                for(const [key,value] of Object.entries({controls:"1",timestamp:"1",description:"1",music_info:"1",rel:"0"}))embed.searchParams.set(key,value);
+                embedUrl=embed.href;
+              }
+            }
+            let embed;try{embed=new URL(embedUrl)}catch{return false}
+            if(embed.origin!=="https://www.tiktok.com"||!/^\/player\/v1\/\d{8,}$/.test(embed.pathname))return false;
+            const frame=make("iframe","youtube-embed-frame");
+            frame.src=embed.href;frame.title="Pemutar resmi TikTok · "+(info.title||"video");
+            frame.loading="lazy";frame.referrerPolicy="strict-origin-when-cross-origin";
+            frame.allow="accelerometer; autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture; web-share";
+            frame.allowFullscreen=true;
+            frame.style.cssText="display:block;width:min(100%,380px);height:min(680px,78svh);min-height:420px;margin:0 auto;border:0;border-radius:14px;background:#000;aspect-ratio:9/16";
+            const onPlayerMessage=event=>{
+              if(event.origin!=="https://www.tiktok.com"||event.source!==frame.contentWindow)return;
+              const message=event.data;
+              if(!message||message["x-tiktok-player"]!==true)return;
+              if(message.type==="onCurrentTime"&&message.value&&typeof message.value==="object"){
+                const current=Number(message.value.currentTime),total=Number(message.value.duration);
+                if(Number.isFinite(total)&&total>0){
+                  const fmt=value=>Math.floor(value/60)+":"+String(Math.floor(value%60)).padStart(2,"0");
+                  previewStatus.textContent="Pemutar resmi TikTok · "+(Number.isFinite(current)?fmt(Math.max(0,current))+" / ":"")+fmt(total)+" · stream MP4 langsung tidak tersedia.";
+                  mediaMetaLine.textContent=[info.extractor||"TikTok",fmt(total),info.size?(info.size/1048576).toFixed(1)+" MB":""].filter(Boolean).join(" · ");
+                }
+              }
+            };
+            window.addEventListener("message",onPlayerMessage);
+            previewWrap.replaceChildren(frame);
+            previewStatus.textContent="Stream langsung sedang bermasalah · memakai pemutar resmi TikTok. Unduhan MP4 tetap memerlukan file publik yang dapat diakses.";
+            previewStatus.className="warning";
+            return true;
+          };
+          const showUnavailablePreview=()=>{
+            const sourceLink=make("a","youtube-thumb-download","Buka video di "+platformName(url));
+            sourceLink.href=url.href;sourceLink.target="_blank";sourceLink.rel="noopener";
+            previewWrap.replaceChildren(sourceLink);
+            previewStatus.textContent="Semua jalur pratinjau publik gagal. Video tetap dapat dibuka pada platform asal; ARYANZZ tidak akan menampilkan player 0:00 seolah-olah siap.";
+            previewStatus.className="warning";
+          };
+          const setPreviewCandidate=(index,direct=false,reason="")=>{
+            const candidate=previewCandidates[index],source=previewSourceFor(candidate,direct);
+            if(!source)return false;
+            previewCandidateIndex=index;
+            preview.src=source.href;preview.load();
+            if(reason){previewStatus.textContent=reason+" · mencoba stream "+(index+1)+" dari "+previewCandidates.length+"…";previewStatus.className="muted";}
+            clearPreviewWatchdog();
+            previewWatchdog=setTimeout(()=>{
+              if(preview.readyState>=1)return;
+              if(!previewDirectFallbackTried){
+                previewDirectFallbackTried=true;
+                if(setPreviewCandidate(previewCandidateIndex,true,"Proxy belum mengirim metadata; mencoba CDN sumber"))return;
+              }
+              if(!tryNextPreviewCandidate("Waktu tunggu metadata habis")&&!showTikTokOfficialPlayer())showUnavailablePreview();
+            },12000);
+            return true;
+          };
+          const tryNextPreviewCandidate=reason=>{
+            if(previewCandidateIndex+1>=previewCandidates.length)return false;
+            const next=previewCandidateIndex+1;
+            previewDirectFallbackTried=false;
+            return setPreviewCandidate(next,false,reason||"Stream sebelumnya gagal");
+          };
           const applyIntrinsicRatio=()=>{
              const width=Number(preview.videoWidth)||0,height=Number(preview.videoHeight)||0;
              if(width>0&&height>0){
@@ -1545,9 +1636,10 @@ function socialNetworkPlan(selected=0){
                preview.style.width=ratio<1?Math.min(box.clientWidth||720,window.innerHeight*.70*ratio)+"px":"100%";
                preview.style.maxWidth="100%";preview.style.maxHeight="70svh";preview.style.marginInline="auto";
                previewStatus.textContent="Rasio asli "+width+" × "+height+" px · "+(ratio<0.92?"Vertikal":ratio>1.08?"Horizontal":"Persegi")+" · "+(Number.isFinite(Number(preview.duration))?Number(preview.duration).toFixed(1)+" detik":"durasi belum tersedia");
-             }else previewStatus.textContent="Menunggu metadata video dari sumber…";
+             }else if(preview.readyState<1)previewStatus.textContent="Menunggu metadata video dari sumber…";
            };
            preview.addEventListener("loadedmetadata",()=>{
+             clearPreviewWatchdog();
              applyIntrinsicRatio();
              const actual=Number(preview.duration),expected=Number(info.duration)||0;
              if(Number.isFinite(actual)&&actual>0){const mm=Math.floor(actual/60),ss=Math.floor(actual%60);mediaMetaLine.textContent=[info.extractor||platformName(url),mm+":"+String(ss).padStart(2,"0"),info.size?(info.size/1048576).toFixed(1)+" MB":""].filter(Boolean).join(" · ");}
@@ -1557,33 +1649,36 @@ function socialNetworkPlan(selected=0){
              }else previewStatus.className="muted";
            });
            preview.addEventListener("durationchange",applyIntrinsicRatio);
-           preview.addEventListener("loadeddata",()=>{if(preview.videoWidth&&preview.videoHeight)applyIntrinsicRatio()});
-           let directFallbackTried=false;
-          preview.addEventListener("error",()=>{
-             if(!directFallbackTried){
-               const directSource=safeUrl(previewFormat.url);
-               if(directSource&&directSource.protocol==="https:"&&directSource.href!==preview.src){
-                 directFallbackTried=true;
-                 previewStatus.textContent="Stream melalui proxy tidak dapat diputar · mencoba jalur CDN sumber…";
-                 previewStatus.className="muted";
-                 preview.src=directSource.href;
-                 preview.load();
-                 return;
-               }
+           preview.addEventListener("loadeddata",()=>{clearPreviewWatchdog();if(preview.videoWidth&&preview.videoHeight)applyIntrinsicRatio()});
+           preview.addEventListener("error",()=>{
+             clearPreviewWatchdog();
+             if(!previewDirectFallbackTried){
+               previewDirectFallbackTried=true;
+               if(setPreviewCandidate(previewCandidateIndex,true,"Stream proxy gagal; mencoba CDN sumber"))return;
              }
-             const mediaError=preview.error;
-             const codes={1:"pemutaran dibatalkan",2:"jaringan atau stream terputus",3:"codec atau data video tidak dapat didekode",4:"format sumber tidak didukung"};
-             previewStatus.textContent="Pratinjau gagal: "+(codes[mediaError?.code]||"sumber tidak mengirim metadata video")+" (kode "+(mediaError?.code||"tidak diketahui")+")";
-             previewStatus.className="warning";
+             if(tryNextPreviewCandidate("Stream sebelumnya gagal"))return;
+             if(!showTikTokOfficialPlayer())showUnavailablePreview();
            });
-           preview.addEventListener("canplay",()=>{previewStatus.textContent="Video siap diputar · kontrol dan durasi aktif.";previewStatus.className="muted"});
-           preview.addEventListener("playing",()=>{previewStatus.textContent="Video sedang diputar.";previewStatus.className="muted"});
-           preview.addEventListener("waiting",()=>{previewStatus.textContent="Memuat bagian video berikutnya…";previewStatus.className="muted"});
-           preview.addEventListener("stalled",()=>{previewStatus.textContent="Koneksi stream tertahan · menunggu data berikutnya…";previewStatus.className="warning"});
-           preview.src=previewSource.href;
-           preview.load();
+           preview.addEventListener("canplay",()=>{clearPreviewWatchdog();previewStatus.textContent="Video siap diputar · kontrol dan durasi aktif.";previewStatus.className="muted"});
+           preview.addEventListener("playing",()=>{clearPreviewWatchdog();previewStatus.textContent="Video sedang diputar.";previewStatus.className="muted"});
+           preview.addEventListener("waiting",()=>{if(preview.readyState<1){previewStatus.textContent="Menunggu metadata · mencoba jalur alternatif bila sumber tidak merespons…";armPreviewWatchdog();}else previewStatus.textContent="Memuat bagian video berikutnya…";});
+           preview.addEventListener("stalled",()=>{if(preview.readyState<1){previewStatus.textContent="Koneksi stream tertahan · mencoba jalur alternatif…";armPreviewWatchdog();}else{previewStatus.textContent="Koneksi stream tertahan · menunggu data berikutnya…";previewStatus.className="warning";}});
+           const armPreviewWatchdog=()=>{
+             clearPreviewWatchdog();
+             previewWatchdog=setTimeout(()=>{
+               if(preview.readyState>=1)return;
+               if(!previewDirectFallbackTried){
+                 previewDirectFallbackTried=true;
+                 if(setPreviewCandidate(previewCandidateIndex,true,"Metadata belum tiba; mencoba CDN sumber"))return;
+               }
+               if(!tryNextPreviewCandidate("Waktu tunggu metadata habis")&&!showTikTokOfficialPlayer())showUnavailablePreview();
+             },12000);
+           };
+           setPreviewCandidate(0,false,"Memuat pratinjau video");
            window.addEventListener("resize",applyIntrinsicRatio,{passive:true});
            previewWrap.append(preview);
+           box.append(previewWrap,previewStatus);
+        }
            box.append(previewWrap,previewStatus);
         }else{
           const audioPreview=(info.formats||[]).find(item=>item.mode==="audio"&&item.url);
