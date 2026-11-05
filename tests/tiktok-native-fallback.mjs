@@ -33,6 +33,15 @@ try{
     const url=new URL(typeof input==="string"?input:input instanceof URL?input.href:input.url);
     if(url.hostname==="vt.tiktok.com"||url.hostname==="www.tiktok.com"&&(url.pathname==="/video/1234567890123456789"||url.pathname==="/@/video/1234567890123456789"))
       return new Response(pageHtml,{status:200,headers:{"content-type":"text/html; charset=utf-8"}});
+    if(url.hostname==="www.tiktok.com"&&url.pathname==="/api/item/detail/"){
+      const id=url.searchParams.get("itemId");
+      if(id==="1234567890123456789")return new Response(JSON.stringify({statusCode:10216,itemInfo:null}),{status:403,headers:{"content-type":"application/json"}});
+      if(id==="9876543210987654321")return new Response(JSON.stringify({statusCode:0,itemInfo:{itemStruct:{
+        id,desc:"TikTok item detail API regression",author:{uniqueId:"demo"},
+        video:{duration:9,playAddr:"https://cdn.example/tiktok-video-api.mp4",downloadAddr:"https://cdn.example/tiktok-video-api.mp4",bitrateInfo:[{GearName:"normal_480_0",Bitrate:500000,PlayAddr:{UrlList:["https://cdn.example/tiktok-video-api.mp4"]}}]}
+      }}}),{status:200,headers:{"content-type":"application/json"}});
+      return new Response(JSON.stringify({statusCode:10216}),{status:403,headers:{"content-type":"application/json"}});
+    }
     if(url.hostname==="btch-downloader-api-green.vercel.app")
       return new Response(JSON.stringify({success:false,error:"provider unavailable"}),{status:502,headers:{"content-type":"application/json"}});
     if(url.hostname==="download-tktk-video.drummerduck.com")
@@ -43,7 +52,7 @@ try{
       return new Response(JSON.stringify({error:"provider unavailable"}),{status:500,headers:{"content-type":"application/json"}});
     if(url.hostname==="www.tikwm.com")
       return new Response(JSON.stringify({code:-1,msg:"Url parsing is failed!"}),{status:200,headers:{"content-type":"application/json"}});
-    if(url.hostname==="cdn.example"&&url.pathname==="/tiktok-video.mp4")
+    if(url.hostname==="cdn.example"&&(url.pathname==="/tiktok-video.mp4"||url.pathname==="/tiktok-video-api.mp4"))
       return new Response(videoBytes,{status:206,headers:{"content-type":"video/mp4","content-length":String(videoBytes.length),"content-range":"bytes 0-"+(videoBytes.length-1)+"/"+videoBytes.length,"accept-ranges":"bytes"}});
     throw new Error("Unexpected mocked fetch: "+url.href);
   };
@@ -70,6 +79,23 @@ try{
   assert.equal(checked.extension,"mp4");
   assert.equal(checked.bytes,videoBytes.length);
   console.log("✔ TikTok short-link canonical metadata, public hydration extraction and MP4 signature preflight pass");
+  const apiInfoResponse=await worker.fetch(new Request("https://aryanzz.example/api/platform/info",{
+    method:"POST",
+    headers:{"content-type":"application/json","cf-connecting-ip":"192.0.2.221"},
+    body:JSON.stringify({url:"https://www.tiktok.com/video/9876543210987654321",expectedPlatform:"tiktok"})
+  }),{});
+  assert.equal(apiInfoResponse.status,200,"public item-detail endpoint should supply metadata when page hydration is unavailable");
+  const apiInfo=await apiInfoResponse.json();
+  assert.equal(apiInfo.providerName,"TikTok public page fallback");
+  assert.equal(apiInfo.title,"TikTok item detail API regression");
+  assert.equal(apiInfo.duration,9);
+  assert.ok(apiInfo.formats.some(item=>item.mode==="video"&&item.height===480));
+  const apiVideo=apiInfo.formats.find(item=>item.mode==="video");
+  const apiProbeUrl=new URL(apiVideo.downloadUrl);apiProbeUrl.searchParams.set("probe","1");
+  const apiProbe=await worker.fetch(new Request(apiProbeUrl.href),{});
+  assert.equal(apiProbe.status,200);
+  assert.equal((await apiProbe.json()).valid,true);
+  console.log("✔ TikTok public item-detail endpoint extracts video metadata and passes MP4 signature preflight");
 }finally{
   globalThis.fetch=originalFetch;
 }

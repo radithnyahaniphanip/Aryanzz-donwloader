@@ -377,7 +377,7 @@ async function freePublicMediaInfo(rawUrl,requestUrl){
       await enrichTikTokDuration(fallback,canonicalUrl);
       return json({...fallback,canonicalUrl:canonicalUrl!==rawUrl?canonicalUrl:undefined});
     }catch(error){
-      primaryError+="; TikWM: "+String(error?.message||error).slice(0,140);
+      primaryError+="; TikTok fallback: "+String(error?.message||error).slice(0,520);
     }
   }
   if(key==="instagram"){
@@ -395,7 +395,7 @@ async function freePublicMediaInfo(rawUrl,requestUrl){
       return json({error:"SnackVideo belum dapat diproses. Provider utama: "+(primaryError||"gagal")+"; provider alternatif: "+String(error?.message||error).slice(0,150)+". "+guidance[key],provider:"Fallback cascade",fallbackTried:true},502);
     }
   }
-  return json({error:label+" belum bisa diproses oleh provider gratis. "+(primaryError||"Provider tidak mengembalikan hasil.")+" "+(guidance[key]||"Periksa kembali tautan publik."),provider:"Fallback cascade",fallbackTried:key==="tiktok",canonicalUrl:canonicalUrl!==rawUrl?canonicalUrl:undefined},502);
+  return json({error:label+" belum bisa diproses oleh provider gratis. "+(primaryError||"Provider tidak mengembalikan hasil.").slice(0,320)+" "+(guidance[key]||"Periksa kembali tautan publik."),diagnostics:primaryError.slice(0,1100),provider:"Fallback cascade",fallbackTried:key==="tiktok",canonicalUrl:canonicalUrl!==rawUrl?canonicalUrl:undefined},502);
 }
 
 function mediaAsciiAt(bytes,offset,value){
@@ -1288,10 +1288,42 @@ function extractTikTokPublicPageInfo(html,pageUrl,rawUrl,requestUrl){
   normalized.canonicalUrl=extractTikTokCanonicalUrl(source,pageUrl)||pageUrl;
   return normalized;
 }
+function extractTikTokVideoId(value){
+  try{
+    const url=new URL(value);
+    const path=url.pathname.match(/\/(?:@[^/]*\/)?video\/(\d{8,})/i);
+    return path?.[1]||url.searchParams.get("itemId")||url.searchParams.get("item_id")||url.searchParams.get("share_item_id")||null;
+  }catch{return null}
+}
+async function tikTokItemDetailFallback(rawUrl,requestUrl,timeoutMs=8000){
+  const videoId=extractTikTokVideoId(rawUrl);
+  if(!videoId)throw new Error("ID video belum tersedia untuk endpoint metadata TikTok.");
+  const endpoint=new URL("https://www.tiktok.com/api/item/detail/");
+  endpoint.searchParams.set("itemId",videoId);
+  endpoint.searchParams.set("aid","1988");
+  endpoint.searchParams.set("app_name","tiktok_web");
+  endpoint.searchParams.set("device_platform","web_pc");
+  const response=await fetch(endpoint.href,{headers:{accept:"application/json,text/plain,*/*","accept-language":"en-US,en;q=0.9","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",referer:"https://www.tiktok.com/video/"+videoId},signal:AbortSignal.timeout(timeoutMs),cache:"no-store"});
+  const payload=await response.json().catch(()=>null);
+  const item=payload?.itemInfo?.itemStruct||payload?.item_info?.item_struct||payload?.itemStruct||payload?.item||null;
+  const statusCode=Number(payload?.statusCode??payload?.status_code??0);
+  if(!response.ok||!item?.video||statusCode!==0)throw new Error("TikTok item detail HTTP "+response.status+" (status "+(Number.isFinite(statusCode)?statusCode:"unknown")+") tanpa metadata video publik.");
+  const html='<script id="SIGI_STATE" type="application/json">'+JSON.stringify(payload)+'</script>';
+  return extractTikTokPublicPageInfo(html,rawUrl,rawUrl,requestUrl);
+}
 async function tikTokNativePageFallback(rawUrl,requestUrl,timeoutMs=9000){
-  const page=await fetchSocialPostHtml(rawUrl,timeoutMs);
-  const canonical=extractTikTokCanonicalUrl(page.html,page.url)||page.url;
-  return extractTikTokPublicPageInfo(page.html,canonical,rawUrl,requestUrl);
+  let apiError="";
+  try{return await tikTokItemDetailFallback(rawUrl,requestUrl,Math.min(timeoutMs,8000))}
+  catch(error){apiError=String(error?.message||error).slice(0,180)}
+  try{
+    const page=await fetchSocialPostHtml(rawUrl,timeoutMs);
+    const canonical=extractTikTokCanonicalUrl(page.html,page.url)||page.url;
+    const info=extractTikTokPublicPageInfo(page.html,canonical,rawUrl,requestUrl);
+    info.fallbackDiagnostic=apiError||null;
+    return info;
+  }catch(error){
+    throw new Error("Item detail: "+(apiError||"tidak tersedia")+"; public page: "+String(error?.message||error).slice(0,180));
+  }
 }
 async function resolveSocialShortLink(rawUrl,key,timeoutMs=11000){
   const canonical=canonicalSocialPostUrl(rawUrl,key);
