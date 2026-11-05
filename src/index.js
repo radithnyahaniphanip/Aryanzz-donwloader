@@ -273,7 +273,6 @@ async function genericPublicPageMediaInfo(rawUrl,requestUrl,platformEntry){
     if(!normalized)return json({ok:false,platform:platformEntry.id,title,thumbnail,providerName:"Public page metadata fallback",provider:"Generic public metadata",experimental:true,fallbackTried:true,directDownloadAvailable:false,error:platformEntry.name+" tidak mengekspos file video/audio langsung pada halaman publik. Konten privat, DRM, atau player streaming memerlukan extractor khusus."},502);
     return json({...normalized,platform:platformEntry.id,providerName:"Public page metadata fallback",provider:"Generic public metadata",extractor:"Public page metadata",fallbackUsed:true,experimental:true,directDownloadAvailable:true,canonicalUrl:page.url},200);
   }catch(error){
-    console.error("[ARYANZZ generic metadata fallback]",platformEntry.id,error?.stack||error);
     return json({ok:false,platform:platformEntry.id,providerName:"Public page metadata fallback",provider:"Generic public metadata",experimental:true,fallbackTried:true,directDownloadAvailable:false,error:platformEntry.name+" belum dapat dibaca melalui jalur metadata publik: "+String(error?.message||error).slice(0,180)},502);
   }
 }
