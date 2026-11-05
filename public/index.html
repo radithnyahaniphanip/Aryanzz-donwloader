@@ -1043,41 +1043,78 @@ function normalizePersonalLayout(){
   }
   if(libraryPanel&&mediaStudio&&libraryPanel.contains(mediaStudio)&&toolsArea)toolsArea.insertBefore(mediaStudio,libraryPanel);
 }
+function resetPanelScroll(){
+  const root=document.documentElement,body=document.body,wrap=document.querySelector(".wrap");
+  const previous=root.style.scrollBehavior;
+  root.style.scrollBehavior="auto";
+  root.scrollTop=0;body.scrollTop=0;if(wrap)wrap.scrollTop=0;
+  window.scrollTo(0,0);
+  requestAnimationFrame(()=>{
+    root.scrollTop=0;body.scrollTop=0;if(wrap)wrap.scrollTop=0;
+    window.scrollTo(0,0);
+    root.style.scrollBehavior=previous;
+  });
+}
 function panel(id){
-  normalizePersonalLayout();
-  const home=$('home'),toolsArea=$('toolsArea'),viewHeader=$('appViewHeader'),viewTitle=$('appViewTitle');
-  const profilePanel=$('profile');
-  if(id==='about'||id==='help'){
-    document.body.dataset.view='home';
+  let panelId=String(id||"");
+  if(panelId==="home")panelId="";
+  const home=$("home"),toolsArea=$("toolsArea"),welcome=$("v89Welcome");
+  const viewHeader=$("appViewHeader"),viewTitle=$("appViewTitle");
+  if(panelId==="about"||panelId==="help"){
+    document.body.dataset.view="home";
     if(home)home.hidden=false;
-    if(toolsArea)toolsArea.classList.remove('v8814-view-active');
-    document.querySelectorAll('#toolsArea>.panel').forEach(p=>{
-      p.classList.remove('active');p.hidden=true;p.inert=true;p.setAttribute('aria-hidden','true');
+    if(welcome)welcome.hidden=false;
+    if(viewHeader)viewHeader.hidden=true;
+    if(toolsArea){toolsArea.hidden=true;toolsArea.classList.remove("v8814-view-active");}
+    document.querySelectorAll("#toolsArea>.panel").forEach(p=>{
+      p.classList.remove("active");p.hidden=true;p.inert=true;p.setAttribute("aria-hidden","true");
     });
-    document.querySelectorAll('[data-nav]').forEach(b=>{
-      const active=b.dataset.nav==='home';b.classList.toggle('active',active);b.setAttribute('aria-current',active?'page':'false');
+    document.querySelectorAll("[data-nav]").forEach(b=>{
+      const active=b.dataset.nav==="home";b.classList.toggle("active",active);b.setAttribute("aria-current",active?"page":"false");
     });
-    const target=$(id);
-    if(viewHeader){viewHeader.hidden=false;if(viewTitle&&target){const heading=target.querySelector('h1,h2,h3');viewTitle.textContent=heading?heading.textContent.trim():(id==='about'?'Tentang ARYANZZ':'Pusat Bantuan');}}
-    target?.scrollIntoView({behavior:'smooth',block:'start'});
+    const target=$(panelId);
+    if(target){
+      const root=document.documentElement,previous=root.style.scrollBehavior;
+      root.style.scrollBehavior="auto";
+      target.scrollIntoView({behavior:"auto",block:"start"});
+      requestAnimationFrame(()=>{root.style.scrollBehavior=previous;});
+    }
     return;
   }
-  document.body.dataset.view=id?(id==='allTools'?'tools':id):'home';
-  if(home)home.hidden=!!id;
-  if(toolsArea)toolsArea.classList.toggle('v8814-view-active',!!id);
-  document.querySelectorAll('#toolsArea>.panel').forEach(p=>{
-    const active=p.id===id;
-    p.classList.toggle('active',active);
+  if(panelId){
+    const candidate=$(panelId);
+    if(!candidate||candidate.parentElement!==toolsArea||!candidate.classList.contains("panel"))panelId="allTools";
+  }
+  const isHome=!panelId;
+  document.body.dataset.view=isHome?"home":panelId==="owner"?"owner":"tool";
+  if(home)home.hidden=!isHome;
+  if(welcome)welcome.hidden=!isHome;
+  if(viewHeader)viewHeader.hidden=isHome;
+  if(toolsArea){
+    toolsArea.hidden=isHome;
+    toolsArea.classList.toggle("v8814-view-active",!isHome);
+  }
+  document.querySelectorAll("#toolsArea>.panel").forEach(p=>{
+    const active=!isHome&&p.id===panelId;
+    p.classList.toggle("active",active);
     p.hidden=!active;
     p.inert=!active;
-    p.setAttribute('aria-hidden',active?'false':'true');
-    p.classList.remove('v677-enter','v677-reveal','v25-reveal');
+    p.setAttribute("aria-hidden",active?"false":"true");
+    p.classList.remove("v677-enter","v677-reveal","v25-reveal");
   });
-  const navKey=!id?'home':id==='history'?'history':id==='owner'?'owner':id==='profile'?'profile':'allTools';
-  document.querySelectorAll('[data-nav]').forEach(b=>{const active=b.dataset.nav===navKey;b.classList.toggle('active',active);b.setAttribute('aria-current',active?'page':'false');});
-  const target=id?$(id):home;
-  if(viewHeader){viewHeader.hidden=!id;if(viewTitle&&target){const heading=target.querySelector('h1,h2,h3');viewTitle.textContent=heading?heading.textContent.trim():({history:'Pustaka',owner:'Pemilik',profile:'Profil'}[id]||'Ruang Kreatif');}}
-  window.scrollTo({top:0,behavior:"auto"});
+  const navKey=isHome?"home":panelId==="history"?"history":panelId==="owner"?"owner":panelId==="profile"?"profile":"allTools";
+  document.querySelectorAll("[data-nav]").forEach(b=>{
+    const active=b.dataset.nav===navKey;
+    b.classList.toggle("active",active);
+    b.setAttribute("aria-current",active?"page":"false");
+  });
+  const target=isHome?home:$(panelId);
+  if(viewTitle&&viewHeader&&!isHome&&target){
+    const titles={allTools:"Pusat Alat",history:"Pustaka",owner:"Pemilik",profile:"Profil"};
+    const heading=target.querySelector("h1,h2,h3");
+    viewTitle.textContent=titles[panelId]||(heading?heading.textContent.trim():"Ruang Kreatif");
+  }
+  resetPanelScroll();
 }
 window.aryanzzShowPanel=panel;
 normalizePersonalLayout();
