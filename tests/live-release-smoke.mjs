@@ -80,12 +80,19 @@ for(const marker of [
   'id="ownerDeveloperBadge"',
   'id="profileRandomId"',
   'id="profileCopyId"',
-  'id="deviceHistoryList"'
+  'id="deviceHistoryList"',
+  'id="allTools"',
+  'id="toolSearch"',
+  'id="toolFilters"',
+  'id="aryLibraryHistoryTab"',
+  'id="aryLibraryFavoriteTab"',
+  'id="aryLibraryHistoryCount"',
+  'id="aryLibraryFavoriteCount"'
 ])assert.ok(html.includes(marker),"Homepage kehilangan elemen/asset: "+marker);
 
 const assetRefs=[...html.matchAll(/(?:src|href)="(\/(?:[^"]+\.(?:js|css))(?:\?[^"]*)?)"/g)].map(match=>match[1]);
 assert.ok(assetRefs.length>=15,"Homepage tidak memuat kumpulan aset aplikasi yang diharapkan");
-let downloaderAsset="",platformPickerAsset="",downloaderCss="";
+let downloaderAsset="",platformPickerAsset="",downloaderCss="",v15Asset="";
 for(const path of [...new Set(assetRefs)]){
   const assetUrl=new URL(path,base);
   assert.equal(assetUrl.searchParams.get("v"),version,"Aset tidak memakai versi build yang sama: "+path);
@@ -95,11 +102,18 @@ for(const path of [...new Set(assetRefs)]){
   if(["/downloader.js","/v674.js","/downloader.css","/update-manager.js"].includes(pathname)){
     const body=await response.text();
     if(pathname==="/downloader.js")downloaderAsset=body;
+    if(pathname==="/v15.js")v15Asset=body;
     if(pathname==="/v674.js")platformPickerAsset=body;
     if(pathname==="/downloader.css")downloaderCss=body;
   }
 }
 assert.ok(downloaderAsset.includes("createPhotoSlideshow"),"Aset downloader.js live belum memuat pembuat video slideshow dari foto.");
+assert.ok(v15Asset.includes("controller=window.aryanzzShowPanel"),"Navigation legacy belum mendelegasikan ke controller utama.");
+assert.ok(!v15Asset.includes("window.aryanzzShowPanel=goto"),"Navigation legacy masih menimpa controller utama.");
+assert.ok(!v15Asset.includes("Tema & pengalaman")&&!v15Asset.includes("setupProfile()"),"Kontrol tema lama masih disuntikkan ke Profil.");
+assert.ok(v15Asset.includes('parent.querySelector("#toolSearch")||parent.querySelector("#toolFilters")'),"Pusat Alat belum mencegah search/filter ganda.");
+assert.ok(v15Asset.includes("aryLibraryHistoryTab")&&v15Asset.includes("clearHistoryV2"),"Kontrol Pustaka belum terhubung.");
+assert.ok(html.includes("welcome.hidden=!isHome")&&html.includes("toolsArea.hidden=isHome"),"Tampilan navigasi belum menyembunyikan bagian yang tidak aktif.");
 assert.ok(downloaderAsset.includes("isTikTokPhotoPost")&&downloaderAsset.includes("slice(0,35)"),"Aset downloader.js live belum memuat deteksi TikTok Photo Mode dan galeri foto.");
 assert.ok(platformPickerAsset.includes("PLATFORM_GUIDES")&&platformPickerAsset.includes("modeLabels.join"),"Aset v674.js live belum memuat panduan dan label media per platform.");
 assert.ok(platformPickerAsset.includes("Tempel tautan TikTok: video atau Photo Mode"),"Placeholder TikTok belum diperbarui pada aset live.");
