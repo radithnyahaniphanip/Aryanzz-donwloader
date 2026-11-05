@@ -29,7 +29,7 @@ try{
       report.playbackReady=player.ok;
       console.log("[TIKTOK-USER-LINK-RESULT] "+JSON.stringify(report));
       if(!player.ok)process.exitCode=1;
-      return;
+      throw new Error("__TIKTOK_EMBED_PLAYBACK_HANDLED__");
     }
     throw new Error(String(info.error||"Provider TikTok tidak mengembalikan format video yang dapat digunakan.").slice(0,320));
   }
