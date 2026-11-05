@@ -609,21 +609,51 @@ async function fetchSocialHeaders(url,init,timeoutMs=25000){
   try{return await fetch(url,{...init,signal:controller.signal});}
   finally{clearTimeout(timer);}
 }
-async function fetchSocialUpstream(mediaUrl,sourceUrl,rangeHeader){
-  const sourceOrigin=new URL(sourceUrl).origin;
-  const headers={"user-agent":"Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36","accept":"video/*,audio/*,application/octet-stream;q=0.9,*/*;q=0.8","referer":sourceOrigin+"/","origin":sourceOrigin};
-  if(rangeHeader)headers.range=rangeHeader;
-  let current=mediaUrl;
-  for(let i=0;i<6;i++){
-    const response=await fetchSocialHeaders(current.href,{method:"GET",headers,redirect:"manual",cache:"no-store"});
-    if(![301,302,303,307,308].includes(response.status))return response;
-    const location=response.headers.get("location");
-    if(!location)throw new Error("CDN media mengirim pengalihan tanpa alamat tujuan.");
-    const next=safePublicMediaUrl(new URL(location,current).href);
-    if(!next)throw new Error("Pengalihan CDN menuju alamat yang tidak aman.");
-    current=next;
+async function fetchSocialUpstream(mediaUrl,sourceUrl,rangeHeader,options={}){
+  const sourceOrigin=new URL(sourceUrl).origin,mediaOrigin=mediaUrl.origin;
+  const baseHeaders={"user-agent":"Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36","accept":"video/*,audio/*,application/octet-stream;q=0.9,*/*;q=0.8"};
+  const profiles=[
+    {name:"source-referer",headers:{referer:sourceOrigin+"/",origin:sourceOrigin}},
+    {name:"cdn-referer",headers:{referer:mediaOrigin+"/",origin:mediaOrigin}},
+    {name:"no-referer",headers:{}}
+  ];
+  const uniqueProfiles=profiles.filter((profile,index,array)=>array.findIndex(item=>JSON.stringify(item.headers)===JSON.stringify(profile.headers))===index);
+  const diagnostics=[];
+  const attempt=async(profile,requestedRange)=>{
+    let current=mediaUrl;
+    for(let hop=0;hop<6;hop++){
+      const headers={...baseHeaders,...profile.headers};
+      if(requestedRange)headers.range=requestedRange;
+      const response=await fetchSocialHeaders(current.href,{method:"GET",headers,redirect:"manual",cache:"no-store"},7500);
+      if([301,302,303,307,308].includes(response.status)){
+        const location=response.headers.get("location");
+        if(!location){await response.body?.cancel().catch(()=>{});throw new Error("CDN media mengirim pengalihan tanpa alamat tujuan.");}
+        const next=safePublicMediaUrl(new URL(location,current).href);
+        if(!next){await response.body?.cancel().catch(()=>{});throw new Error("Pengalihan CDN menuju alamat yang tidak aman.");}
+        current=next;continue;
+      }
+      const contentType=String(response.headers.get("content-type")||"").split(";")[0].trim().toLowerCase();
+      const contentRange=String(response.headers.get("content-range")||"");
+      const validRange=response.status!==206||/^bytes\s+\d+-\d+\/\d+$/i.test(contentRange);
+      const errorMime=/^(text\/|application\/(?:json|xml|x-mpegurl))/i.test(contentType);
+      if([200,206].includes(response.status)&&response.body&&!errorMime&&validRange&&(response.status!==206||requestedRange))return response;
+      diagnostics.push(profile.name+" HTTP "+response.status+(contentType?" "+contentType:"")+(response.status===206&&!validRange?" invalid Content-Range":""));
+      await response.body?.cancel().catch(()=>{});
+      return null;
+    }
+    throw new Error("Terlalu banyak pengalihan dari CDN media.");
+  };
+  for(const profile of uniqueProfiles){
+    try{const response=await attempt(profile,rangeHeader);if(response)return response;}
+    catch(error){diagnostics.push(profile.name+": "+String(error?.message||error).slice(0,100));}
   }
-  throw new Error("Terlalu banyak pengalihan dari CDN media.");
+  if(rangeHeader&&options.allowFullFallback===true){
+    for(const profile of uniqueProfiles){
+      try{const response=await attempt(profile,null);if(response)return response;}
+      catch(error){diagnostics.push(profile.name+" tanpa Range: "+String(error?.message||error).slice(0,100));}
+    }
+  }
+  throw new Error("CDN menolak variasi permintaan media"+(diagnostics.length?": "+diagnostics.slice(0,6).join("; ").slice(0,420):"."));
 }
 async function readSocialChunk(reader,idleMs=60000){
   let timer;
@@ -640,30 +670,42 @@ function socialMimeForExtension(ext,mode){
   return mime&&mime.startsWith(mode==="audio"?"audio/":"video/")?{mime,ext,mode}:null;
 }
 async function socialMediaFile(request){
-  const u=new URL(request.url),raw=u.searchParams.get("url")||"",source=u.searchParams.get("source")||"",mode=u.searchParams.get("mode")==="audio"?"audio":"video",requestedExt=String(u.searchParams.get("ext")||"mp4").toLowerCase(),filename=u.searchParams.get("filename")||"aryanzz-media",probe=u.searchParams.get("probe")==="1",preview=u.searchParams.get("preview")==="1";
+  const u=new URL(request.url),raw=u.searchParams.get("url")||"",source=u.searchParams.get("source")||"",mode=u.searchParams.get("mode")==="audio"?"audio":"video",requestedExt=String(u.searchParams.get("ext")||"mp4").toLowerCase(),filename=u.searchParams.get("filename")||"aryanzz-media",probeMode=String(u.searchParams.get("probe")||""),probe=probeMode==="1"||probeMode==="full",preview=u.searchParams.get("preview")==="1";
   const mediaUrl=safePublicMediaUrl(raw);
   if(!mediaUrl)return json({error:"Alamat media tidak valid atau tidak aman."},400);
   if(!isPlatformLink(source))return json({error:"Tautan sumber platform tidak valid."},400);
   if(!["mp4","webm","mov","m4v","avi","3gp","mp3","m4a","aac","opus","ogg","wav","flac"].includes(requestedExt))return json({error:"Ekstensi media tidak didukung."},400);
   const browserRange=request.headers.get("range");
-  const probeMode=String(u.searchParams.get("probe")||"");
   const rangeToRequest=browserRange||(probe&&probeMode!=="full"?"bytes=0-65535":null);
   const expectedHint=Math.floor(Number(u.searchParams.get("expected"))||0);
   if(expectedHint<0||expectedHint>500*1024*1024)return json({error:"Ukuran file yang diminta tidak valid."},400);
-  let upstream=null,lastError="";
-  try{upstream=await fetchSocialUpstream(mediaUrl,source,rangeToRequest)}catch(error){lastError=String(error?.message||error).slice(0,160)}
+  let upstream=null,lastError="",lastStatus=0;
+  try{upstream=await fetchSocialUpstream(mediaUrl,source,rangeToRequest,{allowFullFallback:probe&&probeMode!=="full"});}catch(error){lastError=String(error?.message||error).slice(0,420);}
   if(!upstream||![200,206].includes(upstream.status)||!upstream.body){
     if(upstream?.body)await upstream.body.cancel().catch(()=>{});
     const fallback=new URL("/api/fetch-media",FREE_MEDIA_API);
     fallback.searchParams.set("url",mediaUrl.href);
     fallback.searchParams.set("filename",socialFileName(filename,requestedExt));
-    const fallbackHeaders={accept:"*/*","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0.0.0 Safari/537.36"};
-    if(rangeToRequest)fallbackHeaders.range=rangeToRequest;
-    try{
-      upstream=await fetchSocialHeaders(fallback.href,{headers:fallbackHeaders,cache:"no-store"});
-    }catch(error){return json({error:"CDN media dan jalur cadangan provider gagal. "+(lastError||String(error?.message||error).slice(0,120))},502)}
+    const fallbackRanges=rangeToRequest&&probe&&probeMode!=="full"?[rangeToRequest,null]:[rangeToRequest];
+    for(const fallbackRange of fallbackRanges){
+      const fallbackHeaders={accept:"*/*","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0.0.0 Safari/537.36"};
+      if(fallbackRange)fallbackHeaders.range=fallbackRange;
+      try{
+        const response=await fetchSocialHeaders(fallback.href,{headers:fallbackHeaders,cache:"no-store"},7500);
+        const contentType=String(response.headers.get("content-type")||"").split(";")[0].trim().toLowerCase();
+        const validPartial=response.status!==206||!!String(response.headers.get("content-range")||"").match(/^bytes\s+\d+-\d+\/\d+$/i);
+        if([200,206].includes(response.status)&&response.body&&!/^(text\/|application\/(?:json|xml|x-mpegurl))/i.test(contentType)&&validPartial&&(response.status!==206||fallbackRange)){
+          upstream=response;break;
+        }
+        lastStatus=response.status;
+        lastError="Jalur provider cadangan HTTP "+response.status+(contentType?" "+contentType:"");
+        await response.body?.cancel().catch(()=>{});
+      }catch(error){lastError=String(error?.message||error).slice(0,180);}
+    }
   }
-  if(!upstream||![200,206].includes(upstream.status)||!upstream.body)return json({error:"Provider tidak mengirim file media utuh (HTTP "+(upstream?.status||502)+")."},502);
+  if(!upstream||![200,206].includes(upstream.status)||!upstream.body){
+    return json({error:"Provider tidak mengirim file media utuh (HTTP "+(lastStatus||upstream?.status||502)+").",diagnostics:{mediaHost:mediaUrl.hostname,detail:lastError||"Semua jalur CDN dan provider cadangan gagal."}},502);
+  }
   if(upstream.status===206&&!rangeToRequest){await upstream.body.cancel().catch(()=>{});return json({error:"Provider hanya mengirim sebagian file tanpa permintaan rentang yang diminta."},502);}
   const rawType=String(upstream.headers.get("content-type")||"").split(";")[0].trim().toLowerCase();
   if(/^(text\/|application\/(json|xml)|application\/x-mpegurl)/i.test(rawType)){
