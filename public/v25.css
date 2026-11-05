@@ -264,3 +264,10 @@ body[data-motion="off"] *,body[data-motion="off"] *:before,body[data-motion="off
 #profile #profileIdDescription{
   display:none!important;
 }
+
+#profile [data-panel="colorStudio"],
+#profile [data-panel="mediaStudio"],
+#profile [data-panel="about"],
+#profile [data-panel="help"]{
+  display:none!important;
+}
