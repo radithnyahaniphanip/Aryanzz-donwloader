@@ -830,96 +830,175 @@ body{background-color:var(--ary-app-bg)}
   <div class="ary-theme-motion"><div><b>Animasi antarmuka</b><small>Efek gerak dan transisi untuk pengalaman ARYANZZ.</small></div><label class="ary-motion-switch"><input id="aryMotionToggle" type="checkbox"><span></span><b id="aryMotionState">Aktif</b></label></div>
   <div class="ary-theme-actions"><button class="primary" id="aryThemeApply" type="button">Terapkan ke seluruh website</button><button class="tag" id="aryThemeReset" type="button">Kembalikan warna awal</button></div><p class="ary-theme-status" id="aryThemeStatus" role="status" aria-live="polite">Pilih preset atau atur warna sendiri.</p>
 </div>
-<div class="panel card v25-profile-panel" id="profile">
-  <div class="v25-profile-cover" id="profileBannerPreview"><div class="v25-cover-glow"></div></div>
-  <div class="v25-cover-actions" aria-label="Kontrol banner profil"><label class="v25-cover-action">✦ Ubah banner<input id="profileBanner" type="file" accept="image/*" hidden></label><button class="v25-cover-remove" id="clearProfileBanner" type="button" hidden>Hapus banner</button></div>
-  <div class="v25-profile-identity">
-    <div class="v25-avatar-shell"><div class="avatar v25-avatar" id="profileAvatar">A</div><label class="v25-avatar-edit" aria-label="Ubah foto profil">＋<input id="profilePhoto" type="file" accept="image/*" hidden></label>
-      <button class="v25-avatar-remove" id="clearProfilePhoto" type="button" hidden>Hapus foto</button></div>
-    <div class="v25-identity-copy"><span class="v25-member-badge">✦ FREE USER</span><h2 id="profileSummary">Pengguna ARYANZZ</h2><p id="profileBioPreview">Selamat datang di ruang personal ARYANZZ.</p></div>
-  </div>
-  <div class="v25-profile-stats">
-    <div><b id="profileHistoryCount">0</b><span>Riwayat</span></div>
-    <div><b id="profileFavoriteCount">0</b><span>Favorit</span></div>
-    <div><b id="profileSince">Hari ini</b><span>Bergabung</span></div>
-  </div>
-  <div class="v25-profile-layout">
-    <section class="v25-profile-card">
-      <div class="v25-section-heading"><div><span class="v25-kicker">PERSONAL ID</span><h3>Profil kamu</h3></div><span class="v25-heading-icon">◉</span></div>
-      <label class="label" for="profileName">Nama tampilan</label><input id="profileName" class="field tool-input" maxlength="40" placeholder="Nama kamu">
-      <label class="label" for="profileBio">Bio singkat</label><textarea id="profileBio" class="field tool-input" rows="3" maxlength="160" placeholder="Ceritakan sedikit tentang dirimu…"></textarea>
-      <div class="v25-form-foot"><small id="profileCharCount">0/160 karakter</small><button class="primary" id="profileSave" type="button">Simpan perubahan</button></div>
-      <button class="v25-text-button" id="profileReset" type="button">Reset informasi profil</button><small class="v25-privacy-note" id="profileAutoSaveStatus" role="status" aria-live="polite">Menyiapkan penyimpanan otomatis…</small>
+<div class="panel card v25-profile-panel ary-profile-v2" id="profile">
+  <header class="ary-profile2-header">
+    <div>
+      <span class="ary-profile2-eyebrow">ACCOUNT CENTER</span>
+      <h1>Profil Saya</h1>
+      <p>Kelola identitas, akun, dan perangkat yang terhubung.</p>
+    </div>
+    <span class="ary-profile2-private"><i></i> RUANG PRIBADI</span>
+  </header>
+
+  <section class="ary-profile2-hero v25-profile-card" aria-label="Kartu profil">
+    <div class="ary-profile2-cover" id="profileBannerPreview"><span class="ary-profile2-cover-orbit"></span></div>
+    <div class="ary-profile2-cover-actions">
+      <label class="ary-profile2-action" for="profileBanner">✦ Ubah sampul<input id="profileBanner" type="file" accept="image/*" hidden></label>
+      <button class="ary-profile2-action ary-profile2-remove" id="clearProfileBanner" type="button" hidden>Hapus sampul</button>
+    </div>
+    <div class="ary-profile2-identity">
+      <div class="ary-profile2-avatar-wrap">
+        <div class="avatar ary-profile2-avatar" id="profileAvatar">A</div>
+        <label class="ary-profile2-avatar-edit" for="profilePhoto" aria-label="Ubah foto profil">✎<input id="profilePhoto" type="file" accept="image/*" hidden></label>
+        <button class="ary-profile2-avatar-remove" id="clearProfilePhoto" type="button" hidden aria-label="Hapus foto profil">×</button>
+      </div>
+      <div class="ary-profile2-identity-copy">
+        <span class="ary-profile2-member-label">✦ FREE MEMBER</span>
+        <h2 id="profileSummary">Pengguna ARYANZZ</h2>
+        <p id="profileBioPreview">Selamat datang di ruang personal ARYANZZ.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="ary-profile2-stats v25-profile-stats" aria-label="Ringkasan akun">
+    <div class="ary-profile2-stat"><span class="ary-profile2-stat-icon">⇩</span><div><b id="profileHistoryCount">0</b><small>Riwayat unduhan</small></div></div>
+    <div class="ary-profile2-stat"><span class="ary-profile2-stat-icon">♡</span><div><b id="profileFavoriteCount">0</b><small>Media favorit</small></div></div>
+    <div class="ary-profile2-stat"><span class="ary-profile2-stat-icon">✦</span><div><b id="profileSince">Hari ini</b><small>Bergabung sejak</small></div></div>
+  </section>
+
+  <div class="ary-profile2-grid">
+    <section class="v25-profile-card ary-profile2-card ary-profile2-details">
+      <div class="ary-profile2-card-heading">
+        <div><span>PERSONAL DETAILS</span><h2>Informasi profil</h2></div>
+        <span class="ary-profile2-heading-icon">◉</span>
+      </div>
+      <label class="ary-profile2-label" for="profileName">Nama tampilan</label>
+      <input id="profileName" class="field tool-input ary-profile2-input" maxlength="40" placeholder="Masukkan nama tampilan">
+      <label class="ary-profile2-label" for="profileBio">Bio singkat</label>
+      <textarea id="profileBio" class="field tool-input ary-profile2-input" rows="3" maxlength="160" placeholder="Tulis sesuatu tentang dirimu..."></textarea>
+      <div class="ary-profile2-form-meta"><small id="profileCharCount">0/160 karakter</small><small id="profileAutoSaveStatus" role="status" aria-live="polite">Menyiapkan penyimpanan otomatis...</small></div>
+      <div class="ary-profile2-form-actions">
+        <button class="ary-profile2-primary" id="profileSave" type="button">Simpan perubahan</button>
+        <button class="ary-profile2-secondary" id="profileReset" type="button">Reset</button>
+      </div>
     </section>
-    <section class="v25-profile-card v25-account-id-card"><div class="v25-section-heading"><div><span class="v25-kicker">PROFILE IDENTIFIER</span><h3>ID profil</h3></div><span class="v25-heading-icon">⌁</span></div><div class="v25-profile-id-row"><code id="profileRandomId">ARY-••••••••</code><button class="tag" id="profileCopyId" type="button">Salin ID</button></div><button class="v25-text-button" id="accountLogout" type="button" hidden>Keluar dari akun</button></section>
+
+    <section class="v25-profile-card ary-profile2-card ary-profile2-account">
+      <div class="ary-profile2-card-heading">
+        <div><span>ACCOUNT IDENTIFIER</span><h2>ID akun</h2></div>
+        <span class="ary-profile2-heading-icon">⌁</span>
+      </div>
+      <p class="ary-profile2-card-copy">ID unik untuk mengenali akun ARYANZZ di perangkat ini.</p>
+      <div class="v25-profile-id-row ary-profile2-id-row">
+        <code id="profileRandomId">ARY-••••••••</code>
+        <button class="tag ary-profile2-copy" id="profileCopyId" type="button">Salin ID</button>
+      </div>
+      <div class="ary-profile2-account-note"><span>●</span> Akun tersimpan di browser ini</div>
+      <button class="ary-profile2-logout" id="accountLogout" type="button" hidden>Keluar dari akun</button>
+    </section>
   </div>
-  <section class="v25-profile-card v25-device-card">
-    <div class="v25-section-heading"><div><span class="v25-kicker">DEVICE & PRIVACY</span><h3>Riwayat perangkat & lokasi</h3></div><span class="v25-heading-icon">⌖</span></div>
-    <p class="v25-muted">Informasi perangkat dan sesi disimpan hanya di browser ini. Lokasi hanya diambil jika kamu menekan tombol dan mengizinkan Chrome.</p>
-    <div class="v25-device-current"><small>PERANGKAT SAAT INI</small><b id="deviceCurrent">Mendeteksi perangkat…</b></div>
-    <div id="deviceHistoryList" class="v25-device-list"></div>
-    <button class="tag" id="deviceGetLocation" type="button">⌖ Izinkan & simpan lokasi HP</button>
-    <p id="deviceLocationStatus" class="v25-muted" aria-live="polite">Lokasi belum dibagikan.</p>
-    <a id="deviceMapLink" class="tag" href="#" target="_blank" rel="noopener" hidden>Lihat lokasi di peta ↗</a>
-    <button class="v25-text-button" id="deviceClearHistory" type="button">Hapus riwayat perangkat</button>
+
+  <section class="v25-profile-card ary-profile2-card ary-profile2-device">
+    <div class="ary-profile2-card-heading ary-profile2-device-heading">
+      <div><span>DEVICE &amp; PRIVACY</span><h2>Perangkat dan lokasi</h2><p>Periksa sesi yang pernah digunakan untuk membuka ARYANZZ.</p></div>
+      <span class="ary-profile2-heading-icon">⌖</span>
+    </div>
+    <div class="ary-profile2-device-grid">
+      <div class="ary-profile2-current-device">
+        <small>PERANGKAT SAAT INI</small>
+        <b id="deviceCurrent">Mendeteksi perangkat...</b>
+        <span class="ary-profile2-current-dot"><i></i> Sesi aktif di browser ini</span>
+      </div>
+      <div class="ary-profile2-history-device">
+        <small>RIWAYAT PERANGKAT</small>
+        <div id="deviceHistoryList" class="ary-profile2-device-list"></div>
+      </div>
+    </div>
+    <div class="ary-profile2-location">
+      <div class="ary-profile2-location-copy"><b>Lokasi perangkat</b><p id="deviceLocationStatus" aria-live="polite">Lokasi belum dibagikan.</p></div>
+      <div class="ary-profile2-location-actions">
+        <button class="ary-profile2-secondary" id="deviceGetLocation" type="button">⌖ Simpan lokasi</button>
+        <a id="deviceMapLink" class="ary-profile2-map-link" href="#" target="_blank" rel="noopener" hidden>Lihat peta ↗</a>
+      </div>
+    </div>
+    <div class="ary-profile2-device-footer">
+      <small>Lokasi hanya disimpan jika kamu memberi izin browser.</small>
+      <button class="ary-profile2-text-button" id="deviceClearHistory" type="button">Hapus riwayat perangkat</button>
+    </div>
   </section>
   <div id="advancedNotice" class="result" hidden></div>
 </div>
 
-<div class="panel owner-panel" id="owner">
-  <div class="owner-shell">
-    <header class="owner-topbar">
-      <button class="owner-menu-mark" type="button" data-panel="allTools" aria-label="Buka semua tools">☰</button>
-      <div class="owner-wordmark">ARYANZZ <small>Creator Space</small></div>
-      <div class="owner-top-actions"><button type="button" data-panel="history" aria-label="Buka riwayat unduhan">◷</button><button type="button" data-panel="profile" aria-label="Buka profil ARYANZZ">✦</button></div>
+<div class="panel owner-panel ary-owner-v2" id="owner">
+  <div class="ary-owner2-shell">
+    <header class="ary-owner2-topbar">
+      <div class="ary-owner2-brand"><span class="ary-owner2-brand-mark">A</span><span><b>ARYANZZ</b><small>CREATOR SPACE</small></span></div>
+      <div class="ary-owner2-top-actions">
+        <button type="button" data-panel="allTools" aria-label="Buka semua alat">✦ <span>Alat</span></button>
+        <button type="button" data-panel="history" aria-label="Buka pustaka">◷ <span>Pustaka</span></button>
+        <button type="button" data-panel="profile" aria-label="Buka profil">◉ <span>Profil</span></button>
+      </div>
     </header>
-    <article class="owner-profile-card">
-      <div class="owner-cover" id="ownerCover" aria-label="Latar visual pemilik"><div class="owner-cover-orbit"></div></div>
-      <div class="owner-avatar-row"><div class="owner-avatar" id="ownerAvatar">A</div></div>
-      <div class="owner-profile-content">
-        <div class="owner-badges owner-identity-titles"><span id="ownerDeveloperBadge" class="owner-badge owner-badge-gold owner-developer-title">♛ DEVELOPER WEBSITE</span><span class="owner-badge owner-badge-green owner-creator-title">✦ ARYANZZ CREATOR</span></div>
-        <h2 id="ownerName">ARYANZZ</h2>
-        <p class="owner-handle" id="ownerHandle">@ARYANZZ</p>
-        <p class="owner-bio" id="ownerBio">Merancang, membangun, dan mengembangkan ekosistem digital ARYANZZ.</p>
-        <button class="owner-edit-button" id="ownerEditProfile" type="button" hidden>✎ Edit foto &amp; banner</button>
-      </div>
-      <div class="owner-stats">
-        <div><b id="ownerToolsCount">13</b><span>FITUR</span></div>
-        <div><b id="ownerHistoryCount">0</b><span>RIWAYAT</span></div>
-        <div><b>FREE</b><span>AKSES</span></div>
-      </div>
-    </article>
-    <div class="owner-social-heading"><span>CONNECT WITH US</span><h2>Temukan ARYANZZ</h2><p>Ikuti kanal resmi dan kunjungi ruang pengembangan ARYANZZ.</p></div>
-    <div class="owner-social-grid">
-      <a class="owner-social-card" data-owner-link="whatsapp" aria-disabled="true">
-        <span class="owner-social-icon owner-whatsapp">✆</span><b>WhatsApp</b><span class="owner-social-action">Chat WhatsApp <i>→</i></span>
-      </a>
-      <a class="owner-social-card" data-owner-link="github" href="https://github.com/radithnyahaniphanip" target="_blank" rel="noopener noreferrer">
-        <span class="owner-social-icon owner-github">⌘</span><b>GitHub Profile</b><span class="owner-social-action">Kunjungi GitHub <i>→</i></span>
-      </a>
-      <a class="owner-social-card" data-owner-link="telegram" aria-disabled="true">
-        <span class="owner-social-icon owner-telegram">➤</span><b>Telegram</b><span class="owner-social-action">Buka Telegram <i>→</i></span>
-      </a>
-      <a class="owner-social-card" data-owner-link="tiktok" aria-disabled="true">
-        <span class="owner-social-icon owner-tiktok">♪</span><b>TikTok</b><span class="owner-social-action">Follow di TikTok <i>→</i></span>
-      </a>
-    </div>
-    <section class="owner-link-editor" id="ownerLinkEditor" hidden>
-      <details open>
-        <summary>⚙ Atur tautan sosial</summary>
-        <p>Masukkan tautan milikmu. Pengaturan ini tersimpan di browser perangkat ini.</p>
-        <label for="ownerWhatsappUrl">WhatsApp</label><input id="ownerWhatsappUrl" class="field" type="url" placeholder="https://wa.me/628...">
-        <label for="ownerGithubUrl">GitHub Profile</label><input id="ownerGithubUrl" class="field" type="url" placeholder="https://github.com/username">
-        <label for="ownerTelegramUrl">Telegram</label><input id="ownerTelegramUrl" class="field" type="url" placeholder="https://t.me/username">
-        <label for="ownerTiktokUrl">TikTok</label><input id="ownerTiktokUrl" class="field" type="url" placeholder="https://www.tiktok.com/@username">
-        <button class="owner-save-button" id="ownerLinksSave" type="button">Simpan tautan sosial</button>
-        <small>Tautan yang kamu atur akan ditampilkan pada kartu sosial di halaman ini dan disimpan pada browser perangkat ini.</small>
-      </details>
-    </section>
-    <section class="v8813-security-center" id="securityCenter" hidden><div class="v8813-security-head"><div><span>SECURITY STATUS · PUBLIC SUMMARY</span><h3>Security Center</h3><p>Ringkasan perlindungan Worker ARYANZZ.</p></div><span class="v8813-shield">◈</span></div><div class="v8813-security-state" id="securityCenterState">Memeriksa status keamanan…</div><div class="v8813-security-metrics"><div><b id="securityBlockedOrigin">—</b><small>Origin diblokir</small></div><div><b id="securityRateLimited">—</b><small>Rate limited</small></div><div><b id="securityOversized">—</b><small>Request besar</small></div><div><b id="securityMethods">—</b><small>Metode ditolak</small></div></div><div class="v8813-security-foot"><span>Counter per Worker isolate · bukan log global</span><button type="button" id="securityCenterRefresh">↻ Perbarui</button></div></section>
-<footer class="owner-footer">© <span id="ownerYear">2026</span> <b>ARYANZZ</b> · Built with care.</footer>
+
+    <main class="ary-owner2-main">
+      <section class="ary-owner2-hero">
+        <div class="ary-owner2-cover" id="ownerCover"><span class="ary-owner2-cover-glow"></span><span class="ary-owner2-cover-grid"></span></div>
+        <div class="ary-owner2-identity">
+          <div class="ary-owner2-avatar" id="ownerAvatar">A</div>
+          <div class="ary-owner2-identity-content">
+            <div class="owner-badges owner-identity-titles ary-owner2-titles">
+              <span id="ownerDeveloperBadge" class="owner-badge owner-badge-gold owner-developer-title">♛ DEVELOPER WEBSITE</span>
+              <span class="owner-badge owner-badge-green owner-creator-title">✦ ARYANZZ CREATOR</span>
+            </div>
+            <h1 id="ownerName">ARYANZZ</h1>
+            <p class="ary-owner2-handle" id="ownerHandle">@ARYANZZ</p>
+            <p class="ary-owner2-bio" id="ownerBio">Merancang, membangun, dan mengembangkan ekosistem digital ARYANZZ.</p>
+            <button class="ary-owner2-edit" id="ownerEditProfile" type="button" hidden>✎ Edit foto dan sampul</button>
+          </div>
+        </div>
+        <div class="ary-owner2-stats">
+          <div><b id="ownerToolsCount">13</b><span>ALAT &amp; FITUR</span></div>
+          <div><b id="ownerHistoryCount">0</b><span>RIWAYAT</span></div>
+          <div><b>FREE</b><span>AKSES PLATFORM</span></div>
+        </div>
+      </section>
+
+      <section class="ary-owner2-social-section">
+        <div class="ary-owner2-section-heading"><div><span>OFFICIAL CHANNELS</span><h2>Terhubung dengan ARYANZZ</h2></div><p>Temukan kanal dan ruang pengembangan resmi.</p></div>
+        <div class="ary-owner2-social-grid">
+          <a class="ary-owner2-social-card" data-owner-link="whatsapp" aria-disabled="true"><span class="ary-owner2-social-icon ary-owner2-wa">✆</span><span class="ary-owner2-social-copy"><b>WhatsApp</b><small class="owner-social-action">Chat WhatsApp</small></span><span class="ary-owner2-social-arrow">↗</span></a>
+          <a class="ary-owner2-social-card" data-owner-link="github" href="https://github.com/radithnyahaniphanip" target="_blank" rel="noopener noreferrer"><span class="ary-owner2-social-icon ary-owner2-gh">⌘</span><span class="ary-owner2-social-copy"><b>GitHub Profile</b><small class="owner-social-action">Kunjungi GitHub</small></span><span class="ary-owner2-social-arrow">↗</span></a>
+          <a class="ary-owner2-social-card" data-owner-link="telegram" aria-disabled="true"><span class="ary-owner2-social-icon ary-owner2-tg">➤</span><span class="ary-owner2-social-copy"><b>Telegram</b><small class="owner-social-action">Buka Telegram</small></span><span class="ary-owner2-social-arrow">↗</span></a>
+          <a class="ary-owner2-social-card" data-owner-link="tiktok" aria-disabled="true"><span class="ary-owner2-social-icon ary-owner2-tt">♪</span><span class="ary-owner2-social-copy"><b>TikTok</b><small class="owner-social-action">Follow di TikTok</small></span><span class="ary-owner2-social-arrow">↗</span></a>
+        </div>
+      </section>
+
+      <section class="ary-owner2-admin" id="ownerLinkEditor" hidden>
+        <details>
+          <summary>⚙ Kelola tautan sosial</summary>
+          <p>Atur tautan yang ditampilkan pada kartu kanal resmi.</p>
+          <div class="ary-owner2-admin-grid">
+            <label for="ownerWhatsappUrl">WhatsApp<input id="ownerWhatsappUrl" class="field" type="url" placeholder="https://wa.me/628..."></label>
+            <label for="ownerGithubUrl">GitHub<input id="ownerGithubUrl" class="field" type="url" placeholder="https://github.com/username"></label>
+            <label for="ownerTelegramUrl">Telegram<input id="ownerTelegramUrl" class="field" type="url" placeholder="https://t.me/username"></label>
+            <label for="ownerTiktokUrl">TikTok<input id="ownerTiktokUrl" class="field" type="url" placeholder="https://www.tiktok.com/@username"></label>
+          </div>
+          <button class="ary-owner2-save" id="ownerLinksSave" type="button">Simpan tautan</button>
+        </details>
+      </section>
+
+      <section class="v8813-security-center ary-owner2-security" id="securityCenter" hidden>
+        <div class="v8813-security-head"><div><span>SECURITY STATUS · PUBLIC SUMMARY</span><h3>Security Center</h3><p>Ringkasan perlindungan Worker ARYANZZ.</p></div><span class="v8813-shield">◈</span></div>
+        <div class="v8813-security-state" id="securityCenterState">Memeriksa status keamanan...</div>
+        <div class="v8813-security-metrics"><div><b id="securityBlockedOrigin">—</b><small>Origin diblokir</small></div><div><b id="securityRateLimited">—</b><small>Rate limited</small></div><div><b id="securityOversized">—</b><small>Request besar</small></div><div><b id="securityMethods">—</b><small>Metode ditolak</small></div></div>
+        <div class="v8813-security-foot"><span>Counter per Worker isolate · bukan log global</span><button type="button" id="securityCenterRefresh">↻ Perbarui</button></div>
+      </section>
+    </main>
+
+    <footer class="ary-owner2-footer">© <span id="ownerYear">2026</span> <b>ARYANZZ</b><span>Digital tools, built with care.</span></footer>
   </div>
 </div>
+
 </section>
 
 <footer>© <span id="year"></span> ARYANZZ</footer></div>
