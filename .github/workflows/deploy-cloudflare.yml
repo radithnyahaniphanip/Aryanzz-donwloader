@@ -1,4 +1,4 @@
-name: ARYANZZ — Validate and deploy V94.27.x
+name: ARYANZZ — Validate and deploy V95.x
 
 on:
   push:
@@ -16,7 +16,7 @@ concurrency:
 
 jobs:
   test:
-    name: Validate V94.27.x release
+    name: Validate V95.x release
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -49,7 +49,7 @@ jobs:
         run: npm test
 
   deploy:
-    name: Deploy V94.27.x to Cloudflare Workers
+    name: Deploy V95.x to Cloudflare Workers
     needs: test
     permissions:
       contents: write
