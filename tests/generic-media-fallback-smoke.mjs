@@ -30,6 +30,7 @@ const html=[
   '<video src="http://127.0.0.1/private.mp4"></video>'
 ].join("\n");
 const results=sandbox.extractGenericPublicMediaCandidates(html,"https://social.example/post/123");
+console.log("Generic media parser diagnostic candidates:",JSON.stringify(results));
 assert.ok(results.some(item=>item.url==="https://cdn.example/video.mp4"&&item.mode==="video"),"Open Graph MP4 should be detected");
 assert.ok(results.some(item=>item.url==="https://cdn.example/audio.mp3"&&item.mode==="audio"),"Open Graph audio should be detected");
 assert.ok(results.some(item=>item.url==="https://cdn.example/clip.webm"&&item.mode==="video"),"HTML video source should be detected");
