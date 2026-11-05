@@ -1487,7 +1487,7 @@ async function fetchTikTokPhotoImageData(rawUrl,timeoutMs=9000){
 }
 function extractTikTokPhotoProxyImages(text){
   const normalized=decodeTikTokPageValue(String(text||"")).replace(/&amp;/gi,"&").replace(/\\u0026/gi,"&").replace(/\\u003d/gi,"=").replace(/\\\//g,"/");
-  const urls=[...normalized.matchAll(/https?:\\/\\/[^\\s"'<>\\\\)]+/g)].map(match=>match[0].replace(/[),.;\\]}]+$/g,""));
+  const urls=[...normalized.matchAll(/https?:\/\/[^\s"'<>\\)]+/g)].map(match=>match[0].replace(/[),.;\]}]+$/g,""));
   const seen=new Set(),images=[];
   for(const raw of urls){
     const safe=safePublicMediaUrl(raw);if(!safe||seen.has(safe.href))continue;
