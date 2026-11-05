@@ -195,7 +195,7 @@ const checks = [
   ["Security status endpoint remains available", worker.includes('url.pathname==="/api/security/status"')],
   ["Security middleware wraps Worker requests", worker.includes("export default {fetch:securityFetch};")],
   ["Platform catalogue state is initialized before setMode runs, preventing the V95 UI bootstrap crash", searchJs.indexOf("let platformCatalog=[],platformPage=1;") < searchJs.indexOf("setMode(\"link\");") && searchJs.indexOf("let platformCatalog=[],platformPage=1;") >= 0],
-  ["Title search and platform pager initialization remain reachable after platform mode setup", searchJs.includes('$("#titleSearchBtn")?.addEventListener("click",go)') && searchJs.includes("platformPrev?.addEventListener") && searchJs.includes("platformNext?.addEventListener")],
+  ["Title search and platform pager initialization remain reachable after platform mode setup", searchJs.includes('$("titleSearchBtn")?.addEventListener("click",go)') && searchJs.includes("platformPrev?.addEventListener") && searchJs.includes("platformNext?.addEventListener")],
   ["TikTok short-link domains are recognized even when platform catalogue aliases are incomplete", html.includes('/(?:^|\\.)tiktok\\.com$/') && html.includes('"tiktok"')],
   ["V95.0 browser release line is selected", read("../package.json").includes('"version": "95.0.0"')],
   ["Automatic release updater polls the no-store health endpoint and refreshes stale app versions", html.includes("/update-manager.js?v=__ARYANZZ_VERSION__") && read("../public/update-manager.js").includes("/api/health?version_check=") && read("../public/update-manager.js").includes("aryanzz:auto-update-target") && read("../public/update-manager.js").includes("reg.unregister()")],
