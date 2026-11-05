@@ -308,27 +308,31 @@ async function freePublicMediaInfo(rawUrl,requestUrl){
     threads:"Gunakan post Threads publik yang benar-benar memuat video.",
     soundcloud:"SoundCloud diproses sebagai audio (MP3/M4A jika tersedia), bukan video MP4."
   };
-  const canonicalUrl=await resolveSocialShortLink(rawUrl,key);
+  const canonicalUrl=await resolveSocialShortLink(rawUrl,key,key==="tiktok"?8000:11000);
   const providerUrls=key==="tiktok"?tikTokUrlCandidates(rawUrl,canonicalUrl):[canonicalUrl];
   let primaryError="";
   try{
     let response=null,data={},attempts=key==="instagram"?2:1;
-    for(const targetUrl of providerUrls){
+    const primaryTargets=key==="tiktok"?providerUrls.slice(0,2):[canonicalUrl];
+    const primaryResults=await Promise.allSettled(primaryTargets.map(async targetUrl=>{
       let candidateResponse=null,candidateData={};
       for(let attempt=0;attempt<attempts;attempt++){
         try{
           const endpoint=FREE_MEDIA_API+"/api/download/"+key+"?url="+encodeURIComponent(targetUrl);
-          candidateResponse=await fetch(endpoint,{headers:{accept:"application/json","user-agent":"Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/130.0.0.0 Mobile Safari/537.36",...(key==="instagram"?{referer:"https://www.instagram.com/"}:{})},signal:AbortSignal.timeout(key==="snackvideo"?12000:14000),cache:"no-store"});
+          candidateResponse=await fetch(endpoint,{headers:{accept:"application/json","user-agent":"Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/130.0.0.0 Mobile Safari/537.36",...(key==="instagram"?{referer:"https://www.instagram.com/"}:{})},signal:AbortSignal.timeout(key==="snackvideo"?12000:key==="tiktok"?10000:14000),cache:"no-store"});
           candidateData=await candidateResponse.json().catch(()=>({}));
           if(candidateResponse.ok||candidateResponse.status<500||attempt===attempts-1)break;
         }catch(error){
-          if(attempt===attempts-1){primaryError=String(error?.message||error).slice(0,180);break;}
+          if(attempt===attempts-1)throw error;
         }
         await new Promise(resolve=>setTimeout(resolve,650));
       }
-      response=candidateResponse;data=candidateData;
-      if(response?.ok||response&&response.status<500)break;
-    }
+      return {response:candidateResponse,data:candidateData,targetUrl};
+    }));
+    const fulfilled=primaryResults.filter(item=>item.status==="fulfilled").map(item=>item.value);
+    const chosen=fulfilled.find(item=>item.response?.ok||item.response&&item.response.status<500)||fulfilled[0];
+    if(chosen){response=chosen.response;data=chosen.data;}
+    else if(primaryResults.length)primaryError=String(primaryResults[0].reason?.message||primaryResults[0].reason||"Provider utama gagal").slice(0,180);
     if(response?.ok&&data?.success!==false){
       const normalized=freeProviderMediaInfo(data,canonicalUrl,requestUrl);
       if(normalized){
@@ -1284,8 +1288,8 @@ function extractTikTokPublicPageInfo(html,pageUrl,rawUrl,requestUrl){
   normalized.canonicalUrl=extractTikTokCanonicalUrl(source,pageUrl)||pageUrl;
   return normalized;
 }
-async function tikTokNativePageFallback(rawUrl,requestUrl){
-  const page=await fetchSocialPostHtml(rawUrl,14000);
+async function tikTokNativePageFallback(rawUrl,requestUrl,timeoutMs=9000){
+  const page=await fetchSocialPostHtml(rawUrl,timeoutMs);
   const canonical=extractTikTokCanonicalUrl(page.html,page.url)||page.url;
   return extractTikTokPublicPageInfo(page.html,canonical,rawUrl,requestUrl);
 }
@@ -1392,9 +1396,11 @@ async function tikwmFallbackMediaInfo(rawUrl,requestUrl,alternateUrls=[]){
     try{return normalizeTikTokFallbackPayload(result.value,task.targetUrl,requestUrl,task.name)}
     catch(error){errors.push(task.name+": "+String(error?.message||error).slice(0,95));}
   }
-  for(const targetUrl of urls){
-    try{return await tikTokNativePageFallback(targetUrl,requestUrl)}
-    catch(error){errors.push("TikTok public page ("+new URL(targetUrl).hostname+"): "+String(error?.message||error).slice(0,130));}
+  const nativeResults=await Promise.allSettled(urls.slice(0,2).map(targetUrl=>tikTokNativePageFallback(targetUrl,requestUrl,8000)));
+  for(let index=0;index<nativeResults.length;index++){
+    const result=nativeResults[index],targetUrl=urls[index];
+    if(result.status==="fulfilled")return result.value;
+    errors.push("TikTok public page ("+new URL(targetUrl).hostname+"): "+String(result.reason?.message||result.reason).slice(0,130));
   }
   throw new Error(errors.join("; ").slice(0,520)||"Semua provider alternatif TikTok gagal.");
 }
