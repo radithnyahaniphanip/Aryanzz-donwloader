@@ -1220,11 +1220,25 @@ async function fetchSocialPostHtml(pageUrl,timeoutMs=18000){
   let current=safePublicMediaUrl(pageUrl);if(!current)throw new Error("Tautan postingan harus HTTPS dan tidak boleh mengarah ke jaringan lokal.");
   for(let hop=0;hop<6;hop++){
     const isTikTokHost=current.hostname==="tiktok.com"||current.hostname.endsWith(".tiktok.com");
-    const response=await fetchSocialHeaders(current.href,{headers:{
+    const baseHeaders={
       accept:"text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-      "user-agent":"Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 Chrome/130.0.0.0 Mobile Safari/537.36",
-      ...(isTikTokHost?{referer:"https://www.tiktok.com/",origin:"https://www.tiktok.com"}:{})
-    },redirect:"manual",cache:"no-store"},timeoutMs);
+      "accept-language":"en-US,en;q=0.9,id;q=0.8"
+    };
+    const headerVariants=isTikTokHost?[
+      {...baseHeaders,"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",referer:"https://www.tiktok.com/"},
+      {...baseHeaders,"user-agent":"Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36",referer:"https://www.tiktok.com/",origin:"https://www.tiktok.com"}
+    ]:[{...baseHeaders,"user-agent":"Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36"}];
+    let response=null,lastResponseError="";
+    for(const requestHeaders of headerVariants){
+      response=await fetchSocialHeaders(current.href,{headers:requestHeaders,redirect:"manual",cache:"no-store"},timeoutMs);
+      if(isTikTokHost&&[403,429,500,502,503,504].includes(response.status)&&headerVariants.length>1){
+        lastResponseError="HTTP "+response.status;
+        await response.body?.cancel().catch(()=>{});
+        continue;
+      }
+      break;
+    }
+    if(!response)throw new Error(lastResponseError||"Halaman sumber tidak dapat dibaca.");
     if([301,302,303,307,308].includes(response.status)){
       const location=response.headers.get("location");if(!location)throw new Error("Pengalihan postingan tidak memiliki alamat tujuan.");
       const next=safePublicMediaUrl(new URL(location,current.href).href);
