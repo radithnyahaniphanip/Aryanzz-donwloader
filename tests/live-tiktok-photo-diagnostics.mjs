@@ -97,4 +97,21 @@ try{
 }
 await probe("official-player","https://www.tiktok.com/player/v1/"+itemId+"?controls=1&timestamp=1&description=1&music_info=1&rel=0");
 await probe("short-link",shortUrl);
+try{
+  const extractUrl=new URL("/api/image/extract",workerBase);
+  extractUrl.searchParams.set("url",canonicalUrl);
+  const extractResponse=await fetch(extractUrl.href,{cache:"no-store",headers:{accept:"application/json"},signal:AbortSignal.timeout(24000)});
+  const extractData=await extractResponse.json().catch(()=>({}));
+  console.log("[TIKTOK-PHOTO-WORKER-IMAGE-EXTRACT] "+JSON.stringify({
+    status:extractResponse.status,
+    ok:extractData.ok===true,
+    imageCount:Array.isArray(extractData.images)?extractData.images.length:0,
+    firstPreview:extractData.images?.[0]?.previewUrl||null,
+    firstDownload:extractData.images?.[0]?.downloadUrl||null,
+    error:extractData.error||null,
+    diagnostics:extractData.diagnostics||null
+  }));
+}catch(error){
+  console.log("[TIKTOK-PHOTO-WORKER-IMAGE-EXTRACT] "+JSON.stringify({error:String(error?.message||error).slice(0,240)}));
+}
 console.log("[TIKTOK-PHOTO-RESOLUTION] "+JSON.stringify({shortUrl,canonicalUrl,itemId,infoStatus:infoResponse.status,providerName:resolvedInfo.providerName||null,embedUrl:resolvedInfo.embedUrl||null}));
