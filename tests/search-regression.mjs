@@ -17,8 +17,11 @@ globalThis.fetch=async(input,init={})=>{
     return new Response(videoSearchHtml,{status:200,headers:{"content-type":"text/html; charset=utf-8"}});
   if(url.hostname==="www.google.com")
     return new Response("",{status:200,headers:{"content-type":"text/html; charset=utf-8"}});
-  if(url.hostname==="bsky.app")
-    return new Response(url.pathname.endsWith("/456")?publicImagePostHtml:publicPostHtml,{status:200,headers:{"content-type":"text/html; charset=utf-8"}});
+  if(url.hostname==="bsky.app"){
+    const imageOnly=url.pathname.endsWith("/456");
+    console.log("Mock Bluesky page:",url.pathname,"imageOnly:",imageOnly);
+    return new Response(imageOnly?publicImagePostHtml:publicPostHtml,{status:200,headers:{"content-type":"text/html; charset=utf-8"}});
+  }
   throw new Error("Unexpected mocked search fetch: "+url.href);
 };
 
