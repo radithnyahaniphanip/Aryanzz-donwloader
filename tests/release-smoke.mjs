@@ -147,7 +147,7 @@ const checks = [
   ["Local worker loads primary and fallback single-thread cores", converterJs.includes("for(let index=0;index<CORE_BASES.length;index++)") && converterJs.includes("instance.terminate()") && converterJs.includes("coreURL:base+\"/ffmpeg-core.js\"")],
   ["Worker CSP permits blob fetch for local WASM resources", worker.includes("connect-src") && worker.includes("wss: blob:;")],
   ["Homepage release label is generated from the build version placeholder", html.includes("__ARYANZZ_VERSION__")],
-  ["Worker health reports the generated build version", worker.includes("version:BUILD_VERSION")],
+  ["Worker health reports the generated build version", worker.includes("version:env.ARYANZZ_BUILD_VERSION||BUILD_VERSION")],
   ["Homepage loads the shared V89 shell stylesheet", html.includes("/v89.css?v=93.2")],
   ["Every homepage JS and CSS asset is included in the active PWA shell cache", htmlAssetRefs.length>0 && htmlAssetRefs.every(ref=>sw.includes('"'+ref+'"'))],
   ["PWA cache namespace is build-scoped and refreshed on each deployment", sw.includes('const CACHE="aryanzz-build-__ARYANZZ_VERSION__"')],
