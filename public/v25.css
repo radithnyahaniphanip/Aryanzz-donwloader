@@ -182,3 +182,68 @@ body.v25-motion-pulse .v25-profile-card{animation:v851-pop .45s ease both}
 body[data-motion="off"] *,body[data-motion="off"] *:before,body[data-motion="off"] *:after{animation:none!important;scroll-behavior:auto!important;transition:none!important}
 @media(prefers-reduced-motion:reduce){body:not([data-motion="on"]) *,body:not([data-motion="on"]) *:before,body:not([data-motion="on"]) *:after{animation:none!important;transition:none!important}}
 @media(max-width:700px){body[data-motion="on"] .v25-profile-card{animation-duration:7s}body[data-motion="on"] .v25-profile-cover:after{animation-duration:9s}}
+
+
+/* ARYANZZ V95.1 — compact Library backup and horizontal profile ID controls */
+.v25-backup-card{
+  width:100%;
+  max-width:none;
+  box-sizing:border-box;
+  margin:16px 0 0!important;
+}
+.v25-backup-card .v25-section-heading{margin-bottom:14px}
+.v25-backup-actions{
+  display:grid!important;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;
+  margin:0;
+}
+.v25-backup-actions>*{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-width:0;
+  min-height:44px;
+  padding:10px 9px;
+  text-align:center;
+  white-space:nowrap;
+}
+.v25-backup-actions #restoreAutoBackup{grid-column:1/-1}
+.v25-profile-id-row{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  width:100%;
+  min-width:0;
+  flex-wrap:nowrap;
+}
+.v25-profile-id-row code{
+  display:inline-flex;
+  align-items:center;
+  flex:1 1 auto;
+  min-width:0;
+  max-width:100%;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.v25-profile-id-row #profileCopyId{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  flex:0 0 auto;
+  min-width:88px;
+  max-width:none;
+  white-space:nowrap;
+  word-break:keep-all;
+  writing-mode:horizontal-tb;
+  text-orientation:mixed;
+}
+@media(max-width:420px){
+  .v25-backup-card{margin-top:14px!important}
+  .v25-backup-actions{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .v25-backup-actions>*{font-size:11px;padding:9px 6px}
+  .v25-profile-id-row{gap:7px}
+  .v25-profile-id-row code{font-size:12px;padding:8px 9px}
+  .v25-profile-id-row #profileCopyId{min-width:78px;padding:9px 8px;font-size:11px}
+}

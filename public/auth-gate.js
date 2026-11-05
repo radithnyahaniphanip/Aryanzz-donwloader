@@ -20,12 +20,12 @@ function setUser(user){
  const isDeveloper=!!user&&String(user.id||"").toUpperCase()==="ARY-ZFTLQPEX92";
  window.aryanzzIsDeveloper=isDeveloper;
  const node=$("profileRandomId"),copy=$("profileCopyId"),logout=$("accountLogout"),desc=$("profileIdDescription");
- if(node){if(user)node.textContent=user.id;node.classList.toggle("ary-developer-id",isDeveloper);node.setAttribute("aria-label",isDeveloper?"ID developer website":"ID akun ARYANZZ");}
- if(desc)desc.textContent=isDeveloper?"ID developer website · akses pengelola ARYANZZ.":"ID akun lokal ARYANZZ pada browser ini.";
+ if(node){if(user)node.textContent=user.id;node.classList.toggle("ary-developer-id",isDeveloper);node.setAttribute("aria-label","ID akun ARYANZZ");}
+ if(desc)desc.textContent="ID akun lokal ARYANZZ pada browser ini.";
  if(copy&&user)copy.onclick=async()=>{try{await navigator.clipboard.writeText(user.id);say("ID akun berhasil disalin.")}catch{say("Tidak dapat menyalin ID pada browser ini.",true)}};
  if(logout)logout.hidden=!user;
- const editor=$("ownerLinkEditor"),security=$("securityCenter"),ownerEdit=$("ownerEditProfile"),developerBadge=$("profileDeveloperBadge");
- if(editor)editor.hidden=!isDeveloper;if(security)security.hidden=!isDeveloper;if(ownerEdit)ownerEdit.hidden=!isDeveloper;if(developerBadge)developerBadge.hidden=!isDeveloper;
+ const editor=$("ownerLinkEditor"),security=$("securityCenter"),ownerEdit=$("ownerEditProfile");
+ if(editor)editor.hidden=!isDeveloper;if(security)security.hidden=!isDeveloper;if(ownerEdit)ownerEdit.hidden=!isDeveloper;
  document.body.classList.toggle("ary-developer-account",isDeveloper);
  if(gate)gate.hidden=!!user;document.body.classList.toggle("ary-authenticated",!!user);
 }

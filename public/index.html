@@ -726,9 +726,7 @@ body{background-color:var(--ary-app-bg)}
   <div class="ary-library-note"><b>Disimpan di perangkat ini</b><p>Riwayat dan favorit tersimpan di browser ini, tidak otomatis tersinkron ke perangkat lain.</p></div>
   <section class="v25-profile-card v25-backup-card">
     <div class="v25-section-heading"><div><span class="v25-kicker">YOUR DATA</span><h3>Backup & pemulihan</h3></div><span class="v25-heading-icon">⬡</span></div>
-    <p class="v25-muted">Ekspor profil, riwayat, dan favorit untuk dipindahkan atau dipulihkan di perangkat lain.</p>
     <div class="v25-backup-actions"><button class="tag" id="exportData" type="button">↓ Ekspor backup</button><label class="tag v25-import-label">↑ Pulihkan backup<input id="importData" type="file" accept="application/json" hidden></label><button class="tag" id="restoreAutoBackup" type="button">↺ Pulihkan cadangan otomatis</button></div>
-    <small class="v25-privacy-note">Auto-save dan cadangan otomatis tersimpan di browser perangkat ini. Ekspor file backup untuk memindahkan data ke perangkat lain; penyimpanan browser yang dihapus akan menghapus cadangan lokal.</small>
   </section>
 </div><div class="panel card image-studio-panel" id="imageTools">
   <div class="image-studio-heading"><div><span class="section-kicker">ARYANZZ CREATIVE LAB</span><h3>▧ Image Studio</h3></div><span class="image-studio-mark">✦</span></div>
@@ -823,7 +821,7 @@ body{background-color:var(--ary-app-bg)}
       <div class="v25-form-foot"><small id="profileCharCount">0/160 karakter</small><button class="primary" id="profileSave" type="button">Simpan perubahan</button></div>
       <button class="v25-text-button" id="profileReset" type="button">Reset informasi profil</button><small class="v25-privacy-note" id="profileAutoSaveStatus" role="status" aria-live="polite">Menyiapkan penyimpanan otomatis…</small>
     </section>
-    <section class="v25-profile-card v25-account-id-card"><div class="v25-section-heading"><div><span class="v25-kicker">PROFILE IDENTIFIER</span><h3>ID profil</h3></div><span class="v25-heading-icon">⌁</span></div><p class="v25-muted">ID profil sementara pada perangkat ini. ID akun resmi akan diterbitkan server setelah registrasi akun diaktifkan.</p><div class="v25-profile-id-row"><code id="profileRandomId">ARY-••••••••</code><span id="profileDeveloperBadge" class="v25-member-badge ary-profile-developer-badge" hidden>♛ DEVELOPER WEBSITE</span><button class="tag" id="profileCopyId" type="button">Salin ID</button></div><small class="v25-privacy-note" id="profileIdDescription">ID profil sementara pada perangkat ini.</small><button class="v25-text-button" id="accountLogout" type="button" hidden>Keluar dari akun</button></section>
+    <section class="v25-profile-card v25-account-id-card"><div class="v25-section-heading"><div><span class="v25-kicker">PROFILE IDENTIFIER</span><h3>ID profil</h3></div><span class="v25-heading-icon">⌁</span></div><p class="v25-muted">ID profil sementara pada perangkat ini. ID akun resmi akan diterbitkan server setelah registrasi akun diaktifkan.</p><div class="v25-profile-id-row"><code id="profileRandomId">ARY-••••••••</code><button class="tag" id="profileCopyId" type="button">Salin ID</button></div><small class="v25-privacy-note" id="profileIdDescription">ID profil sementara pada perangkat ini.</small><button class="v25-text-button" id="accountLogout" type="button" hidden>Keluar dari akun</button></section>
   </div>
   <section class="v25-profile-card v25-device-card">
     <div class="v25-section-heading"><div><span class="v25-kicker">DEVICE & PRIVACY</span><h3>Riwayat perangkat & lokasi</h3></div><span class="v25-heading-icon">⌖</span></div>
@@ -849,7 +847,7 @@ body{background-color:var(--ary-app-bg)}
       <div class="owner-cover" id="ownerCover" aria-label="Latar visual pemilik"><div class="owner-cover-orbit"></div></div>
       <div class="owner-avatar-row"><div class="owner-avatar" id="ownerAvatar">A</div></div>
       <div class="owner-profile-content">
-        <div class="owner-badges"><span class="owner-badge owner-badge-gold">♛ DEVELOPER WEBSITE</span><span class="owner-badge owner-badge-green">✦ ARYANZZ CREATOR</span></div>
+        <div class="owner-badges"><span id="ownerDeveloperBadge" class="owner-badge owner-badge-gold">♛ DEVELOPER WEBSITE</span><span class="owner-badge owner-badge-green">✦ ARYANZZ CREATOR</span></div>
         <h2 id="ownerName">ARYANZZ</h2>
         <p class="owner-handle" id="ownerHandle">@ARYANZZ</p>
         <p class="owner-bio" id="ownerBio">Merancang, membangun, dan mengembangkan ekosistem digital ARYANZZ.</p>
