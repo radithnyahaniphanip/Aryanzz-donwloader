@@ -12,6 +12,18 @@ try{
     const photoData=await photoResponse.json().catch(()=>({}));
     report.photoImageCount=Array.isArray(photoData.images)?photoData.images.length:0;
     report.photoImageError=photoData.error||null;report.photoDiagnostics=photoData.diagnostics||null;
+    report.photoPreviewStatus=null;report.photoPreviewMime=null;report.photoDownloadReady=false;
+    const firstPhoto=photoData.images?.[0];
+    if(firstPhoto?.previewUrl){
+      try{
+        const previewUrl=new URL(firstPhoto.previewUrl);
+        if(previewUrl.origin!==base||previewUrl.pathname!=="/api/image/file")throw new Error("URL preview foto tidak melewati proxy ARYANZZ.");
+        const photoPreview=await request(previewUrl.pathname+previewUrl.search);
+        report.photoPreviewStatus=photoPreview.status;report.photoPreviewMime=photoPreview.headers.get("content-type");
+        await photoPreview.body?.cancel().catch(()=>{});
+        report.photoDownloadReady=photoPreview.ok&&String(report.photoPreviewMime||"").startsWith("image/");
+      }catch(error){report.photoPreviewError=String(error?.message||error).slice(0,160)}
+    }
   }catch(error){report.photoImageError=String(error?.message||error).slice(0,160)}
   report.canonicalUrl=info.canonicalUrl||null;
   report.providerName=info.providerName||null;
@@ -94,6 +106,14 @@ try{
   if(!report.durationSeconds)console.log("[TIKTOK-USER-LINK-NOTE] Provider tidak mengirim durasi pada metadata; pemutar HP harus mengambil durasi asli melalui event loadedmetadata.");
 }catch(error){
   if(String(error?.message||error)==="__TIKTOK_EMBED_PLAYBACK_HANDLED__"){
+    if(/\/photo\//i.test(String(report.canonicalUrl||""))&&report.photoImageCount===0){
+      report.downloadReady=false;
+      report.error="Photo Mode: pemutar resmi bisa dibuka, tetapi galeri foto asli belum berhasil diekstrak; unduhan foto belum tersedia.";
+      process.exitCode=1;
+    }else if(/\/photo\//i.test(String(report.canonicalUrl||""))&&report.photoImageCount>0){
+      report.downloadReady=report.photoDownloadReady===true;
+      if(!report.downloadReady){report.error="Galeri foto ditemukan, tetapi file foto belum lolos pemeriksaan unduhan." ;process.exitCode=1;}
+    }
     console.log("[TIKTOK-USER-LINK-RESULT] "+JSON.stringify(report));
   }else{
     report.error=String(error?.message||error).slice(0,320);
