@@ -24,10 +24,14 @@ function hasStaleLocalAssetReferences(){
 }
 function hasLegacyProfileLayout(){
  const profile=document.getElementById("profile");
+ const owner=document.getElementById("owner");
  const title=document.getElementById("ownerDeveloperBadge");
  const titleStack=title?.parentElement?.classList.contains("owner-identity-titles");
  const creator=title?.parentElement?.querySelector(".owner-creator-title");
- return !title||!!(profile&&profile.querySelector(".ary-theme-studio,[data-theme-studio],.v25-backup-card,#exportData,#importData,#restoreAutoBackup,#ownerLinkEditor,#securityCenter,#profileDeveloperBadge,[data-panel=colorStudio],[data-panel=mediaStudio]"))||!!(title&&!titleStack)||!!(title&&!creator);
+ const profileV2=!!(profile?.classList.contains("ary-profile-v2")&&profile.querySelector(".ary-profile2-header")&&profile.querySelector(".ary-profile2-device")&&profile.querySelector("#profileRandomId")&&profile.querySelector("#profileCopyId"));
+ const ownerV2=!!(owner?.classList.contains("ary-owner-v2")&&owner.querySelector(".ary-owner2-hero")&&owner.querySelector(".ary-owner2-social-grid")&&owner.querySelector("#ownerDeveloperBadge"));
+ const oldProfileControls=profile?.querySelector(".ary-theme-studio,[data-theme-studio],.v25-backup-card,#exportData,#importData,#restoreAutoBackup,#ownerLinkEditor,#securityCenter,#profileDeveloperBadge,[data-panel=colorStudio],[data-panel=mediaStudio]");
+ return !profileV2||!ownerV2||!!oldProfileControls||!titleStack||!creator;
 }
 function showNotice(version){
  if(document.getElementById("aryanzzUpdateNotice"))return;
