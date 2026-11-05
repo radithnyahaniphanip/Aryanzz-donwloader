@@ -114,11 +114,12 @@
 
   function setupReveal(){
     const targets=document.querySelectorAll(".v25-profile-card,.v25-profile-stats>div");
-    if(document.body.dataset.motion==="off"){targets.forEach(el=>el.classList.add("v25-visible"));return;}
-    if(!("IntersectionObserver" in window)||window.matchMedia("(prefers-reduced-motion: reduce)").matches){targets.forEach(el=>el.classList.add("v25-visible"));return;}
-    targets.forEach(el=>el.classList.add("v25-reveal"));
-    const observer=new IntersectionObserver(entries=>entries.forEach(entry=>{if(entry.isIntersecting){entry.target.classList.add("v25-visible");observer.unobserve(entry.target);}}),{threshold:.08});
-    targets.forEach(el=>observer.observe(el));
+    targets.forEach(el=>{
+      el.classList.remove("v25-reveal");
+      el.classList.add("v25-visible");
+      el.style.opacity="1";
+      el.style.transform="none";
+    });
   }
   function setupPremiumEffects(){
     if(document.body.dataset.motion==="off")return;
