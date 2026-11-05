@@ -11,7 +11,7 @@
 #titleModePanel[hidden]{display:none!important}
 #titleModePanel .v674-search-type-row{margin:0;min-width:0}
 #titleModePanel .v674-search-type-row .field{width:100%;max-width:none;min-width:0}
-#titleModePanel .inputrow.v674-input-row{display:grid;grid-template-columns:minmax(0,1fr) 44px 92px;gap:8px;min-width:0}
+#titleModePanel .inputrow.v674-input-row{display:grid;grid-template-columns:minmax(0,1fr) 92px;gap:8px;min-width:0}
 #titleModePanel .inputrow.v674-input-row>*{min-width:0;width:100%}
 #titleModePanel .inputrow.v674-input-row .field{min-height:48px;padding:11px 12px}
 #titleModePanel .inputrow.v674-input-row .primary{min-width:0;min-height:48px;padding:10px 8px}
@@ -24,7 +24,7 @@
 .v674-pagination{align-items:center;gap:9px}
 .v674-pagination>span{min-width:100%;line-height:1.5}
 @media(min-width:700px){.v674-platform-result-list{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:380px){#titleModePanel .inputrow.v674-input-row{grid-template-columns:minmax(0,1fr) 40px 76px;gap:6px}#titleModePanel .inputrow.v674-input-row .primary{font-size:12px}}
+@media(max-width:380px){#titleModePanel .inputrow.v674-input-row{grid-template-columns:minmax(0,1fr) 76px;gap:6px}#titleModePanel .inputrow.v674-input-row .primary{font-size:12px}}
 
 
 /* ARYANZZ Smart Search V94.12.2 — unified three-column result grid */

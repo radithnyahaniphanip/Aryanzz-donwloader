@@ -1,4 +1,4 @@
-# ARYANZZ V94.16.0 — Local accounts, Color Studio & unified creator workspace
+# ARYANZZ V95.1.0 — Stable navigation, 200-platform search & unified media workspace
 
 Production website: https://aryanzz-donwloader.radithnyahaniphanip.workers.dev/
 
@@ -395,3 +395,13 @@ ARYANZZ cannot technically guarantee immunity from regulatory access restriction
 - **Review official notices promptly.** Preserve the notice and response record, verify the sender and legal scope, and comply with applicable deadlines and lawful instructions. Obtain Indonesian legal advice for the service's precise PSE, copyright, and personal-data obligations.
 
 Relevant references: Permenkominfo No. 5 Tahun 2020 (as amended), https://jdih.komdigi.go.id/produk_hukum/view/id/759/t/pera ; UU No. 27 Tahun 2022 tentang Pelindungan Data Pribadi, https://peraturan.bpk.go.id/Details/229798/uu-no-27-tahun-2022.
+
+
+## V95.1.0 — navigation and platform-search stabilization
+
+- Remove slide-up panel transitions and smooth page scrolling from all primary menu navigation, including Beranda, Tools, Library, Owner, Profile, About and Help.
+- Add a searchable 200-platform picker. Exact matches take priority (typing “Facebook” shows Facebook only); partial matches show matching names, and clearing the query restores the paginated catalogue.
+- Remove the voice-search microphone from title search and rebalance the mobile input row.
+- Give title search a clear external search handoff when internal providers return no verifiable result; external search links are not presented as verified download results.
+- Bump the release line to 95.1.x so the build generator no longer publishes the stale 95.0.x version label.
+- Keep the download checker honest: MP4, image, photo-mode, live-stream, and audio availability depends on the actual public media formats exposed by each source; no login, DRM, CAPTCHA, or private-content restrictions are bypassed.
