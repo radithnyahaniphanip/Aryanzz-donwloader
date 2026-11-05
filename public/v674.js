@@ -7,7 +7,7 @@ async function copy(s){try{await navigator.clipboard.writeText(s);return true}ca
 function initTheme(){document.body.dataset.theme=localStorage.getItem(THEME)||"dark";const b=$("themeToggle");if(!b)return;const draw=()=>{b.textContent=document.body.dataset.theme==="light"?"☾":"☼"};draw();b.onclick=()=>{const v=document.body.dataset.theme==="light"?"dark":"light";document.body.dataset.theme=v;localStorage.setItem(THEME,v);draw();toast("Tema "+v+" diaktifkan")}}
 function initSearch(){
 const a=$("downloadLinkMode"),b=$("downloadTitleMode"),x=$("linkModePanel"),y=$("titleModePanel"),picker=$("platformPicker");
-const results=$("titleSearchResults"),help=$("titleSearchHelp"),searchInput=$("titleSearch"),searchType=$("titleSearchType");
+const results=$("titleSearchResults"),help=$("titleSearchHelp"),searchInput=$("titleSearch"),searchType=$("titleSearchType"),platformSearch=$("platformSearch");
 const linkInput=$("url"),linkLabel=$("linkModePanel")?.querySelector("label");
 // Hanya sediakan pencarian Video dan Gambar; konversi MP4 ke MP3 berada di Pusat Alat.
 // All-platform mode searches the complete supported platform list.
@@ -114,12 +114,28 @@ const platformPager=$("platformPager"),platformPrev=$("platformPrev"),platformNe
 const platformPageSize=20;
 function renderPlatformPage(nextPage){
  if(!picker||!platformCatalog.length)return;
- const totalPages=Math.max(1,Math.ceil(platformCatalog.length/platformPageSize));
+ const query=String(platformSearch?.value||"").normalize("NFKC").trim().toLocaleLowerCase("id-ID");
+ let matches=platformCatalog;
+ if(query){
+  matches=platformCatalog.filter(platform=>String(platform.name||"").normalize("NFKC").toLocaleLowerCase("id-ID").includes(query));
+  const exact=matches.filter(platform=>String(platform.name||"").normalize("NFKC").trim().toLocaleLowerCase("id-ID")===query);
+  if(exact.length)matches=exact;
+ }
+ const totalPages=Math.max(1,Math.ceil(matches.length/platformPageSize));
  platformPage=Math.max(1,Math.min(totalPages,Number(nextPage)||1));
  const start=(platformPage-1)*platformPageSize;
- const visible=platformCatalog.slice(start,start+platformPageSize);
+ const visible=matches.slice(start,start+platformPageSize);
  picker.replaceChildren();
- if(allPlatformButton){allPlatformButton.querySelector("span:last-child").textContent="Semua 200";picker.append(allPlatformButton)}
+ if(allPlatformButton){
+  allPlatformButton.querySelector("span:last-child").textContent="Semua 200";
+  allPlatformButton.hidden=!!query||activeMode==="link";
+  if(!query)picker.append(allPlatformButton);
+ }
+ if(!visible.length){
+  const empty=document.createElement("p");empty.className="v736-platform-empty";empty.setAttribute("role","status");
+  empty.textContent="Platform tidak ditemukan. Coba nama lain.";
+  picker.append(empty);
+ }
  for(const platform of visible){
   let button=platformTemplates.get(platform.id)?.cloneNode(true);
   if(!button){
@@ -154,8 +170,10 @@ function renderPlatformPage(nextPage){
   button.setAttribute("aria-pressed",String(button.dataset.platform===selected));
   picker.append(button);
  }
- if(platformPager)platformPager.hidden=false;
- if(platformPageLabel)platformPageLabel.textContent="Halaman "+platformPage+" / "+totalPages+" · "+(start+1)+"–"+(start+visible.length)+" dari 200";
+ if(platformPager)platformPager.hidden=matches.length<=platformPageSize;
+ if(platformPageLabel)platformPageLabel.textContent=query
+  ?(matches.length?matches.length+" platform cocok untuk “"+String(platformSearch.value).trim()+"”":"Tidak ada platform yang cocok")
+  :"Halaman "+platformPage+" / "+totalPages+" · "+(start+1)+"–"+(start+visible.length)+" dari "+platformCatalog.length;
  if(platformPrev)platformPrev.disabled=platformPage<=1;
  if(platformNext)platformNext.disabled=platformPage>=totalPages;
 }
@@ -182,6 +200,7 @@ async function loadPlatformCatalog(){
 }
 platformPrev?.addEventListener("click",()=>renderPlatformPage(platformPage-1));
 platformNext?.addEventListener("click",()=>renderPlatformPage(platformPage+1));
+platformSearch?.addEventListener("input",()=>renderPlatformPage(1));
 loadPlatformCatalog();
 function searchResultBelongsTo(item,platform){
  let host="";try{host=new URL(item?.url||item?.sourceUrl||"").hostname.toLowerCase().replace(/^www\./,"")}catch{return false}
@@ -189,11 +208,15 @@ function searchResultBelongsTo(item,platform){
  if(key==="all")return Object.values(SEARCH_PLATFORM_DOMAINS).flat().some(domain=>host===domain||host.endsWith("."+domain));
  return (SEARCH_PLATFORM_DOMAINS[key]||[]).some(domain=>host===domain||host.endsWith("."+domain));
 }
-function showFallback(target,q){
+function showFallback(target,q,kind="video"){
 const card=document.createElement("article");card.className="v674-search-result v736-search-handoff";
-const title=document.createElement("h3");title.textContent="Pencarian "+target.name+" belum tersedia";
-const note=document.createElement("p");note.textContent="Provider pencarian video/audio gratis belum mengirim hasil. Kamu tetap bisa membuka pencarian "+target.name+" dari sini.";
-const open=document.createElement("a");open.className="primary";open.href=target.url(q);open.target="_blank";open.rel="noopener noreferrer";open.textContent="Buka pencarian "+target.name+" ↗";
+const title=document.createElement("h3");title.textContent="Pencarian "+target.name+" belum mengirim hasil";
+const note=document.createElement("p");note.textContent="Hasil internal belum tersedia atau sedang dibatasi. Kamu bisa membuka pencarian sumber eksternal, lalu tempel tautan postingan publik di ARYANZZ untuk memeriksa format media yang benar-benar tersedia.";
+const fallbackQuery=selected==="all"?"":(SEARCH_PLATFORM_DOMAINS[SEARCH_PLATFORM_ALIASES[selected]||selected]||[]).map(domain=>"site:"+domain).join(" OR ");
+const href=kind==="image"
+ ?"https://www.google.com/search?tbm=isch&q="+encodeURIComponent([fallbackQuery,q].filter(Boolean).join(" "))
+ :target.url(q);
+const open=document.createElement("a");open.className="primary";open.href=href;open.target="_blank";open.rel="noopener noreferrer";open.textContent=kind==="image"?"Buka pencarian gambar ↗":"Buka pencarian "+target.name+" ↗";
 card.append(title,note,open);results.append(card);
 }
 function safeImageProxy(raw){
@@ -215,7 +238,7 @@ action.addEventListener("click",()=>{
 if(item.verified&&String(item.extension||"").toLowerCase()==="mp3"&&item.downloadUrl){
 const link=document.createElement("a");link.href=item.downloadUrl;link.download=(item.title||"aryanzz-audio").replace(/[^a-z0-9 _-]/gi,"").trim().slice(0,70)+".mp3";document.body.append(link);link.click();link.remove();return;
 }
-const input=$("url");if(!input)return;input.value=item.url;setMode("link");$("analyze")?.click();$("downloadResult")?.scrollIntoView({behavior:"smooth",block:"nearest"});
+const input=$("url");if(!input)return;input.value=item.url;setMode("link");$("analyze")?.click();$("downloadResult")?.scrollIntoView({behavior:"auto",block:"nearest"});
 });
 card.append(main,action);results.append(card);return;
 }
@@ -229,7 +252,7 @@ if(searchType?.value==="audio"&&item.mediaMode==="audio"&&item.verified&&item.pr
 try{const audioUrl=new URL(item.previewUrl,location.origin);if(audioUrl.origin===location.origin&&audioUrl.pathname==="/api/social-file"){const player=document.createElement("audio");player.controls=true;player.preload="none";player.src=audioUrl.href;player.setAttribute("aria-label","Pratinjau audio "+(item.title||"hasil pencarian"));player.style.cssText="display:block;width:100%;margin:10px 0";card.append(player);}}catch{}
 }
 pick.type="button";pick.className="primary";pick.textContent=searchType?.value==="audio"?"Periksa & buat MP3":"Lihat & unduh";
-pick.addEventListener("click",()=>{const input=$("url");if(!input||!item.url)return;const source=SEARCH_PLATFORM_ALIASES[item.platform]||item.platform;if(platforms[source])setPlatform(source);setMode("link");input.value=item.url;$("analyze")?.click();$("downloadResult")?.scrollIntoView({behavior:"smooth",block:"nearest"})});
+pick.addEventListener("click",()=>{const input=$("url");if(!input||!item.url)return;const source=SEARCH_PLATFORM_ALIASES[item.platform]||item.platform;if(platforms[source])setPlatform(source);setMode("link");input.value=item.url;$("analyze")?.click();$("downloadResult")?.scrollIntoView({behavior:"auto",block:"nearest"})});
 info.append(title,meta,snippet,pick);card.append(info);
 // Keep every platform result in one shared grid; platform identity stays on each card.
 results.append(card);
@@ -266,7 +289,7 @@ const go=async()=>{
 const q=(searchInput?.value||"").trim();if(!q){if(help)help.textContent="Masukkan judul atau kata kunci gambar.";return}if(q.length<2){if(help)help.textContent="Masukkan minimal 2 karakter.";return}
 searchController?.abort();searchController=new AbortController();
 results.hidden=false;results.replaceChildren();
-const target=selected==="all"?{name:"Semua 200 platform"}:platforms[selected],kind=["image","audio"].includes(searchType?.value)?searchType.value:"video";
+const target=selected==="all"?{name:"Semua 200 platform",url:q=>"https://www.google.com/search?q="+encodeURIComponent(q)}:platforms[selected],kind=["image","audio"].includes(searchType?.value)?searchType.value:"video";
 const loading=document.createElement("div");loading.className="v674-search-loading";loading.textContent=kind==="image"?"Mencari gambar dari "+target.name+"…":kind==="audio"?"Mencari musik dan video sumber untuk dibuat MP3 dari "+target.name+"…":"Mencari video dari "+target.name+"…";results.append(loading);
 const btn=$("titleSearchBtn");if(btn){btn.disabled=true;btn.textContent="Mencari…"}
 if(help)help.textContent=selected==="all"?"Smart Search aktif: mencari lintas 200 platform dan mengelompokkan hasil menurut sumber.":kind==="image"?"Mode gambar: sumber "+target.name+".":kind==="audio"?"Mode audio: hanya file audio yang diverifikasi dari "+target.name+".":"Mode video: sumber "+target.name+".";
@@ -300,22 +323,13 @@ pager.append(prev,status,size,next);results.append(pager);updatePage();
 if(error?.name==="AbortError")return;
 results.replaceChildren();
 const note=document.createElement("p");note.className="v674-title-help";note.textContent=String(error?.message||"Pencarian belum tersedia.").slice(0,220);results.append(note);
-if(help)help.textContent=selected==="all"?"Pencarian lintas platform aktif. Hasil video akan dikelompokkan menurut sumber.":kind==="image"?"Pencarian gambar hanya menampilkan sumber "+target.name+".":kind==="audio"?"Pencarian audio hanya menampilkan file audio terverifikasi dari "+target.name+".":"Pencarian video hanya menampilkan sumber "+target.name+".";
+showFallback(target,q,kind);
+if(help)help.textContent=selected==="all"?"Smart Search lintas platform belum menemukan hasil yang dapat diverifikasi. Gunakan tautan sumber publik sebagai alternatif.":kind==="image"?"Pencarian gambar hanya menampilkan sumber "+target.name+".":kind==="audio"?"Pencarian audio hanya menampilkan file audio terverifikasi dari "+target.name+".":"Pencarian video hanya menampilkan sumber "+target.name+".";
 }finally{if(btn){btn.disabled=false;btn.textContent="Cari ⌕"}}
 };
 $("titleSearchBtn")?.addEventListener("click",go);searchInput?.addEventListener("keydown",e=>{if(e.key==="Enter")go()});
 }
 
-const titleMic=$("titleSearchMic");
-titleMic?.addEventListener("click",()=>{
- const Speech=window.SpeechRecognition||window.webkitSpeechRecognition;
- if(!Speech){if(help)help.textContent="Pencarian suara belum didukung browser ini. Silakan ketik kata kunci.";return;}
- const recognition=new Speech();recognition.lang="id-ID";recognition.interimResults=false;recognition.maxAlternatives=3;
- titleMic.disabled=true;if(help)help.textContent="Mendengarkan… ucapkan judul yang ingin dicari.";
- recognition.onresult=e=>{const transcript=e.results?.[0]?.[0]?.transcript||"";if(searchInput)searchInput.value=transcript;if(help)help.textContent="Kata yang dikenali: "+transcript+" · mulai mencari…";$("titleSearchBtn")?.click();};
- recognition.onerror=()=>{if(help)help.textContent="Suara tidak berhasil dikenali. Coba lagi atau ketik judul.";};
- recognition.onend=()=>{titleMic.disabled=false;};try{recognition.start()}catch{titleMic.disabled=false;}
-});
 function initTools(){const input=$("toolSearch"),grid=$("toolGrid"),filters=$("toolFilters"),empty=$("toolEmpty");if(!input||!grid||!filters)return;let category="all";const cards=[...grid.querySelectorAll(".tool")];const apply=()=>{let n=0;const q=input.value.toLowerCase().trim();cards.forEach(c=>{const show=(category==="all"||c.dataset.category===category)&&c.textContent.toLowerCase().includes(q);c.hidden=!show;if(show)n++});empty.hidden=n>0};filters.onclick=e=>{const b=e.target.closest("[data-tool-filter]");if(!b)return;category=b.dataset.toolFilter;filters.querySelectorAll("button").forEach(x=>x.classList.toggle("active",x===b));apply()};input.oninput=apply}
 const rand=(a,b)=>Math.random()*(b-a)+a;
 function toHex(h,s,l){s/=100;l/=100;const k=n=>(n+h/30)%12,a=s*Math.min(l,1-l),f=n=>l-a*Math.max(-1,Math.min(k(n)-3,Math.min(9-k(n),1)));return "#"+[f(0),f(8),f(4)].map(v=>Math.round(v*255).toString(16).padStart(2,"0")).join("").toUpperCase()}
