@@ -130,6 +130,7 @@
       if (!event.key || event.key === KEY) renderLinks();
     });
     window.addEventListener("aryanzz:profile-assets-updated", renderOwnerProfile);
+    window.addEventListener("aryanzz:history-updated", renderOwnerProfile);
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init, { once: true });
   else init();
