@@ -23,10 +23,10 @@ function summarizeJson(payload){
   return {topKeys:Object.keys(payload||{}).slice(0,30),statusCode:payload?.statusCode??payload?.status_code??null,hasItem:!!item,itemKeys:item?Object.keys(item).slice(0,40):[],imagePostKeys:imagePost?Object.keys(imagePost).slice(0,30):[],imageCount:images.length,firstImageKeys:firstKeys,firstImagePreview:first?JSON.stringify(first).slice(0,700):null,mentionsImagePost:serialized.includes("imagePost"),mentionsImageURL:serialized.includes("imageURL"),mentionsUrlList:serialized.includes("urlList"),urlHosts};
 }
 async function probe(name,url,extraHeaders={}){
-  const result={name,url:new URL(url).origin+new URL(url).pathname,status:null,contentType:null,finalUrl:null,bytes:0,kind:null,details:null,error:null};
+  const result={name,url:new URL(url).origin+new URL(url).pathname,status:null,contentType:null,corsAllowOrigin:null,corsAllowHeaders:null,finalUrl:null,bytes:0,kind:null,details:null,error:null};
   try{
     const response=await fetch(url,{headers:{...headers,...extraHeaders},redirect:"follow",cache:"no-store",signal:AbortSignal.timeout(18000)});
-    result.status=response.status;result.contentType=response.headers.get("content-type");result.finalUrl=new URL(response.url).origin+new URL(response.url).pathname;
+    result.status=response.status;result.contentType=response.headers.get("content-type");result.corsAllowOrigin=response.headers.get("access-control-allow-origin");result.corsAllowHeaders=response.headers.get("access-control-allow-headers");result.finalUrl=new URL(response.url).origin+new URL(response.url).pathname;
     const text=await response.text();result.bytes=Buffer.byteLength(text);
     if((result.contentType||"").includes("json")||/^[\s]*[\[{]/.test(text)){
       result.kind="json";
@@ -59,6 +59,39 @@ await probe("photo-page",canonicalUrl,{"referer":"https://www.tiktok.com/"});
 await probe("embed-v2","https://www.tiktok.com/embed/v2/"+itemId);
 await probe("jina-embed-v2-http","https://r.jina.ai/http://www.tiktok.com/embed/v2/"+itemId);
 await probe("jina-embed-v2-https","https://r.jina.ai/https://www.tiktok.com/embed/v2/"+itemId);
+await probe("jina-embed-v2-html","https://r.jina.ai/http://www.tiktok.com/embed/v2/"+itemId,{"x-return-format":"html"});
+try{
+  const jinaUrl="https://r.jina.ai/http://www.tiktok.com/embed/v2/"+itemId;
+  const jinaResponse=await fetch(jinaUrl,{headers:{...headers,"x-return-format":"html"},redirect:"follow",cache:"no-store",signal:AbortSignal.timeout(18000)});
+  const jinaText=await jinaResponse.text();
+  const candidateUrls=[...jinaText.matchAll(/https?:\/\/[^\s"'<>\\)]+/g)].map(match=>match[0].replace(/[),.;\]}]+$/g,""));
+  const photoUrl=candidateUrls.find(value=>{
+    try{
+      const u=new URL(value);
+      return /tiktokcdn|byteoversea|ibytedtos|muscdn/i.test(u.hostname)&&/photomode/i.test(u.pathname)&&/\.(?:jpe?g|png|webp|avif)(?:[?#]|$)/i.test(u.href);
+    }catch{return false}
+  });
+  let proxyResult=null;
+  if(photoUrl){
+    const proxyUrl=new URL("/api/social-image-file",workerBase);
+    proxyUrl.searchParams.set("url",photoUrl);
+    proxyUrl.searchParams.set("source",canonicalUrl);
+    proxyUrl.searchParams.set("filename","aryanzz-photo-diagnostic.jpg");
+    const imageResponse=await fetch(proxyUrl.href,{headers:{accept:"image/*"},cache:"no-store",signal:AbortSignal.timeout(22000)});
+    const reader=imageResponse.body?.getReader();
+    let first=null;
+    if(reader){
+      const chunk=await reader.read();
+      first=chunk.value||null;
+      await reader.cancel().catch(()=>{});
+    }
+    const signature=!!(first&&((first[0]===0xff&&first[1]===0xd8&&first[2]===0xff)||(first[0]===0x89&&first[1]===0x50&&first[2]===0x4e&&first[3]===0x47)||(first[0]===0x47&&first[1]===0x49&&first[2]===0x46)||(first[0]===0x52&&first[1]===0x49&&first[2]===0x46&&first[8]===0x57&&first[9]===0x45&&first[10]===0x42&&first[11]===0x50)));
+    proxyResult={status:imageResponse.status,mime:imageResponse.headers.get("content-type"),firstChunkBytes:first?.byteLength||0,validImageSignature:signature};
+  }
+  console.log("[TIKTOK-PHOTO-CLIENT-READER-PROBE] "+JSON.stringify({status:jinaResponse.status,corsAllowOrigin:jinaResponse.headers.get("access-control-allow-origin"),contentType:jinaResponse.headers.get("content-type"),bytes:Buffer.byteLength(jinaText),photomodeUrlCount:candidateUrls.filter(value=>/photomode/i.test(value)).length,photoUrl:photoUrl||null,workerImageProxy:proxyResult}));
+}catch(error){
+  console.log("[TIKTOK-PHOTO-CLIENT-READER-PROBE] "+JSON.stringify({error:String(error?.message||error).slice(0,220)}));
+}
 await probe("official-player","https://www.tiktok.com/player/v1/"+itemId+"?controls=1&timestamp=1&description=1&music_info=1&rel=0");
 await probe("short-link",shortUrl);
 console.log("[TIKTOK-PHOTO-RESOLUTION] "+JSON.stringify({shortUrl,canonicalUrl,itemId,infoStatus:infoResponse.status,providerName:resolvedInfo.providerName||null,embedUrl:resolvedInfo.embedUrl||null}));
