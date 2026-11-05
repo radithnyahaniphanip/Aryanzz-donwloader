@@ -998,7 +998,7 @@ function panel(id){
   document.querySelectorAll('[data-nav]').forEach(b=>{const active=b.dataset.nav===navKey;b.classList.toggle('active',active);b.setAttribute('aria-current',active?'page':'false');});
   const target=id?$(id):home;
   if(viewHeader){viewHeader.hidden=!id;if(viewTitle&&target){const heading=target.querySelector('h1,h2,h3');viewTitle.textContent=heading?heading.textContent.trim():({history:'Pustaka',owner:'Pemilik',profile:'Profil'}[id]||'Ruang Kreatif');}}
-  window.scrollTo({top:0,behavior:'auto'});
+  window.scrollTo({top:0,behavior:"auto"});
 }
 window.aryanzzShowPanel=panel;
 normalizePersonalLayout();
