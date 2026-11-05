@@ -259,6 +259,18 @@ async function enrichTikTokDuration(info,canonicalUrl){
   }catch{}
   return info;
 }
+
+async function enrichInstagramDuration(info,canonicalUrl){
+  if(!info||Number(info.duration)>0||info.imageOnly===true)return info;
+  const hasVideo=String(info.type||"").toLowerCase()==="video"||(Array.isArray(info.formats)&&info.formats.some(item=>item?.mode==="video"));
+  if(!hasVideo)return info;
+  try{
+    const page=await fetchSocialPostHtml(canonicalUrl,9000);
+    const duration=extractSocialVideoDuration(page.html);
+    if(duration)info.duration=duration;
+  }catch{}
+  return info;
+}
 async function freePublicMediaInfo(rawUrl,requestUrl){
   const key=freePlatformKey(rawUrl);
   if(!key)return json({error:"Platform belum didukung oleh provider gratis."},400);
@@ -298,8 +310,12 @@ async function freePublicMediaInfo(rawUrl,requestUrl){
         if(key==="instagram"){
           try{
             const alternative=normalizeWeirdDlInstagramData(await fetchWeirdDlInstagramData(canonicalUrl,9000),canonicalUrl,requestUrl);
-            if(alternative)return json({...alternative,canonicalUrl:canonicalUrl!==rawUrl?canonicalUrl:undefined});
+            if(alternative){
+              await enrichInstagramDuration(alternative,canonicalUrl);
+              return json({...alternative,canonicalUrl:canonicalUrl!==rawUrl?canonicalUrl:undefined});
+            }
           }catch{}
+          await enrichInstagramDuration(normalized,canonicalUrl);
         }
         if(key==="tiktok"){
           try{
@@ -338,7 +354,10 @@ async function freePublicMediaInfo(rawUrl,requestUrl){
   if(key==="instagram"){
     try{
       const fallback=normalizeWeirdDlInstagramData(await fetchWeirdDlInstagramData(canonicalUrl,9000),canonicalUrl,requestUrl);
-      if(fallback)return json({...fallback,canonicalUrl:canonicalUrl!==rawUrl?canonicalUrl:undefined});
+      if(fallback){
+        await enrichInstagramDuration(fallback,canonicalUrl);
+        return json({...fallback,canonicalUrl:canonicalUrl!==rawUrl?canonicalUrl:undefined});
+      }
     }catch(error){primaryError+="; WeirdDL: "+String(error?.message||error).slice(0,120)}
   }
   if(key==="snackvideo"){
