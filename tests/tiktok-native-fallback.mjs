@@ -3,7 +3,7 @@ import worker from "../src/index.js";
 
 const originalFetch=globalThis.fetch;
 const shortUrl="https://vt.tiktok.com/ZSPNASKHN/";
-const canonicalUrl="https://www.tiktok.com/@demo/video/1234567890123456789";
+const canonicalUrl="https://www.tiktok.com/video/1234567890123456789";
 const videoBytes=Uint8Array.from([0,0,0,24,102,116,121,112,105,115,111,109,0,0,2,0,105,115,111,109,105,115,111,50]);
 const hydration={
   __DEFAULT_SCOPE__:{
@@ -25,12 +25,13 @@ const hydration={
     }
   }
 };
-const pageHtml='<html><head><link rel="canonical" href="'+canonicalUrl+'"><meta property="og:title" content="TikTok native page fallback regression"></head><body><script id="__UNIVERSAL_DATA_FOR_REHYDRATION__" type="application/json">'+JSON.stringify(hydration)+'</script></body></html>';
+const malformedShareUrl="https://www.tiktok.com/@/video/1234567890123456789?share_item_id=1234567890123456789";
+const pageHtml='<html><head><link rel="canonical" href="'+malformedShareUrl+'"><meta property="og:title" content="TikTok native page fallback regression"></head><body><script id="__UNIVERSAL_DATA_FOR_REHYDRATION__" type="application/json">'+JSON.stringify(hydration)+'</script></body></html>';
 
 try{
   globalThis.fetch=async(input,init={})=>{
     const url=new URL(typeof input==="string"?input:input instanceof URL?input.href:input.url);
-    if(url.hostname==="vt.tiktok.com"||url.hostname==="www.tiktok.com"&&url.pathname==="/@demo/video/1234567890123456789")
+    if(url.hostname==="vt.tiktok.com"||url.hostname==="www.tiktok.com"&&(url.pathname==="/video/1234567890123456789"||url.pathname==="/@/video/1234567890123456789"))
       return new Response(pageHtml,{status:200,headers:{"content-type":"text/html; charset=utf-8"}});
     if(url.hostname==="btch-downloader-api-green.vercel.app")
       return new Response(JSON.stringify({success:false,error:"provider unavailable"}),{status:502,headers:{"content-type":"application/json"}});
