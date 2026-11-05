@@ -90,12 +90,12 @@
   function recordHistory(item){
     const key=KEY.history;const values=readArray(key);
     saveArray(key,[{...item,at:Date.now()},...values.filter(v=>v.url!==item.url)].slice(0,40));
-    renderLibrary();
+    renderLibrary();window.dispatchEvent(new Event("aryanzz:history-updated"));
   }
   function setFavorite(item){
     const values=readArray(KEY.favorites);const has=values.some(v=>v.url===item.url);
     saveArray(KEY.favorites,has?values.filter(v=>v.url!==item.url):[{...item,at:Date.now()},...values].slice(0,40));
-    renderLibrary();return !has;
+    renderLibrary();window.dispatchEvent(new Event("aryanzz:history-updated"));return !has;
   }
   async function startDownload(url,data,mode,quality,bar,label,btn,cancel){
     const controller=new AbortController();activeController=controller;
