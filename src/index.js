@@ -1884,6 +1884,7 @@ async function resolveSocialImagePost(rawUrl,requestUrl,options={}){
       const pageTarget=itemId?"https://www.tiktok.com/embed/v2/"+itemId:canonicalUrl;
       let page=await fetchSocialPostHtml(pageTarget,Number(options.timeoutMs)||12000).then(result=>{
         const images=extractSocialImageCandidates(result.html,result.url,key);
+        if(options.diagnostics)options.diagnostics.value={source:"public-page",status:result.status,bytes:result.html.length,imageCount:images.length};
         if(key==="tiktok"&&options.diagnostics){
           const excerpt=pattern=>{const index=result.html.search(pattern);return index<0?null:result.html.slice(Math.max(0,index-180),Math.min(result.html.length,index+520)).replace(/\s+/g," ").slice(0,700)};
           options.diagnostics.value={source:"official-embed-v2",status:result.status,bytes:result.html.length,imageCount:images.length,hasImagePost:/imagePost|image_post|photoPost|photo_post/i.test(result.html),hasImageURL:/imageURL|imageUrl|urlList/i.test(result.html),hasCaptcha:/captcha|verify to continue|access denied/i.test(result.html),imageURLExcerpt:excerpt(/imageURL|imageUrl|urlList/i)};
