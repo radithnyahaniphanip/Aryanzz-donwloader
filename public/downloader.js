@@ -598,13 +598,10 @@
     return output;
   }
   async function muxYoutubeMp4(videoItem,audioItem,info,bar,progressText,progressMeta,speed){
-    const connection=navigator.connection||navigator.mozConnection||navigator.webkitConnection||null;
-    const downlink=Number(connection?.downlink)||0,effective=String(connection?.effectiveType||"").toLowerCase();
-    const lowNetwork=!!connection?.saveData||effective==="slow-2g"||effective==="2g"||(downlink>0&&downlink<1.5);
     const lowMemory=(Number(navigator.deviceMemory)||4)<=2;
-    if(lowNetwork||lowMemory){
-      const error=new Error(lowNetwork?"Jaringan lambat; perakitan lokal dilewati agar unduhan tidak tertahan.":"Memori perangkat terbatas; perakitan lokal dilewati agar browser tetap stabil.");
-      error.code="FFMPEG_SKIPPED_SLOW_NETWORK";
+    if(lowMemory){
+      const error=new Error("Memori perangkat terbatas; perakitan lokal dilewati agar browser tetap stabil.");
+      error.code="FFMPEG_SKIPPED_LOW_MEMORY";
       throw error;
     }
     const {maxTrack,maxCombined}=youtubeMuxMemoryBudget();
@@ -814,7 +811,7 @@
         return await downloadYoutubeProgressiveCandidate(url,mode,selected,info,bar,progressText,progressMeta,quality);
       }catch(error){
         if(activeDownloadController?.signal.aborted)throw new Error("Unduhan dibatalkan.");
-        if(error?.code==="FFMPEG_LOAD_FAILED"||error?.code==="FFMPEG_SKIPPED_SLOW_NETWORK"){ffmpegUnavailable=true;retryState.ffmpegUnavailable=true;const engineStatus=progressMeta?.parentElement?.querySelector(".youtube-engine-status");if(engineStatus)engineStatus.textContent=error.code==="FFMPEG_SKIPPED_SLOW_NETWORK"?"Perakitan lokal dilewati; mencari MP4 langsung yang lebih cepat.":"Mesin MP4 tidak berhasil dimuat; mencoba MP4 langsung yang tersedia."}
+        if(error?.code==="FFMPEG_LOAD_FAILED"||error?.code==="FFMPEG_SKIPPED_LOW_MEMORY"){ffmpegUnavailable=true;retryState.ffmpegUnavailable=true;const engineStatus=progressMeta?.parentElement?.querySelector(".youtube-engine-status");if(engineStatus)engineStatus.textContent=error.code==="FFMPEG_SKIPPED_LOW_MEMORY"?"RAM perangkat terbatas; mencari MP4 langsung yang lebih ringan.":"Mesin MP4 tidak berhasil dimuat; mencoba MP4 langsung yang tersedia."}
         const reason=String(error.message||error).slice(0,180);
         failures.push((selected.provider||"provider")+" "+(instance||"")+": "+reason);
         if(mode==="video"&&/memori|RAM|terlalu besar|out of memory|allocation failed/i.test(reason)){

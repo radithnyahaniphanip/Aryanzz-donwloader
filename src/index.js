@@ -268,9 +268,9 @@ function extractGenericPublicMediaCandidates(html,pageUrl){
   for(const pattern of patterns)for(const match of decoded.matchAll(pattern.regex))add(match[1],pattern.mode,"",pattern.mode==="audio"?"Audio":"Video");
   return output.slice(0,20);
 }
-async function genericPublicPageMediaInfo(rawUrl,requestUrl,platformEntry){
+async function genericPublicPageMediaInfo(rawUrl,requestUrl,platformEntry,timeoutMs=11000){
   try{
-    const page=await fetchSocialPostHtml(rawUrl,11000);
+    const page=await fetchSocialPostHtml(rawUrl,timeoutMs);
     const titleMatch=page.html.match(/<meta\b[^>]*property=["']og:title["'][^>]*content=["']([^"']{1,300})["']/i)||page.html.match(/<title[^>]*>([^<]{1,300})<\/title>/i);
     const title=String(titleMatch?.[1]||platformEntry.name+" media").replace(/&amp;/gi,"&").slice(0,300);
     const thumbnail=extractSocialImageCandidates(page.html,page.url,platformEntry.id)[0]?.url||null;
@@ -544,6 +544,17 @@ async function freePublicMediaInfo(rawUrl,requestUrl){
       primaryError+="; TikTok fallback: "+String(error?.message||error).slice(0,900);
     }
   }
+  if(key==="tiktok"&&!isTikTokPhotoRoute){
+    try{
+      const entry=platformForHost(new URL(canonicalUrl).hostname)||platformForHost(new URL(rawUrl).hostname);
+      const response=await genericPublicPageMediaInfo(canonicalUrl,requestUrl,entry,6500);
+      const fallback=await response.json().catch(()=>({}));
+      if(response.ok&&fallback.ok&&Array.isArray(fallback.formats)&&fallback.formats.length){
+        return json({...fallback,providerName:"TikTok public-page fallback",provider:"HTML media fallback",fallbackUsed:true,primaryProviderError:primaryError.slice(0,300)});
+      }
+      primaryError+="; TikTok HTML fallback: "+String(fallback.error||"no direct media").slice(0,140);
+    }catch(error){primaryError+="; TikTok HTML fallback: "+String(error?.message||error).slice(0,140)}
+  }
   if(key==="tiktok"){
     const embedTargets=[...new Set([rawUrl,canonicalUrl,...providerUrls])].slice(0,3);
     const embedResults=await Promise.allSettled(embedTargets.map(target=>fetchTikTokOEmbed(target,6500)));
@@ -575,8 +586,27 @@ async function freePublicMediaInfo(rawUrl,requestUrl){
   if(key==="snackvideo"){
     try{return await snackVideoFallbackMediaInfo(canonicalUrl,requestUrl)}
     catch(error){
+      try{
+        const entry=platformForHost(new URL(canonicalUrl).hostname);
+        const response=await genericPublicPageMediaInfo(canonicalUrl,requestUrl,entry,7500);
+        const fallback=await response.json().catch(()=>({}));
+        if(response.ok&&fallback.ok&&Array.isArray(fallback.formats)&&fallback.formats.length)return json({...fallback,providerName:"SnackVideo public-page fallback",provider:"HTML media fallback",fallbackUsed:true});
+      }catch{}
       return json({error:"SnackVideo belum dapat diproses. Provider utama: "+(primaryError||"gagal")+"; provider alternatif: "+String(error?.message||error).slice(0,150)+". "+guidance[key],provider:"Fallback cascade",fallbackTried:true},502);
     }
+  }
+  if(key!=="youtube"&&key!=="tiktok"&&key!=="snackvideo"){
+    try{
+      const entry=platformForHost(new URL(canonicalUrl).hostname)||platformForHost(new URL(rawUrl).hostname);
+      if(entry){
+        const response=await genericPublicPageMediaInfo(canonicalUrl,requestUrl,entry,7500);
+        const fallback=await response.json().catch(()=>({}));
+        if(response.ok&&fallback.ok&&Array.isArray(fallback.formats)&&fallback.formats.length){
+          return json({...fallback,providerName:"Public page metadata fallback",provider:"HTML media fallback",fallbackUsed:true,primaryProviderError:primaryError.slice(0,300)});
+        }
+        primaryError+="; HTML metadata fallback: "+String(fallback.error||"tidak menemukan file media langsung").slice(0,180);
+      }
+    }catch(error){primaryError+="; HTML metadata fallback: "+String(error?.message||error).slice(0,160)}
   }
   const restricted=key==="tiktok"&&/protected|age.?restricted|status\s*10216|login required|requires login|private|Native TikTok metadata/i.test(primaryError);
   const userMessage=restricted
@@ -2328,7 +2358,7 @@ const PIPED_PUBLIC_INSTANCES=[
 "https://pipedapi.ducks.party","https://piped-api.codespace.cz","https://pipedapi.reallyaweso.me",
 "https://api.piped.private.coffee","https://pipedapi.darkness.services","https://pipedapi.orangenet.cc"
 ];
-const INVIDIOUS_PUBLIC_INSTANCES=["https://inv.nadeko.net","https://invidious.nerdvpn.de","https://yt.chocolatemoo53.com","https://invidious.tiekoetter.com"];
+const INVIDIOUS_PUBLIC_INSTANCES=["https://inv.nadeko.net","https://invidious.nerdvpn.de","https://invidious.tiekoetter.com"];
 const HYBRID_MEDIA_ROOTS=["kavin.rocks","leptons.xyz","nosebs.ru","privacy.com.de","adminforge.de","piped.yt","drgns.space","owo.si","ducks.party","codespace.cz","reallyaweso.me","private.coffee","darkness.services","orangenet.cc"];
 function youtubeVideoId(raw){
   try{const u=new URL(raw),h=u.hostname.toLowerCase();if(h==="youtu.be"||h==="www.youtu.be")return u.pathname.split("/").filter(Boolean)[0]||null;const v=u.searchParams.get("v");if(v)return v;return u.pathname.match(/^\/(?:shorts|embed|live|v)\/([A-Za-z0-9_-]{6,20})/)?.[1]||null;}catch{return null;}
@@ -2438,7 +2468,7 @@ async function currentHybridInvidiousInstances(){
     const rows=await response.json();if(!Array.isArray(rows))throw new Error("Invidious directory response invalid");
     const discovered=rows.map(row=>{
       const raw=Array.isArray(row)?row[0]:row?.uri,meta=Array.isArray(row)?row[1]:row;
-      try{const u=new URL(raw);return u.protocol==="https:"&&!u.username&&!u.password&&!u.port&&meta?.api===true&&meta?.cors===true&&!u.hostname.endsWith(".onion")?u.origin:null;}catch{return null;}
+      try{const u=new URL(raw);const unhealthy=u.hostname.toLowerCase()==="yt.chocolatemoo53.com";return !unhealthy&&u.protocol==="https:"&&!u.username&&!u.password&&!u.port&&meta?.api===true&&meta?.cors===true&&!u.hostname.endsWith(".onion")?u.origin:null;}catch{return null;}
     }).filter(Boolean);
     hybridInvidiousRegistryCache=[...new Set([...discovered,...fallback])].slice(0,20);
   }catch{hybridInvidiousRegistryCache=fallback;}
@@ -2472,6 +2502,44 @@ function hybridFromInvidious(data,instance){
   if(!hasUsableVideo||!data.title)return null;const thumb=Array.isArray(data.videoThumbnails)?data.videoThumbnails.find(x=>x.quality==="maxresdefault")||data.videoThumbnails[0]:null;
   return {ok:true,providerReady:true,providerName:"Hybrid",provider:"Invidious",instance,title:String(data.title).slice(0,300),thumbnail:typeof thumb?.url==="string"?thumb.url:null,duration:Number(data.lengthSeconds)||null,uploader:String(data.author||"").slice(0,160),formats:formats.map((f,i)=>({...f,id:"f"+i})),message:"Stream progresif tersedia dari instance komunitas."};
 }
+const HYBRID_INNERTUBE_CLIENTS=[
+  {name:"ANDROID",version:"20.10.38",header:"3",context:{clientName:"ANDROID",clientVersion:"20.10.38",androidSdkVersion:34,hl:"en",gl:"US"},ua:"com.google.android.youtube/20.10.38 (Linux; U; Android 14) gzip"},
+  {name:"IOS",version:"20.10.4",header:"5",context:{clientName:"IOS",clientVersion:"20.10.4",deviceModel:"iPhone16,2",osName:"iPhone",osVersion:"18.0.1",hl:"en",gl:"US"},ua:"com.google.ios.youtube/20.10.4 (iPhone16,2; U; CPU iOS 18_0_1 like Mac OS X)"},
+  {name:"TVHTML5",version:"7.20250612.16.00",header:"7",context:{clientName:"TVHTML5",clientVersion:"7.20250612.16.00",clientScreen:"TV",hl:"en",gl:"US"},ua:"Mozilla/5.0 (SMART-TV; LINUX; Tizen 8.0) AppleWebKit/537.36"}
+];
+async function hybridInnerTubePlayer(videoId,client){
+  const response=await fetch("https://www.youtube.com/youtubei/v1/player?prettyPrint=false",{
+    method:"POST",
+    headers:{"content-type":"application/json","accept":"application/json","origin":"https://www.youtube.com","referer":"https://www.youtube.com/","user-agent":client.ua,"x-youtube-client-name":client.header,"x-youtube-client-version":client.version},
+    body:JSON.stringify({context:{client:client.context},videoId,contentCheckOk:true,racyCheckOk:true}),
+    signal:AbortSignal.timeout(6500),cache:"no-store"
+  });
+  const data=await response.json().catch(()=>null);
+  if(!response.ok||!data)throw new Error("YouTube InnerTube "+client.name+" HTTP "+response.status);
+  const playability=String(data.playabilityStatus?.status||"");
+  if(playability&&playability!=="OK")throw new Error("YouTube "+client.name+": "+playability+" "+String(data.playabilityStatus?.reason||"").slice(0,90));
+  const streaming=data.streamingData||{};
+  const progressive=(Array.isArray(streaming.formats)?streaming.formats:[])
+    .map(item=>hybridVideoFormat(item,"https://www.youtube.com",true,false)).filter(Boolean);
+  const adaptive=(Array.isArray(streaming.adaptiveFormats)?streaming.adaptiveFormats:[])
+    .map(item=>String(item?.mimeType||item?.type||"").toLowerCase().startsWith("video/")
+      ?hybridVideoFormat(item,"https://www.youtube.com",false,true)
+      :hybridAudioFormat(item,"https://www.youtube.com")).filter(Boolean);
+  const formats=dedupeHybridFormats([...progressive,...adaptive]);
+  const usable=formats.some(item=>item.mode==="video"&&item.ext==="mp4"&&(!item.videoOnly||formats.some(audio=>audio.mode==="audio"&&audio.ext==="m4a")));
+  if(!usable)throw new Error("YouTube "+client.name+" tidak mengembalikan URL MP4 langsung yang dapat dipakai.");
+  const details=data.videoDetails||{};
+  const thumbs=Array.isArray(details.thumbnail?.thumbnails)?details.thumbnail.thumbnails:[];
+  const thumbnail=thumbs.slice().sort((a,b)=>(Number(b.width)||0)-(Number(a.width)||0))[0]?.url||null;
+  return {ok:true,providerReady:true,providerName:"Hybrid",provider:"YouTube InnerTube",instance:"https://www.youtube.com",title:String(details.title||"Video YouTube").slice(0,300),thumbnail,duration:Number(details.lengthSeconds)||null,uploader:String(details.author||"").slice(0,160),formats:formats.map((item,index)=>({...item,id:"f"+index,instance:"https://www.youtube.com",provider:"YouTube InnerTube"})),message:"Stream langsung YouTube tersedia melalui jalur cadangan."};
+}
+async function hybridInnerTubeGroup(videoId){
+  const settled=await Promise.all(HYBRID_INNERTUBE_CLIENTS.map(async client=>{
+    try{return {ok:true,result:await hybridInnerTubePlayer(videoId,client)}}
+    catch(error){return {ok:false,diagnostic:{provider:"YouTube InnerTube "+client.name,error:String(error?.message||error).slice(0,150)}}}
+  }));
+  return {results:settled.filter(item=>item.ok).map(item=>item.result),diagnostics:settled.filter(item=>!item.ok).map(item=>item.diagnostic)};
+}
 async function hybridYoutubeInfo(request){
   const raw=new URL(request.url).searchParams.get("url")||"";
   if(!isYouTubeUrl(raw))return json({error:"URL YouTube tidak valid."},400);
@@ -2484,9 +2552,15 @@ async function hybridYoutubeInfo(request){
   ]);
   const available=[...pipedProbe.results,...invProbe.results];
   const diagnostics=[...pipedProbe.diagnostics,...invProbe.diagnostics];
+  const hasDirectProgressive=available.some(item=>(item.formats||[]).some(format=>format.mode==="video"&&format.ext==="mp4"&&!format.videoOnly));
+  if(!hasDirectProgressive){
+    const innerTube=await hybridInnerTubeGroup(id);
+    available.push(...innerTube.results);
+    diagnostics.push(...innerTube.diagnostics);
+  }
   if(available.length){
-    const primary=available.find(item=>item.provider==="Piped")||available[0];
-    const formats=dedupeHybridFormats([...invProbe.results,...pipedProbe.results].flatMap(result=>(result.formats||[]).map(format=>({...format,instance:result.instance,provider:result.provider}))));
+    const primary=available.find(item=>(item.formats||[]).some(format=>format.mode==="video"&&!format.videoOnly))||available[0];
+    const formats=dedupeHybridFormats(available.flatMap(result=>(result.formats||[]).map(format=>({...format,instance:format.instance||result.instance,provider:format.provider||result.provider}))));
     return json({...primary,providerReady:true,formats:formats.map((format,index)=>({...format,id:"f"+index})),providers:available.map(item=>({provider:item.provider,instance:item.instance,formatCount:item.formats?.length||0})),diagnostics:diagnostics.slice(0,20)});
   }
   {
