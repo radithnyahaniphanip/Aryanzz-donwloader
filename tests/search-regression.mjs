@@ -53,6 +53,16 @@ try{
   assert.ok(videoData.results.some(item=>item.platform==="bluesky"&&item.searchOnly===true),"Video title search must preserve AIO results as clearly unverified candidates, not drop them");
   console.log("✔ Selected-platform video title search returns generic-provider candidates without mislabeling them as verified");
 
+  const expansionSearch=await worker.fetch(new Request("https://aryanzz.example/api/social/search",{
+    method:"POST",
+    headers:{"content-type":"application/json","cf-connecting-ip":"198.51.100.36"},
+    body:JSON.stringify({query:"green screen meme kucing",platform:"bluesky",mediaType:"video"})
+  }),{});
+  assert.equal(expansionSearch.status,200,"Keyword expansion search should return a valid response");
+  const expansionData=await expansionSearch.json();
+  assert.ok(expansionData.searchVariants.includes("green screen meme template"),"Green-screen meme searches must expand to useful related title variants");
+  console.log("✔ Title-search keyword expansion recognizes green screen, meme and Indonesian cat terms");
+
   const videoInfo=await worker.fetch(new Request("https://aryanzz.example/api/platform/info",{
     method:"POST",
     headers:{"content-type":"application/json","cf-connecting-ip":"198.51.100.34"},
