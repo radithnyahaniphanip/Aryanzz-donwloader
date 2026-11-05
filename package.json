@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node server/index.js",
     "test": "node tests/smoke.mjs",
-    "test:release": "node tests/release-smoke.mjs && node tests/tiktok-native-fallback.mjs",
+    "test:release": "node tests/release-smoke.mjs && node tests/tiktok-native-fallback.mjs && node tests/auth-gate-smoke.mjs",
     "build:version": "node scripts/build-version.mjs",
     "deploy": "npm run build:version && wrangler deploy"
   },
