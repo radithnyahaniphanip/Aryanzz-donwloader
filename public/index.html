@@ -210,7 +210,7 @@ body{background-color:var(--ary-app-bg)}
 @media(max-width:420px){.v8814-view-state{font-size:7px;padding:5px 6px}.nav button{font-size:10px}.nav button .nav-icon{font-size:17px}}
 @media(prefers-reduced-motion:reduce){#toolsArea>.panel.active{animation:none}html{scroll-behavior:auto}}
 </style><link rel="stylesheet" href="/link-bypass.css?v=94.0"><link rel="stylesheet" href="/theme-studio.css?v=94.1">
-<link rel="stylesheet" href="/auth-gate.css?v=94.2">
+<link rel="stylesheet" href="/auth-gate.css?v=95.0.1">
 </head><body>
 <div class="wrap">
 <header class="top v674-top"><a class="brand v674-brand" href="/" aria-label="ARYANZZ Home"><span class="logo v674-logo" aria-hidden="true"><svg width="30" height="30" viewBox="0 0 64 64" focusable="false"><defs><linearGradient id="aryanzzHeaderMark" x1="0" y1="1" x2="1" y2="0"><stop stop-color="#35d9df"/><stop offset=".5" stop-color="#5795ff"/><stop offset="1" stop-color="#b078ff"/></linearGradient></defs><path d="M7 53 24 13q2-5 8-5t8 5l17 40H43L32 26 21 53z" fill="url(#aryanzzHeaderMark)"/><path d="M23 39h18l-4-9H27z" fill="#fff"/><path d="m49 5 3 8 8 3-8 3-3 8-3-8-8-3 8-3z" fill="#fff"/></svg></span><span>ARYANZZ<small>RUANG KREATIF</small></span></a><div class="v674-top-actions"><span class="pill v674-version"><i></i> V__ARYANZZ_VERSION__ · GRATIS</span><span class="v674-security-indicator" id="securityStatusIndicator" role="status" aria-live="polite" title="Memeriksa perlindungan website"><i></i><span>Memeriksa keamanan</span></span></div></header>
@@ -1070,23 +1070,29 @@ $('analyze').onclick=async()=>{
  catch(e){out.textContent=e.message||'Masukkan URL yang valid.';return}
  const detected=aryPlatformForUrl(u.href),chosen=arySelectedPlatform();
  const aliases={tiktoklite:"tiktok",instagramlite:"instagram",facebooklite:"facebook"};
- const normalizedChosen=aliases[chosen]||chosen;
+ let normalizedChosen=aliases[chosen]||chosen;
  const isLinkMode=!$("linkModePanel")?.hidden;
- if(isLinkMode&&chosen==="all"){
-  const p=document.createElement("p");p.className="warning";p.textContent="Pilih satu platform khusus terlebih dahulu. Mode Semua 200 hanya tersedia untuk AI Search lintas platform.";out.append(p);return;
+ // In link mode, the URL is authoritative. Auto-correct the picker instead of rejecting
+ // valid links because a stale selection or "All 200" state remained active.
+ if(isLinkMode&&detected){
+  if(normalizedChosen!==detected){
+   const picker=document.getElementById("platformPicker");
+   const targetButton=picker?.querySelector('[data-platform="'+detected+'"]');
+   if(targetButton)targetButton.click();
+   else document.dispatchEvent(new CustomEvent("aryanzz:platform-autodetected",{detail:{platform:detected}}));
+   normalizedChosen=detected;
+  }
  }
- if(isLinkMode&&(!detected||normalizedChosen!==detected)){
+ if(isLinkMode&&!detected){
   const b=document.createElement("b"),p=document.createElement("p");
-  b.textContent="GAGAL — PLATFORM TIDAK SESUAI";
+  b.textContent="Platform belum dikenali";
   p.className="warning";
-  p.textContent=detected
-   ?"Kamu memilih "+aryPlatformLabel(normalizedChosen)+", tetapi tautan berasal dari "+aryPlatformLabel(detected)+". Tautan ditolak. Pilih "+aryPlatformLabel(detected)+" untuk memprosesnya."
-   :"Domain tautan tidak dikenali sebagai "+aryPlatformLabel(normalizedChosen)+". Tautan ditolak. Tempel tautan asli dari platform yang dipilih.";
+  p.textContent="Domain tautan belum dikenali oleh katalog ARYANZZ. Periksa tautan publik atau pilih platform yang sesuai. Tautan tidak akan dikirim ke extractor platform lain.";
   out.append(b,p);return;
  }
  const ext=extOf(u);
  if(detected==="youtube"){showYouTubeDownloader(u);return}
- if(detected){await showUniversalPlatformDownloader(u,normalizedChosen);return}
+ if(detected){await showUniversalPlatformDownloader(u,detected);return}
  if(ext){const p=document.createElement("p");p.className="warning";p.textContent="GAGAL — tautan file langsung bukan tautan asli "+aryPlatformLabel(normalizedChosen)+". Gunakan AI Search untuk pencarian lintas platform.";out.append(p);return}
  if(API){
   out.textContent='Memeriksa tautan ke backend…';
@@ -1103,7 +1109,7 @@ let deferred=null;window.addEventListener('beforeinstallprompt',e=>{e.preventDef
 if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('/sw.js?v=__ARYANZZ_VERSION__',{updateViaCache:'none'}).catch(()=>{}));
 </script><script src="/link-bypass.js?v=94.0" defer></script><script src="/audio-studio.js?v=92.5" defer></script><script src="/media-studio.js?v=92.0" defer></script>
 <script src="/download-queue.js?v=92.0" defer></script><script src="/image-studio.js?v=81.4" defer></script><script src="/advanced.js?v=92.5" defer></script><script src="/v15.js?v=59.5" defer></script><script src="/v25.js?v=94.0" defer></script><script src="/owner.js?v=94.0" defer></script><script src="/downloader.js?v=94.25.0" defer></script><script src="/v59.js?v=59.5" defer></script><script src="/editor.js?v=65.0" defer></script><script src="/music-recognition.js?v=71.0" defer></script><script src="/v674.js?v=94.25.0" defer></script><script src="/v677.js?v=67.7" defer></script><script src="/v680.js?v=71.0" defer></script><script src="/theme-studio.js?v=94.1" defer></script>
-<div id="aryAuthGate" class="ary-auth-gate" role="dialog" aria-modal="true" aria-labelledby="aryAuthTitle">
+<div id="aryAuthGate" class="ary-auth-gate" hidden role="dialog" aria-modal="true" aria-labelledby="aryAuthTitle">
  <div class="ary-auth-shell">
   <div class="ary-auth-brand"><span class="ary-auth-logo" aria-hidden="true"><svg width="30" height="30" viewBox="0 0 64 64" focusable="false"><defs><linearGradient id="aryanzzAuthMark" x1="0" y1="1" x2="1" y2="0"><stop stop-color="#35d9df"/><stop offset=".5" stop-color="#5795ff"/><stop offset="1" stop-color="#b078ff"/></linearGradient></defs><path d="M7 53 24 13q2-5 8-5t8 5l17 40H43L32 26 21 53z" fill="url(#aryanzzAuthMark)"/><path d="M23 39h18l-4-9H27z" fill="#fff"/><path d="m49 5 3 8 8 3-8 3-3 8-3-8-8-3 8-3z" fill="#fff"/></svg></span><div><b>ARYANZZ</b><small>RUANG KREATIF</small></div><span class="ary-auth-free">V__ARYANZZ_VERSION__ · MEMBER ACCESS</span></div>
   <div class="ary-auth-intro"><span>YOUR DIGITAL SPACE</span><h1 id="aryAuthTitle">Selamat datang kembali.</h1><p>Buat akun atau masuk untuk melanjutkan ke ruang ARYANZZ.</p></div>
@@ -1129,4 +1135,4 @@ if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.ser
 </div>
 
 <script src="/update-manager.js?v=__ARYANZZ_VERSION__" defer></script><script src="/speed-test.js?v=94.6" defer></script>
-<script src="/auth-gate.js?v=94.4" defer></script></body></html>
+<script src="/auth-gate.js?v=95.0.1" defer></script></body></html>

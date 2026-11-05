@@ -35,6 +35,7 @@ const platforms={
  kakaotalk:{name:"KakaoTalk",url:q=>"https://www.google.com/search?q="+encodeURIComponent("site:kakao.com "+q)}
 };
 let selected="youtube",activeMode="link",searchController=null,pageSize=10,currentPage=1;
+let platformCatalog=[],platformPage=1;
 const PLATFORM_GUIDES={
  youtube:{link:"Tempel tautan video, Shorts, atau audio YouTube…",search:"Cari judul video YouTube…",videoHelp:"YouTube: periksa video atau Shorts publik, lalu pilih format dan kualitas yang tersedia.",imageHelp:"YouTube: cari gambar atau thumbnail publik. Hasil gambar dipisahkan dari hasil video."},
  tiktok:{link:"Tempel tautan TikTok: video atau Photo Mode…",search:"Cari judul video atau foto TikTok…",videoHelp:"TikTok: tautan video diperiksa sebagai MP4; Photo Mode menampilkan foto asli dan bisa dibuat menjadi video slideshow lokal tanpa audio sumber.",imageHelp:"TikTok Photo Mode: cari postingan foto, tampilkan seluruh gambar yang berhasil ditemukan, lalu unduh satu per satu."},
@@ -109,7 +110,6 @@ const platformTemplates=new Map();
 picker?.querySelectorAll("[data-platform]").forEach(button=>{if(button.dataset.platform!=="all")platformTemplates.set(button.dataset.platform,button.cloneNode(true))});
 const allPlatformButton=picker?.querySelector('[data-platform="all"]')||null;
 const platformPager=$("platformPager"),platformPrev=$("platformPrev"),platformNext=$("platformNext"),platformPageLabel=$("platformPageLabel");
-let platformCatalog=[],platformPage=1;
 const platformPageSize=20;
 function renderPlatformPage(nextPage){
  if(!picker||!platformCatalog.length)return;
