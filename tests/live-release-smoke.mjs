@@ -109,14 +109,25 @@ for(const id of ["tiktok","tiktoklite"]){
 console.log("✔ TikTok and TikTok Lite advertise both video and image media modes.");
 console.log("✔ Platform status endpoint exposes all 200 platform choices and preserves the original first page.");
 
-const releaseResponse=await request("/release.json");
-assert.equal(releaseResponse.status,200,"Metadata release.json tidak tersedia");
-const release=await releaseResponse.json();
-assert.equal(release?.version,version,"Metadata release.json tidak cocok dengan Worker");
-const manifestResponse=await request("/manifest.webmanifest?v="+version);
-assert.equal(manifestResponse.status,200,"PWA manifest tidak tersedia");
-const manifest=await manifestResponse.json();
-assert.equal(manifest?.version,version,"PWA manifest belum mengikuti versi Worker");
+async function waitForVersionedJson(path,label){
+  let last="belum tersedia";
+  for(let attempt=0;attempt<20;attempt++){
+    try{
+      const target=new URL(path,base);
+      target.searchParams.set("release-check",String(attempt));
+      const response=await request(target.pathname+target.search);
+      if(response.ok){
+        const data=await response.json();
+        if(String(data?.version||"")===version)return data;
+        last="versi "+String(data?.version||"kosong");
+      }else last="HTTP "+response.status;
+    }catch(error){last=String(error.message||error);}
+    await new Promise(resolve=>setTimeout(resolve,1500));
+  }
+  throw new Error(label+" belum mengikuti versi Worker "+version+" setelah menunggu propagasi; respons terakhir: "+last);
+}
+const release=await waitForVersionedJson("/release.json","Metadata release.json");
+const manifest=await waitForVersionedJson("/manifest.webmanifest?v="+version,"PWA manifest");
 const swResponse=await request("/sw.js");
 assert.equal(swResponse.status,200,"Service worker tidak tersedia");
 const sw=await swResponse.text();
