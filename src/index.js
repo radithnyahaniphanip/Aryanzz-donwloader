@@ -363,7 +363,8 @@ async function freePublicMediaInfo(rawUrl,requestUrl){
     soundcloud:"SoundCloud diproses sebagai audio (MP3/M4A jika tersedia), bukan video MP4."
   };
   const canonicalUrl=await resolveSocialShortLink(rawUrl,key,key==="tiktok"?8000:11000);
-  const providerUrls=key==="tiktok"?tikTokUrlCandidates(rawUrl,canonicalUrl):[canonicalUrl];
+  const isTikTokPhotoRoute=key==="tiktok"&&(()=>{try{return /\/photo\//i.test(new URL(canonicalUrl).pathname)}catch{return false}})();
+  const providerUrls=key==="tiktok"?(isTikTokPhotoRoute?[canonicalUrl]:tikTokUrlCandidates(rawUrl,canonicalUrl)):[canonicalUrl];
   let primaryError="";
   try{
     let response=null,data={},attempts=key==="instagram"?2:1;
@@ -401,22 +402,24 @@ async function freePublicMediaInfo(rawUrl,requestUrl){
           await enrichInstagramDuration(normalized,canonicalUrl);
         }
         if(key==="tiktok"){
-          try{
-            const fallback=await tikwmFallbackMediaInfo(canonicalUrl,requestUrl,providerUrls.filter(value=>value!==canonicalUrl));
-            const seen=new Set(),combined=[];
-            for(const item of [...(fallback.formats||[]),...(normalized.formats||[])]){
-              const identity=String(item?.downloadUrl||item?.url||"")+"|"+String(item?.mode||"");
-              if(!item?.downloadUrl||seen.has(identity))continue;
-              seen.add(identity);combined.push(item);
-            }
-            if(combined.length)normalized.formats=combined;
-            normalized.fallbackUsed=true;
-            normalized.providerName=[fallback.providerName,normalized.providerName].filter(Boolean).join(" + ");
-            normalized.title=normalized.title||fallback.title;
-            normalized.duration=Number(normalized.duration)||Number(fallback.duration)||null;
-          }catch(error){normalized.fallbackDiagnostic=String(error?.message||error).slice(0,180)}
+          if(!isTikTokPhotoRoute){
+            try{
+              const fallback=await tikwmFallbackMediaInfo(canonicalUrl,requestUrl,providerUrls.filter(value=>value!==canonicalUrl));
+              const seen=new Set(),combined=[];
+              for(const item of [...(fallback.formats||[]),...(normalized.formats||[])]){
+                const identity=String(item?.downloadUrl||item?.url||"")+"|"+String(item?.mode||"");
+                if(!item?.downloadUrl||seen.has(identity))continue;
+                seen.add(identity);combined.push(item);
+              }
+              if(combined.length)normalized.formats=combined;
+              normalized.fallbackUsed=true;
+              normalized.providerName=[fallback.providerName,normalized.providerName].filter(Boolean).join(" + ");
+              normalized.title=normalized.title||fallback.title;
+              normalized.duration=Number(normalized.duration)||Number(fallback.duration)||null;
+            }catch(error){normalized.fallbackDiagnostic=String(error?.message||error).slice(0,180)}
+          }
           await verifyTikTokPhotoVideoFormats(normalized,canonicalUrl);
-          await enrichTikTokDuration(normalized,canonicalUrl);
+          if(!isTikTokPhotoRoute)await enrichTikTokDuration(normalized,canonicalUrl);
         }
         return json({...normalized,canonicalUrl:canonicalUrl!==rawUrl?canonicalUrl:undefined});
       }
@@ -426,6 +429,14 @@ async function freePublicMediaInfo(rawUrl,requestUrl){
       primaryError=String(detail).slice(0,140);
     }
   }catch(error){primaryError=String(error?.message||error).slice(0,140)}
+  if(key==="tiktok"&&isTikTokPhotoRoute){
+    const photoItemId=extractTikTokItemId(canonicalUrl);
+    if(photoItemId){
+      const player=new URL("https://www.tiktok.com/player/v1/"+photoItemId);
+      for(const [name,value] of Object.entries({controls:"1",timestamp:"1",description:"1",music_info:"1",rel:"0"}))player.searchParams.set(name,value);
+      return json({ok:true,platform:"tiktok",title:"TikTok Photo Mode",duration:null,formats:[],embedUrl:player.href,embedId:photoItemId,providerName:"TikTok Photo Mode · official embed",providerReady:true,directDownloadAvailable:false,downloadMessage:"Pemutar resmi TikTok tersedia. Provider publik belum memberikan foto asli atau stream MP4 yang lolos validasi.",canonicalUrl:canonicalUrl!==rawUrl?canonicalUrl:undefined,diagnostics:primaryError.slice(0,900)},200);
+    }
+  }
   if(key==="tiktok"){
     try{
       const fallback=await tikwmFallbackMediaInfo(canonicalUrl,requestUrl,providerUrls.filter(value=>value!==canonicalUrl));
