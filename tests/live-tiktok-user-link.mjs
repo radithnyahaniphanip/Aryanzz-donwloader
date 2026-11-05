@@ -1,12 +1,17 @@
 const base=(process.env.WORKER_URL||"https://aryanzz-donwloader.radithnyahaniphanip.workers.dev").replace(/\/$/,"");
 const sourceUrl="https://vt.tiktok.com/ZSPNASKHN/";
 const request=(path,init={})=>fetch(base+path,{cache:"no-store",signal:AbortSignal.timeout(45000),...init});
-const report={test:"user-supplied TikTok short link",sourceUrl,infoStatus:null,title:null,durationSeconds:null,durationLabel:null,videoFormats:0,selectedFormat:null,probeStatus:null,probeMime:null,previewStatus:null,previewMime:null,previewDisposition:null,downloadUrlAvailable:false,playbackReady:false,downloadReady:false,error:null};
+const report={test:"user-supplied TikTok short link",sourceUrl,infoStatus:null,canonicalUrl:null,providerName:null,provider:null,fallbackUsed:false,title:null,durationSeconds:null,durationLabel:null,videoFormats:0,formatCandidates:[],selectedFormat:null,probeStatus:null,probeMime:null,previewStatus:null,previewMime:null,previewDisposition:null,downloadUrlAvailable:false,playbackReady:false,downloadReady:false,error:null};
 try{
   const infoResponse=await request("/api/platform/info",{method:"POST",headers:{"content-type":"application/json","accept":"application/json"},body:JSON.stringify({url:sourceUrl,expectedPlatform:"tiktok"})});
   report.infoStatus=infoResponse.status;
   const info=await infoResponse.json().catch(()=>({}));
-  if(!infoResponse.ok||!Array.isArray(info.formats)||!info.formats.length)throw new Error(String(info.error||"Provider TikTok tidak mengembalikan format video yang dapat digunakan.").slice(0,260));
+  report.canonicalUrl=info.canonicalUrl||null;
+  report.providerName=info.providerName||null;
+  report.provider=info.provider||null;
+  report.fallbackUsed=info.fallbackUsed===true;
+  report.formatCandidates=(Array.isArray(info.formats)?info.formats:[]).slice(0,6).map(item=>({label:item.label||null,ext:item.ext||null,mimeType:item.mimeType||null,mode:item.mode||null,videoOnly:item.videoOnly===true}));
+  if(!infoResponse.ok||!Array.isArray(info.formats)||!info.formats.length)throw new Error(String(info.error||"Provider TikTok tidak mengembalikan format video yang dapat digunakan.").slice(0,320));
   report.title=String(info.title||"").slice(0,160)||null;
   report.durationSeconds=Number(info.duration)||null;
   if(report.durationSeconds){const total=Math.floor(report.durationSeconds);report.durationLabel=Math.floor(total/60)+":"+String(total%60).padStart(2,"0");}

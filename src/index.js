@@ -277,7 +277,7 @@ async function freePublicMediaInfo(rawUrl,requestUrl){
   const labels={tiktok:"TikTok",instagram:"Instagram",snackvideo:"SnackVideo",capcut:"CapCut",pinterest:"Pinterest",facebook:"Facebook",twitter:"X",reddit:"Reddit",vimeo:"Vimeo",threads:"Threads",soundcloud:"SoundCloud"};
   const label=platformForHost(new URL(rawUrl).hostname)?.name||labels[key]||key;
   const guidance={
-    tiktok:"Gunakan tautan video publik, bukan halaman profil atau LIVE.",
+    tiktok:"Jika video bisa diputar tanpa login, salin ulang tautan dari menu Bagikan. Video privat, LIVE, dibatasi umur/wilayah, atau memerlukan login tidak dapat diambil oleh provider publik.",
     instagram:"Pastikan Reels/postingan berupa video dan dapat dilihat publik. Akun privat, Story yang dibatasi, atau konten yang memerlukan login tidak dapat diekstrak.",
     snackvideo:"Gunakan tautan share video publik, bukan halaman profil atau halaman aplikasi.",
     capcut:"Gunakan tautan share hasil video yang dapat diputar publik. Draft pribadi dan template/proyek yang belum diekspor bukan file MP4 yang bisa diunduh.",
@@ -366,7 +366,7 @@ async function freePublicMediaInfo(rawUrl,requestUrl){
       return json({error:"SnackVideo belum dapat diproses. Provider utama: "+(primaryError||"gagal")+"; provider alternatif: "+String(error?.message||error).slice(0,150)+". "+guidance[key],provider:"Fallback cascade",fallbackTried:true},502);
     }
   }
-  return json({error:label+" belum bisa diproses oleh provider gratis. "+(primaryError||"Provider tidak mengembalikan hasil.")+" "+(guidance[key]||"Periksa kembali tautan publik."),provider:"Fallback cascade",fallbackTried:key==="tiktok"},502);
+  return json({error:label+" belum bisa diproses oleh provider gratis. "+(primaryError||"Provider tidak mengembalikan hasil.")+" "+(guidance[key]||"Periksa kembali tautan publik."),provider:"Fallback cascade",fallbackTried:key==="tiktok",canonicalUrl:canonicalUrl!==rawUrl?canonicalUrl:undefined},502);
 }
 
 function mediaAsciiAt(bytes,offset,value){
@@ -481,12 +481,17 @@ async function socialMediaFile(request){
   let detected=null;
   if(preview){
     detected=socialMimeForExtension(requestedExt,mode);
-    if(rangeStart===0&&prefixLength>=8){const signature=detectSocialMediaSignature(prefix,mode);if(!signature||signature.mime!==detected?.mime)detected=null;}
+    if(rangeStart===0&&prefixLength>=8){
+      const signature=detectSocialMediaSignature(prefix,mode);
+      detected=signature&&signature.mode===mode?signature:null;
+    }
   }else if(rangeStart===0||!responseIsPartial)detected=detectSocialMediaSignature(prefix,mode);
   else if(responseIsPartial)detected=socialMimeForExtension(requestedExt,mode);
   if(!detected||detected.mode!==mode){
+    const actual=detectSocialMediaSignature(prefix,"video")||detectSocialMediaSignature(prefix,"audio");
+    const actualMime=actual?.mime||rawType||"signature media tidak dikenali";
     await reader.cancel().catch(()=>{});
-    return json({error:"File ditolak: isi file tidak cocok dengan video/audio yang diminta. ARYANZZ tidak akan menyimpan file rusak dengan ekstensi palsu."},415);
+    return json({error:"File ditolak: isi sumber terdeteksi sebagai "+actualMime+", bukan "+(mode==="audio"?"audio":"video")+" yang diminta. ARYANZZ tidak akan menyimpan file rusak dengan ekstensi palsu.",detectedMime:actual?.mime||rawType||null,requestedMode:mode},415);
   }
   if(responseIsPartial&&!rangeMatch){
     await reader.cancel().catch(()=>{});
@@ -1137,18 +1142,136 @@ function canonicalSocialPostUrl(rawUrl,key){
     return u.href;
   }catch{return rawUrl}
 }
+function decodeTikTokPageValue(value){
+  return String(value||"").replace(/\\u002f/gi,"/").replace(/\\u0026/gi,"&").replace(/\\u003d/gi,"=").replace(/\\\//g,"/").replace(/&amp;/gi,"&").replace(/&#x2f;/gi,"/").replace(/&quot;/gi,'"').trim();
+}
+function tikTokTagAttributes(tag){
+  const attrs={};
+  for(const match of String(tag||"").matchAll(/([a-zA-Z_:][-a-zA-Z0-9_:]*)\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s>]+))/g))attrs[match[1].toLowerCase()]=match[2]??match[3]??match[4]??"";
+  return attrs;
+}
+function extractTikTokCanonicalUrl(html,pageUrl){
+  const source=decodeTikTokPageValue(html),candidates=[];
+  const add=raw=>{
+    let url;try{url=new URL(decodeTikTokPageValue(raw).replace(/^["']|["']$/g,""),pageUrl)}catch{return}
+    if(url.protocol!=="https:"||platformIdForUrl(url.href)!=="tiktok"||/^(?:vt|vm)\\.tiktok\\.com$/i.test(url.hostname))return;
+    if(!(/^\\/@[^/]+\\/video\\/\\d{8,}/i.test(url.pathname)||/^\\/t\\/[^/]+/i.test(url.pathname)))return;
+    url.hash="";
+    if(/^\\/@[^/]+\\/video\\/\\d+/i.test(url.pathname))url.search="";
+    if(!candidates.includes(url.href))candidates.push(url.href);
+  };
+  for(const match of source.matchAll(/<(?:link|meta)\\b[^>]*>/gi)){
+    const attrs=tikTokTagAttributes(match[0]);
+    if(match[0].slice(0,5).toLowerCase()==="<link"&&String(attrs.rel||"").toLowerCase().split(/\\s+/).includes("canonical"))add(attrs.href);
+    if(match[0].slice(0,5).toLowerCase()==="<meta"&&["og:url","twitter:url","al:ios:url"].includes(String(attrs.property||attrs.name||"").toLowerCase()))add(attrs.content);
+  }
+  for(const match of source.matchAll(/"(?:canonicalUrl|webVideoUrl|web_video_url|shareUrl|share_url)"\\s*:\\s*"([^"]{12,1200})"/gi))add(match[1]);
+  add(pageUrl);
+  return candidates[0]||null;
+}
+function collectTikTokUrlValues(value,output=[],depth=0){
+  if(depth>5||value==null)return output;
+  if(typeof value==="string"){output.push(value);return output;}
+  if(Array.isArray(value)){for(const item of value.slice(0,30))collectTikTokUrlValues(item,output,depth+1);return output;}
+  if(typeof value==="object"){
+    for(const key of ["UrlList","urlList","url_list","urls","url","uri","src"])if(value[key]!==undefined)collectTikTokUrlValues(value[key],output,depth+1);
+  }
+  return output;
+}
+function extractTikTokPublicPageInfo(html,pageUrl,rawUrl,requestUrl){
+  const source=decodeTikTokPageValue(html),records=[],media=[],seen=new Set();
+  const walk=(value,depth=0)=>{
+    if(depth>18||!value||typeof value!=="object"||records.length>40)return;
+    if(Array.isArray(value)){for(const item of value)walk(item,depth+1);return;}
+    const video=value.video&&typeof value.video==="object"?value.video:null;
+    const directFields=["playAddr","downloadAddr","play_addr","download_addr","playUrl","downloadUrl","videoUrl","video_url","bitrateInfo","bitrate_info"];
+    if(video&&directFields.some(key=>video[key]!==undefined))records.push({item:value,video});
+    else if(!video&&directFields.some(key=>value[key]!==undefined))records.push({item:value,video:value});
+    for(const child of Object.values(value))if(child&&typeof child==="object")walk(child,depth+1);
+  };
+  for(const match of source.matchAll(/<script\\b([^>]*)>([\\s\\S]*?)<\\/script>/gi)){
+    const attrs=tikTokTagAttributes("<script "+(match[1]||"")+">");
+    const body=String(match[2]||"").trim();
+    if(!body||body.length>3000000)continue;
+    if(!/__UNIVERSAL_DATA_FOR_REHYDRATION__|SIGI_STATE/i.test(attrs.id||"")&&!/"(?:playAddr|downloadAddr|play_addr|download_addr|bitrateInfo|bitrate_info)"/i.test(body))continue;
+    let parsed=null;
+    try{parsed=JSON.parse(body)}catch{
+      const first=body.indexOf("{"),last=body.lastIndexOf("}");
+      if(first>=0&&last>first){try{parsed=JSON.parse(body.slice(first,last+1))}catch{}}
+    }
+    if(parsed)walk(parsed);
+  }
+  const add=(raw,label,height=0)=>{
+    for(const candidate of collectTikTokUrlValues(raw)){
+      const value=decodeTikTokPageValue(candidate);
+      const safe=safePublicMediaUrl(value);if(!safe||seen.has(safe.href))continue;
+      seen.add(safe.href);
+      const pathExt=(safe.pathname.match(/\\.(mp4|webm|mov|m4v)$/i)||[])[1]?.toLowerCase()||"mp4";
+      const ext=pathExt==="m4v"?"mp4":pathExt;
+      const mime=ext==="webm"?"video/webm":ext==="mov"?"video/quicktime":"video/mp4";
+      media.push({type:"video",kind:"video",label:"TikTok "+label,url:safe.href,ext,mimeType:mime,height:Number(height)||0});
+    }
+  };
+  let title="",thumbnail=null,duration=0,author=null;
+  for(const record of records){
+    const item=record.item||{},video=record.video||{};
+    title=title||String(item.desc||item.description||item.shareInfo?.shareTitle||item.share_info?.share_title||video.desc||"").trim();
+    author=author||item.author?.uniqueId||item.author?.unique_id||item.author?.nickname||null;
+    duration=duration||Number(video.duration)||Number(video.durationMs||video.duration_ms)/1000||0;
+    if(!thumbnail){
+      for(const field of ["originCover","origin_cover","cover","dynamicCover","dynamic_cover","thumbnail"]){
+        const candidate=collectTikTokUrlValues(video[field])[0];
+        const safe=safePublicMediaUrl(decodeTikTokPageValue(candidate||""));
+        if(safe){thumbnail=safe.href;break;}
+      }
+    }
+    add(video.downloadAddr||video.download_addr,"download");
+    add(video.playAddr||video.play_addr,"stream");
+    add(video.playUrl||video.play_url||video.videoUrl||video.video_url,"video");
+    const variants=video.bitrateInfo||video.bitrate_info||[];
+    if(Array.isArray(variants))for(const variant of variants){
+      const quality=String(variant?.GearName||variant?.gear_name||variant?.quality||variant?.QualityType||"");
+      const height=Number(quality.match(/(144|240|360|480|540|576|720|900|960|1080|1440|2160)/)?.[1]||variant?.height||0);
+      add(variant?.PlayAddr||variant?.playAddr||variant?.play_addr||variant?.UrlList||variant?.url_list,"stream "+(quality||"variant"),height);
+    }
+  }
+  const meta={};
+  for(const match of source.matchAll(/<(?:meta)\\b[^>]*>/gi)){
+    const attrs=tikTokTagAttributes(match[0]);
+    const key=String(attrs.property||attrs.name||"").toLowerCase();
+    if(key&&attrs.content)meta[key]=attrs.content;
+  }
+  for(const key of ["og:video","og:video:url","og:video:secure_url","twitter:player:stream"])if(meta[key])add(meta[key],"public video");
+  title=title||decodeTikTokPageValue(meta["og:title"]||"")||"Video TikTok";
+  if(!thumbnail&&meta["og:image"]){const safe=safePublicMediaUrl(decodeTikTokPageValue(meta["og:image"]));if(safe)thumbnail=safe.href;}
+  duration=duration||extractSocialVideoDuration(source)||0;
+  if(!media.length)throw new Error("Halaman TikTok tidak menyediakan URL stream video publik. Video mungkin privat, dibatasi umur/wilayah, memerlukan login, atau halaman TikTok tidak mengirim metadata media.");
+  const normalized=freeProviderMediaInfo({normalized:{kind:"media",title,thumbnail,duration:duration||null,media}},rawUrl,requestUrl);
+  if(!normalized)throw new Error("Metadata TikTok ditemukan, tetapi stream tidak lolos normalisasi media.");
+  normalized.providerName="TikTok public page fallback";
+  normalized.provider="TikTok public page";
+  normalized.fallbackUsed=true;
+  normalized.author=author;
+  normalized.canonicalUrl=extractTikTokCanonicalUrl(source,pageUrl)||pageUrl;
+  return normalized;
+}
+async function tikTokNativePageFallback(rawUrl,requestUrl){
+  const page=await fetchSocialPostHtml(rawUrl,14000);
+  const canonical=extractTikTokCanonicalUrl(page.html,page.url)||page.url;
+  return extractTikTokPublicPageInfo(page.html,canonical,rawUrl,requestUrl);
+}
 async function resolveSocialShortLink(rawUrl,key,timeoutMs=11000){
   const canonical=canonicalSocialPostUrl(rawUrl,key);
   let input;try{input=new URL(canonical)}catch{return canonical}
   const host=input.hostname.toLowerCase();
-  const shortLink=(key==="tiktok"&&/^(?:vt|vm)\.tiktok\.com$/.test(host))
+  const shortLink=(key==="tiktok"&&/^(?:vt|vm)\\.tiktok\\.com$/.test(host))
     ||(key==="instagram"&&host==="instagr.am")
     ||(key==="facebook"&&host==="fb.watch")
     ||(key==="pinterest"&&host==="pin.it");
   if(!shortLink)return canonical;
   try{
     const page=await fetchSocialPostHtml(canonical,timeoutMs);
-    const finalUrl=canonicalSocialPostUrl(page.url,key);
+    const finalUrl=key==="tiktok"?(extractTikTokCanonicalUrl(page.html,page.url)||canonicalSocialPostUrl(page.url,key)):canonicalSocialPostUrl(page.url,key);
     if(platformIdForUrl(finalUrl)===key)return finalUrl;
   }catch{}
   return canonical;
@@ -1238,7 +1361,9 @@ async function tikwmFallbackMediaInfo(rawUrl,requestUrl){
     try{return normalizeTikTokFallbackPayload(result.value,rawUrl,requestUrl,providers[i].name)}
     catch(error){errors.push(providers[i].name+": "+String(error?.message||error).slice(0,110));}
   }
-  throw new Error(errors.join("; ").slice(0,300)||"Semua provider alternatif TikTok gagal.");
+  try{return await tikTokNativePageFallback(rawUrl,requestUrl)}
+  catch(error){errors.push("TikTok public page: "+String(error?.message||error).slice(0,150));}
+  throw new Error(errors.join("; ").slice(0,420)||"Semua provider alternatif TikTok gagal.");
 }
 function providerImageCandidates(data){
   const output=[],n=data?.normalized||{},r=data?.result||{};
