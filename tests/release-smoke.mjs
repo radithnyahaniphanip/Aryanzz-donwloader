@@ -31,6 +31,15 @@ const ownerJs = read("../public/owner.js");
 const authGateJs = read("../public/auth-gate.js");
 const themeStudioJs = read("../public/theme-studio.js");
 const ownerCss = read("../public/owner.css");
+const profileCss = read("../public/v25.css");
+const backupStart = html.indexOf('<section class="v25-profile-card v25-backup-card">');
+const backupEnd = backupStart >= 0 ? html.indexOf("</section>", backupStart) : -1;
+const backupMarkup = backupStart >= 0 && backupEnd > backupStart ? html.slice(backupStart, backupEnd) : "";
+const profileStart = html.indexOf('id="profile"');
+const ownerStart = html.indexOf('id="owner"', profileStart);
+const profileMarkup = profileStart >= 0 && ownerStart > profileStart ? html.slice(profileStart, ownerStart) : "";
+const colorStudioStart = html.indexOf('id="colorStudio"');
+const colorStudioCount = (html.match(/id="colorStudio"/g) || []).length;
 
 const idCounts = new Map();
 for (const match of html.matchAll(/\bid=["']([^"']+)["']/g)) idCounts.set(match[1], (idCounts.get(match[1]) || 0) + 1);
@@ -313,11 +322,14 @@ const checks = [
   ["YouTube live and upcoming streams use the official player while live archives remain downloadable as normal media", worker.includes("liveBroadcastDetails") && worker.includes("liveManifestAvailable") && downloaderJs.includes("info.isLive||info.isUpcoming") && downloaderJs.includes("youtube-nocookie.com/embed/") && downloaderJs.includes("info.isLiveArchive")],
   ["About ARYANZZ and Help Center are home shortcuts, not entries in the Tools catalog", html.includes('class="home-shortcuts"') && html.includes('data-panel="about"') && html.includes('data-panel="help"') && !html.includes('data-panel="about" data-category="personal"') && !html.includes('data-panel="help" data-category="personal"')],
   ["Media Studio Pro is accessible from Tools but removed from the Library surface", html.includes('data-panel="mediaStudio" data-category="media"') && !html.includes("ms-library-entry")],
-  ["Backup and restore controls live inside Library, not Profile", html.indexOf('id="history"')<html.indexOf('id="exportData"') && html.indexOf('id="exportData"')<html.indexOf('id="profile"') && !html.slice(html.indexOf('id="profile"'),html.indexOf('id="owner"')).includes('id="exportData"')],
+  ["Backup and restore controls live inside Library, not Profile", html.indexOf('id="history"')<html.indexOf('id="exportData"') && html.indexOf('id="exportData"')<html.indexOf('id="profile"') && !profileMarkup.includes('id="exportData"')],
+  ["Library backup card removes all explanatory copy while preserving all three backup actions", backupMarkup.includes('id="exportData"') && backupMarkup.includes('id="importData"') && backupMarkup.includes('id="restoreAutoBackup"') && !backupMarkup.includes('<p class="v25-muted">') && !backupMarkup.includes('<small class="v25-privacy-note">')],
+  ["Library backup card aligns with the Pustaka content width and uses a compact two-column action layout", profileCss.includes(".v25-backup-card{") && profileCss.includes("margin:16px 0 0!important") && profileCss.includes("grid-template-columns:repeat(2,minmax(0,1fr))") && profileCss.includes(".v25-backup-actions #restoreAutoBackup{grid-column:1/-1}")],
+  ["Profile ID and Salin ID remain on one horizontal line with a non-wrapping copy button", profileMarkup.includes('id="profileRandomId"') && profileMarkup.includes('id="profileCopyId"') && !profileMarkup.includes("profileDeveloperBadge") && profileCss.includes(".v25-profile-id-row{") && profileCss.includes("flex-wrap:nowrap") && profileCss.includes("white-space:nowrap")],
   ["Profile and owner cover backgrounds no longer carry decorative text labels", !html.includes("YOUR DIGITAL SPACE</span><b>ARYANZZ MEMBER") && !html.includes("THE CREATOR BEHIND") && !html.includes("ALL IN ONE DIGITAL SPACE</span>")],
   ["Only the specified developer ID reveals owner editing and Security Center controls", authGateJs.includes('==="ARY-ZFTLQPEX92"') && authGateJs.includes('editor.hidden=!isDeveloper') && authGateJs.includes('security.hidden=!isDeveloper') && html.includes('id="ownerLinkEditor" hidden') && html.includes('id="securityCenter" hidden')],
-  ["Developer ID and badge receive a dedicated animated visual treatment", html.includes('id="profileDeveloperBadge"') && ownerCss.includes("#profileRandomId.ary-developer-id") && ownerCss.includes("@keyframes developerBadgeShimmer")],
-  ["Theme and experience settings are consolidated in Color Studio with a persistent animation toggle", html.includes("<h2>Tema &amp; pengalaman</h2>") && html.includes('id="aryMotionToggle"') && themeStudioJs.includes("MOTION_KEY") && themeStudioJs.includes("applyMotion") && html.includes('data-panel="colorStudio" data-category="creative"')],
+  ["Developer Website title is anchored in Pemilik and removed from Profile", html.includes('id="ownerDeveloperBadge"') && html.slice(ownerStart).includes("DEVELOPER WEBSITE") && !profileMarkup.includes("DEVELOPER WEBSITE") && !html.includes('id="profileDeveloperBadge"') && !authGateJs.includes("profileDeveloperBadge") && ownerCss.includes("#profileRandomId.ary-developer-id") && ownerCss.includes("@keyframes developerBadgeShimmer")],
+  ["Tema & pengalaman exists once inside Tools and is absent from Profile", colorStudioCount===1 && html.indexOf('<section id="toolsArea">')<colorStudioStart && colorStudioStart<profileStart && !profileMarkup.includes("Tema &amp; pengalaman") && !profileMarkup.includes('id="aryMotionToggle"') && html.includes('data-panel="colorStudio" data-category="creative"') && html.includes("<h2>Tema &amp; pengalaman</h2>") && html.includes('id="aryMotionToggle"') && themeStudioJs.includes("MOTION_KEY") && themeStudioJs.includes("applyMotion")],
   ["Security Center visibility is changed without removing Worker security protections", html.includes('id="securityCenter" hidden') && worker.includes("security") && authGateJs.includes('security.hidden=!isDeveloper')],
 ];
 
