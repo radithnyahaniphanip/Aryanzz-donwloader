@@ -10,6 +10,25 @@ function readUpdateState(){
 }
 function writeUpdateState(value){try{sessionStorage.setItem(updateKey,JSON.stringify(value));return true;}catch{return false;}}
 function clearUpdateState(){try{sessionStorage.removeItem(updateKey)}catch{}}
+function hasStaleLocalAssetReferences(){
+ if(!localVersion)return false;
+ const assets=[...document.querySelectorAll("script[src],link[rel~='stylesheet'][href]")];
+ return assets.some(node=>{
+  const raw=node.getAttribute("src")||node.getAttribute("href")||"";
+  try{
+   const url=new URL(raw,location.href);
+   if(url.origin!==location.origin||!/\\.(?:js|css)$/i.test(url.pathname))return false;
+   return url.searchParams.get("v")!==localVersion;
+  }catch{return true}
+ });
+}
+function hasLegacyProfileLayout(){
+ const profile=document.getElementById("profile");
+ const title=document.getElementById("ownerDeveloperBadge");
+ const titleStack=title?.parentElement?.classList.contains("owner-identity-titles");
+ const creator=title?.parentElement?.querySelector(".owner-creator-title");
+ return !!(profile&&profile.querySelector(".ary-theme-studio,[data-theme-studio],.v25-backup-card,#exportData,#importData,#restoreAutoBackup,#ownerLinkEditor,#securityCenter"))||!!(title&&!titleStack)||!!(title&&!creator);
+}
 function showNotice(version){
  if(document.getElementById("aryanzzUpdateNotice"))return;
  const bar=document.createElement("div");bar.id="aryanzzUpdateNotice";bar.setAttribute("role","status");bar.setAttribute("aria-live","polite");
@@ -64,6 +83,10 @@ async function checkVersion(){
   const latest=String(data?.version||"").trim();
   if(!/^\d+\.\d+\.\d+$/.test(latest))return;
   if(latest===localVersion){
+   if(hasStaleLocalAssetReferences()||hasLegacyProfileLayout()){
+    await applyUpdate(latest);
+    return;
+   }
    const state=readUpdateState();
    if(state.version===latest)clearUpdateState();
    const current=new URL(location.href);
