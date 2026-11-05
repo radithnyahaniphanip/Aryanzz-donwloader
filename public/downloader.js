@@ -1689,8 +1689,6 @@ function socialNetworkPlan(selected=0){
            window.addEventListener("resize",applyIntrinsicRatio,{passive:true});
            previewWrap.append(preview);
            box.append(previewWrap,previewStatus);
-        }
-           box.append(previewWrap,previewStatus);
         }else{
           const audioPreview=(info.formats||[]).find(item=>item.mode==="audio"&&item.url);
           if(audioPreview?.previewUrl){const preview=make("audio","v737-audio-preview");preview.src=audioPreview.previewUrl;preview.controls=true;preview.preload="metadata";box.append(preview)}
