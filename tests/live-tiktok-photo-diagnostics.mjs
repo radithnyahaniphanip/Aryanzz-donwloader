@@ -1,5 +1,5 @@
 const workerBase="https://aryanzz-donwloader.radithnyahaniphanip.workers.dev";
-const shortUrl="https://vt.tiktok.com/ZSpYA7VKa/";
+const shortUrl="https://vt.tiktok.com/ZSpY4TkPP/";
 const itemId="7692687238634769682";
 const canonicalUrl="https://www.tiktok.com/@taechi4.5/photo/"+itemId;
 const headers={
