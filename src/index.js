@@ -1891,7 +1891,7 @@ async function resolveSocialImagePost(rawUrl,requestUrl,options={}){
         }
         return {...result,images};
       }).catch(error=>{
-        if(key==="tiktok"&&options.diagnostics)options.diagnostics.value={source:"official-embed-v2",error:String(error?.message||error).slice(0,180)};
+        if(options.diagnostics)options.diagnostics.value={source:key==="tiktok"?"official-embed-v2":"public-page",error:String(error?.message||error).slice(0,180)};
         return null;
       });
       const tikTokPhotoSignals=key==="tiktok"&&(/photo.?mode|imagePost|image_post|photoPost|photo_post|imageURL|imageUrl|multi.?photo|carousel|image_post_info/i.test(page?.html||"")||isTikTokPhotoRoute);
