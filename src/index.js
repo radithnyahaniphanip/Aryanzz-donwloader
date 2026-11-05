@@ -1684,6 +1684,7 @@ async function fetchTikTokPhotoEmbedProxy(canonicalUrl,timeoutMs=14000){
   const headers={"accept":"text/html,text/plain,*/*","x-return-format":"html","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"};
   const jina=[
     {name:"Jina Reader HTML",url:"https://r.jina.ai/http://www.tiktok.com/embed/v2/"+itemId,headers},
+    {name:"CORS.dev → Jina Reader",url:"https://proxy.cors.dev/https://r.jina.ai/http://www.tiktok.com/embed/v2/"+itemId,headers:{accept:"text/plain,text/html,*/*"}},
     {name:"Jina Reader HTTPS",url:"https://r.jina.ai/https://www.tiktok.com/embed/v2/"+itemId,headers}
   ];
   const fallbacks=[
@@ -1964,7 +1965,7 @@ async function resolveSocialImagePost(rawUrl,requestUrl,options={}){
   const providerUrl=FREE_MEDIA_API+"/api/download/"+(providerKey||key)+"?url="+encodeURIComponent(canonicalUrl);
   // Experimental catalogue entries still get safe public-page metadata extraction;
   // only established provider keys are sent to the community extractor API.
-  const includeProvider=options.includeProvider!==false&&providerKey!=="aio";
+  const includeProvider=options.includeProvider!==false&&providerKey!=="aio"&&!isTikTokPhotoRoute;
   let oembedImage=null,weirdDlImages=[];
   const tasks=[
     includeProvider?fetch(providerUrl,{headers:{accept:"application/json"},signal:AbortSignal.timeout(Number(options.providerTimeoutMs)||12000),cache:"no-store"}).then(async response=>{
@@ -1975,9 +1976,27 @@ async function resolveSocialImagePost(rawUrl,requestUrl,options={}){
       providerImages=providerImageCandidates(data);
     }).catch(()=>{}):Promise.resolve(),
     (async()=>{
-      const itemId=isTikTokPhotoRoute?extractTikTokItemId(canonicalUrl):null;
-      const pageTarget=itemId?"https://www.tiktok.com/embed/v2/"+itemId:canonicalUrl;
-      let page=await fetchSocialPostHtml(pageTarget,Number(options.timeoutMs)||12000).then(result=>{
+      if(isTikTokPhotoRoute){
+        let page=null;
+        try{
+          const proxyData=await fetchTikTokPhotoEmbedProxy(canonicalUrl,Number(options.proxyTimeoutMs)||13000);
+          providerTitle=providerTitle||proxyData.title;
+          page={url:canonicalUrl,html:"",title:proxyData.title,images:proxyData.images};
+          if(options.diagnostics)options.diagnostics.value={source:"TikTok Photo Mode",proxy:{ok:true,source:proxyData.source,imageCount:proxyData.images.length}};
+        }catch(error){
+          if(options.diagnostics)options.diagnostics.value={source:"TikTok Photo Mode",proxy:{ok:false,error:String(error?.message||error).slice(0,200)}};
+          try{
+            const photoData=await fetchTikTokPhotoImageData(canonicalUrl,Number(options.photoTimeoutMs)||7500);
+            providerTitle=providerTitle||photoData.title;
+            page={url:canonicalUrl,html:"",title:photoData.title,images:photoData.images.map(item=>({...item,type:"image",source:"TikTok item detail"}))};
+            if(options.diagnostics)options.diagnostics.value={...(options.diagnostics.value||{}),itemDetail:{ok:true,imageCount:page.images.length,author:photoData.author||null}};
+          }catch(detailError){
+            if(options.diagnostics)options.diagnostics.value={...(options.diagnostics.value||{}),itemDetail:{ok:false,error:String(detailError?.message||detailError).slice(0,180)}};
+          }
+        }
+        return page;
+      }
+      let page=await fetchSocialPostHtml(canonicalUrl,Number(options.timeoutMs)||12000).then(result=>{
         const images=extractSocialImageCandidates(result.html,result.url,key);
         if(options.diagnostics)options.diagnostics.value={source:"public-page",status:result.status,bytes:result.html.length,imageCount:images.length};
         if(key==="tiktok"&&options.diagnostics){
@@ -1999,16 +2018,6 @@ async function resolveSocialImagePost(rawUrl,requestUrl,options={}){
           if(options.diagnostics)options.diagnostics.value={...(options.diagnostics.value||{}),itemDetail:{ok:true,imageCount:images.length,author:photoData.author||null}};
         }catch(error){
           if(options.diagnostics)options.diagnostics.value={...(options.diagnostics.value||{}),itemDetail:{ok:false,error:String(error?.message||error).slice(0,180)}};
-        }
-      }
-      if((!page||!page.images?.length)&&isTikTokPhotoRoute){
-        try{
-          const proxyData=await fetchTikTokPhotoEmbedProxy(canonicalUrl,Number(options.proxyTimeoutMs)||13000);
-          providerTitle=providerTitle||proxyData.title;
-          page={...(page||{url:canonicalUrl,html:""}),title:proxyData.title,images:proxyData.images};
-          if(options.diagnostics)options.diagnostics.value={...(options.diagnostics.value||{}),proxy:{ok:true,source:proxyData.source,imageCount:proxyData.images.length}};
-        }catch(error){
-          if(options.diagnostics)options.diagnostics.value={...(options.diagnostics.value||{}),proxy:{ok:false,error:String(error?.message||error).slice(0,200)}};
         }
       }
       if((!page||!page.images?.length)&&key==="instagram"){
