@@ -52,18 +52,19 @@ const PLATFORM_GUIDES={
 };
 const setMode=v=>{const link=v==="link";if(link&&selected==="all")setPlatform("youtube");const entry=platformCatalog.find(platform=>platform.id===selected);const modes=entry?.inputModes||["link","search"];const canLink=modes.includes("link"),canSearch=modes.includes("search");if(!canLink&&canSearch)v="title";if(!canSearch&&canLink)v="link";activeMode=v;const useLink=v==="link";if(x)x.hidden=!useLink;if(y)y.hidden=useLink;const allButton=picker?.querySelector('[data-platform="all"]');if(allButton)allButton.hidden=useLink;if(a){a.hidden=!canLink;a.disabled=!canLink;a.classList.toggle("active",useLink);a.setAttribute("aria-selected",String(useLink))}if(b){b.hidden=!canSearch;b.disabled=!canSearch;b.classList.toggle("active",!useLink);b.setAttribute("aria-selected",String(!useLink))}};
 a?.addEventListener("click",()=>setMode("link"));b?.addEventListener("click",()=>setMode("title"));
-const setPlatform=id=>{
+const setPlatform=(id,options={})=>{
  const next=(id==="all"||platforms[id])?id:"youtube";
+ const preserveLink=options.preserveLink===true,preserveOutput=options.preserveOutput===true,silent=options.silent===true;
  window.aryanzzSelectedPlatform=()=>selected;
  if(next!==selected){
-  searchController?.abort();
-  if(linkInput)linkInput.value="";
+  if(!silent)searchController?.abort();
+  if(linkInput&&!preserveLink)linkInput.value="";
   const downloadResult=$("downloadResult");
-  if(downloadResult){downloadResult.replaceChildren();downloadResult.hidden=true;}
-  if(results){results.replaceChildren();results.hidden=true;}
-  if(help)help.textContent="Platform berubah ke "+(next==="all"?"Semua 200 Platform":(platforms[next]?.name||"platform pilihan"))+". Panduan tempel tautan dan pencarian ikut menyesuaikan.";
-  if(searchInput)searchInput.value="";
-  document.dispatchEvent(new Event("aryanzz:platform-change"));
+  if(downloadResult&&!preserveOutput){downloadResult.replaceChildren();downloadResult.hidden=true;}
+  if(results&&!preserveOutput){results.replaceChildren();results.hidden=true;}
+  if(help)help.textContent=(silent?"Platform terdeteksi otomatis: ":"Platform berubah ke ")+(next==="all"?"Semua 200 Platform":(platforms[next]?.name||"platform pilihan"))+". Panduan tempel tautan dan pencarian ikut menyesuaikan.";
+  if(searchInput&&!preserveOutput)searchInput.value="";
+  if(!silent)document.dispatchEvent(new Event("aryanzz:platform-change"));
  }
  selected=next;
  picker?.querySelectorAll("[data-platform]").forEach(btn=>{
@@ -87,7 +88,7 @@ const setPlatform=id=>{
  updateSearchHelp();setMode(activeMode);
 };
 picker?.addEventListener("click",e=>{const btn=e.target.closest("[data-platform]");if(btn)setPlatform(btn.dataset.platform)});
-window.aryanzzSelectedPlatform=()=>selected;picker?.setAttribute("data-selected-platform",selected);
+window.aryanzzSelectedPlatform=()=>selected;window.aryanzzAutoSelectPlatform=id=>setPlatform(id,{preserveLink:true,preserveOutput:true,silent:true});picker?.setAttribute("data-selected-platform",selected);
 setMode("link");
 const updateSearchHelp=()=>{
  if(!help)return;
