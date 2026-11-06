@@ -161,11 +161,12 @@
   }
   function setupProfilePreview(){
     const name=$("profileName"),bio=$("profileBio"),saved=read(PROFILE_KEY,{});
-    if(name)name.value=String(saved.name||"");
+    const accountName=String(window.aryanzzAuthUser?.fullName||"Anggota ARYANZZ").trim().slice(0,40);
+    if(name)name.value=String(saved.name||accountName);
     if(bio)bio.value=String(saved.bio||"");
     const update=()=>{
       const profile={name:String(name?.value||"").trim().slice(0,40),bio:String(bio?.value||"").trim().slice(0,160),updatedAt:Date.now()};
-      if($("profileSummary"))$("profileSummary").textContent=profile.name||"Pengguna ARYANZZ";
+      if($("profileSummary"))$("profileSummary").textContent=profile.name||accountName;
       if($("profileBioPreview"))$("profileBioPreview").textContent=profile.bio||"Selamat datang di ruang personal ARYANZZ.";
       if($("profileCharCount")&&bio)$("profileCharCount").textContent=bio.value.length+"/160 karakter";
       if(!write(PROFILE_KEY,profile)){setAutoSaveStatus("Penyimpanan perangkat penuh.",true);return;}
