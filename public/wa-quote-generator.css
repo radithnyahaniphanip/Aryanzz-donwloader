@@ -40,3 +40,8 @@
 #waQuoteTools .waq-step b{display:block;font-size:11px;margin:5px 0}
 #waQuoteTools .waq-step span{font-size:10px;color:#9fb1ca;line-height:1.5}
 @media(max-width:560px){#waQuoteTools{padding:13px!important}#waQuoteTools .waq-section{padding:12px}#waQuoteTools .waq-samples,#waQuoteTools .waq-how{grid-template-columns:1fr}}
+#waQuoteTools .waq-check{display:flex;align-items:center;gap:8px;margin:10px 0;color:#cbd8ea;font-size:11px}
+#waQuoteTools .waq-check input{width:17px;height:17px;accent-color:#8b5cf6}
+#waQuoteTools .waq-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+#waQuoteTools .waq-actions .waq-primary{flex:1 1 160px}
+#waQuoteTools .waq-actions .waq-secondary{flex:0 1 auto}
