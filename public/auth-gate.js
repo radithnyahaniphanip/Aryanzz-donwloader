@@ -251,8 +251,15 @@
   }
   async function verifyLegacy(event) {
     event.preventDefault(); const button = $("aryLegacyVerifySubmit"); button.disabled = true;
-    try { const result = await post("/api/auth/legacy/verify", { email: pendingEmail, code: $("aryLegacyCode").value.trim() }); setUser(result.user); pendingLegacy = null; say("Akun lama berhasil dipindahkan. ID dan password tetap dipertahankan."); }
-    catch (error) { say(error.message, true); } finally { button.disabled = false; }
+    try {
+      const result = await post("/api/auth/legacy/verify", {
+        email: pendingEmail, code: $("aryLegacyCode").value.trim(),
+        deviceHash: await currentDeviceHash()
+      });
+      setUser(result.user, false); pendingLegacy = null; $("aryLegacyMigrate").hidden = true;
+      say("Akun lama berhasil dipindahkan ke server. ID dan password tetap dipertahankan.");
+    } catch (error) { say(error.message, true); }
+    finally { button.disabled = false; }
   }
   const resetWait = ms => new Promise(resolve => setTimeout(resolve, ms));
   async function animateDeviceCheck() {
