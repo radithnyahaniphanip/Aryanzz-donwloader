@@ -48,9 +48,9 @@
   function showStep(id) {
     for (const form of ["aryRegisterForm","aryLoginForm","aryResetStartForm","aryRegisterVerifyForm","aryLegacyVerifyForm","aryResetVerifyForm","aryLocalRecoveryForm"]) if ($(form)) $(form).hidden = form !== id;
     const tabs = $("aryAuthTabs");
-    if (tabs) tabs.hidden = ["aryResetStartForm","aryRegisterVerifyForm","aryLegacyVerifyForm","aryResetVerifyForm"].includes(id);
+    if (tabs) tabs.hidden = ["aryResetStartForm","aryRegisterVerifyForm","aryLegacyVerifyForm","aryResetVerifyForm","aryLocalRecoveryForm"].includes(id);
     if ($("aryAuthCaptcha")) $("aryAuthCaptcha").hidden = true;
-    $("aryAuthTitle").textContent = id === "aryRegisterForm" ? "Buat akun ARYANZZ." : id === "aryLoginForm" ? "Selamat datang kembali." : id.includes("Reset") ? "Reset password." : "Verifikasi email.";
+    $("aryAuthTitle").textContent = id === "aryRegisterForm" ? "Buat akun ARYANZZ." : id === "aryLoginForm" ? "Selamat datang kembali." : id === "aryResetStartForm" ? "Reset password." : id === "aryLocalRecoveryForm" ? "Simpan Recovery Code." : "Verifikasi email.";
     const foot = $("aryAuthFoot");
     if (foot) foot.hidden = id === "aryResetStartForm" || id === "aryResetVerifyForm" || id === "aryLocalRecoveryForm";
     say("");
