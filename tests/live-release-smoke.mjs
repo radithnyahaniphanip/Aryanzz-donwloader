@@ -48,7 +48,7 @@ for(let attempt=0;attempt<15;attempt++){
   const homeResponse=await request("/");
   lastHomepageStatus=homeResponse.status;
   if(homeResponse.ok)html=await homeResponse.text();
-  if(homeResponse.ok&&html.includes("V"+version+" · GRATIS")){homepageReady=true;break;}
+  if(homeResponse.ok&&html.includes('name="aryanzz-version" content="'+version+'"')){homepageReady=true;break;}
   await new Promise(resolve=>setTimeout(resolve,2000));
 }
 assert.ok(homepageReady,"Homepage belum menyajikan versi "+version+" setelah menunggu propagasi aset; status HTTP "+lastHomepageStatus);
@@ -70,7 +70,6 @@ for(const marker of [
   'id="audioStudioFormat"',
   'id="audioStudioTestEngine"',
   'id="audioStudioDiagnosticsResult"',
-  'id="v89Welcome"',
   'ary-profile-v2',
   'ary-profile2-header',
   'ary-profile2-device',
@@ -113,7 +112,7 @@ assert.ok(!v15Asset.includes("window.aryanzzShowPanel=goto"),"Navigation legacy 
 assert.ok(!v15Asset.includes("Tema & pengalaman")&&!v15Asset.includes("setupProfile()"),"Kontrol tema lama masih disuntikkan ke Profil.");
 assert.ok(v15Asset.includes('parent.querySelector("#toolSearch")||parent.querySelector("#toolFilters")'),"Pusat Alat belum mencegah search/filter ganda.");
 assert.ok(v15Asset.includes("aryLibraryHistoryTab")&&v15Asset.includes("clearHistoryV2"),"Kontrol Pustaka belum terhubung.");
-assert.ok(html.includes("welcome.hidden=!isHome")&&html.includes("toolsArea.hidden=isHome"),"Tampilan navigasi belum menyembunyikan bagian yang tidak aktif.");
+assert.ok(!html.includes('class="top v674-top"')&&!html.includes('id="v89Welcome"')&&!html.includes('id="appViewHeader"')&&html.includes("toolsArea.hidden=isHome"),"Kerangka navigasi harus menghilangkan header/banner global dan tetap mengatur panel aktif.");
 assert.ok(downloaderAsset.includes("isTikTokPhotoPost")&&downloaderAsset.includes("slice(0,35)"),"Aset downloader.js live belum memuat deteksi TikTok Photo Mode dan galeri foto.");
 assert.ok(platformPickerAsset.includes("PLATFORM_GUIDES")&&platformPickerAsset.includes("modeLabels.join"),"Aset v674.js live belum memuat panduan dan label media per platform.");
 assert.ok(platformPickerAsset.includes("Tempel tautan TikTok: video atau Photo Mode"),"Placeholder TikTok belum diperbarui pada aset live.");
