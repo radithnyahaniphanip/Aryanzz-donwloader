@@ -69,3 +69,26 @@
 #waQuoteTools .waq-preview{width:100%;height:auto;max-height:72svh;object-fit:contain;object-position:center;background:#050b14;cursor:zoom-in}
 #waQuoteTools .waq-export{min-width:0}
 @media(max-width:560px){#waQuoteTools .waq-preview{max-height:74svh}}
+
+/* V1.0.1780 — give exported WA conversation a real full-width preview stage */
+#waQuoteTools .waq-bottom-grid{display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:14px!important}
+#waQuoteTools .waq-bottom-grid>.waq-section{min-width:0;width:100%;box-sizing:border-box}
+#waQuoteTools .waq-export{grid-column:1/-1!important;min-width:0;width:100%;overflow:hidden}
+#waQuoteTools .waq-export .waq-preview-box{width:100%;min-height:320px;max-height:78svh;display:flex;align-items:center;justify-content:center;box-sizing:border-box;padding:12px;overflow:auto;background:#050b14}
+#waQuoteTools .waq-export .waq-preview{display:block;width:auto!important;height:auto!important;max-width:100%!important;max-height:74svh!important;object-fit:contain!important;object-position:center!important;margin:0 auto;border-radius:9px;cursor:zoom-in}
+#waQuoteTools .waq-export .waq-preview[hidden]{display:none!important}
+#waQuoteTools .waq-export .waq-empty{width:100%;min-height:280px;display:grid;place-content:center}
+#waQuoteTools .waq-export .waq-empty[hidden]{display:none!important}
+#waQuoteTools .waq-export .waq-actions{grid-template-columns:1.3fr 1fr .8fr}
+@media(min-width:760px){
+ #waQuoteTools .waq-bottom-grid{grid-template-columns:minmax(0,1fr)!important}
+ #waQuoteTools .waq-export .waq-preview-box{min-height:420px}
+ #waQuoteTools .waq-export .waq-preview{max-height:78svh!important}
+}
+@media(max-width:560px){
+ #waQuoteTools .waq-bottom-grid{grid-template-columns:minmax(0,1fr)!important}
+ #waQuoteTools .waq-export .waq-preview-box{min-height:300px;max-height:80svh;padding:8px}
+ #waQuoteTools .waq-export .waq-preview{max-width:100%!important;max-height:76svh!important}
+ #waQuoteTools .waq-export .waq-actions{grid-template-columns:1fr 1fr}
+ #waQuoteTools .waq-export .waq-actions #waqReset{grid-column:1/-1}
+}
