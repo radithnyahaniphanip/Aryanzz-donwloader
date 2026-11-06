@@ -1,4 +1,17 @@
-/* ARYANZZ V1 — prevent accidental text selection/copy across the interface */
-html,body,body *:not(input):not(textarea):not(select):not(option):not([contenteditable="true"]):not([contenteditable=""]):not([data-allow-select]){-webkit-user-select:none!important;user-select:none!important;-webkit-touch-callout:none}
-input,textarea,select,option,[contenteditable="true"],[contenteditable=""],[data-allow-select]{-webkit-user-select:text!important;user-select:text!important;-webkit-touch-callout:default}
-input::selection,textarea::selection,[contenteditable="true"]::selection{background:#3979d6;color:#fff}
+/* ARYANZZ V1 — global no-selection and no-copy policy.
+   Inputs remain editable/typable; only text selection and copying are disabled. */
+html,body,body *,body *::before,body *::after{
+  -webkit-user-select:none!important;
+  user-select:none!important;
+  -webkit-touch-callout:none!important;
+}
+input,textarea,select,option,button,[contenteditable],[role="textbox"]{
+  -webkit-user-select:none!important;
+  user-select:none!important;
+  -webkit-touch-callout:none!important;
+}
+input,textarea{cursor:text!important}
+::selection,::-moz-selection{
+  color:inherit!important;
+  background:transparent!important;
+}
