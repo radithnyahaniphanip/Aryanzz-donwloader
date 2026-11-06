@@ -1167,25 +1167,32 @@ if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.ser
    <label>Password<div class="ary-auth-password"><input id="aryRegPassword" name="password" type="password" minlength="12" maxlength="128" autocomplete="new-password" placeholder="Minimal 12 karakter" required><button type="button" id="aryRegEye" aria-label="Lihat password">◉</button></div></label>
    <label>Konfirmasi password<div class="ary-auth-password"><input id="aryRegPasswordConfirm" name="passwordConfirm" type="password" minlength="12" maxlength="128" autocomplete="new-password" placeholder="Ulangi password" required><button type="button" id="aryRegConfirmEye" aria-label="Lihat konfirmasi password">◉</button></div></label>
    <div class="ary-auth-strength"><div class="ary-auth-strength-track"><i id="aryStrengthBar"></i></div><b id="aryStrengthLabel">Kekuatan password: belum diisi</b></div>
-   <small class="ary-auth-hint">Gunakan huruf besar, huruf kecil, angka, dan simbol. Password asli tidak disimpan.</small>
-   <button class="ary-auth-submit" type="submit" id="aryRegisterSubmit">Kirim kode verifikasi</button>
+   <div class="ary-local-captcha"><div class="ary-local-captcha-label" id="aryRegCaptchaQuestion">Verifikasi manusia</div><input id="aryRegCaptchaAnswer" type="number" inputmode="numeric" placeholder="Jawaban" required></div>
+   <small class="ary-auth-hint">Gunakan huruf besar, huruf kecil, angka, dan simbol. Password disimpan sebagai hash pada browser ini.</small>
+   <button class="ary-auth-submit" type="submit" id="aryRegisterSubmit">Buat akun ARYANZZ</button>
   </form>
   <form id="aryLoginForm" class="ary-auth-form" autocomplete="on">
    <label>Email atau ID ARYANZZ<input id="aryLoginIdentifier" name="identifier" type="text" maxlength="254" autocomplete="username" placeholder="nama@gmail.com atau ARY-XXXXXXXXXX" required></label>
    <label>Password<div class="ary-auth-password"><input id="aryLoginPassword" name="password" type="password" autocomplete="current-password" placeholder="Password akun" required><button type="button" id="aryLoginEye" aria-label="Lihat password">◉</button></div></label>
+   <label>Konfirmasi password<div class="ary-auth-password"><input id="aryLoginPasswordConfirm" name="passwordConfirm" type="password" autocomplete="current-password" placeholder="Ulangi password akun" required><button type="button" id="aryLoginConfirmEye" aria-label="Lihat konfirmasi password">◉</button></div></label>
+   <div class="ary-local-captcha"><div class="ary-local-captcha-label" id="aryLoginCaptchaQuestion">Verifikasi manusia</div><input id="aryLoginCaptchaAnswer" type="number" inputmode="numeric" placeholder="Jawaban" required></div>
    <button class="ary-auth-submit" type="submit" id="aryLoginSubmit">Masuk ke ARYANZZ</button>
    <button class="ary-auth-secondary" type="button" id="aryLegacyMigrate" hidden>Kirim kode migrasi akun lama</button>
    <div class="ary-auth-inline-actions"><button class="ary-auth-link" type="button" id="aryForgotPassword">Lupa password?</button></div>
   </form>
-  <form id="aryResetStartForm" class="ary-auth-form" hidden autocomplete="on">
-   <label>Email akun<input id="aryResetEmail" type="email" autocomplete="email" placeholder="nama@gmail.com" required></label>
-   <div id="aryResetProgress" class="ary-reset-progress" hidden>
-    <div class="ary-reset-progress-copy"><span id="aryResetProgressText">Memeriksa email kamu…</span><b id="aryResetProgressPercent">0%</b></div>
-    <div class="ary-reset-progress-track"><i id="aryResetProgressFill"></i></div>
-    <div id="aryResetProgressResult" class="ary-reset-progress-result" hidden><span>✓</span><b>Pemeriksaan selesai</b><small>Jika email cocok dengan akun, tautan reset aman telah dikirim ke Gmail.</small></div>
-   </div>
-   <button class="ary-auth-submit" type="submit" id="aryResetStartSubmit">Memeriksa email kamu</button>
+  <form id="aryResetStartForm" class="ary-auth-form" hidden autocomplete="off">
+   <label>Email atau ID akun<input id="aryResetEmail" type="text" autocomplete="username" placeholder="Email atau ID ARYANZZ" required></label>
+   <label>Recovery Code<input id="aryResetRecoveryCode" type="text" autocomplete="off" placeholder="Masukkan Recovery Code" required></label>
+   <label>Password baru<div class="ary-auth-password"><input id="aryResetPassword" type="password" minlength="12" maxlength="128" autocomplete="new-password" placeholder="Minimal 12 karakter" required><button type="button" id="aryResetEye" aria-label="Lihat password baru">◉</button></div></label>
+   <label>Ulangi password baru<div class="ary-auth-password"><input id="aryResetPasswordConfirm" type="password" minlength="12" maxlength="128" autocomplete="new-password" placeholder="Ulangi password baru" required><button type="button" id="aryResetConfirmEye" aria-label="Lihat konfirmasi password">◉</button></div></label>
+   <div class="ary-local-captcha"><div class="ary-local-captcha-label" id="aryResetCaptchaQuestion">Verifikasi manusia</div><input id="aryResetCaptchaAnswer" type="number" inputmode="numeric" placeholder="Jawaban" required></div>
+   <button class="ary-auth-submit" type="submit" id="aryResetStartSubmit">Reset password</button>
    <button class="ary-auth-link" type="button" id="aryBackToLogin">Kembali ke login</button>
+  </form>
+  <form id="aryLocalRecoveryForm" class="ary-auth-form" hidden autocomplete="off">
+   <div class="ary-reset-verified"><span>✓</span><div><b>Akun berhasil dibuat</b><small>Simpan Recovery Code ini. Kode diperlukan jika kamu lupa password.</small></div></div>
+   <label>Recovery Code<div class="ary-recovery-code-row"><input id="aryRecoveryCodeDisplay" type="text" readonly><button type="button" id="aryCopyRecoveryCode">Salin</button></div></label>
+   <button class="ary-auth-submit" type="button" id="aryFinishLocalRegister">Saya sudah menyimpan Recovery Code</button>
   </form>
   <form id="aryRegisterVerifyForm" class="ary-auth-form" hidden autocomplete="one-time-code">
    <p class="ary-auth-step-note">Kode verifikasi dikirim ke <b id="aryRegisterVerifyEmail"></b>. Kode berlaku 10 menit.</p>
