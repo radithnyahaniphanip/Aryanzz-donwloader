@@ -2011,6 +2011,41 @@ function socialNetworkPlan(selected=0){
       node.textContent="Gratis · file langsung lewat Chrome · tautan sosial lewat platform.";
     }
   }
+
+  function installMediaViewer(){
+    if(document.getElementById("aryanzzMediaViewer"))return;
+    const dialog=document.createElement("dialog");dialog.id="aryanzzMediaViewer";dialog.className="ary-media-viewer";
+    dialog.innerHTML='<div class="ary-media-viewer-head"><strong class="ary-media-viewer-title">Pratinjau media</strong><button type="button" data-viewer-close aria-label="Tutup">✕</button></div><div class="ary-media-viewer-stage"><div class="ary-media-viewer-content"></div></div><div class="ary-media-viewer-tools"><button type="button" data-viewer-zoom="-">−</button><button type="button" data-viewer-zoom="fit">Sesuaikan</button><button type="button" data-viewer-zoom="+">＋</button><button type="button" data-viewer-rotate>↻ Putar</button><span class="ary-media-viewer-hint">Geser untuk mengatur posisi · cubit untuk zoom</span></div>';
+    document.body.append(dialog);
+    const stage=dialog.querySelector(".ary-media-viewer-stage"),content=dialog.querySelector(".ary-media-viewer-content"),title=dialog.querySelector(".ary-media-viewer-title");
+    let scale=1,rotation=0,x=0,y=0,pointers=new Map(),start=null,pinch=0;
+    const paint=()=>{content.style.transform="translate("+x+"px,"+y+"px) scale("+scale+") rotate("+rotation+"deg)";};
+    const reset=()=>{scale=1;rotation=0;x=0;y=0;paint();};
+    const close=()=>{const v=content.querySelector("video");if(v)v.pause();dialog.close();content.replaceChildren();reset();};
+    dialog.querySelector("[data-viewer-close]").addEventListener("click",close);
+    dialog.addEventListener("click",e=>{if(e.target===dialog)close();});
+    dialog.querySelectorAll("[data-viewer-zoom]").forEach(b=>b.addEventListener("click",()=>{const z=b.dataset.viewerZoom;if(z==="fit")reset();else scale=Math.max(.5,Math.min(5,scale+(z==="+"?.25:-.25)));paint();}));
+    dialog.querySelector("[data-viewer-rotate]").addEventListener("click",()=>{rotation=(rotation+90)%360;paint();});
+    stage.addEventListener("wheel",e=>{e.preventDefault();scale=Math.max(.5,Math.min(5,scale+(e.deltaY<0?.15:-.15)));paint();},{passive:false});
+    stage.addEventListener("pointerdown",e=>{if(e.target.closest("video"))return;stage.setPointerCapture(e.pointerId);pointers.set(e.pointerId,true);start={x:e.clientX,y:e.clientY,ox:x,oy:y};});
+    stage.addEventListener("pointermove",e=>{if(!pointers.has(e.pointerId)||!start)return;x=start.ox+e.clientX-start.x;y=start.oy+e.clientY-start.y;paint();});
+    const end=e=>{pointers.delete(e.pointerId);if(!pointers.size)start=null;};stage.addEventListener("pointerup",end);stage.addEventListener("pointercancel",end);
+    stage.addEventListener("touchstart",e=>{if(e.touches.length===2)pinch=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);},{passive:true});
+    stage.addEventListener("touchmove",e=>{if(e.touches.length===2){const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);if(pinch){scale=Math.max(.5,Math.min(5,scale*d/pinch));paint();}pinch=d;}},{passive:true});
+    stage.addEventListener("touchend",()=>{pinch=0;},{passive:true});
+    document.addEventListener("click",e=>{
+      const media=e.target.closest("#downloadResult img,#downloadResult video,#waQuoteTools .waq-preview,#waQuoteTools .waq-preview-box img,.aryanzz-inline-image-open img");
+      if(!media||dialog.open)return;
+      e.preventDefault();
+      const clone=media.cloneNode(true);clone.removeAttribute("id");clone.removeAttribute("hidden");
+      if(clone.tagName==="VIDEO"){clone.controls=true;clone.removeAttribute("controlslist");clone.controlsList="";clone.autoplay=false;clone.style.maxWidth="100%";clone.style.maxHeight="100%";}
+      if(clone.tagName==="IMG"){clone.draggable=false;clone.alt=media.alt||"Pratinjau gambar";clone.style.maxWidth="100%";clone.style.maxHeight="100%";}
+      content.replaceChildren(clone);title.textContent=media.alt||media.getAttribute("aria-label")||"Pratinjau media";reset();
+      if(typeof dialog.showModal==="function")dialog.showModal();else dialog.setAttribute("open","");
+    },true);
+    dialog.addEventListener("cancel",e=>{e.preventDefault();close();});
+  }
+  installMediaViewer();
   function init() {
     refreshBackendStatus();
     const button = $("analyze");
