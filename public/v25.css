@@ -385,3 +385,68 @@ body[data-motion="off"] *,body[data-motion="off"] *:before,body[data-motion="off
     will-change:auto;
   }
 }
+
+
+/* ARYANZZ V1 — clean profile hierarchy and animated avatar support */
+#profile.ary-profile-v2 .ary-profile2-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+  flex-wrap:wrap;
+  margin-bottom:17px;
+}
+#profile.ary-profile-v2 .ary-profile2-cover-actions{
+  position:static!important;
+  inset:auto!important;
+  z-index:auto!important;
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  flex-wrap:wrap;
+  gap:8px;
+  margin:0 0 0 auto;
+  padding:0!important;
+  border:0!important;
+  background:none!important;
+}
+#profile.ary-profile-v2 .ary-profile2-identity{
+  align-items:center;
+  gap:18px;
+  margin-top:0!important;
+  padding:18px clamp(14px,2.8vw,24px) 21px!important;
+}
+#profile.ary-profile-v2 .ary-profile2-identity-copy{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  gap:4px;
+  min-width:0;
+  padding-top:0!important;
+}
+#profile.ary-profile-v2 .ary-profile2-identity-copy h2{order:1;margin:0}
+#profile.ary-profile-v2 .ary-profile2-identity-copy p{order:2;margin:0}
+#profile.ary-profile-v2 .ary-profile2-member-label{order:3;margin-top:7px}
+#profile.ary-profile-v2 .ary-profile2-avatar.ary-profile2-avatar-animated{
+  background-repeat:no-repeat;
+  background-size:cover!important;
+  background-position:center!important;
+}
+#profile.ary-profile-v2 .ary-profile2-action{white-space:nowrap}
+@media(max-width:620px){
+  #profile.ary-profile-v2 .ary-profile2-header{align-items:flex-start}
+  #profile.ary-profile-v2 .ary-profile2-cover-actions{
+    width:100%;
+    justify-content:flex-start;
+    margin:10px 0 0;
+  }
+  #profile.ary-profile-v2 .ary-profile2-identity{
+    gap:12px;
+    margin-top:0!important;
+    padding:15px 13px 18px!important;
+  }
+  #profile.ary-profile-v2 .ary-profile2-identity-copy{padding-top:0!important}
+}
+@media(prefers-reduced-motion:reduce){
+  #profile.ary-profile-v2 .ary-profile2-avatar-animated{animation:none!important;transition:none!important}
+}
