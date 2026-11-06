@@ -9,3 +9,7 @@
 .ary-profile2-identity-copy p{margin:0;font-size:11px}
 .ary-profile2-member-label{display:none!important}
 @media(max-width:420px){.ary-profile2-avatar-wrap{width:70px;height:70px;flex-basis:70px}.ary-profile2-avatar{width:70px;height:70px;min-width:70px;min-height:70px;font-size:28px}.ary-profile2-identity{gap:12px}}
+
+.ary-profile2-account-email{display:grid;gap:5px;margin-top:12px;padding:11px 13px;border:1px solid rgba(113,157,210,.18);border-radius:12px;background:rgba(7,18,35,.48);min-width:0}
+.ary-profile2-account-email small{color:#7fa8d4;font-size:9px;font-weight:900;letter-spacing:1.5px}
+.ary-profile2-account-email b{color:#dceaff;font-size:12px;overflow-wrap:anywhere;font-weight:700}
