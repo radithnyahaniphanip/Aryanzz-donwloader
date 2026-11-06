@@ -91,7 +91,7 @@ for(const marker of [
 
 const assetRefs=[...html.matchAll(/(?:src|href)="(\/(?:[^"]+\.(?:js|css))(?:\?[^"]*)?)"/g)].map(match=>match[1]);
 assert.ok(assetRefs.length>=15,"Homepage tidak memuat kumpulan aset aplikasi yang diharapkan");
-let downloaderAsset="",platformPickerAsset="",downloaderCss="",v15Asset="";
+let downloaderAsset="",platformPickerAsset="",downloaderCss="",v15Asset="",workspaceHomeAsset="",workspaceLayoutAsset="",workspaceLibraryAsset="",workspaceToolsAsset="",workspaceNavigationAsset="";
 for(const path of [...new Set(assetRefs)]){
   const assetUrl=new URL(path,base);
   assert.equal(assetUrl.searchParams.get("v"),version,"Aset tidak memakai versi build yang sama: "+path);
@@ -104,6 +104,11 @@ for(const path of [...new Set(assetRefs)]){
     if(pathname==="/v15.js")v15Asset=body;
     if(pathname==="/v674.js")platformPickerAsset=body;
     if(pathname==="/downloader.css")downloaderCss=body;
+    if(pathname==="/workspace-home.js")workspaceHomeAsset=body;
+    if(pathname==="/workspace-layout.js")workspaceLayoutAsset=body;
+    if(pathname==="/workspace-library.js")workspaceLibraryAsset=body;
+    if(pathname==="/workspace-tools.js")workspaceToolsAsset=body;
+    if(pathname==="/workspace-navigation.js")workspaceNavigationAsset=body;
   }
 }
 assert.ok(downloaderAsset.includes("createPhotoSlideshow"),"Aset downloader.js live belum memuat pembuat video slideshow dari foto.");
@@ -112,7 +117,12 @@ assert.ok(!v15Asset.includes("window.aryanzzShowPanel=goto"),"Navigation legacy 
 assert.ok(!v15Asset.includes("Tema & pengalaman")&&!v15Asset.includes("setupProfile()"),"Kontrol tema lama masih disuntikkan ke Profil.");
 assert.ok(v15Asset.includes('parent.querySelector("#toolSearch")||parent.querySelector("#toolFilters")'),"Pusat Alat belum mencegah search/filter ganda.");
 assert.ok(v15Asset.includes("aryLibraryHistoryTab")&&v15Asset.includes("clearHistoryV2"),"Kontrol Pustaka belum terhubung.");
-assert.ok(!html.includes('class="top v674-top"')&&!html.includes('id="v89Welcome"')&&!html.includes('id="appViewHeader"')&&html.includes("toolsArea.hidden=isHome"),"Kerangka navigasi harus menghilangkan header/banner global dan tetap mengatur panel aktif.");
+const homeRoot=html.indexOf('<section id="home"');
+const toolsRoot=html.indexOf('<section id="toolsArea"');
+const brandHeader=html.indexOf('id="homeBrandHeader"');
+const welcomeHero=html.indexOf('id="v89Welcome"');
+assert.ok(homeRoot>=0&&toolsRoot>homeRoot&&brandHeader>homeRoot&&brandHeader<toolsRoot&&welcomeHero>brandHeader&&welcomeHero<toolsRoot&&!html.includes('id="appViewHeader"'),"Header identitas dan hero harus berada hanya di dalam Beranda, bukan menjadi header global.");
+assert.ok(workspaceHomeAsset.includes('home.dataset.workspace="home"')&&workspaceLayoutAsset.includes("normalizeWorkspaceLayout")&&workspaceLibraryAsset.includes("window.ARYANZZLibrary")&&workspaceToolsAsset.includes("#toolSearch")&&workspaceNavigationAsset.includes("window.aryanzzShowPanel=showPanel"),"Setiap workspace harus memuat script khusus dan controller navigasi terpisah.");
 assert.ok(downloaderAsset.includes("isTikTokPhotoPost")&&downloaderAsset.includes("slice(0,35)"),"Aset downloader.js live belum memuat deteksi TikTok Photo Mode dan galeri foto.");
 assert.ok(platformPickerAsset.includes("PLATFORM_GUIDES")&&platformPickerAsset.includes("modeLabels.join"),"Aset v674.js live belum memuat panduan dan label media per platform.");
 assert.ok(platformPickerAsset.includes("Tempel tautan TikTok: video atau Photo Mode"),"Placeholder TikTok belum diperbarui pada aset live.");
@@ -151,12 +161,17 @@ async function waitForVersionedJson(path,label){
 }
 const release=await waitForVersionedJson("/release.json","Metadata release.json");
 const manifest=await waitForVersionedJson("/manifest.webmanifest?v="+version,"PWA manifest");
+const workspaceManifestResponse=await request("/workspace-manifest.json?v="+version);
+assert.equal(workspaceManifestResponse.status,200,"Workspace ownership manifest tidak tersedia");
+const workspaceManifest=await workspaceManifestResponse.json();
+for(const key of ["home","tools","library","owner","profile","navigation"])assert.ok(workspaceManifest.workspaces?.[key]?.root,"Workspace manifest kehilangan pemilik: "+key);
 const swResponse=await request("/sw.js");
 assert.equal(swResponse.status,200,"Service worker tidak tersedia");
 const sw=await swResponse.text();
 assert.ok(sw.includes("aryanzz-build-"+version),"Namespace cache PWA tidak mengikuti versi build");
 assert.ok(sw.includes("/speed-test.js?v="+version),"Service worker belum mencache controller Speed Test dengan versi terbaru");
 assert.ok(sw.includes("/link-bypass.js?v="+version),"Service worker belum mencache Link Bypass dengan versi terbaru");
+for(const asset of ["workspace-home.css","workspace-tools.css","workspace-library.css","workspace-navigation.css","workspace-home.js","workspace-layout.js","workspace-library.js","workspace-tools.js","workspace-navigation.js","workspace-manifest.json"])assert.ok(sw.includes("/"+asset+"?v="+version),"Service worker belum mencache modul workspace: "+asset);
 console.log("✔ Cloudflare Worker health matches expected build: "+version);
 console.log("✔ release.json, PWA manifest, homepage, JS/CSS assets and service-worker cache all match "+version);
 console.log("✔ Security middleware and Link Bypass validation are active");
