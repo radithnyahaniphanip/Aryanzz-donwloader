@@ -13,6 +13,7 @@ function reply(data, status = 200, headers = {}) {
 }
 const emailOf = value => String(value || "").trim().toLowerCase();
 const validEmail = value => value.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+const validDeviceHash = value => /^[a-f0-9]{64}$/i.test(String(value || ""));
 const validPassword = value => typeof value === "string" && value.length >= 12 && value.length <= 128 &&
   /[a-z]/.test(value) && /[A-Z]/.test(value) && /[0-9]/.test(value) && /[^A-Za-z0-9]/.test(value);
 const hex = bytes => Array.from(new Uint8Array(bytes), value => value.toString(16).padStart(2, "0")).join("");
@@ -132,6 +133,16 @@ function tokenFrom(request) {
   const part = cookie.split(";").map(value => value.trim()).find(value => value.startsWith(COOKIE + "="));
   return part ? part.slice(COOKIE.length + 1) : "";
 }
+async function rememberTrustedDevice(userId, deviceHash, env) {
+  if (!validDeviceHash(deviceHash)) return false;
+  const now = Date.now();
+  const storedHash = await digest(String(env.AUTH_SESSION_SECRET) + "|trusted-device|" + String(deviceHash).toLowerCase());
+  await env.AUTH_DB.prepare("INSERT INTO auth_trusted_devices (user_id,device_hash,created_at,last_seen_at) VALUES (?1,?2,?3,?3) ON CONFLICT(user_id,device_hash) DO UPDATE SET last_seen_at=excluded.last_seen_at")
+    .bind(userId, storedHash, now).run();
+  await env.AUTH_DB.prepare("DELETE FROM auth_trusted_devices WHERE user_id=?1 AND device_hash NOT IN (SELECT device_hash FROM auth_trusted_devices WHERE user_id=?1 ORDER BY last_seen_at DESC LIMIT 8)")
+    .bind(userId).run();
+  return true;
+}
 async function createSession(row, env) {
   const token = randomHex(32), now = Date.now();
   await env.AUTH_DB.prepare("INSERT INTO auth_sessions (token_hash,user_id,created_at,expires_at) VALUES (?1,?2,?3,?4)")
@@ -173,8 +184,8 @@ async function startRegister(request, env) {
   return reply({ ok: true, message: "Kode verifikasi 6 digit telah dikirim ke email kamu." });
 }
 async function verifyRegister(request, env) {
-  const b = await bodyOf(request), email = emailOf(b?.email), code = String(b?.code || "").trim();
-  if (!validEmail(email) || !/^\d{6}$/.test(code)) return reply({ ok: false, error: "Email atau kode tidak valid." }, 400);
+  const b = await bodyOf(request), email = emailOf(b?.email), code = String(b?.code || "").trim(), deviceHash = String(b?.deviceHash || "");
+  if (!validEmail(email) || !/^\d{6}$/.test(code) || !validDeviceHash(deviceHash)) return reply({ ok: false, error: "Email, kode, atau identitas perangkat tidak valid." }, 400);
   if (limited(request, "register-verify", 12, 600000)) return reply({ ok: false, error: "Terlalu banyak percobaan kode." }, 429);
   const checked = await verifyCode(email, "register", code, env);
   if (checked.error) return reply({ ok: false, error: checked.error }, 400);
@@ -188,10 +199,11 @@ async function verifyRegister(request, env) {
   } catch { return reply({ ok: false, error: "Email sudah terdaftar. Silakan masuk." }, 409); }
   await env.AUTH_DB.prepare("DELETE FROM auth_verifications WHERE email=?1 AND purpose=?2").bind(email, "register").run();
   const user = await env.AUTH_DB.prepare("SELECT id,email,full_name,role,created_at FROM auth_users WHERE id=?1").bind(id).first();
+  await rememberTrustedDevice(id, deviceHash, env);
   return createSession(user, env);
 }
 async function login(request, env) {
-  const b = await bodyOf(request), identifier = String(b?.identifier || "").trim().slice(0, 254), password = String(b?.password || "");
+  const b = await bodyOf(request), identifier = String(b?.identifier || "").trim().slice(0, 254), password = String(b?.password || ""), deviceHash = String(b?.deviceHash || "");
   if (!identifier || !password || password.length > 128) return reply({ ok: false, error: "Masukkan email/ID dan password." }, 400);
   if (limited(request, "login", 10, 600000)) return reply({ ok: false, error: "Terlalu banyak percobaan masuk. Tunggu beberapa menit." }, 429);
   if (!(await captcha(request, b.captchaToken, env))) return reply({ ok: false, error: "Verifikasi CAPTCHA belum berhasil." }, 400);
@@ -202,6 +214,7 @@ async function login(request, env) {
   if (!equal(await passwordDigest(password, user.password_salt, iterations), String(user.password_hash || ""))) {
     return reply({ ok: false, code: "INVALID_CREDENTIALS", error: "Email/ID atau password tidak cocok." }, 401);
   }
+  if (validDeviceHash(deviceHash)) await rememberTrustedDevice(user.id, deviceHash, env);
   return createSession(user, env);
 }
 async function startLegacy(request, env) {
@@ -251,6 +264,45 @@ async function sendResetLink(email, resetUrl, env) {
 async function resetLinkRow(token, env) {
   const hash = await digest(String(env.AUTH_SESSION_SECRET) + "|reset-link|" + token);
   return env.AUTH_DB.prepare("SELECT email,expires_at FROM auth_verifications WHERE purpose='reset_link' AND code_hash=?1 LIMIT 1").bind(hash).first();
+}
+async function startDeviceReset(request, env) {
+  const b = await bodyOf(request), email = emailOf(b?.email), deviceHash = String(b?.deviceHash || "");
+  if (!validEmail(email) || !validDeviceHash(deviceHash)) return reply({ ok: false, error: "Email atau identitas perangkat tidak valid." }, 400);
+  if (limited(request, "device-reset-start", 4, 600000)) return reply({ ok: false, error: "Terlalu banyak pemeriksaan. Tunggu beberapa menit." }, 429);
+  const user = await env.AUTH_DB.prepare("SELECT id FROM auth_users WHERE email=?1 COLLATE NOCASE LIMIT 1").bind(email).first();
+  if (!user) return reply({ ok: false, code: "DEVICE_NOT_RECOGNIZED", error: "Email atau perangkat tidak cocok dengan akun yang terdaftar." }, 404);
+  const deviceKeyHash = await digest(String(env.AUTH_SESSION_SECRET) + "|trusted-device|" + deviceHash.toLowerCase());
+  const trusted = await env.AUTH_DB.prepare("SELECT user_id FROM auth_trusted_devices WHERE user_id=?1 AND device_hash=?2 LIMIT 1").bind(user.id, deviceKeyHash).first();
+  if (!trusted) return reply({ ok: false, code: "DEVICE_NOT_RECOGNIZED", error: "Email atau perangkat tidak cocok dengan perangkat yang pernah digunakan untuk akun ini." }, 403);
+  const token = randomHex(32), now = Date.now();
+  const tokenHash = await digest(String(env.AUTH_SESSION_SECRET) + "|device-reset|" + token);
+  const payload = JSON.stringify({ userId: user.id, deviceKeyHash });
+  await env.AUTH_DB.prepare("DELETE FROM auth_verifications WHERE email=?1 AND purpose='device_reset'").bind(email).run();
+  await env.AUTH_DB.prepare("INSERT INTO auth_verifications (email,purpose,code_hash,payload_json,created_at,expires_at,attempts,last_sent_at) VALUES (?1,'device_reset',?2,?3,?4,?5,0,?4)")
+    .bind(email, tokenHash, payload, now, now + 15 * 60 * 1000).run();
+  return reply({ ok: true, verified: true, token, userId: user.id, expiresAt: now + 15 * 60 * 1000 });
+}
+async function verifyDeviceReset(request, env) {
+  const b = await bodyOf(request), email = emailOf(b?.email), token = String(b?.token || "");
+  const password = String(b?.password || ""), confirm = String(b?.passwordConfirm || "");
+  if (!validEmail(email) || !/^[a-f0-9]{64}$/i.test(token)) return reply({ ok: false, error: "Sesi verifikasi tidak valid. Ulangi pemeriksaan perangkat." }, 400);
+  if (!validPassword(password)) return reply({ ok: false, error: "Password baru minimal 12 karakter, memakai huruf besar, huruf kecil, angka, dan simbol." }, 400);
+  if (password !== confirm) return reply({ ok: false, error: "Ulangi password baru belum sama." }, 400);
+  if (limited(request, "device-reset-verify", 8, 600000)) return reply({ ok: false, error: "Terlalu banyak percobaan reset password." }, 429);
+  const row = await env.AUTH_DB.prepare("SELECT * FROM auth_verifications WHERE email=?1 AND purpose='device_reset' LIMIT 1").bind(email).first();
+  const expected = await digest(String(env.AUTH_SESSION_SECRET) + "|device-reset|" + token);
+  if (!row || Number(row.expires_at) <= Date.now() || !equal(String(row.code_hash || ""), expected)) return reply({ ok: false, error: "Verifikasi perangkat sudah kedaluwarsa. Ulangi pemeriksaan." }, 400);
+  let payload;
+  try { payload = JSON.parse(row.payload_json || "{}"); } catch { payload = null; }
+  if (!payload?.userId || !payload?.deviceKeyHash) return reply({ ok: false, error: "Data verifikasi perangkat tidak valid." }, 400);
+  const trusted = await env.AUTH_DB.prepare("SELECT user_id FROM auth_trusted_devices WHERE user_id=?1 AND device_hash=?2 LIMIT 1").bind(payload.userId, payload.deviceKeyHash).first();
+  const user = await env.AUTH_DB.prepare("SELECT id FROM auth_users WHERE id=?1 AND email=?2 COLLATE NOCASE LIMIT 1").bind(payload.userId, email).first();
+  if (!trusted || !user) return reply({ ok: false, error: "Perangkat tidak lagi terdaftar pada akun ini." }, 403);
+  const salt = randomHex(16), hash = await passwordDigest(password, salt), now = Date.now();
+  await env.AUTH_DB.prepare("UPDATE auth_users SET password_salt=?1,password_hash=?2,password_iterations=?3,updated_at=?4 WHERE id=?5").bind(salt, hash, ITERATIONS, now, user.id).run();
+  await env.AUTH_DB.prepare("DELETE FROM auth_sessions WHERE user_id=?1").bind(user.id).run();
+  await env.AUTH_DB.prepare("DELETE FROM auth_verifications WHERE email=?1 AND purpose='device_reset'").bind(email).run();
+  return reply({ ok: true, message: "Reset password berhasil. Silakan masuk menggunakan email dan password baru." });
 }
 async function startReset(request, env) {
   const b = await bodyOf(request), email = emailOf(b?.email);
@@ -314,6 +366,8 @@ export async function handleAuthRequest(request, env) {
     if (path === "/api/auth/login") return login(request, env);
     if (path === "/api/auth/legacy/start") return startLegacy(request, env);
     if (path === "/api/auth/legacy/verify") return verifyLegacy(request, env);
+    if (path === "/api/auth/reset/device/start") return startDeviceReset(request, env);
+    if (path === "/api/auth/reset/device/verify") return verifyDeviceReset(request, env);
     if (path === "/api/auth/reset/start") return startReset(request, env);
     if (path === "/api/auth/reset/check") return checkResetLink(request, env);
     if (path === "/api/auth/reset/verify") return verifyReset(request, env);
