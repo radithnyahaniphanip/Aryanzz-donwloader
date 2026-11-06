@@ -36,9 +36,9 @@
     if (logout) logout.hidden = !user;
     if (desc) desc.textContent = localOnly ? "ID akun lokal pada browser ini." : "ID akun ARYANZZ.";
     const editor = $("ownerLinkEditor"), security = $("securityCenter"), ownerEdit = $("ownerEditProfile");
-    if (editor) editor.hidden = !isDeveloper;
-    if (security) security.hidden = !isDeveloper;
-    if (ownerEdit) ownerEdit.hidden = !isDeveloper;
+    if (editor) editor.hidden=!isDeveloper;
+    if (security) security.hidden=!isDeveloper;
+    if (ownerEdit) ownerEdit.hidden=!isDeveloper;
     document.body.classList.toggle("ary-developer-account", isDeveloper);
     if (gate) gate.hidden = !!user;
     document.body.classList.toggle("ary-authenticated", !!user);
