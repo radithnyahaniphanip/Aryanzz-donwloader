@@ -3,7 +3,7 @@
   const $ = id => document.getElementById(id);
   const gate = $("aryAuthGate"), message = $("aryAuthMessage");
   const USERS_KEY = "aryanzz.local.accounts.v94", SESSION_KEY = "aryanzz.local.session.v94";
-  let config = { ready: false, captchaSiteKey: "" }, widgetId = null, captchaToken = "", pendingEmail = "", pendingLegacy = null;
+  let config = { ready: false, captchaSiteKey: "" }, widgetId = null, captchaToken = "", pendingEmail = "", pendingLegacy = null, pendingResetToken = new URLSearchParams(location.search).get("resetToken") || "";
 
   const say = (value, error = false) => { if (message) { message.textContent = value; message.classList.toggle("is-error", !!error); } };
   const readUsers = () => { try { const raw = localStorage.getItem(USERS_KEY); if (raw === null) return []; const value = JSON.parse(raw); return Array.isArray(value) ? value : null; } catch { return null; } };
@@ -51,6 +51,8 @@
     if (tabs) tabs.hidden = ["aryResetStartForm","aryRegisterVerifyForm","aryLegacyVerifyForm","aryResetVerifyForm"].includes(id);
     if ($("aryAuthCaptcha")) $("aryAuthCaptcha").hidden = !config.ready || !["aryRegisterForm","aryLoginForm","aryResetStartForm"].includes(id);
     $("aryAuthTitle").textContent = id === "aryRegisterForm" ? "Buat akun ARYANZZ." : id === "aryLoginForm" ? "Selamat datang kembali." : id.includes("Reset") ? "Reset password." : "Verifikasi email.";
+    const foot = $("aryAuthFoot");
+    if (foot) foot.hidden = id === "aryResetStartForm" || id === "aryResetVerifyForm";
     say("");
   }
   function mode(value) {
@@ -158,24 +160,41 @@
   }
   async function startReset(event) {
     event.preventDefault();
-    if (!config.ready) return say("Reset password email belum aktif karena layanan akun online belum dikonfigurasi.", true);
+    if (!config.ready) return say("Layanan akun online belum siap. Pendaftaran dan pemulihan akun memerlukan konfigurasi server.", true);
     const email = $("aryResetEmail").value.trim().toLowerCase();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return say("Masukkan email yang valid.", true);
     const captchaToken = takeCaptcha(); if (!captchaToken) return;
-    const button = $("aryResetStartSubmit"); button.disabled = true;
-    try { await post("/api/auth/reset/start", { email, captchaToken }); pendingEmail = email; $("aryResetVerifyEmail").textContent = email; showStep("aryResetVerifyForm"); say("Jika email terdaftar, kode reset telah dikirim. Periksa Gmail dan folder spam."); }
-    catch (error) { say(error.message, true); } finally { button.disabled = false; }
+    const button = $("aryResetStartSubmit"), progress = $("aryResetProgress"), fill = $("aryResetProgressFill"), percent = $("aryResetProgressPercent"), status = $("aryResetProgressText"), resultBox = $("aryResetProgressResult");
+    button.disabled = true; button.textContent = "Memeriksa email kamu…";
+    if (progress) progress.hidden = false;
+    if (resultBox) resultBox.hidden = true;
+    if (fill) fill.style.width = "8%";
+    if (percent) percent.textContent = "8%";
+    if (status) status.textContent = "Memeriksa email dan akun…";
+    try {
+      await post("/api/auth/reset/start", { email, captchaToken });
+      if (fill) fill.style.width = "100%";
+      if (percent) percent.textContent = "100%";
+      if (status) status.textContent = "Pemeriksaan selesai";
+      if (resultBox) resultBox.hidden = false;
+      say("Jika email cocok dengan akun ARYANZZ, tautan reset aman sudah dikirim ke Gmail.");
+    } catch (error) { if (progress) progress.hidden = true; say(error.message, true); }
+    finally { button.disabled = false; button.textContent = "Periksa email"; }
   }
   async function verifyReset(event) {
     event.preventDefault(); const password = $("aryResetPassword").value, confirm = $("aryResetPasswordConfirm").value;
     if (!validPassword(password)) return say("Password baru minimal 12 karakter, gunakan huruf besar, huruf kecil, angka, dan simbol.", true);
-    if (password !== confirm) return say("Konfirmasi password baru belum sama.", true);
-    const button = $("aryResetVerifySubmit"); button.disabled = true;
+    if (password !== confirm) return say("Ulangi password belum sama.", true);
+    if (!pendingResetToken) return say("Tautan reset tidak valid. Minta tautan baru melalui email.", true);
+    const button = $("aryResetVerifySubmit"); button.disabled = true; button.textContent = "Menyimpan password…";
     try {
-      const result = await post("/api/auth/reset/verify", { email: pendingEmail, code: $("aryResetCode").value.trim(), password, passwordConfirm: confirm });
-      mode("login"); $("aryLoginIdentifier").value = pendingEmail; $("aryLoginPassword").value = ""; $("aryResetPassword").value = ""; $("aryResetPasswordConfirm").value = "";
-      say(result.message || "Reset password berhasil. Silakan masuk menggunakan password baru.");
-    } catch (error) { say(error.message, true); } finally { button.disabled = false; }
+      const result = await post("/api/auth/reset/verify", { token: pendingResetToken, password, passwordConfirm: confirm });
+      pendingResetToken = "";
+      try { history.replaceState({}, "", location.pathname); } catch {}
+      $("aryLoginPassword").value = ""; $("aryResetPassword").value = ""; $("aryResetPasswordConfirm").value = "";
+      mode("login"); say(result.message || "Reset password berhasil. Silakan masuk menggunakan password baru.");
+    } catch (error) { say(error.message, true); }
+    finally { button.disabled = false; button.textContent = "Simpan password baru"; }
   }
   async function init() {
     if (!gate) return;
@@ -195,6 +214,21 @@
     if ($("aryAuthFoot")) $("aryAuthFoot").textContent = config.ready
       ? "Akun tersimpan secara online. Verifikasi email diperlukan untuk pendaftaran dan reset password."
       : "Layanan akun online belum siap: " + (Array.isArray(config.missing) ? config.missing.join(", ") : "konfigurasi server") + ". Akun lokal lama tetap dapat masuk dari perangkat asal.";
+    if (pendingResetToken) {
+      setUser(null);
+      try {
+        await post("/api/auth/reset/check", { token: pendingResetToken });
+        showStep("aryResetVerifyForm");
+        $("aryResetVerified").hidden = false;
+        say("Verifikasi email berhasil. Silakan buat password baru.");
+      } catch {
+        pendingResetToken = "";
+        try { history.replaceState({}, "", location.pathname); } catch {}
+        mode("reset");
+        say("Tautan reset tidak valid atau sudah kedaluwarsa. Minta tautan baru.", true);
+      }
+      return;
+    }
     if (config.ready) {
       try { const result = await get("/api/auth/me"); setUser(result.user); return; } catch {}
       const oldUsers = readUsers(), oldSession = localSession();
