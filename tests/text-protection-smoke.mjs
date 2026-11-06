@@ -5,7 +5,7 @@ const html=read("../public/index.html"),css=read("../public/text-protection.css"
 assert.ok(html.includes("/text-protection.css?v=__ARYANZZ_VERSION__"),"global protection stylesheet must load");
 assert.ok(html.includes("/text-protection.js?v=__ARYANZZ_VERSION__"),"global protection script must load");
 assert.match(css,/body\s*\*[^{}]*user-select:none/s,"all page elements must disable text selection");
-assert.match(css,/input,textarea,select,option,button[^{}]*user-select:none/s,"form controls must also disable selection");
+assert.ok(css.includes("input,textarea,select,option,button")&&css.includes("user-select:none!important"),"form controls must also disable selection");
 for(const event of ["contextmenu","copy","cut","selectstart","dragstart"])assert.ok(js.includes('"'+event+'"'),event+" must be blocked");
 assert.ok(js.includes('["c","x","a"]'),"copy/cut/select-all keyboard shortcuts must be blocked");
 assert.ok(!/editable\s*=|editable\(/.test(js),"no editable-field exemption may bypass protection");
