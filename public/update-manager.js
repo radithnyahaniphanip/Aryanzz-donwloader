@@ -37,7 +37,7 @@ function showNotice(version){
  if(document.getElementById("aryanzzUpdateNotice"))return;
  const bar=document.createElement("div");bar.id="aryanzzUpdateNotice";bar.setAttribute("role","status");bar.setAttribute("aria-live","polite");
  bar.style.cssText="position:fixed;z-index:99999;left:12px;right:12px;top:12px;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border:1px solid #6f8dff;border-radius:14px;background:#101b32;color:#f4f7ff;box-shadow:0 12px 35px #0008;font:600 13px/1.4 system-ui,sans-serif";
- const message=document.createElement("span");message.textContent="Versi terbaru V"+version+" sudah tersedia, tetapi browser masih membuka build lama.";
+ const message=document.createElement("span");message.textContent="Pembaruan ARYANZZ V1 sudah tersedia. Muat ulang untuk menggunakan perbaikan terbaru.";
  const button=document.createElement("button");button.type="button";button.textContent="Muat versi terbaru";
  button.style.cssText="border:0;border-radius:10px;padding:9px 12px;background:linear-gradient(110deg,#9160ff,#328dff);color:white;font-weight:800;white-space:nowrap";
  button.addEventListener("click",()=>{

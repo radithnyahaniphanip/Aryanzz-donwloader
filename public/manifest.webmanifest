@@ -1,8 +1,8 @@
 {
   "id": "/",
-  "name": "ARYANZZ — Ruang Kreatif Digital",
+  "name": "ARYANZZ V1 — Ruang Kreatif Digital",
   "short_name": "ARYANZZ",
-  "description": "Ruang kreatif digital untuk mencari, mempratinjau, mengunduh, dan mengelola media dari sumber publik yang didukung.",
+  "description": "ARYANZZ V1 Full Release: ruang kreatif digital untuk mencari, mempratinjau, mengunduh, dan mengelola media dari sumber publik yang didukung.",
   "lang": "id-ID",
   "start_url": "/?source=install",
   "scope": "/",

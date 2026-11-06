@@ -13,7 +13,73 @@
   const safeSet=(key,value)=>{try{localStorage.setItem(key,String(value));return true}catch{return false}};
   const read=(key,fallback)=>{try{return JSON.parse(safeGet(key,JSON.stringify(fallback)))}catch{return fallback}};
   const write=(key,value)=>{try{return safeSet(key,JSON.stringify(value))}catch{return false}};
+  const MOTION_AVATAR_DB="aryanzz-profile-motion-v1";
+  let motionAvatarDbPromise=null,motionAvatarObjectUrl="",motionAvatarLoadToken=0;
   let toastTimer;
+  function openMotionAvatarDb(){
+    if(!("indexedDB" in window))return Promise.resolve(null);
+    if(motionAvatarDbPromise)return motionAvatarDbPromise;
+    motionAvatarDbPromise=new Promise(resolve=>{
+      try{
+        const request=indexedDB.open(MOTION_AVATAR_DB,1);
+        request.onupgradeneeded=()=>{const db=request.result;if(!db.objectStoreNames.contains("assets"))db.createObjectStore("assets");};
+        request.onsuccess=()=>resolve(request.result);
+        request.onerror=()=>resolve(null);
+        request.onblocked=()=>resolve(null);
+      }catch{resolve(null);}
+    });
+    return motionAvatarDbPromise;
+  }
+  async function saveMotionAvatar(file){
+    const db=await openMotionAvatarDb();
+    if(!db)throw new Error("Penyimpanan GIF tidak tersedia di browser ini.");
+    return new Promise((resolve,reject)=>{
+      try{
+        const tx=db.transaction("assets","readwrite");
+        tx.objectStore("assets").put(file,"avatar");
+        tx.oncomplete=()=>resolve(true);
+        tx.onerror=()=>reject(new Error("GIF gagal disimpan di perangkat."));
+        tx.onabort=()=>reject(new Error("Penyimpanan GIF dibatalkan."));
+      }catch{reject(new Error("Penyimpanan GIF tidak dapat dibuka."));}
+    });
+  }
+  async function readMotionAvatar(){
+    const db=await openMotionAvatarDb();if(!db)return null;
+    return new Promise(resolve=>{
+      try{const request=db.transaction("assets","readonly").objectStore("assets").get("avatar");request.onsuccess=()=>resolve(request.result||null);request.onerror=()=>resolve(null);}
+      catch{resolve(null);}
+    });
+  }
+  async function removeMotionAvatar(){
+    const db=await openMotionAvatarDb();if(!db)return false;
+    return new Promise(resolve=>{
+      try{const tx=db.transaction("assets","readwrite");tx.objectStore("assets").delete("avatar");tx.oncomplete=()=>resolve(true);tx.onerror=()=>resolve(false);tx.onabort=()=>resolve(false);}
+      catch{resolve(false);}
+    });
+  }
+  function revokeMotionAvatarUrl(){
+    if(motionAvatarObjectUrl){try{URL.revokeObjectURL(motionAvatarObjectUrl);}catch{}motionAvatarObjectUrl="";}
+    $("profileAvatar")?.classList.remove("ary-profile2-avatar-animated");
+  }
+  async function applyMotionAvatar(){
+    const token=++motionAvatarLoadToken,avatar=$("profileAvatar"),design=readDesign();
+    if(!design.avatarAnimated){revokeMotionAvatarUrl();return;}
+    const blob=await readMotionAvatar();
+    if(token!==motionAvatarLoadToken||!avatar||!readDesign().avatarAnimated)return;
+    if(!blob||typeof blob.size!=="number"){revokeMotionAvatarUrl();return;}
+    revokeMotionAvatarUrl();
+    motionAvatarObjectUrl=URL.createObjectURL(blob);
+    avatar.style.backgroundImage='url("'+motionAvatarObjectUrl+'")';
+    avatar.style.backgroundSize="cover";
+    avatar.style.backgroundPosition="center";
+    avatar.textContent="";
+    avatar.classList.add("ary-profile2-avatar-animated");
+    const removeAvatar=$("clearProfilePhoto");if(removeAvatar)removeAvatar.hidden=false;
+  }
+  function moveCoverActions(){
+    const profile=$("profile"),header=profile?.querySelector(".ary-profile2-header"),actions=profile?.querySelector(".ary-profile2-cover-actions");
+    if(header&&actions&&actions.parentElement!==header)header.appendChild(actions);
+  }
   function toast(message){
     let el=$("v25Toast");if(!el){el=document.createElement("div");el.id="v25Toast";el.className="v25-toast";el.setAttribute("role","status");el.setAttribute("aria-live","polite");document.body.append(el);}
     el.textContent=message;el.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove("show"),3200);
@@ -22,11 +88,12 @@
   function applyDesign(){
     const d=readDesign(),banner=$("profileBannerPreview"),avatar=$("profileAvatar"),profile=read(PROFILE_KEY,{});
     if(banner){if(d.banner)banner.style.backgroundImage='linear-gradient(120deg,#08152555,#08152588),url("'+d.banner+'")';else banner.style.removeProperty("background-image");}
-    if(avatar){if(d.avatar){avatar.style.backgroundImage='url("'+d.avatar+'")';avatar.textContent="";}else{avatar.style.removeProperty("background-image");avatar.textContent=(String(profile.name||"A").trim().charAt(0)||"A").toUpperCase();}}
+    if(avatar){if(d.avatar){avatar.style.backgroundImage='url("'+d.avatar+'")';avatar.textContent="";}else{avatar.style.removeProperty("background-image");avatar.textContent=(String(profile.name||"A").trim().charAt(0)||"A").toUpperCase();}avatar.classList.remove("ary-profile2-avatar-animated");}
     const removeBanner=$("clearProfileBanner"),removeAvatar=$("clearProfilePhoto");
     if(removeBanner)removeBanner.hidden=!d.banner;
     if(removeAvatar)removeAvatar.hidden=!d.avatar;
     document.body.style.removeProperty("--v25-bg-image");document.body.dataset.customBackground="false";
+    applyMotionAvatar();
   }
   async function compressImage(file,maxWidth,maxHeight,quality){
     if(!file||!file.type.startsWith("image/"))throw new Error("Pilih file gambar yang valid.");
@@ -40,11 +107,31 @@
   async function storeImage(inputId,key,maxW,maxH,quality,label){
     const input=$(inputId);input?.addEventListener("change",async()=>{
       const file=input.files?.[0];if(!file)return;
-      if(file.size>15*1024*1024){toast("Ukuran gambar maksimal 15 MB sebelum dikompres.");input.value="";return;}
+      if(file.size>15*1024*1024){toast("Ukuran gambar maksimal 15 MB sebelum diproses.");input.value="";return;}
       try{
-        const data=await compressImage(file,maxW,maxH,quality),d=readDesign();d[key]=data;
+        const d=readDesign();
+        if(key==="avatar"&&String(file.type||"").toLowerCase()==="image/gif"){
+          const previous=await readMotionAvatar();
+          await saveMotionAvatar(file);
+          d.avatar="";d.avatarAnimated=true;
+          if(!write(DESIGN_KEY,d)){
+            if(previous)await saveMotionAvatar(previous);else await removeMotionAvatar();
+            throw new Error("Penyimpanan perangkat tidak cukup untuk GIF.");
+          }
+          applyDesign();
+          window.dispatchEvent(new Event("aryanzz:profile-assets-updated"));
+          toast("Foto profil GIF bergerak berhasil diperbarui.");
+          input.value="";
+          return;
+        }
+        const data=await compressImage(file,maxW,maxH,quality);
+        d[key]=data;
+        if(key==="avatar")d.avatarAnimated=false;
         if(!write(DESIGN_KEY,d))throw new Error("Penyimpanan perangkat tidak cukup. Hapus gambar lama atau gunakan file lebih kecil.");
-        applyDesign();toast(label+" berhasil diperbarui.");input.value="";
+        if(key==="avatar")await removeMotionAvatar();
+        applyDesign();
+        if(key==="avatar")window.dispatchEvent(new Event("aryanzz:profile-assets-updated"));
+        toast(label+" berhasil diperbarui.");input.value="";
       }catch(e){toast(e.message||"Gambar gagal diproses.");input.value="";}
     });
   }
@@ -56,7 +143,7 @@
   function setupSurface(){
     $("clearProfileBackground")?.addEventListener("click",()=>{const d=readDesign();d.background="";if(!write(DESIGN_KEY,d)){toast("Background belum terhapus karena penyimpanan browser penuh.");return;}applyDesign();toast("Background pribadi dihapus.");});
     $("clearProfileBanner")?.addEventListener("click",()=>{const d=readDesign();d.banner="";if(!write(DESIGN_KEY,d)){toast("Banner belum terhapus karena penyimpanan browser penuh.");return;}applyDesign();window.dispatchEvent(new Event("aryanzz:profile-assets-updated"));toast("Banner berhasil dihapus.");});
-    $("clearProfilePhoto")?.addEventListener("click",()=>{const d=readDesign();d.avatar="";if(!write(DESIGN_KEY,d)){toast("Foto profil belum terhapus karena penyimpanan browser penuh.");return;}applyDesign();window.dispatchEvent(new Event("aryanzz:profile-assets-updated"));toast("Foto profil berhasil dihapus.");});
+    $("clearProfilePhoto")?.addEventListener("click",()=>{const d=readDesign();d.avatar="";d.avatarAnimated=false;if(!write(DESIGN_KEY,d)){toast("Foto profil belum terhapus karena penyimpanan browser penuh.");return;}removeMotionAvatar();applyDesign();window.dispatchEvent(new Event("aryanzz:profile-assets-updated"));toast("Foto profil berhasil dihapus.");});
   }
   function profileCounts(){
     const count=keys=>{for(const key of keys){const value=read(key,[]);if(Array.isArray(value)&&value.length)return value.length;}return 0;};
@@ -276,7 +363,7 @@
   }
   function init(){
     if(!$("profile"))return;
-    installAutoSaveObserver();setSurface(safeGet(SURFACE_KEY,"aurora"));applyDesign();initDeviceHistory();
+    moveCoverActions();installAutoSaveObserver();setSurface(safeGet(SURFACE_KEY,"aurora"));applyDesign();initDeviceHistory();
     storeImage("profileBanner","banner",1500,520,.78,"Banner");
     storeImage("profilePhoto","avatar",520,520,.8,"Foto profil");
     setupSurface();setupProfilePreview();setupBackupActions();profileCounts();setupReveal();setupPremiumEffects();initRandomProfileId();

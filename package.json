@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node server/index.js",
     "test": "node tests/smoke.mjs",
-    "test:release": "node tests/release-smoke.mjs && node tests/tiktok-native-fallback.mjs && node tests/auth-gate-smoke.mjs && node tests/search-regression.mjs && node tests/generic-media-fallback-smoke.mjs && node tests/social-media-file-probe.mjs",
+    "test:release": "node tests/release-smoke.mjs && node tests/tiktok-native-fallback.mjs && node tests/auth-gate-smoke.mjs && node tests/search-regression.mjs && node tests/generic-media-fallback-smoke.mjs && node tests/social-media-file-probe.mjs && node tests/profile-motion-avatar-smoke.mjs",
     "build:version": "node scripts/build-version.mjs",
     "deploy": "npm run build:version && wrangler deploy"
   },
@@ -15,5 +15,6 @@
     "express": "^4.21.2",
     "express-rate-limit": "^7.5.0",
     "helmet": "^8.0.0"
-  }
+  },
+  "release": "V1"
 }
