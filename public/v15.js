@@ -23,11 +23,9 @@
     const controller=window.aryanzzShowPanel;
     if(typeof controller==="function"&&controller!==goto)return controller(id);
     const panelId=id==="home"||!id?"":String(id);
-    const home=$("home"),toolsArea=$("toolsArea"),welcome=$("v89Welcome"),viewHeader=$("appViewHeader");
+    const home=$("home"),toolsArea=$("toolsArea");
     document.body.dataset.view=panelId==="owner"?"owner":panelId?"tool":"home";
     if(home)home.hidden=!!panelId;
-    if(welcome)welcome.hidden=!!panelId;
-    if(viewHeader)viewHeader.hidden=!panelId;
     if(toolsArea)toolsArea.hidden=!panelId;
     document.querySelectorAll("#toolsArea>.panel").forEach(p=>{
       const active=!!panelId&&p.id===panelId;
