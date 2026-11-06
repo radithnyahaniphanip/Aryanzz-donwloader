@@ -234,7 +234,8 @@ async function startLegacy(request, env) {
   return reply({ ok: true, message: "Kode verifikasi pemindahan akun dikirim ke email kamu." });
 }
 async function verifyLegacy(request, env) {
-  const b = await bodyOf(request), email = emailOf(b?.email), code = String(b?.code || "").trim();
+  const b = await bodyOf(request), email = emailOf(b?.email), code = String(b?.code || "").trim(), deviceHash = String(b?.deviceHash || "");
+  if (!validDeviceHash(deviceHash)) return reply({ ok: false, error: "Identitas perangkat tidak valid." }, 400);
   if (!validEmail(email) || !/^\d{6}$/.test(code)) return reply({ ok: false, error: "Email atau kode tidak valid." }, 400);
   const checked = await verifyCode(email, "legacy", code, env);
   if (checked.error) return reply({ ok: false, error: checked.error }, 400);
@@ -250,6 +251,7 @@ async function verifyLegacy(request, env) {
   } catch { return reply({ ok: false, error: "Akun lama tidak dapat dipindahkan karena email sudah terdaftar." }, 409); }
   await env.AUTH_DB.prepare("DELETE FROM auth_verifications WHERE email=?1 AND purpose=?2").bind(email, "legacy").run();
   const user = await env.AUTH_DB.prepare("SELECT id,email,full_name,role,created_at FROM auth_users WHERE id=?1").bind(id).first();
+  await rememberTrustedDevice(id, deviceHash, env);
   return createSession(user, env);
 }
 async function sendResetLink(email, resetUrl, env) {
