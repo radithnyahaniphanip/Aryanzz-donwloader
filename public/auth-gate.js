@@ -196,9 +196,8 @@
       ? "Akun tersimpan secara online. Verifikasi email diperlukan untuk pendaftaran dan reset password."
       : "Layanan akun online belum dikonfigurasi. Akun lokal lama masih dapat masuk dari perangkat asal; pendaftaran baru dan reset email menunggu konfigurasi.";
     if (config.ready) {
-      loadCaptcha();
       try { const result = await get("/api/auth/me"); setUser(result.user); return; } catch {}
-      setUser(null); mode(readUsers()?.length ? "login" : "register");
+      setUser(null); mode(readUsers()?.length ? "login" : "register"); loadCaptcha();
       if (readUsers()?.length) say("Akun lokal lama terdeteksi. Masuk dengan email/ID dan password untuk memindahkannya ke sistem online.");
       return;
     }
