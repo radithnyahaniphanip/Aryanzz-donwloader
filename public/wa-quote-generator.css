@@ -63,3 +63,9 @@
 #waQuoteTools .back-home{margin-top:6px}
 @media(max-width:560px){#waQuoteTools.waq-workspace{padding:12px!important}#waQuoteTools .waq-section{padding:10px;border-radius:13px}#waQuoteTools .waq-message-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}#waQuoteTools .waq-message-details>summary{min-height:88px;padding:9px 29px 9px 9px}#waQuoteTools .waq-message-snippet{font-size:11px}#waQuoteTools .waq-actions{grid-template-columns:1fr 1fr}#waQuoteTools .waq-actions #waqReset{grid-column:1/-1}}
 @media(max-width:350px){#waQuoteTools .waq-quick-grid{grid-template-columns:1fr}#waQuoteTools .waq-compact-grid{grid-template-columns:1fr}}
+
+/* V1 — large, readable quote output; tap to zoom and reposition */
+#waQuoteTools .waq-preview-box{padding:10px;min-width:0;overflow:hidden}
+#waQuoteTools .waq-preview{width:100%;height:auto;max-height:72svh;object-fit:contain;object-position:center;background:#050b14;cursor:zoom-in}
+#waQuoteTools .waq-export{min-width:0}
+@media(max-width:560px){#waQuoteTools .waq-preview{max-height:74svh}}
