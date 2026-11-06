@@ -100,7 +100,7 @@ const bossCatalog=Array.from({length:900},(_,i)=>{
  return {id:id,name:BOSS_PREFIX[i%30]+" "+BOSS_KIND[Math.floor(i/30)%30]+" #"+id,
   hp:id<=5?BOSS_HP[id-1]:Math.round(1200+k*1800+Math.pow(k,1.55)*60),
   atk:Math.round(12+id*2.1+Math.pow(id,1.15)*.3),def:Math.round(5+id*1.4+Math.sqrt(id)*2),
-  levelReq:Math.max(1,Math.ceil(id/15)),pattern:["Cleave","Shadow Dash","Rune Burst","Earthquake","Soul Drain"][i%5],
+  levelReq:Math.max(1,Math.ceil(id/3)),pattern:["Cleave","Shadow Dash","Rune Burst","Earthquake","Soul Drain"][i%5],
   rewardCoins:100+id*15,rewardXp:160+id*45};
 });
 const SKINS=[
@@ -268,6 +268,7 @@ function refreshHud(){
  set("eclLevel",p.level);set("eclCoin",fmt(p.coins));set("eclXpText",fmt(p.xp)+" / "+fmt(xp)+" EXP");
  set("eclHpText",fmt(p.hp)+" / "+fmt(s.maxHp));set("eclMpText",fmt(p.mp)+" / "+fmt(s.maxMp));
  set("eclAtk",fmt(s.atk));set("eclDef",fmt(s.def));set("eclCrit",Math.round(s.crit)+"%");
+ state.skillSlots.forEach((id,index)=>{const node=$("eclSkillSlot"+index),skill=skillCatalog[id];if(node)node.textContent=skill?skill.name:"Slot kosong";});
  bar("eclXpFill",p.xp/xp*100);bar("eclHpFill",p.hp/s.maxHp*100);bar("eclMpFill",p.mp/s.maxMp*100);
  const bossHud=$("eclBossHud");if(bossHud)bossHud.hidden=!bossActive||!boss;
  if(bossActive&&boss){set("eclBossName",boss.name);set("eclBossHpText",fmt(boss.hp)+" / "+fmt(boss.maxHp)+" HP");bar("eclBossHpFill",boss.hp/boss.maxHp*100)}
