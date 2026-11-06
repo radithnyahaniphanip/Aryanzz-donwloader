@@ -6,14 +6,23 @@ const packagePath = resolve(root, "package.json");
 const packageJson = JSON.parse(readFileSync(packagePath, "utf8"));
 const [major, minor, patch] = String(packageJson.version || "95.0.0").split(".").map(value => Number(value) || 0);
 
-// GitHub Actions supplies a monotonically increasing run number for every deployment.
-// Local builds increment the patch component instead of silently reusing an old version.
-const runNumber = Number(process.env.GITHUB_RUN_NUMBER || process.env.CF_BUILD_NUMBER || 0);
-const buildNumber = Number.isSafeInteger(runNumber) && runNumber > 0 ? runNumber : patch + 1;
+// Production releases must come from the serialized GitHub Actions pipeline.
+// Cloudflare's independent build hook can run without GitHub identity and must not
+// silently deploy a lower "local" version over a verified production release.
+const runNumber = Number(process.env.GITHUB_RUN_NUMBER || 0);
+const githubSha = String(process.env.GITHUB_SHA || "").trim();
+const isGitHubActionsBuild = process.env.GITHUB_ACTIONS === "true" &&
+  Number.isSafeInteger(runNumber) && runNumber > 0 &&
+  /^[0-9a-f]{7,40}$/i.test(githubSha);
+const allowLocalBuild = process.env.ARYANZZ_ALLOW_LOCAL_BUILD === "1";
+if (!isGitHubActionsBuild && !allowLocalBuild) {
+  throw new Error("Refusing to create a production release without a verified GitHub Actions build. Use GitHub Actions for production deployment; set ARYANZZ_ALLOW_LOCAL_BUILD=1 only for an intentional local deployment.");
+}
+const buildNumber = isGitHubActionsBuild ? runNumber : patch + 1;
 const version = major + "." + minor + "." + buildNumber;
 packageJson.version = version;
 writeFileSync(packagePath, JSON.stringify(packageJson, null, 2) + "\n");
-const commit = String(process.env.GITHUB_SHA || process.env.CF_COMMIT_SHA || "local").slice(0, 8);
+const commit = isGitHubActionsBuild ? githubSha.slice(0, 8) : "local";
 
 const workerPath = resolve(root, "src/index.js");
 let worker = readFileSync(workerPath, "utf8").replaceAll("__ARYANZZ_VERSION__", version);
