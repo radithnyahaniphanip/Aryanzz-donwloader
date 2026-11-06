@@ -2034,11 +2034,12 @@ function socialNetworkPlan(selected=0){
     stage.addEventListener("touchmove",e=>{if(e.touches.length===2){const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);if(pinch){scale=Math.max(.5,Math.min(5,scale*d/pinch));paint();}pinch=d;}},{passive:true});
     stage.addEventListener("touchend",()=>{pinch=0;},{passive:true});
     document.addEventListener("click",e=>{
-      const media=e.target.closest("#downloadResult img,#downloadResult video,#waQuoteTools .waq-preview,#waQuoteTools .waq-preview-box img,.aryanzz-inline-image-open img");
+      const media=e.target.closest("#downloadResult img,#downloadResult video,#downloadResult iframe,#waQuoteTools .waq-preview,#waQuoteTools .waq-preview-box img,.aryanzz-inline-image-open img,.v674-search-result img");
       if(!media||dialog.open)return;
       e.preventDefault();
       const clone=media.cloneNode(true);clone.removeAttribute("id");clone.removeAttribute("hidden");
       if(clone.tagName==="VIDEO"){clone.controls=true;clone.removeAttribute("controlslist");clone.controlsList="";clone.autoplay=false;clone.style.maxWidth="100%";clone.style.maxHeight="100%";}
+      if(clone.tagName==="IFRAME"){clone.style.width="min(92vw,900px)";clone.style.height="min(76svh,700px)";clone.style.border="0";clone.allowFullscreen=true;}
       if(clone.tagName==="IMG"){clone.draggable=false;clone.alt=media.alt||"Pratinjau gambar";clone.style.maxWidth="100%";clone.style.maxHeight="100%";}
       content.replaceChildren(clone);title.textContent=media.alt||media.getAttribute("aria-label")||"Pratinjau media";reset();
       if(typeof dialog.showModal==="function")dialog.showModal();else dialog.setAttribute("open","");
