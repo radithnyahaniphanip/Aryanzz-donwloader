@@ -14,6 +14,9 @@ for (const table of ["auth_users","auth_verifications","auth_sessions"]) assert.
 assert.ok(backend.includes("auth_trusted_devices") && deviceMigration.includes("CREATE TABLE IF NOT EXISTS auth_trusted_devices"), "Trusted devices must be stored server-side");
 assert.ok(backend.includes("startDeviceReset") && backend.includes("verifyDeviceReset"), "Password reset must use a trusted-device flow without email OTP");
 assert.ok(backend.includes("rememberTrustedDevice") && backend.includes("deviceHash"), "Registration and login must register the current device");
+assert.ok(backend.includes("auth_user_bans") && backend.includes("auth_banned_devices"), "Permanent account and device bans must be stored server-side");
+assert.ok(backend.includes("DEVICE_BANNED") && backend.includes("ACCOUNT_BANNED"), "Banned users and their known devices must be denied");
+assert.ok(backend.includes("/api/auth/admin/ban") && backend.includes("adminModerate"), "Only authenticated owner/admin sessions can moderate accounts");
 assert.ok(backend.includes("WHERE email=?1 COLLATE NOCASE OR id=?2 COLLATE NOCASE"), "Online login must accept email or account ID");
 const config = await handleAuthRequest(new Request("https://aryanzz.example/api/auth/config"), {});
 assert.equal(config.status, 200);
