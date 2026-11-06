@@ -143,6 +143,43 @@ async function rememberTrustedDevice(userId, deviceHash, env) {
     .bind(userId).run();
   return true;
 }
+
+async function ensureModerationTables(env) {
+  await env.AUTH_DB.prepare("CREATE TABLE IF NOT EXISTS auth_user_bans (user_id TEXT PRIMARY KEY, reason TEXT NOT NULL, banned_by TEXT NOT NULL, created_at INTEGER NOT NULL, FOREIGN KEY(user_id) REFERENCES auth_users(id) ON DELETE CASCADE)").run();
+  await env.AUTH_DB.prepare("CREATE TABLE IF NOT EXISTS auth_banned_devices (device_hash TEXT PRIMARY KEY, reason TEXT NOT NULL, banned_by TEXT NOT NULL, created_at INTEGER NOT NULL)").run();
+}
+async function isDeviceBanned(deviceHash, env) {
+  if (!validDeviceHash(deviceHash)) return false;
+  const hash = await digest(String(env.AUTH_SESSION_SECRET) + "|trusted-device|" + String(deviceHash).toLowerCase());
+  return !!(await env.AUTH_DB.prepare("SELECT device_hash FROM auth_banned_devices WHERE device_hash=?1 LIMIT 1").bind(hash).first());
+}
+async function userBan(userId, env) {
+  return await env.AUTH_DB.prepare("SELECT reason,created_at FROM auth_user_bans WHERE user_id=?1 LIMIT 1").bind(userId).first();
+}
+async function adminModerate(request, env, action) {
+  const token=tokenFrom(request);
+  if(!/^[a-f0-9]{64}$/i.test(token)) return reply({ok:false,error:"Sesi admin tidak valid."},401);
+  const admin=await env.AUTH_DB.prepare("SELECT u.id,u.role FROM auth_sessions s JOIN auth_users u ON u.id=s.user_id WHERE s.token_hash=?1 AND s.expires_at>?2 LIMIT 1").bind(await digest(token),Date.now()).first();
+  if(!admin||!["owner","admin","developer"].includes(String(admin.role||"").toLowerCase())) return reply({ok:false,error:"Akses khusus pemilik website."},403);
+  const b=await bodyOf(request),userId=String(b?.userId||"").trim().toUpperCase();
+  if(!/^ARY-[A-Z0-9]{10}$/.test(userId)) return reply({ok:false,error:"ID akun tidak valid."},400);
+  if(userId===admin.id) return reply({ok:false,error:"Akun pemilik tidak dapat diblokir dari panel ini."},400);
+  const target=await env.AUTH_DB.prepare("SELECT id FROM auth_users WHERE id=?1 LIMIT 1").bind(userId).first();
+  if(!target) return reply({ok:false,error:"Akun tidak ditemukan."},404);
+  if(action==="unban"){
+    await env.AUTH_DB.prepare("DELETE FROM auth_user_bans WHERE user_id=?1").bind(userId).run();
+    return reply({ok:true,message:"Blokir akun dilepas. Blokir perangkat tetap berlaku bila perangkat pernah masuk daftar blokir."});
+  }
+  const reason=String(b?.reason||"").trim().replace(/\s+/g," ").slice(0,500);
+  if(reason.length<8) return reply({ok:false,error:"Alasan pemblokiran minimal 8 karakter."},400);
+  const now=Date.now();
+  await env.AUTH_DB.prepare("INSERT INTO auth_user_bans (user_id,reason,banned_by,created_at) VALUES (?1,?2,?3,?4) ON CONFLICT(user_id) DO UPDATE SET reason=excluded.reason,banned_by=excluded.banned_by,created_at=excluded.created_at").bind(userId,reason,admin.id,now).run();
+  const devices=await env.AUTH_DB.prepare("SELECT device_hash FROM auth_trusted_devices WHERE user_id=?1").bind(userId).all();
+  for(const row of devices.results||[]) await env.AUTH_DB.prepare("INSERT OR IGNORE INTO auth_banned_devices (device_hash,reason,banned_by,created_at) VALUES (?1,?2,?3,?4)").bind(row.device_hash,reason,admin.id,now).run();
+  await env.AUTH_DB.prepare("DELETE FROM auth_sessions WHERE user_id=?1").bind(userId).run();
+  return reply({ok:true,message:"Akun diblokir permanen, semua sesi dicabut, dan perangkat tepercaya akun ini masuk daftar blokir."});
+}
+
 async function createSession(row, env) {
   const token = randomHex(32), now = Date.now();
   await env.AUTH_DB.prepare("INSERT INTO auth_sessions (token_hash,user_id,created_at,expires_at) VALUES (?1,?2,?3,?4)")
@@ -191,6 +228,7 @@ async function startRegister(request, env) {
 async function verifyRegister(request, env) {
   const b = await bodyOf(request), email = emailOf(b?.email), code = String(b?.code || "").trim(), deviceHash = String(b?.deviceHash || "");
   if (!validEmail(email) || !/^\d{6}$/.test(code) || !validDeviceHash(deviceHash)) return reply({ ok: false, error: "Email, kode, atau identitas perangkat tidak valid." }, 400);
+  if (await isDeviceBanned(deviceHash, env)) return reply({ok:false,code:"DEVICE_BANNED",error:"Pendaftaran ditolak. Perangkat ini terkait dengan akun yang diblokir permanen."},403);
   if (limited(request, "register-verify", 12, 600000)) return reply({ ok: false, error: "Terlalu banyak percobaan kode." }, 429);
   const checked = await verifyCode(email, "register", code, env);
   if (checked.error) return reply({ ok: false, error: checked.error }, 400);
@@ -211,11 +249,13 @@ async function login(request, env) {
   const b = await bodyOf(request), identifier = String(b?.identifier || "").trim().slice(0, 254), password = String(b?.password || ""), deviceHash = String(b?.deviceHash || "");
   if (!identifier || !password || password.length > 128) return reply({ ok: false, error: "Masukkan email/ID dan password." }, 400);
   if (await isDeviceBanned(deviceHash, env)) return reply({ok:false,code:"DEVICE_BANNED",error:"Akses ditolak. Perangkat ini terkait dengan akun yang diblokir permanen."},403);
+  if (await isDeviceBanned(deviceHash, env)) return reply({ok:false,code:"DEVICE_BANNED",error:"Akses ditolak. Perangkat ini terkait dengan akun yang diblokir permanen."},403);
   if (limited(request, "login", 10, 600000)) return reply({ ok: false, error: "Terlalu banyak percobaan masuk. Tunggu beberapa menit." }, 429);
   if (!(await captcha(request, b.captchaToken, env))) return reply({ ok: false, error: "Verifikasi CAPTCHA belum berhasil." }, 400);
   const user = await env.AUTH_DB.prepare("SELECT id,email,full_name,password_salt,password_hash,password_iterations,role,created_at FROM auth_users WHERE email=?1 COLLATE NOCASE OR id=?2 COLLATE NOCASE LIMIT 1")
     .bind(identifier, identifier).first();
   if (!user) return reply({ ok: false, code: "ACCOUNT_NOT_FOUND", error: "Akun belum ditemukan. Periksa email atau ID." }, 404);
+  if (await userBan(user.id, env)) return reply({ok:false,code:"ACCOUNT_BANNED",error:"Akun ini diblokir permanen karena pelanggaran aturan ARYANZZ."},403);
   if (await userBan(user.id, env)) return reply({ok:false,code:"ACCOUNT_BANNED",error:"Akun ini diblokir permanen karena pelanggaran aturan ARYANZZ."},403);
   const iterations = Math.max(100000, Math.min(1000000, Number(user.password_iterations) || ITERATIONS));
   if (!equal(await passwordDigest(password, user.password_salt, iterations), String(user.password_hash || ""))) {
@@ -369,7 +409,10 @@ export async function handleAuthRequest(request, env) {
   if (path === "/api/auth/logout" && request.method === "POST") return logout(request, env);
   if (!ready(env)) return reply({ ok: false, code: "AUTH_NOT_CONFIGURED", error: "Layanan akun online belum dikonfigurasi. Akun lokal lama tetap dapat digunakan pada perangkat asal." }, 503);
   try {
+    await ensureModerationTables(env);
     if (path === "/api/auth/me" && request.method === "GET") return me(request, env);
+    if (path === "/api/auth/admin/ban" && request.method === "POST") return adminModerate(request, env, "ban");
+    if (path === "/api/auth/admin/unban" && request.method === "POST") return adminModerate(request, env, "unban");
     if (request.method !== "POST") return reply({ ok: false, error: "Metode tidak diizinkan." }, 405);
     if (path === "/api/auth/register/start") return startRegister(request, env);
     if (path === "/api/auth/register/verify") return verifyRegister(request, env);
