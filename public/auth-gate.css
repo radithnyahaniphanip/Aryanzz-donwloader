@@ -24,3 +24,5 @@
 .ary-auth-verify-code{font-size:23px!important;font-weight:900;letter-spacing:8px;text-align:center}
 .ary-auth-captcha{display:flex;justify-content:center;min-height:66px;margin:8px 0 2px;padding:7px;border:1px solid #ffffff12;border-radius:12px;background:#071020;overflow:hidden}
 .ary-auth-step-note{font-size:10px;line-height:1.6;color:#a9bbd5;margin:0 0 4px}
+
+.ary-auth-gate[hidden],.ary-auth-form[hidden],.ary-auth-tabs[hidden],.ary-auth-captcha[hidden]{display:none!important}
