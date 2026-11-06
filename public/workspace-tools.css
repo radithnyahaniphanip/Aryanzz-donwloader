@@ -197,3 +197,56 @@
   #toolsArea #allTools .v674-tool-filters button{transition:none!important}
   #toolsArea #allTools .tool:hover{transform:none}
 }
+
+/* Shared compact grid rules for media and creative tool panels. */
+#toolsArea .image-editor-fields,
+#toolsArea .audio-studio-fields,
+#toolsArea .music-grid,
+#toolsArea .ms-library-controls{
+ display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px!important;align-items:start
+}
+#toolsArea .image-editor-preview,
+#toolsArea .image-upload-drop,
+#toolsArea .image-ratio-gallery,
+#toolsArea .audio-file-drop,
+#toolsArea .audio-file-meta,
+#toolsArea .audio-studio-result,
+#toolsArea .music-head,
+#toolsArea .music-status,
+#toolsArea .ms-section-head,
+#toolsArea .ms-library-list,
+#toolsArea .ms-note,
+#toolsArea .ms-player-stage,
+#toolsArea .editor-preview-shell,
+#toolsArea .editor-transport,
+#toolsArea .editor-timeline,
+#toolsArea .editor-sourcebar{grid-column:1/-1;min-width:0}
+#toolsArea .image-editor-fields>*,
+#toolsArea .audio-studio-fields>*,
+#toolsArea .music-grid>*,
+#toolsArea .ms-library-controls>*{min-width:0;width:100%}
+#toolsArea .image-ratio-gallery{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+#toolsArea .image-studio-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+#toolsArea .image-studio-tabs button{min-width:0}
+#toolsArea .music-card{min-width:0}
+#toolsArea .music-card .field,
+#toolsArea .music-card input,
+#toolsArea .music-card select{width:100%;min-width:0}
+#toolsArea .ms-library-controls{grid-template-columns:minmax(0,1.4fr) minmax(0,1fr)}
+#toolsArea .audio-trim-fields{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media(max-width:620px){
+ #toolsArea .image-editor-fields,
+ #toolsArea .audio-studio-fields,
+ #toolsArea .music-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ #toolsArea .image-ratio-gallery{grid-template-columns:repeat(3,minmax(0,1fr))}
+ #toolsArea .ms-library-controls{grid-template-columns:repeat(2,minmax(0,1fr))}
+ #toolsArea .music-card{padding:11px;min-width:0}
+ #toolsArea .music-card h3{font-size:13px}
+ #toolsArea .music-help{font-size:10px;line-height:1.4}
+}
+@media(max-width:350px){
+ #toolsArea .image-editor-fields,
+ #toolsArea .audio-studio-fields,
+ #toolsArea .music-grid{grid-template-columns:1fr}
+ #toolsArea .image-ratio-gallery{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
