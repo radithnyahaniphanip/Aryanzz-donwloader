@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "purpose": "Strict ownership map for ARYANZZ workspace UI, styles, scripts, and tool modules.",
+  "purpose": "ARYANZZ V1 Full Release ownership map for workspace UI, styles, scripts, and tool modules.",
   "rules": [
     "Edit only the workspace module that owns the requested page or feature.",
     "Keep CSS selectors rooted under the workspace root; do not add broad body, html, or generic panel overrides to page modules.",
@@ -198,5 +198,11 @@
         "/advanced.js"
       ]
     }
-  ]
+  ],
+  "release": {
+    "publicVersion": "V1",
+    "status": "full-release",
+    "updatePolicy": "Keep the public release label fixed at V1. Internal build identifiers may advance only for cache invalidation, deployment verification, and recovery checkpoints.",
+    "architecture": "One release with independently owned feature modules. Do not flatten unrelated feature logic into a single handler or stylesheet."
+  }
 }
