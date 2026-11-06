@@ -269,6 +269,7 @@ async function startDeviceReset(request, env) {
   const b = await bodyOf(request), email = emailOf(b?.email), deviceHash = String(b?.deviceHash || "");
   if (!validEmail(email) || !validDeviceHash(deviceHash)) return reply({ ok: false, error: "Email atau identitas perangkat tidak valid." }, 400);
   if (limited(request, "device-reset-start", 4, 600000)) return reply({ ok: false, error: "Terlalu banyak pemeriksaan. Tunggu beberapa menit." }, 429);
+  if (!(await captcha(request, b.captchaToken, env))) return reply({ ok: false, error: "Selesaikan CAPTCHA sebelum memeriksa perangkat." }, 400);
   const user = await env.AUTH_DB.prepare("SELECT id FROM auth_users WHERE email=?1 COLLATE NOCASE LIMIT 1").bind(email).first();
   if (!user) return reply({ ok: false, code: "DEVICE_NOT_RECOGNIZED", error: "Email atau perangkat tidak cocok dengan akun yang terdaftar." }, 404);
   const deviceKeyHash = await digest(String(env.AUTH_SESSION_SECRET) + "|trusted-device|" + deviceHash.toLowerCase());
