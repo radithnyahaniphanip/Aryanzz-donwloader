@@ -17,7 +17,11 @@ assert.match(game,/function updateQuest\(type,amount\)/,"quest progress must upd
 assert.match(game,/function hitTarget\(target,raw,kind\)/,"combat damage must be implemented");
 assert.match(game,/function upgradeItem\(id\)/,"equipment upgrades must be implemented");
 assert.match(game,/function chooseRune\(n\)/,"rune puzzle interaction must be implemented");
-assert.match(game,/localStorage\.setItem\(SAVE_KEY/,"game save must persist locally");
+assert.match(game,/localStorage\.setItem\(activeSaveKey/,"game save must persist locally");
+assert.match(game,/SAVE_KEY_BASE/,"game saves must be scoped by account");
+assert.match(game,/aryanzz:auth-changed/,"game must switch save slots when the signed-in account changes");
+assert.match(game,/Meteor Rain.*Void Beam.*Frost Prison.*Summon Adds/,"boss archive must provide varied attack patterns");
+assert.match(read("../public/auth-gate.js"),/aryanzz:auth-changed/,"account changes must notify isolated game modules");
 assert.match(html,/data-panel="eclipseRpg"/,"game must be discoverable in the Tools hub");
 assert.match(html,/id="eclipseRpg"/,"game panel must be mounted inside the workspace");
 assert.match(html,/\/eclipse-rpg\.js\?v=__ARYANZZ_VERSION__/,"game script must be versioned");
