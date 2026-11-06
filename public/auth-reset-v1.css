@@ -1,0 +1,15 @@
+/* ARYANZZ V1 — account recovery UI */
+.ary-reset-progress{display:grid;gap:9px;padding:12px;border:1px solid #314c6b;border-radius:13px;background:#091729}
+.ary-reset-progress[hidden],.ary-reset-progress-result[hidden],.ary-reset-verified[hidden]{display:none!important}
+.ary-reset-progress-copy{display:flex;justify-content:space-between;align-items:center;gap:8px;color:#dcecff;font-size:11px}
+.ary-reset-progress-copy b{color:#81e3c0;font-variant-numeric:tabular-nums}
+.ary-reset-progress-track{height:7px;overflow:hidden;border-radius:20px;background:#22334b}
+.ary-reset-progress-track i{display:block;width:0;height:100%;border-radius:inherit;background:linear-gradient(90deg,#398cff,#32d7c4);transition:width .45s ease}
+.ary-reset-progress-result{display:flex;align-items:center;gap:8px;flex-wrap:wrap;color:#8ce3bd;font-size:11px}
+.ary-reset-progress-result>span,.ary-reset-verified>span{display:grid;place-items:center;width:25px;height:25px;flex:0 0 25px;border-radius:50%;background:#123e32;color:#68edb5;font-weight:1000}
+.ary-reset-progress-result small{flex-basis:100%;padding-left:33px;color:#9fb7cb;font-size:10px;line-height:1.5}
+.ary-reset-verified{display:flex;align-items:center;gap:10px;padding:12px;border:1px solid #2b8061;border-radius:13px;background:#0b2a24;color:#bfffe2}
+.ary-reset-verified b,.ary-reset-verified small{display:block}
+.ary-reset-verified b{font-size:12px}
+.ary-reset-verified small{margin-top:3px;color:#a7d9c4;font-size:10px;line-height:1.5}
+@media(prefers-reduced-motion:reduce){.ary-reset-progress-track i{transition:none}}
