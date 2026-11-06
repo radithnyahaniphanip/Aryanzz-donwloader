@@ -2,8 +2,8 @@
   "use strict";
   const $ = id => document.getElementById(id);
   const gate = $("aryAuthGate"), message = $("aryAuthMessage");
-  const USERS_KEY = "aryanzz.local.accounts.v94", SESSION_KEY = "aryanzz.local.session.v94";
-  let config = { ready: false, captchaSiteKey: "" }, widgetId = null, captchaToken = "", pendingEmail = "", pendingLegacy = null, pendingResetToken = new URLSearchParams(location.search).get("resetToken") || "";
+  const USERS_KEY = "aryanzz.local.accounts.v94", SESSION_KEY = "aryanzz.local.session.v94", DEVICE_KEY = "aryanzz.device.key.v1";
+  let config = { ready: false, captchaSiteKey: "" }, widgetId = null, captchaToken = "", pendingEmail = "", pendingLegacy = null, pendingResetToken = new URLSearchParams(location.search).get("resetToken") || "", resetVerifiedUserId = "";
 
   const say = (value, error = false) => { if (message) { message.textContent = value; message.classList.toggle("is-error", !!error); } };
   const readUsers = () => { try { const raw = localStorage.getItem(USERS_KEY); if (raw === null) return []; const value = JSON.parse(raw); return Array.isArray(value) ? value : null; } catch { return null; } };
@@ -14,6 +14,26 @@
     const salt = Uint8Array.from(String(saltHex).match(/.{2}/g) || [], value => parseInt(value, 16));
     const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(password), "PBKDF2", false, ["deriveBits"]);
     return hex(await crypto.subtle.deriveBits({ name: "PBKDF2", hash: "SHA-256", salt, iterations }, key, 256));
+  }
+  async function currentDeviceHash() {
+    let token = localStorage.getItem(DEVICE_KEY);
+    if (!token) {
+      token = hex(crypto.getRandomValues(new Uint8Array(32)));
+      localStorage.setItem(DEVICE_KEY, token);
+    }
+    return hex(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(token)));
+  }
+  async function rememberCurrentDevice(user) {
+    const users = readUsers();
+    if (!Array.isArray(users)) throw new Error("Data akun pada browser tidak dapat dibaca.");
+    const index = users.findIndex(item => item.id === user.id);
+    if (index < 0) throw new Error("Akun tidak ditemukan pada browser ini.");
+    const deviceKeyHash = await currentDeviceHash();
+    users[index] = { ...users[index], deviceKeyHash };
+    delete users[index].recoverySalt;
+    delete users[index].recoveryHash;
+    localStorage.setItem(USERS_KEY, JSON.stringify(users));
+    Object.assign(user, users[index]);
   }
   function equal(a, b) { if (typeof a !== "string" || typeof b !== "string" || a.length !== b.length) return false; let n = 0; for (let i = 0; i < a.length; i++) n |= a.charCodeAt(i) ^ b.charCodeAt(i); return n === 0; }
   function validPassword(value) { return typeof value === "string" && value.length >= 12 && value.length <= 128 && /[a-z]/.test(value) && /[A-Z]/.test(value) && /[0-9]/.test(value) && /[^A-Za-z0-9]/.test(value); }
@@ -46,16 +66,25 @@
     if ($("profileSummary")) $("profileSummary").textContent = String(user?.fullName || "Anggota ARYANZZ");
   }
   function showStep(id) {
-    for (const form of ["aryRegisterForm","aryLoginForm","aryResetStartForm","aryRegisterVerifyForm","aryLegacyVerifyForm","aryResetVerifyForm","aryLocalRecoveryForm"]) if ($(form)) $(form).hidden = form !== id;
+    for (const form of ["aryRegisterForm","aryLoginForm","aryResetStartForm","aryRegisterVerifyForm","aryLegacyVerifyForm","aryResetVerifyForm"]) if ($(form)) $(form).hidden = form !== id;
     const tabs = $("aryAuthTabs");
-    if (tabs) tabs.hidden = ["aryResetStartForm","aryRegisterVerifyForm","aryLegacyVerifyForm","aryResetVerifyForm","aryLocalRecoveryForm"].includes(id);
+    if (tabs) tabs.hidden = ["aryResetStartForm","aryRegisterVerifyForm","aryLegacyVerifyForm","aryResetVerifyForm"].includes(id);
     if ($("aryAuthCaptcha")) $("aryAuthCaptcha").hidden = true;
-    $("aryAuthTitle").textContent = id === "aryRegisterForm" ? "Buat akun ARYANZZ." : id === "aryLoginForm" ? "Selamat datang kembali." : id === "aryResetStartForm" ? "Reset password." : id === "aryLocalRecoveryForm" ? "Simpan Recovery Code." : "Verifikasi email.";
+    $("aryAuthTitle").textContent = id === "aryRegisterForm" ? "Buat akun ARYANZZ." : id === "aryLoginForm" ? "Selamat datang kembali." : id === "aryResetStartForm" ? "Reset password." : "Verifikasi email.";
     const foot = $("aryAuthFoot");
-    if (foot) foot.hidden = id === "aryResetStartForm" || id === "aryResetVerifyForm" || id === "aryLocalRecoveryForm";
+    if (foot) foot.hidden = id === "aryResetStartForm" || id === "aryResetVerifyForm";
     say("");
   }
   function mode(value) {
+    if (value !== "reset") resetVerifiedUserId = "";
+    if (value === "reset") {
+      resetVerifiedUserId = "";
+      if ($("aryResetCheckPanel")) $("aryResetCheckPanel").hidden = true;
+      if ($("aryResetPasswordStage")) $("aryResetPasswordStage").hidden = true;
+      if ($("aryResetPassword")) { $("aryResetPassword").value = ""; $("aryResetPassword").disabled = true; }
+      if ($("aryResetPasswordConfirm")) { $("aryResetPasswordConfirm").value = ""; $("aryResetPasswordConfirm").disabled = true; }
+      if ($("aryResetStartSubmit")) $("aryResetStartSubmit").textContent = "Periksa email dan perangkat";
+    }
     showStep(value === "register" ? "aryRegisterForm" : value === "reset" ? "aryResetStartForm" : "aryLoginForm");
     document.querySelectorAll("[data-auth-mode]").forEach(button => button.classList.toggle("active", button.dataset.authMode === value));
   }
@@ -115,13 +144,11 @@
     if (!ok) say("Jawaban CAPTCHA belum benar. Coba soal yang baru.", true);
     return ok;
   }
-  function newRecoveryCode() {
-    const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789", bytes = crypto.getRandomValues(new Uint8Array(16));
-    return Array.from(bytes, b => alphabet[b % alphabet.length]).join("").match(/.{1,4}/g).join("-");
-  }
   async function localLogin(identifier, password) {
     const user = legacyAccount(identifier);
     if (!user || !(await validLegacyPassword(user, password))) { say("Email/ID atau password tidak cocok.", true); return; }
+    try { await rememberCurrentDevice(user); }
+    catch (error) { return say(error.message, true); }
     if (!saveLocalSession(user)) { say("Sesi lokal tidak dapat disimpan. Aktifkan penyimpanan browser.", true); return; }
     setUser(user, true); say("Berhasil masuk ke akun ARYANZZ pada browser ini.");
   }
@@ -138,12 +165,16 @@
     if (users.some(u => String(u.email || "").toLowerCase() === email)) return say("Email tersebut sudah terdaftar pada browser ini.", true);
     const button = $("aryRegisterSubmit"); button.disabled = true; button.textContent = "Membuat akun…";
     try {
-      const salt = hex(crypto.getRandomValues(new Uint8Array(16))), recoveryCode = newRecoveryCode(), recoverySalt = hex(crypto.getRandomValues(new Uint8Array(16)));
-      const [hash, recoveryHash] = await Promise.all([passwordHash(password, salt, 250000), passwordHash(recoveryCode, recoverySalt, 250000)]);
-      const user = { id:"ARY-" + Array.from(crypto.getRandomValues(new Uint8Array(5)), b => b.toString(16).padStart(2,"0")).join("").toUpperCase(), fullName, email, salt, passwordHash:hash, iterations:250000, recoverySalt, recoveryHash, createdAt:Date.now(), localOnly:true };
+      const salt = hex(crypto.getRandomValues(new Uint8Array(16)));
+      const [hash, deviceKeyHash] = await Promise.all([passwordHash(password, salt, 250000), currentDeviceHash()]);
+      const user = {
+        id:"ARY-" + Array.from(crypto.getRandomValues(new Uint8Array(5)), b => b.toString(16).padStart(2,"0")).join("").toUpperCase(),
+        fullName, email, salt, passwordHash:hash, iterations:250000, deviceKeyHash,
+        createdAt:Date.now(), localOnly:true
+      };
       users.push(user); localStorage.setItem(USERS_KEY, JSON.stringify(users));
-      $("aryRecoveryCodeDisplay").value = recoveryCode; showStep("aryLocalRecoveryForm");
-      say("Akun berhasil dibuat. Simpan Recovery Code sebelum melanjutkan.");
+      saveLocalSession(user); setUser(user, true);
+      say("Akun ARYANZZ berhasil dibuat. Perangkat ini sudah terdaftar.");
     } catch (error) { say("Akun belum berhasil dibuat: " + error.message, true); }
     finally { button.disabled = false; button.textContent = "Buat akun ARYANZZ"; }
   }
@@ -176,25 +207,79 @@
     try { const result = await post("/api/auth/legacy/verify", { email: pendingEmail, code: $("aryLegacyCode").value.trim() }); setUser(result.user); pendingLegacy = null; say("Akun lama berhasil dipindahkan. ID dan password tetap dipertahankan."); }
     catch (error) { say(error.message, true); } finally { button.disabled = false; }
   }
+  const resetWait = ms => new Promise(resolve => setTimeout(resolve, ms));
+  async function animateDeviceCheck() {
+    const panel = $("aryResetCheckPanel"), fill = $("aryResetProgressFill"), percent = $("aryResetProgressPercent"), text = $("aryResetProgressText"), result = $("aryResetProgressResult");
+    panel.hidden = false; result.hidden = true; fill.style.width = "0%"; percent.textContent = "0%";
+    const steps = [
+      ["Memeriksa email kamu…", 28],
+      ["Mencari ID ARYANZZ yang terhubung…", 62],
+      ["Mencocokkan perangkat yang pernah terdaftar…", 92]
+    ];
+    for (const [label, value] of steps) {
+      text.textContent = label; fill.style.width = value + "%"; percent.textContent = value + "%";
+      await resetWait(420);
+    }
+    fill.style.width = "100%"; percent.textContent = "100%";
+    text.textContent = "Pemeriksaan selesai";
+    await resetWait(350);
+  }
   async function startReset(event) {
     event.preventDefault();
-    const identifier = $("aryResetEmail").value.trim(), code = $("aryResetRecoveryCode").value.trim().toUpperCase();
+    const email = $("aryResetEmail").value.trim().toLowerCase(), button = $("aryResetStartSubmit");
+    if (!resetVerifiedUserId) {
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return say("Masukkan alamat email yang benar.", true);
+      const users = readUsers();
+      if (!Array.isArray(users)) return say("Data akun pada browser tidak dapat dibaca.", true);
+      button.disabled = true; button.textContent = "Memeriksa email kamu…";
+      try {
+        const user = users.find(item => String(item.email || "").toLowerCase() === email);
+        await animateDeviceCheck();
+        if (!user) { say("Email ini belum terdaftar pada browser/perangkat ini.", true); return; }
+        const deviceHash = await currentDeviceHash();
+        if (!user.deviceKeyHash || !equal(String(user.deviceKeyHash), deviceHash)) {
+          say("Perangkat ini tidak cocok dengan perangkat yang pernah didaftarkan untuk akun tersebut. Gunakan browser dan perangkat asal.", true);
+          return;
+        }
+        resetVerifiedUserId = user.id;
+        $("aryResetProgressResult").hidden = false;
+        $("aryResetPasswordStage").hidden = false;
+        $("aryResetPassword").disabled = false;
+        $("aryResetPasswordConfirm").disabled = false;
+        $("aryResetProgressResult").querySelector("small").textContent = "Email, ID " + user.id + ", dan perangkat terdaftar cocok.";
+        button.textContent = "Simpan Password Baru";
+        $("aryResetPassword").focus();
+        say("Verifikasi berhasil. Sekarang buat password baru.");
+      } catch (error) { say("Pemeriksaan belum berhasil: " + error.message, true); }
+      finally { button.disabled = false; if (!resetVerifiedUserId) button.textContent = "Periksa email dan perangkat"; }
+      return;
+    }
     const password = $("aryResetPassword").value, confirm = $("aryResetPasswordConfirm").value;
-    if (!identifier || !code) return say("Masukkan email/ID dan Recovery Code.", true);
     if (!validPassword(password)) return say("Password baru minimal 12 karakter, gunakan huruf besar, huruf kecil, angka, dan simbol.", true);
     if (password !== confirm) return say("Ulangi password baru belum sama.", true);
-    if (!checkLocalCaptcha("aryReset")) return;
-    const user = legacyAccount(identifier);
-    if (!user?.recoverySalt || !user?.recoveryHash) return say("Recovery Code tidak cocok atau akun ini belum memiliki Recovery Code.", true);
-    if (!equal(await passwordHash(code, user.recoverySalt, 250000), user.recoveryHash)) return say("Recovery Code tidak cocok. Periksa kembali kode milikmu.", true);
-    const salt = hex(crypto.getRandomValues(new Uint8Array(16)));
-    user.passwordHash = await passwordHash(password, salt, 250000); user.salt = salt; user.iterations = 250000; user.recoveryHash = ""; user.recoverySalt = "";
-    const users = readUsers(), index = users.findIndex(u => u.id === user.id);
-    if (index < 0) return say("Akun tidak ditemukan di penyimpanan browser ini.", true);
-    users[index] = user; localStorage.setItem(USERS_KEY, JSON.stringify(users));
-    $("aryResetPassword").value = ""; $("aryResetPasswordConfirm").value = ""; $("aryResetRecoveryCode").value = "";
-    mode("login"); $("aryLoginIdentifier").value = identifier;
-    say("✓ Reset password berhasil. Recovery Code lama sudah tidak berlaku. Silakan masuk.");
+    const users = readUsers();
+    if (!Array.isArray(users)) return say("Data akun pada browser tidak dapat dibaca.", true);
+    const index = users.findIndex(item => item.id === resetVerifiedUserId && String(item.email || "").toLowerCase() === email);
+    if (index < 0) { resetVerifiedUserId = ""; return say("Akun tidak ditemukan. Ulangi pemeriksaan email.", true); }
+    try {
+      const deviceHash = await currentDeviceHash();
+      if (!users[index].deviceKeyHash || !equal(String(users[index].deviceKeyHash), deviceHash)) {
+        resetVerifiedUserId = ""; return say("Perangkat berubah. Ulangi pemeriksaan dari perangkat yang terdaftar.", true);
+      }
+      button.disabled = true; button.textContent = "Menyimpan password…";
+      const salt = hex(crypto.getRandomValues(new Uint8Array(16)));
+      users[index].passwordHash = await passwordHash(password, salt, 250000);
+      users[index].salt = salt; users[index].iterations = 250000;
+      delete users[index].recoverySalt; delete users[index].recoveryHash;
+      localStorage.setItem(USERS_KEY, JSON.stringify(users));
+      resetVerifiedUserId = "";
+      $("aryResetPassword").value = ""; $("aryResetPasswordConfirm").value = "";
+      $("aryResetPassword").disabled = true; $("aryResetPasswordConfirm").disabled = true;
+      $("aryLoginPassword").value = ""; $("aryLoginPasswordConfirm").value = "";
+      mode("login"); $("aryLoginIdentifier").value = email;
+      say("✓ Reset password berhasil. Silakan masuk menggunakan email dan password baru.");
+    } catch (error) { say("Password belum berhasil disimpan: " + error.message, true); }
+    finally { button.disabled = false; if (resetVerifiedUserId) button.textContent = "Simpan Password Baru"; }
   }
   async function verifyReset(event) {
     event.preventDefault(); const password = $("aryResetPassword").value, confirm = $("aryResetPasswordConfirm").value;
@@ -218,8 +303,7 @@
     initStrength("aryRegPassword","aryStrengthBar","aryStrengthLabel"); initStrength("aryResetPassword","aryResetStrengthBar","aryResetStrengthLabel");
     document.querySelectorAll("[data-auth-mode]").forEach(button => button.addEventListener("click", () => mode(button.dataset.authMode)));
     $("aryRegisterForm")?.addEventListener("submit", register); $("aryLoginForm")?.addEventListener("submit", login);
-    $("aryFinishLocalRegister")?.addEventListener("click", () => { const user = legacyAccount($("aryRegEmail").value.trim()); if (!user) return say("Akun lokal tidak ditemukan.", true); saveLocalSession(user); setUser(user, true); say("Selamat datang di ARYANZZ."); });
-    $("aryCopyRecoveryCode")?.addEventListener("click", async () => { try { await navigator.clipboard.writeText($("aryRecoveryCodeDisplay").value); say("Recovery Code berhasil disalin."); } catch { $("aryRecoveryCodeDisplay").select(); say("Pilih lalu salin Recovery Code secara manual."); } });
+
     $("aryRegisterVerifyForm")?.addEventListener("submit", verifyRegister); $("aryLegacyVerifyForm")?.addEventListener("submit", verifyLegacy);
     $("aryResetStartForm")?.addEventListener("submit", startReset); $("aryResetVerifyForm")?.addEventListener("submit", verifyReset);
     $("aryForgotPassword")?.addEventListener("click", () => mode("reset")); $("aryBackToLogin")?.addEventListener("click", () => mode("login"));
@@ -228,14 +312,14 @@
     $("accountLogout")?.addEventListener("click", async () => { try { await post("/api/auth/logout", {}); } catch {} try { localStorage.removeItem(SESSION_KEY); } catch {} setUser(null); mode("login"); say("Kamu sudah keluar dari akun."); });
     config = { ready:false, captchaSiteKey:"" };
     const registerTab = document.querySelector('[data-auth-mode="register"]'); if (registerTab) registerTab.hidden = false;
-    if ($("aryAuthFoot")) $("aryAuthFoot").textContent = "Mode mandiri aktif. Akun dan Recovery Code tersimpan hanya pada browser ini.";
+    if ($("aryAuthFoot")) $("aryAuthFoot").textContent = "Mode akun mandiri aktif. Pemulihan password tersedia pada browser/perangkat yang pernah digunakan untuk masuk.";
     refreshLocalCaptcha("aryReg"); refreshLocalCaptcha("aryLogin"); refreshLocalCaptcha("aryReset");
     const users = readUsers(), session = localSession();
     const sessionUser = session && Array.isArray(users) ? users.find(user => user.id === session.id) : null;
     if (sessionUser) { setUser(sessionUser, true); return; }
     setUser(null); mode("login");
     if (Array.isArray(users) && users.length) say("Akun lokal lama tetap tersimpan. Masuk menggunakan email atau ID dan password pada perangkat ini.");
-    else say("Buat akun ARYANZZ baru untuk memulai. Simpan Recovery Code dengan aman.");
+    else say("Buat akun ARYANZZ baru untuk memulai.");
     if (!window.crypto?.subtle || !window.crypto?.getRandomValues) say("Browser ini tidak mendukung Web Crypto. Gunakan Chrome terbaru melalui HTTPS.", true);
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init, { once: true }); else init();

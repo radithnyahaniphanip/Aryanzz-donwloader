@@ -1,8 +1,15 @@
-/* ARYANZZ V1 standalone local auth */
-.ary-local-captcha{display:grid;grid-template-columns:1fr minmax(100px,120px);align-items:center;gap:10px;padding:10px 12px;border:1px solid #334969;border-radius:13px;background:#0b172a}
-.ary-local-captcha-label{font-size:12px;font-weight:800;color:#cfe5ff}
-.ary-local-captcha input{width:100%;min-width:0;padding:10px;border:1px solid #3d5475;border-radius:9px;background:#071224;color:#fff;font:inherit}
-.ary-recovery-code-row{display:flex;gap:8px}
-.ary-recovery-code-row input{min-width:0;flex:1;letter-spacing:1px;font-weight:900;color:#8ce3bd}
-.ary-recovery-code-row button{padding:0 14px;border:1px solid #49688f;border-radius:10px;background:#172a45;color:#eaf4ff;font-weight:800}
-#aryAuthCaptcha{display:none!important}
+/* ARYANZZ V1 — trusted-browser password recovery */
+.ary-reset-check-panel{display:grid;gap:11px;padding:14px;border:1px solid #314b68;border-radius:15px;background:rgba(7,19,36,.82)}
+.ary-reset-check-panel[hidden],.ary-reset-password-stage[hidden],.ary-reset-check-result[hidden]{display:none!important}
+.ary-reset-check-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;color:#e7f1ff;font-size:13px}
+.ary-reset-check-heading strong{color:#80e2b6;font-size:12px;font-variant-numeric:tabular-nums}
+.ary-reset-progress-track{height:8px;overflow:hidden;border-radius:30px;background:#24354d}
+.ary-reset-progress-track i{display:block;width:0;height:100%;border-radius:inherit;background:linear-gradient(90deg,#24b77e,#35d5a1);transition:width .45s ease}
+.ary-reset-check-result{display:flex;align-items:center;gap:10px;padding-top:2px;color:#7ce2ad}
+.ary-reset-check-result>span{display:grid;place-items:center;width:28px;height:28px;flex:0 0 28px;border-radius:50%;background:#103d2c;color:#78f0ad;font-weight:1000}
+.ary-reset-check-result b,.ary-reset-check-result small{display:block}
+.ary-reset-check-result b{font-size:13px}
+.ary-reset-check-result small{margin-top:3px;color:#a8cbb9;font-size:11px;line-height:1.5}
+.ary-reset-password-stage{display:grid;gap:12px}
+.ary-reset-password-stage .ary-auth-step-note{margin:0}
+@media(prefers-reduced-motion:reduce){.ary-reset-progress-track i{transition:none}}

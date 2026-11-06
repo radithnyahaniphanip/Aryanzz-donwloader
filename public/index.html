@@ -217,7 +217,7 @@ body{background-color:var(--ary-app-bg)}
 <link rel="stylesheet" href="/workspace-library.css?v=__ARYANZZ_VERSION__">
 <link rel="stylesheet" href="/workspace-navigation.css?v=__ARYANZZ_VERSION__">
 <link rel="stylesheet" href="/auth-profile-v1.css?v=1">
-<link rel="stylesheet" href="/auth-reset-v1.css?v=1">
+<link rel="stylesheet" href="/auth-reset-v1.css?v=2">
 </head><body class="ary-reduced-motion" data-motion="off" data-view="home">
 <div class="app-shell wrap">
 <section id="home" class="v674-home">
@@ -1181,19 +1181,23 @@ if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.ser
    <div class="ary-auth-inline-actions"><button class="ary-auth-link" type="button" id="aryForgotPassword">Lupa password?</button></div>
   </form>
   <form id="aryResetStartForm" class="ary-auth-form" hidden autocomplete="off">
-   <label>Email atau ID akun<input id="aryResetEmail" type="text" autocomplete="username" placeholder="Email atau ID ARYANZZ" required></label>
-   <label>Recovery Code<input id="aryResetRecoveryCode" type="text" autocomplete="off" placeholder="Masukkan Recovery Code" required></label>
-   <label>Password baru<div class="ary-auth-password"><input id="aryResetPassword" type="password" minlength="12" maxlength="128" autocomplete="new-password" placeholder="Minimal 12 karakter" required><button type="button" id="aryResetEye" aria-label="Lihat password baru">◉</button></div></label>
-   <label>Ulangi password baru<div class="ary-auth-password"><input id="aryResetPasswordConfirm" type="password" minlength="12" maxlength="128" autocomplete="new-password" placeholder="Ulangi password baru" required><button type="button" id="aryResetConfirmEye" aria-label="Lihat konfirmasi password">◉</button></div></label>
-   <div class="ary-local-captcha"><div class="ary-local-captcha-label" id="aryResetCaptchaQuestion">Verifikasi manusia</div><input id="aryResetCaptchaAnswer" type="number" inputmode="numeric" placeholder="Jawaban" required></div>
-   <button class="ary-auth-submit" type="submit" id="aryResetStartSubmit">Reset password</button>
+   <p class="ary-auth-step-note">Tenang, kami bantu kamu mendapatkan kembali akses akun ARYANZZ.</p>
+   <label>Email akun<input id="aryResetEmail" type="email" autocomplete="email" placeholder="nama@gmail.com" required></label>
+   <div id="aryResetCheckPanel" class="ary-reset-check-panel" hidden>
+    <div class="ary-reset-check-heading"><b id="aryResetProgressText">Memeriksa email kamu…</b><strong id="aryResetProgressPercent">0%</strong></div>
+    <div class="ary-reset-progress-track"><i id="aryResetProgressFill"></i></div>
+    <div id="aryResetProgressResult" class="ary-reset-check-result" hidden><span>✓</span><div><b>Verifikasi berhasil</b><small>Email, ID ARYANZZ, dan perangkat terdaftar cocok.</small></div></div>
+   </div>
+   <div id="aryResetPasswordStage" class="ary-reset-password-stage" hidden>
+    <p class="ary-auth-step-note">Buat password baru untuk akunmu.</p>
+    <label>Password baru<div class="ary-auth-password"><input id="aryResetPassword" type="password" minlength="12" maxlength="128" autocomplete="new-password" placeholder="Minimal 12 karakter" required disabled><button type="button" id="aryResetEye" aria-label="Lihat password baru">◉</button></div></label>
+    <label>Ulangi password baru<div class="ary-auth-password"><input id="aryResetPasswordConfirm" type="password" minlength="12" maxlength="128" autocomplete="new-password" placeholder="Ulangi password baru" required disabled><button type="button" id="aryResetConfirmEye" aria-label="Lihat konfirmasi password">◉</button></div></label>
+    <div class="ary-auth-strength"><div class="ary-auth-strength-track"><i id="aryResetStrengthBar"></i></div><b id="aryResetStrengthLabel">Kekuatan password: belum diisi</b></div>
+   </div>
+   <button class="ary-auth-submit" type="submit" id="aryResetStartSubmit">Periksa email dan perangkat</button>
    <button class="ary-auth-link" type="button" id="aryBackToLogin">Kembali ke login</button>
   </form>
-  <form id="aryLocalRecoveryForm" class="ary-auth-form" hidden autocomplete="off">
-   <div class="ary-reset-verified"><span>✓</span><div><b>Akun berhasil dibuat</b><small>Simpan Recovery Code ini. Kode diperlukan jika kamu lupa password.</small></div></div>
-   <label>Recovery Code<div class="ary-recovery-code-row"><input id="aryRecoveryCodeDisplay" type="text" readonly><button type="button" id="aryCopyRecoveryCode">Salin</button></div></label>
-   <button class="ary-auth-submit" type="button" id="aryFinishLocalRegister">Saya sudah menyimpan Recovery Code</button>
-  </form>
+  
   <form id="aryRegisterVerifyForm" class="ary-auth-form" hidden autocomplete="one-time-code">
    <p class="ary-auth-step-note">Kode verifikasi dikirim ke <b id="aryRegisterVerifyEmail"></b>. Kode berlaku 10 menit.</p>
    <label>Kode verifikasi email<input id="aryRegisterCode" class="ary-auth-verify-code" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" placeholder="000000" required></label>
