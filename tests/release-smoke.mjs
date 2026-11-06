@@ -385,6 +385,10 @@ const checks = [
   ["Layout normalization and navigation are removed from the shared downloader inline script", !html.includes("function normalizePersonalLayout()")&&!html.includes("function panel(id)")&&workspaceLayoutJs.includes("normalizeWorkspaceLayout")&&workspaceNavigationJs.includes("window.aryanzzShowPanel=showPanel")],
   ["All new workspace assets are included in the offline service-worker shell", ["/workspace-home.css","/workspace-tools.css","/workspace-library.css","/workspace-navigation.css","/workspace-home.js","/workspace-layout.js","/workspace-library.js","/workspace-tools.js","/workspace-navigation.js","/workspace-manifest.json"].every(asset=>sw.includes('"'+asset+'?v=__ARYANZZ_VERSION__"'))],
 
+  ["Home security status indicator is owned by the Home module, not the platform picker script", workspaceHomeJs.includes("initSecurityIndicator") && workspaceHomeJs.includes("securityStatusIndicator") && !searchJs.includes("initSecurityIndicator")],
+  ["Owner security dashboard is owned by the Owner module, not the Home platform picker script", ownerJs.includes("initSecurityCenter") && ownerJs.includes("securityCenterState") && !searchJs.includes("initSecurityCenter")],
+  ["Home platform picker script contains only Home search initialization and no dead theme, color-generator, or Owner security handlers", searchJs.includes("initSearch();") && !searchJs.includes("initColors") && !searchJs.includes("initTheme") && !searchJs.includes("colorPalette") && !searchJs.includes("securityCenter") && !searchJs.includes("securityStatusIndicator")],
+
 ];
 
 for (const [name, ok] of checks) {

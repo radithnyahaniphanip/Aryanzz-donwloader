@@ -21,7 +21,8 @@
         "v89Welcome",
         "downloader landing",
         "platform picker",
-        "title search"
+        "title search",
+        "home security indicator"
       ]
     },
     "tools": {
@@ -58,6 +59,11 @@
       ],
       "js": [
         "/owner.js"
+      ],
+      "features": [
+        "owner identity",
+        "social links",
+        "security center"
       ]
     },
     "profile": {
@@ -83,7 +89,7 @@
     "js": [
       "/workspace-layout.js"
     ],
-    "purpose": "One-time DOM ownership and legacy-layout normalization only."
+    "purpose": "One-time DOM ownership and legacy-layout normalization only; no downloader, profile, owner or library feature logic."
   },
   "featureModules": [
     {
@@ -104,7 +110,7 @@
       "js": [
         "/v674.js"
       ],
-      "purpose": "Platform picker, title search, Color Studio and security widgets"
+      "purpose": "Home platform picker and title search only"
     },
     {
       "root": "#linkBypass",

@@ -119,10 +119,38 @@
       alert("Penyimpanan browser penuh atau tidak tersedia. Kosongkan ruang lalu coba lagi.");
     }
   }
+  async function initSecurityCenter() {
+    const root = $("securityCenter");
+    if (!root) return;
+    const state = $("securityCenterState");
+    const refresh = $("securityCenterRefresh");
+    const draw = async () => {
+      if (refresh) refresh.disabled = true;
+      try {
+        const response = await fetch("/api/security/status", { cache: "no-store", headers: { accept: "application/json" } });
+        const data = await response.json();
+        if (!response.ok || data?.security?.active !== true) throw new Error("Status belum dapat diverifikasi");
+        const events = data.security.events || {};
+        const set = (id, value) => { const node = $(id); if (node) node.textContent = String(Number(value) || 0); };
+        set("securityBlockedOrigin", events.blockedOrigin);
+        set("securityRateLimited", events.rateLimited);
+        set("securityOversized", events.oversizedRequest);
+        set("securityMethods", events.blockedMethod);
+        if (state) { state.textContent = "● Perlindungan Worker aktif"; state.classList.add("is-active"); state.classList.remove("is-warning"); }
+      } catch {
+        if (state) { state.textContent = "Status keamanan belum dapat diverifikasi"; state.classList.add("is-warning"); state.classList.remove("is-active"); }
+      } finally {
+        if (refresh) refresh.disabled = false;
+      }
+    };
+    refresh?.addEventListener("click", draw);
+    draw();
+  }
   function init() {
     if (!$("owner")) return;
     renderOwnerProfile();
     renderLinks();
+    initSecurityCenter();
     $("ownerLinksSave")?.addEventListener("click", saveLinks);
     $("ownerEditProfile")?.addEventListener("click", () => window.aryanzzShowPanel?.("profile"));
     window.addEventListener("storage", event => {
