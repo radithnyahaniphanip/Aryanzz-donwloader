@@ -16,11 +16,12 @@
     return hex(await crypto.subtle.deriveBits({ name: "PBKDF2", hash: "SHA-256", salt, iterations }, key, 256));
   }
   async function currentDeviceHash() {
-    let token = localStorage.getItem(DEVICE_KEY);
-    if (!token) {
-      token = hex(crypto.getRandomValues(new Uint8Array(32)));
-      localStorage.setItem(DEVICE_KEY, token);
-    }
+    const cookieName = "aryanzz_device_id";
+    const cookieToken = document.cookie.split(";").map(v=>v.trim()).find(v=>v.startsWith(cookieName+"="))?.slice(cookieName.length+1)||"";
+    let token = localStorage.getItem(DEVICE_KEY) || cookieToken;
+    if (!/^[a-f0-9]{64}$/i.test(token)) token = hex(crypto.getRandomValues(new Uint8Array(32)));
+    try { localStorage.setItem(DEVICE_KEY, token); } catch {}
+    try { if (cookieToken !== token) document.cookie = cookieName+"="+token+"; Max-Age=63072000; Path=/; Secure; SameSite=Lax"; } catch {}
     return hex(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(token)));
   }
   async function rememberCurrentDevice(user) {
