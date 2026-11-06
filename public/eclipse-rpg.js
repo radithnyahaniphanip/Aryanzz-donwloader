@@ -2,7 +2,9 @@
 const root=document.getElementById("eclipseRpg");
 if(!root)return;
 const $=id=>document.getElementById(id);
-const SAVE_KEY="aryanzz.eclipse-rpg.save.v1";
+const SAVE_KEY_BASE="aryanzz.eclipse-rpg.save.v1";
+function accountSaveKey(){const user=window.aryanzzAuthUser;const identity=user&&user.id?String(user.id):"guest";return SAVE_KEY_BASE+":"+encodeURIComponent(identity);}
+let activeSaveKey=accountSaveKey();
 const TIER_DATA=[
  {id:"biasa",name:"Biasa",count:30,mult:.8,color:"#a7b4c8",anim:"plain",prefix:"Prajurit"},
  {id:"sangat-biasa",name:"Sangat Biasa",count:60,mult:1,color:"#72c7d8",anim:"spark",prefix:"Penjelajah"},
@@ -100,7 +102,7 @@ const bossCatalog=Array.from({length:900},(_,i)=>{
  return {id:id,name:BOSS_PREFIX[i%30]+" "+BOSS_KIND[Math.floor(i/30)%30]+" #"+id,
   hp:id<=5?BOSS_HP[id-1]:Math.round(1200+k*1800+Math.pow(k,1.55)*60),
   atk:Math.round(12+id*2.1+Math.pow(id,1.15)*.3),def:Math.round(5+id*1.4+Math.sqrt(id)*2),
-  levelReq:Math.max(1,Math.ceil(id/3)),pattern:["Cleave","Shadow Dash","Rune Burst","Earthquake","Soul Drain"][i%5],
+  levelReq:Math.max(1,Math.ceil(id/3)),pattern:["Cleave","Shadow Dash","Rune Burst","Earthquake","Soul Drain","Meteor Rain","Void Beam","Frost Prison","Summon Adds","Twin Strike","Gravity Well","Eclipse Pulse"][i%12],
   rewardCoins:100+id*15,rewardXp:160+id*45};
 });
 const SKINS=[
@@ -185,7 +187,7 @@ function freshState(){
 function loadState(){
  const base=freshState();
  try{
-  const raw=localStorage.getItem(SAVE_KEY);if(!raw)return base;
+  const raw=localStorage.getItem(activeSaveKey);if(!raw)return base;
   const data=JSON.parse(raw);if(!data||typeof data!=="object")return base;
   base.player=Object.assign(base.player,data.player||{});
   ["ownedItems","upgrades","unlockedSkills","skillSlots","equipped","quests","skinsUnlocked"].forEach(k=>{if(data[k]&&typeof data[k]==="object")base[k]=data[k]});
@@ -202,7 +204,7 @@ function loadState(){
 let state=loadState();
 ensureQuestPeriods();
 const world={w:1800,h:1260,tile:48};
-const player={x:270,y:360,faceX:1,faceY:0,attackCd:0,dodge:0,invuln:0,shield:0,buff:0,burn:0,summon:0,regen:0};
+const player={x:270,y:360,faceX:1,faceY:0,attackCd:0,dodge:0,invuln:0,shield:0,buff:0,burn:0,summon:0,regen:0,slow:0};
 const input={up:false,down:false,left:false,right:false,block:false};
 let enemies=[],boss=null,bossActive=false,particles=[],lastFrame=0,raf=0,running=false;
 let activeTab="adventure",inventoryPage=0,skillPage=0,bossPage=0,questPeriod="daily",skillQuery="",bossQuery="",puzzleAttempt=[];
@@ -242,7 +244,7 @@ function log(message){
  while(node.children.length>5)node.lastChild.remove();
 }
 function save(show){
- try{localStorage.setItem(SAVE_KEY,JSON.stringify(state));if(show)toast("Progress berhasil disimpan di perangkat ini.");}
+ try{localStorage.setItem(activeSaveKey,JSON.stringify(state));if(show)toast("Progress berhasil disimpan di perangkat ini.");}
  catch{toast("Penyimpanan perangkat penuh. Ekspor save agar progress aman.");}
  refreshHud();
 }
@@ -611,7 +613,8 @@ function update(dt){
  const stats=getStats();
  let dx=(input.right?1:0)-(input.left?1:0),dy=(input.down?1:0)-(input.up?1:0);
  const len=Math.hypot(dx,dy)||1;if(dx||dy){dx/=len;dy/=len;player.faceX=dx;player.faceY=dy;}
- const speed=stats.speed*(player.buff>0?1.18:1);
+ player.slow=Math.max(0,player.slow-dt);
+ const speed=stats.speed*(player.buff>0?1.18:1)*(player.slow>0?.5:1);
  const nx=Math.max(28,Math.min(world.w-28,player.x+dx*speed*dt)),ny=Math.max(32,Math.min(world.h-32,player.y+dy*speed*dt));
  player.x=nx;player.y=ny;
  player.attackCd=Math.max(0,player.attackCd-dt);player.dodge=Math.max(0,player.dodge-dt);player.invuln=Math.max(0,player.invuln-dt);
@@ -631,9 +634,19 @@ function update(dt){
   const d=Math.hypot(player.x-boss.x,player.y-boss.y);
   if(boss.stun<=0&&d>90){const sp=boss.speed*(boss.slow>0?.4:1);boss.x+=(player.x-boss.x)/d*sp*dt;boss.y+=(player.y-boss.y)/d*sp*dt;}
   if(telegraphWasActive&&boss.telegraph===0){
-   const range=boss.pattern==="Rune Burst"||boss.pattern==="Earthquake"?210:boss.pattern==="Shadow Dash"?260:115;
-   if(d<range)damagePlayer(boss.atk*(boss.pattern==="Earthquake"?1.5:1));
-   if(boss.pattern==="Shadow Dash"&&d<330){boss.x=player.x-boss.x<0?player.x+100:player.x-100;boss.y=player.y;}
+   const pattern=boss.pattern;
+   const ranges={"Cleave":120,"Shadow Dash":260,"Rune Burst":210,"Earthquake":210,"Soul Drain":185,"Meteor Rain":250,"Void Beam":330,"Frost Prison":165,"Summon Adds":185,"Twin Strike":135,"Gravity Well":245,"Eclipse Pulse":300};
+   const multipliers={"Earthquake":1.5,"Meteor Rain":1.5,"Void Beam":1.35,"Twin Strike":.82,"Gravity Well":1.15,"Eclipse Pulse":1.8};
+   const range=ranges[pattern]||120,mult=multipliers[pattern]||1;
+   if(d<range)damagePlayer(boss.atk*mult);
+   if(pattern==="Twin Strike"&&d<range)damagePlayer(boss.atk*.72);
+   if(pattern==="Shadow Dash"&&d<330){boss.x=player.x-boss.x<0?player.x+100:player.x-100;boss.y=player.y;}
+   if(pattern==="Soul Drain"&&d<range&&!(input.block||player.shield>0))boss.hp=Math.min(boss.maxHp,boss.hp+Math.round(boss.maxHp*.015));
+   if(pattern==="Frost Prison"&&d<range)player.slow=2.2;
+   if(pattern==="Gravity Well"&&d<range){const pull=Math.max(0,1-d/range);player.x+=(boss.x-player.x)*pull*.22;player.y+=(boss.y-player.y)*pull*.22;}
+   if(pattern==="Summon Adds"){
+    enemies.push({id:10000+Math.floor(Math.random()*100000),name:"Eclipse Wisp",x:boss.x+70,y:boss.y+45,hp:24+boss.id*2,maxHp:24+boss.id*2,atk:Math.max(4,boss.atk*.35),def:Math.max(1,boss.def*.2),speed:62,cd:0,dead:false,color:"#bb8cff"});
+   }
    spawnParticles(boss.x,boss.y,"#ff718c",25);boss.attackCd=2.5+Math.random()*1.2;
   }
   if(!boss.telegraph&&boss.attackCd<=0){boss.telegraph=.85;log(boss.name+" menyiapkan "+boss.pattern+".");}
@@ -733,6 +746,12 @@ function syncGame(){
 function renderAll(){
  refreshHud();renderInventory();renderSkills();renderShop();renderQuests();renderBosses();renderCodex();renderSkins();
 }
+function syncAccountSave(){
+ const nextKey=accountSaveKey();if(nextKey===activeSaveKey)return;
+ save(false);activeSaveKey=nextKey;state=loadState();ensureQuestPeriods();renderAll();
+ toast(window.aryanzzAuthUser?"Progress game untuk akun ini dimuat.":"Progress mode tamu dimuat.");
+}
+window.addEventListener("aryanzz:auth-changed",syncAccountSave);
 root.addEventListener("click",event=>{
  const tab=event.target.closest("[data-ecl-tab]");if(tab){switchTab(tab.dataset.eclTab);return}
  const period=event.target.closest("[data-ecl-period]");if(period){questPeriod=period.dataset.eclPeriod;renderQuests();return}
@@ -798,7 +817,7 @@ const exportBtn=$("eclExport");if(exportBtn)exportBtn.addEventListener("click",(
 const importInput=$("eclImportFile");if(importInput)importInput.addEventListener("change",async()=>{
  const file=importInput.files&&importInput.files[0];if(!file)return;
  try{const data=JSON.parse(await file.text());if(!data||!data.player||!Array.isArray(data.ownedItems))throw new Error("Format save tidak valid.");
-  localStorage.setItem(SAVE_KEY,JSON.stringify(data));state=loadState();ensureQuestPeriods();renderAll();toast("Save berhasil dipulihkan.");
+  localStorage.setItem(activeSaveKey,JSON.stringify(data));state=loadState();ensureQuestPeriods();renderAll();toast("Save berhasil dipulihkan.");
  }catch(error){toast(error.message||"File save tidak dapat dibaca.");}finally{importInput.value="";}
 });
 const skillSearch=$("eclSkillSearch");if(skillSearch)skillSearch.addEventListener("input",()=>{skillQuery=skillSearch.value.toLowerCase().trim();skillPage=0;renderSkills()});
