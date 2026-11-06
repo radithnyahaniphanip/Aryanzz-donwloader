@@ -1,0 +1,11 @@
+/* ARYANZZ V1 — profile identity cleanup */
+.ary-profile2-identity{align-items:flex-end;gap:14px}
+.ary-profile2-avatar-wrap{width:76px;height:76px;flex:0 0 76px;position:relative;transform:translateY(5px)}
+.ary-profile2-avatar{width:76px;height:76px;min-width:76px;min-height:76px;font-size:31px;border-radius:22px}
+.ary-profile2-avatar-edit{width:22px;height:22px;right:-4px;bottom:-4px;font-size:10px}
+.ary-profile2-avatar-remove{width:21px;height:21px;right:-4px;top:-4px}
+.ary-profile2-identity-copy{padding:0 0 5px;transform:translateY(8px);min-width:0}
+.ary-profile2-identity-copy h2{margin:0 0 3px;font-size:17px;line-height:1.25}
+.ary-profile2-identity-copy p{margin:0;font-size:11px}
+.ary-profile2-member-label{display:none!important}
+@media(max-width:420px){.ary-profile2-avatar-wrap{width:70px;height:70px;flex-basis:70px}.ary-profile2-avatar{width:70px;height:70px;min-width:70px;min-height:70px;font-size:28px}.ary-profile2-identity{gap:12px}}
