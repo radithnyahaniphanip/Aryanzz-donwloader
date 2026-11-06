@@ -361,6 +361,8 @@ const checks = [
   ["Dedicated Speed Test has one controller and the legacy duplicate is not initialized", !v15Js.includes("setupSpeedTest()") && read("../public/speed-test.js").includes('btn.dataset.speedBound="1"') && html.includes('src="/speed-test.js')],
   ["Library tabs, clear actions and visible counters are functional and use the same local history source", v15Js.includes("aryLibraryHistoryTab") && v15Js.includes("aryLibraryFavoriteTab") && v15Js.includes("localStorage.removeItem(KEY.history)") && v15Js.includes('localStorage.removeItem("aryanzz-download-history-v1")') && v15Js.includes("aryLibraryHistoryCount") && v15Js.includes("aryLibraryFavoriteCount") && html.includes('id="aryLibraryHistoryCount"') && html.includes('id="aryLibraryFavoriteCount"')],
   ["Local media activity updates the Library, Owner and Profile counters without requiring a refresh", downloaderJs.includes('new Event("aryanzz:history-updated")') && v15Js.includes('new Event("aryanzz:history-updated")') && ownerJs.includes('addEventListener("aryanzz:history-updated", renderOwnerProfile)') && profileJs.includes('addEventListener("aryanzz:history-updated",profileCounts)')],
+  ["About and Help stay hidden on first load and open only through their home shortcuts", html.includes('<body class="ary-reduced-motion" data-motion="off" data-view="home">') && html.includes('<section id="toolsArea" hidden>') && v15Js.includes('bindNavigation();\\n    goto("home");') && v15Js.includes('p.hidden=!active;') && appUiCss.includes('#toolsArea[hidden]') && appUiCss.includes('#toolsArea>.panel[hidden]') && html.includes('data-panel="about"') && html.includes('data-panel="help"')],
+  ["Home shortcuts use two balanced columns and remain compact on mobile", appUiCss.includes('#home .home-shortcuts') && appUiCss.includes('grid-template-columns:repeat(2,minmax(0,1fr))') && appUiCss.includes('#home .shortcut-icon')],
   ["Home view does not reserve an empty Tools area", !html.includes("#toolsArea{min-height:55vh}") && html.includes("toolsArea.hidden=isHome")],
   ["Profile, Owner and Library do not receive redundant generic back-to-tools buttons", v15Js.includes('["history","owner","profile"].includes(p.id)')],
 
@@ -371,4 +373,4 @@ for (const [name, ok] of checks) {
   assert.ok(ok, name + " failed");
   console.log("✔ " + name);
 }
-console.log("\nARYANZZ V95.1 full workspace audit release smoke tests passed.");
+console.log("\nARYANZZ V95.2 full workspace audit release smoke tests passed.");

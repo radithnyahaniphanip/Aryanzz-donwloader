@@ -308,7 +308,9 @@
 
   /* V15 finish. */
   function init(){
-    bindNavigation();setupToolSearch();setupDownloader();setupImageLab();setupTextExtras();setupLibrary();
+    bindNavigation();
+    goto("home");
+    setupToolSearch();setupDownloader();setupImageLab();setupTextExtras();setupLibrary();
     if("serviceWorker" in navigator)navigator.serviceWorker.ready.then(r=>r.update().catch(()=>{})).catch(()=>{});
     document.querySelector(".pill")?.setAttribute("title","ARYANZZ V25 Premium Experience");
   }
