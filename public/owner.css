@@ -68,8 +68,6 @@ body[data-view="owner"] .nav button[data-nav="owner"]{font-weight:1000}
 .owner-cover:after{border-color:#d7b8ff55;box-shadow:0 0 0 18px #ffffff0a,0 0 38px #9874ff33}
 .owner-badge-gold,.owner-badge-gold.owner-developer-title{color:#fff1b5!important;background:linear-gradient(110deg,#4c2b0b 0%,#a46a17 24%,#ffe6a1 48%,#895214 72%,#4c2b0b 100%)!important;background-size:260% 100%!important;border:1px solid #ffe4a0!important;box-shadow:0 0 18px #f0bd4b88,0 4px 0 #020711!important;animation:developerBadgeShimmer 3.8s linear infinite,developerBadgeGlow 2.4s ease-in-out infinite alternate!important}
 .owner-badge-gold.owner-developer-title{letter-spacing:1.7px;text-shadow:0 1px 5px #4c2b0b88}
-.ary-profile-developer-badge{color:#fff1b5;background:linear-gradient(110deg,#4c2b0b,#a46a17,#ffe6a1,#895214,#4c2b0b);background-size:260% 100%;border-color:#ffe4a0;box-shadow:0 0 18px #f0bd4b88;animation:developerBadgeShimmer 3.8s linear infinite,developerBadgeGlow 2.4s ease-in-out infinite alternate}
-#profileRandomId.ary-developer-id{display:inline-block;color:#fff0a8;background:linear-gradient(110deg,#1d1740,#553a12,#b27b20,#553a12,#1d1740);background-size:260% 100%;border:1px solid #ffe39a;border-radius:10px;padding:8px 12px;text-shadow:0 0 12px #ffe39a;box-shadow:0 0 22px #f5c65c77;animation:developerBadgeShimmer 3.8s linear infinite,developerBadgeGlow 2.4s ease-in-out infinite alternate}
 .ary-developer-account .owner-link-editor{border-color:#e8c66d}
 .ary-developer-account .v8813-security-center{border-color:#e8c66d}
 .ary-theme-motion{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:16px 0;padding:14px 16px;border:1px solid #304b6b;border-radius:15px;background:linear-gradient(120deg,#11243a,#101b30)}
@@ -86,7 +84,7 @@ body[data-view="owner"] .nav button[data-nav="owner"]{font-weight:1000}
 @keyframes developerBadgeShimmer{0%{background-position:100% 50%}100%{background-position:-160% 50%}}
 @keyframes developerBadgeGlow{from{filter:brightness(1);transform:translateY(0)}to{filter:brightness(1.18);transform:translateY(-1px)}}
 @media(max-width:600px){.owner-cover{height:154px}.ary-theme-motion{align-items:flex-start;flex-direction:column}.ary-motion-switch{align-self:flex-end}}
-@media(prefers-reduced-motion:reduce){.owner-cover,.owner-cover-orbit,.owner-badge-gold,.ary-profile-developer-badge,#profileRandomId.ary-developer-id{animation:none!important}}
+@media(prefers-reduced-motion:reduce){.owner-cover,.owner-cover-orbit,.owner-badge-gold{animation:none!important}}
 
 
 /* V95.1 — keep owner identity readable over animated cover artwork */
@@ -278,7 +276,7 @@ body[data-view="owner"] .nav button[data-nav="owner"]{font-weight:1000}
 #owner.ary-owner-v2 .ary-owner2-identity-content{min-width:0;padding-top:35px}
 #owner.ary-owner-v2 .owner-badges.owner-identity-titles{display:flex!important;flex-direction:column!important;align-items:flex-start!important;gap:8px;margin:0 0 11px;padding:0}
 #owner.ary-owner-v2 .owner-badges.owner-identity-titles .owner-badge{display:inline-flex;align-items:center;min-height:34px;max-width:100%;padding:8px 13px;border-radius:10px;font-size:10px;font-weight:1000;letter-spacing:1.4px;line-height:1.2}
-#owner.ary-owner-v2 #ownerDeveloperBadge.owner-developer-title{color:#fff!important;-webkit-text-fill-color:#fff!important;background:linear-gradient(105deg,#70400c,#bd8123 27%,#ffe9ad 52%,#a66b18 76%,#633708)!important;border:1px solid #ffe8ad!important;text-shadow:0 1px 5px rgba(46,24,0,.9),0 0 12px rgba(255,235,181,.4);box-shadow:0 0 0 1px rgba(255,229,166,.12),0 0 22px rgba(240,185,73,.34),0 4px 0 #030a13!important}
+#owner.ary-owner-v2 #ownerDeveloperBadge.owner-developer-title{color:#2b1703!important;-webkit-text-fill-color:#2b1703!important;background:linear-gradient(105deg,#d69b2c 0%,#f3d17d 34%,#e4b34c 57%,#c38422 100%)!important;background-size:260% 100%!important;border:1px solid #ffe8ad!important;text-shadow:0 1px 1px rgba(255,244,207,.72),0 0 7px rgba(255,255,255,.16);box-shadow:0 0 0 1px rgba(255,229,166,.12),0 0 22px rgba(240,185,73,.34),0 4px 0 #030a13!important;animation:developerBadgeShimmer 3.8s linear infinite,developerBadgeGlow 2.4s ease-in-out infinite alternate!important}
 #owner.ary-owner-v2 .owner-badges.owner-identity-titles .owner-creator-title{color:#eafff7!important;-webkit-text-fill-color:#eafff7!important;background:linear-gradient(110deg,#07594e,#0e9875 55%,#07564d)!important;border:1px solid #83efc9!important;box-shadow:0 0 16px rgba(20,210,157,.18),0 4px 0 #030a13!important}
 #owner.ary-owner-v2 #ownerName{margin:0;color:#f5f8ff!important;font-size:clamp(25px,4vw,34px);font-weight:1000;letter-spacing:-1px;line-height:1.1;overflow-wrap:anywhere}
 #owner.ary-owner-v2 .ary-owner2-handle{margin:6px 0;color:#a7c7e3;font-size:12px;font-weight:800;letter-spacing:.3px}
@@ -319,3 +317,17 @@ body[data-view="owner"] .nav button[data-nav="owner"]{font-weight:1000}
 @media(max-width:620px){#owner.ary-owner-v2{padding:12px!important}#owner.ary-owner-v2 .ary-owner2-top-actions button{padding:7px 8px;font-size:10px}#owner.ary-owner-v2 .ary-owner2-identity{gap:13px;padding:0 15px 16px;margin-top:-40px}#owner.ary-owner-v2 .ary-owner2-avatar{width:84px;height:84px;border-width:4px;border-radius:22px;font-size:30px}#owner.ary-owner-v2 .ary-owner2-identity-content{padding-top:27px}#owner.ary-owner-v2 .owner-badges.owner-identity-titles .owner-badge{min-height:30px;padding:7px 10px;font-size:9px;letter-spacing:1px}#owner.ary-owner-v2 #ownerName{font-size:23px}#owner.ary-owner-v2 .ary-owner2-bio{font-size:11px}#owner.ary-owner-v2 .ary-owner2-stats{gap:7px;padding:0 12px 12px}#owner.ary-owner-v2 .ary-owner2-stats>div{padding:10px 8px;text-align:center}#owner.ary-owner-v2 .ary-owner2-stats b{font-size:18px}#owner.ary-owner-v2 .ary-owner2-stats span{font-size:8px;letter-spacing:.5px}#owner.ary-owner-v2 .ary-owner2-section-heading{align-items:flex-start;flex-direction:column}#owner.ary-owner-v2 .ary-owner2-section-heading p{text-align:left}}
 @media(max-width:390px){#owner.ary-owner-v2 .ary-owner2-top-actions button span{display:none}#owner.ary-owner-v2 .ary-owner2-top-actions button{width:34px;justify-content:center}#owner.ary-owner-v2 .ary-owner2-social-grid,#owner.ary-owner-v2 .ary-owner2-admin-grid{grid-template-columns:1fr}#owner.ary-owner-v2 .ary-owner2-identity{align-items:flex-start;flex-direction:column;margin-top:-34px}#owner.ary-owner-v2 .ary-owner2-identity-content{padding-top:0}#owner.ary-owner-v2 .owner-badges.owner-identity-titles{gap:6px}#owner.ary-owner-v2 .ary-owner2-footer{align-items:flex-start;flex-direction:column}}
 @media(prefers-reduced-motion:reduce){#owner.ary-owner-v2 *{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
+
+/* V95.4.1716 — keep the Developer Website identity badge legible and animated. */
+#owner.ary-owner-v2 #ownerDeveloperBadge.owner-developer-title{
+  color:#2b1703!important;
+  -webkit-text-fill-color:#2b1703!important;
+  animation:developerBadgeShimmer 3.8s linear infinite,developerBadgeGlow 2.4s ease-in-out infinite alternate!important;
+  will-change:background-position,box-shadow,transform;
+}
+@media(prefers-reduced-motion:reduce){
+  #owner.ary-owner-v2 #ownerDeveloperBadge.owner-developer-title{
+    animation:none!important;
+    will-change:auto;
+  }
+}

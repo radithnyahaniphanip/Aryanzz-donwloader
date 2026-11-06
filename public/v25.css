@@ -350,3 +350,38 @@ body[data-motion="off"] *,body[data-motion="off"] *:before,body[data-motion="off
 @media(max-width:720px){#profile.ary-profile-v2{padding:12px!important}#profile.ary-profile-v2 .ary-profile2-grid,#profile.ary-profile-v2 .ary-profile2-device-grid{grid-template-columns:1fr}#profile.ary-profile-v2 .ary-profile2-stats{gap:8px}#profile.ary-profile-v2 .ary-profile2-stat{padding:11px;gap:8px}#profile.ary-profile-v2 .ary-profile2-stat-icon{width:32px;height:32px;font-size:17px}#profile.ary-profile-v2 .ary-profile2-stat b{font-size:17px}#profile.ary-profile-v2 .ary-profile2-stat small{font-size:9px}}
 @media(max-width:460px){#profile.ary-profile-v2 .ary-profile2-header{align-items:flex-start}#profile.ary-profile-v2 .ary-profile2-private{font-size:8px;padding:7px 8px}#profile.ary-profile-v2 .ary-profile2-identity{gap:12px;padding:0 14px 17px;margin-top:-34px}#profile.ary-profile-v2 .ary-profile2-avatar-wrap,#profile.ary-profile-v2 .ary-profile2-avatar{width:78px!important;height:78px!important}#profile.ary-profile-v2 .ary-profile2-avatar{border-width:4px;border-radius:20px;font-size:27px}#profile.ary-profile-v2 .ary-profile2-identity-copy{padding-top:30px}#profile.ary-profile-v2 .ary-profile2-identity-copy h2{font-size:18px}#profile.ary-profile-v2 .ary-profile2-identity-copy p{font-size:10px}#profile.ary-profile-v2 .ary-profile2-card{padding:15px}#profile.ary-profile-v2 .ary-profile2-stat{display:block;text-align:center}#profile.ary-profile-v2 .ary-profile2-stat-icon{margin:0 auto 7px}#profile.ary-profile-v2 .ary-profile2-form-actions{flex-wrap:wrap}#profile.ary-profile-v2 .ary-profile2-primary{flex:1}#profile.ary-profile-v2 .ary-profile2-location{align-items:flex-start;flex-direction:column}#profile.ary-profile-v2 .ary-profile2-device-footer{align-items:flex-start;flex-direction:column}#profile.ary-profile-v2 .ary-profile2-cover-actions{right:9px;top:9px}#profile.ary-profile-v2 .ary-profile2-action{min-height:31px;padding:7px 9px;font-size:10px}}
 @media(prefers-reduced-motion:reduce){#profile.ary-profile-v2 *{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
+
+/* V95.4.1716 — restore the developer account ID's dedicated shimmer and glow.
+   This identity accent remains animated when general page motion is disabled;
+   the operating system's reduced-motion preference is always respected. */
+@keyframes aryProfileIdShimmer{
+  0%{background-position:100% 50%}
+  100%{background-position:-160% 50%}
+}
+@keyframes aryProfileIdGlow{
+  0%,100%{box-shadow:0 0 13px rgba(245,198,92,.38),0 3px 10px rgba(0,0,0,.18);transform:translateY(0)}
+  50%{box-shadow:0 0 24px rgba(245,198,92,.72),0 0 9px rgba(255,226,154,.28),0 4px 13px rgba(0,0,0,.2);transform:translateY(-1px)}
+}
+#profile.ary-profile-v2 #profileRandomId.ary-developer-id{
+  display:inline-flex;
+  align-items:center;
+  max-width:100%;
+  padding:8px 12px;
+  overflow:hidden;
+  border:1px solid #ffe39a;
+  border-radius:10px;
+  color:#fff0a8!important;
+  -webkit-text-fill-color:#fff0a8!important;
+  background:linear-gradient(110deg,#1d1740 0%,#553a12 24%,#b27b20 50%,#553a12 76%,#1d1740 100%);
+  background-size:260% 100%;
+  text-shadow:0 0 12px rgba(255,227,154,.82),0 1px 3px rgba(24,14,2,.85);
+  box-shadow:0 0 18px rgba(245,198,92,.45);
+  animation:aryProfileIdShimmer 3.8s linear infinite,aryProfileIdGlow 2.7s ease-in-out infinite alternate!important;
+  will-change:background-position,box-shadow,transform;
+}
+@media(prefers-reduced-motion:reduce){
+  #profile.ary-profile-v2 #profileRandomId.ary-developer-id{
+    animation:none!important;
+    will-change:auto;
+  }
+}
