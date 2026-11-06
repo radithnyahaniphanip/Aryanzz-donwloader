@@ -207,16 +207,6 @@
         "/wa-quote-generator.js"
       ],
       "purpose": "Create WhatsApp-style chat mockups for Android and iPhone and export PNG locally."
-    },
-    {
-      "root": "#eclipseRpg",
-      "css": [
-        "/eclipse-rpg.css"
-      ],
-      "js": [
-        "/eclipse-rpg.js"
-      ],
-      "purpose": "Isolated 2D fantasy RPG game: world exploration, combat, generated equipment/skills/bosses, local save and timed quests."
     }
   ],
   "release": {
