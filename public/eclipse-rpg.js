@@ -56,7 +56,7 @@ TIER_DATA.forEach((tier,ti)=>{
   const roman=["I","II","III","IV","V","VI","VII","VIII","IX","X","XI","XII","XIII","XIV","XV","XVI","XVII","XVIII","XIX","XX"];
   const subTier=tier.id==="langka"&&j>=39?"Sangat Langka":"";
   equipmentCatalog.push({
-   id:equipmentCatalog.length,name:tier.prefix+" "+type.names[j%type.names.length]+" "+roman[j%roman.length],
+   id:equipmentCatalog.length,name:tier.prefix+" "+type.names[j%type.names.length]+" "+roman[j%roman.length]+" · "+(j+1),
    tier:tier.id,tierName:tier.name,subTier:subTier,tierIndex:ti,type:type.id,typeLabel:type.label,
    levelReq:Math.max(1,ti*3+Math.floor(j/12)+1),price:Math.round(45*tier.mult*tier.mult+j*4),
    color:tier.color,anim:tier.anim,effect:effect.id,effectName:effect.name,effectDesc:effect.desc,
@@ -625,17 +625,17 @@ function update(dt){
   if(d<42&&e.cd<=0){e.cd=1.45;damagePlayer(e.atk);}
  });
  if(bossActive&&boss){
-  boss.attackCd=Math.max(0,boss.attackCd-dt);boss.telegraph=Math.max(0,boss.telegraph-dt);boss.slow=Math.max(0,boss.slow-dt);boss.stun=Math.max(0,boss.stun-dt);
+  boss.attackCd=Math.max(0,boss.attackCd-dt);const telegraphWasActive=boss.telegraph>0;if(telegraphWasActive)boss.telegraph=Math.max(0,boss.telegraph-dt);boss.slow=Math.max(0,boss.slow-dt);boss.stun=Math.max(0,boss.stun-dt);
   if(boss.burn>0){boss.burn-=dt;boss.hp=Math.max(0,boss.hp-(boss.burnDamage||2)*dt);if(boss.hp<=0){defeatBoss();return}}
   const d=Math.hypot(player.x-boss.x,player.y-boss.y);
   if(boss.stun<=0&&d>90){const sp=boss.speed*(boss.slow>0?.4:1);boss.x+=(player.x-boss.x)/d*sp*dt;boss.y+=(player.y-boss.y)/d*sp*dt;}
-  if(boss.telegraph>0&&boss.telegraph<=dt){
+  if(telegraphWasActive&&boss.telegraph===0){
    const range=boss.pattern==="Rune Burst"||boss.pattern==="Earthquake"?210:boss.pattern==="Shadow Dash"?260:115;
    if(d<range)damagePlayer(boss.atk*(boss.pattern==="Earthquake"?1.5:1));
    if(boss.pattern==="Shadow Dash"&&d<330){boss.x=player.x-boss.x<0?player.x+100:player.x-100;boss.y=player.y;}
    spawnParticles(boss.x,boss.y,"#ff718c",25);boss.attackCd=2.5+Math.random()*1.2;
   }
-  if(boss.telegraph<=0&&boss.attackCd<=0){boss.telegraph=.85;log(boss.name+" menyiapkan "+boss.pattern+".");}
+  if(!boss.telegraph&&boss.attackCd<=0){boss.telegraph=.85;log(boss.name+" menyiapkan "+boss.pattern+".");}
  }
  particles.forEach(p=>{p.x+=p.vx*dt;p.y+=p.vy*dt;p.life-=dt});particles=particles.filter(p=>p.life>0);
  nearestObject();refreshHud();
@@ -649,7 +649,7 @@ function drawGround(camX,camY){
   ctx.fillStyle=shade<3?"#1c4738":shade<6?"#204b3b":"#1a4235";ctx.fillRect(sx,sy,tile,tile);
   if((x*3+y*7)%11===0){ctx.fillStyle="#3e7650";ctx.fillRect(sx+12,sy+13,3,3);ctx.fillRect(sx+33,sy+31,2,2);}
  }
- ctx.fillStyle="#46513e";ctx.fillRect(0,390-camY,world.w,84);
+ ctx.fillStyle="#46513e";ctx.fillRect(-camX,390-camY,world.w,84);
  ctx.fillStyle="#566044";ctx.fillRect(0,392-camY,world.w,5);
  ctx.fillStyle="#344b3d";ctx.fillRect(820-camX,0,74,world.h);
  ctx.fillStyle="#3f5a46";ctx.fillRect(823-camX,0,4,world.h);
@@ -772,7 +772,6 @@ if(blockButton){
  blockButton.addEventListener("pointerdown",e=>{e.preventDefault();input.block=true;blockButton.classList.add("pressed")});
  ["pointerup","pointerleave","pointercancel"].forEach(name=>blockButton.addEventListener(name,()=>{input.block=false;blockButton.classList.remove("pressed")}));
 }
-root.querySelectorAll("[data-ecl-action-button]").forEach(button=>button.addEventListener("click",()=>{}));
 document.addEventListener("keydown",event=>{
  if(!isVisible()||/INPUT|TEXTAREA|SELECT/.test(event.target.tagName))return;
  const k=event.key.toLowerCase();
@@ -816,8 +815,6 @@ bindPage("eclPotionMp",()=>usePotion("mp"));
 bindPage("eclAttackButton",attack);
 bindPage("eclDodgeButton",dodge);
 bindPage("eclInteractButton",interact);
-root.querySelectorAll("[data-ecl-cast]").forEach(b=>b.addEventListener("click",()=>castSkill(Number(b.dataset.eclCast))));
-root.querySelectorAll("[data-ecl-period]").forEach(b=>b.addEventListener("click",()=>{questPeriod=b.dataset.eclPeriod;renderQuests()}));
 const observer=new MutationObserver(syncGame);observer.observe(root,{attributes:true,attributeFilter:["class","hidden"]});
 window.addEventListener("resize",resizeCanvas);
 window.addEventListener("pagehide",()=>{running=false;save(false)});
