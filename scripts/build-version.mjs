@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 const root = process.cwd();
 const packagePath = resolve(root, "package.json");
 const packageJson = JSON.parse(readFileSync(packagePath, "utf8"));
+const publicRelease = String(packageJson.release || "V1").trim() || "V1";
 const [major, minor, patch] = String(packageJson.version || "95.0.0").split(".").map(value => Number(value) || 0);
 
 // Production releases must come from the serialized GitHub Actions pipeline.
@@ -49,5 +50,5 @@ writeFileSync(swPath, sw);
 const manifestPath = resolve(root, "public/manifest.webmanifest");
 const manifest = readFileSync(manifestPath, "utf8").replaceAll("__ARYANZZ_VERSION__", version);
 writeFileSync(manifestPath, manifest);
-writeFileSync(resolve(root, "public/release.json"), JSON.stringify({ name: "ARYANZZ", version, commit, builtAt: new Date().toISOString() }, null, 2) + "\n");
+writeFileSync(resolve(root, "public/release.json"), JSON.stringify({ name: "ARYANZZ", release: publicRelease, releaseName: "Full Release", version, commit, builtAt: new Date().toISOString() }, null, 2) + "\n");
 console.log("[ARYANZZ] Release " + version + " built from commit " + commit);
