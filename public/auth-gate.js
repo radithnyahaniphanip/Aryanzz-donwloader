@@ -191,7 +191,7 @@
     $("aryLegacyMigrate")?.addEventListener("click", startLegacyMigration);
     $("accountLogout")?.addEventListener("click", async () => { try { await post("/api/auth/logout", {}); } catch {} try { localStorage.removeItem(SESSION_KEY); } catch {} setUser(null); mode("login"); say("Kamu sudah keluar dari akun."); });
     try { const response = await fetch("/api/auth/config", { cache: "no-store", credentials: "same-origin" }); config = await response.json(); } catch { config = { ready: false, captchaSiteKey: "" }; }
-    const registerTab = document.querySelector('[data-auth-mode="register"]'); if (registerTab) registerTab.hidden = !config.ready;
+    const registerTab = document.querySelector('[data-auth-mode="register"]'); if (registerTab) registerTab.hidden = false;
     if ($("aryAuthFoot")) $("aryAuthFoot").textContent = config.ready
       ? "Akun tersimpan secara online. Verifikasi email diperlukan untuk pendaftaran dan reset password."
       : "Layanan akun online belum siap: " + (Array.isArray(config.missing) ? config.missing.join(", ") : "konfigurasi server") + ". Akun lokal lama tetap dapat masuk dari perangkat asal.";
