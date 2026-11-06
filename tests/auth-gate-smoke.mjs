@@ -13,6 +13,10 @@ assert.ok(client.includes("currentDeviceHash") && client.includes("deviceKeyHash
 assert.ok(client.includes("/api/auth/legacy/start"), "Legacy accounts need a verified migration path");
 assert.ok(client.includes("password !== confirm"), "Registration and reset must compare confirmation password");
 assert.ok(client.includes("identifier"), "Login must accept email or account ID");
+assert.ok(client.includes('get("/api/auth/config")'), "Auth client must detect server-backed account availability");
+assert.ok(client.includes('post("/api/auth/login"') && client.includes('post("/api/auth/register/start"'), "Online login and registration must use the account API");
+assert.ok(client.includes('post("/api/auth/reset/device/start"') && client.includes('post("/api/auth/reset/device/verify"'), "Online password reset must verify the previously registered device");
+assert.ok(html.includes('id="profileAccountEmail"') && html.includes('id="profileAccountNote"'), "Profile must display the registered email and account storage mode");
 assert.ok(client.includes("checkLocalCaptcha") && client.includes("refreshLocalCaptcha"), "Local human verification must be present on auth forms");
 assert.ok(client.includes("aryanzz.local.accounts.v94"), "Old local accounts must be preserved for migration");
 assert.ok(client.includes("localSession") && client.includes("sessionUser"), "Existing local sessions must be restored");
