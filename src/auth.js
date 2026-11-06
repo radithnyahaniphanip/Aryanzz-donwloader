@@ -157,7 +157,12 @@ async function me(request, env) {
   if (!/^[a-f0-9]{64}$/i.test(token)) return reply({ ok: false, code: "NOT_AUTHENTICATED" }, 401);
   const row = await env.AUTH_DB.prepare("SELECT u.id,u.email,u.full_name,u.role,u.created_at FROM auth_sessions s JOIN auth_users u ON u.id=s.user_id WHERE s.token_hash=?1 AND s.expires_at>?2 LIMIT 1")
     .bind(await digest(token), Date.now()).first();
-  return row ? reply({ ok: true, user: publicUser(row) }) : reply({ ok: false, code: "NOT_AUTHENTICATED" }, 401);
+  if (!row) return reply({ ok: false, code: "NOT_AUTHENTICATED" }, 401);
+  if (await userBan(row.id, env)) {
+    await env.AUTH_DB.prepare("DELETE FROM auth_sessions WHERE token_hash=?1").bind(await digest(token)).run();
+    return reply({ok:false,code:"ACCOUNT_BANNED",error:"Akun ini diblokir permanen karena pelanggaran aturan ARYANZZ."},403);
+  }
+  return reply({ ok: true, user: publicUser(row) });
 }
 async function logout(request, env) {
   const token = tokenFrom(request);
@@ -205,11 +210,13 @@ async function verifyRegister(request, env) {
 async function login(request, env) {
   const b = await bodyOf(request), identifier = String(b?.identifier || "").trim().slice(0, 254), password = String(b?.password || ""), deviceHash = String(b?.deviceHash || "");
   if (!identifier || !password || password.length > 128) return reply({ ok: false, error: "Masukkan email/ID dan password." }, 400);
+  if (await isDeviceBanned(deviceHash, env)) return reply({ok:false,code:"DEVICE_BANNED",error:"Akses ditolak. Perangkat ini terkait dengan akun yang diblokir permanen."},403);
   if (limited(request, "login", 10, 600000)) return reply({ ok: false, error: "Terlalu banyak percobaan masuk. Tunggu beberapa menit." }, 429);
   if (!(await captcha(request, b.captchaToken, env))) return reply({ ok: false, error: "Verifikasi CAPTCHA belum berhasil." }, 400);
   const user = await env.AUTH_DB.prepare("SELECT id,email,full_name,password_salt,password_hash,password_iterations,role,created_at FROM auth_users WHERE email=?1 COLLATE NOCASE OR id=?2 COLLATE NOCASE LIMIT 1")
     .bind(identifier, identifier).first();
   if (!user) return reply({ ok: false, code: "ACCOUNT_NOT_FOUND", error: "Akun belum ditemukan. Periksa email atau ID." }, 404);
+  if (await userBan(user.id, env)) return reply({ok:false,code:"ACCOUNT_BANNED",error:"Akun ini diblokir permanen karena pelanggaran aturan ARYANZZ."},403);
   const iterations = Math.max(100000, Math.min(1000000, Number(user.password_iterations) || ITERATIONS));
   if (!equal(await passwordDigest(password, user.password_salt, iterations), String(user.password_hash || ""))) {
     return reply({ ok: false, code: "INVALID_CREDENTIALS", error: "Email/ID atau password tidak cocok." }, 401);
