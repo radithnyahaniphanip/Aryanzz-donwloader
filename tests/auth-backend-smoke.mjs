@@ -8,7 +8,7 @@ assert.ok(backend.includes("api.resend.com/emails"), "Email codes must be sent b
 assert.ok(backend.includes("turnstile/v0/siteverify"), "CAPTCHA must be verified server-side");
 assert.ok(backend.includes("PBKDF2"), "Passwords must be hashed");
 assert.ok(backend.includes("HttpOnly; Secure; SameSite=Lax"), "Sessions must use secure HttpOnly cookies");
-assert.ok(backend.includes("attempts>=5"), "OTP attempts must be bounded");
+assert.ok(backend.includes("Number(row.attempts) >= 5"), "OTP attempts must be bounded");
 for (const table of ["auth_users","auth_verifications","auth_sessions"]) assert.ok(migration.includes("CREATE TABLE IF NOT EXISTS " + table));
 const config = await handleAuthRequest(new Request("https://aryanzz.example/api/auth/config"), {});
 assert.equal(config.status, 200);
