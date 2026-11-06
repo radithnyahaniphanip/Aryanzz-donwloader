@@ -28,15 +28,18 @@
   }
   function setUser(user, localOnly = false) {
     window.aryanzzAuthUser = user || null;
-    const developer = !!user && (String(user.role || "").toLowerCase() === "owner" || String(user.id || "").toUpperCase() === "ARY-ZFTLQPEX92");
+    const isDeveloper = !!user && String(user.id || "").toUpperCase() === "ARY-ZFTLQPEX92";
     window.aryanzzIsDeveloper = developer;
     const id = $("profileRandomId"), copy = $("profileCopyId"), logout = $("accountLogout"), desc = $("profileIdDescription");
-    if (id && user) { id.textContent = user.id; id.classList.toggle("ary-developer-id", developer); id.setAttribute("aria-label", "ID akun ARYANZZ"); }
+    if (id && user) { id.textContent = user.id; id.classList.toggle("ary-developer-id", isDeveloper); id.setAttribute("aria-label", "ID akun ARYANZZ"); }
     if (copy && user) copy.dataset.accountId = user.id;
     if (logout) logout.hidden = !user;
     if (desc) desc.textContent = localOnly ? "ID akun lokal pada browser ini." : "ID akun ARYANZZ.";
-    for (const element of ["ownerLinkEditor", "securityCenter", "ownerEditProfile"]) if ($(element)) $(element).hidden = !developer;
-    document.body.classList.toggle("ary-developer-account", developer);
+    const editor = $("ownerLinkEditor"), security = $("securityCenter"), ownerEdit = $("ownerEditProfile");
+    if (editor) editor.hidden = !isDeveloper;
+    if (security) security.hidden = !isDeveloper;
+    if (ownerEdit) ownerEdit.hidden = !isDeveloper;
+    document.body.classList.toggle("ary-developer-account", isDeveloper);
     if (gate) gate.hidden = !!user;
     document.body.classList.toggle("ary-authenticated", !!user);
     if ($("profileName") && user?.fullName && !$("profileName").value.trim()) $("profileName").value = user.fullName;
