@@ -197,6 +197,16 @@
       "js": [
         "/advanced.js"
       ]
+    },
+    {
+      "root": "#waQuoteTools",
+      "css": [
+        "/wa-quote-generator.css"
+      ],
+      "js": [
+        "/wa-quote-generator.js"
+      ],
+      "purpose": "Create WhatsApp-style chat mockups for Android and iPhone and export PNG locally."
     }
   ],
   "release": {
