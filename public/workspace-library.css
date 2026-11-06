@@ -1,0 +1,8 @@
+/* Library styles are scoped to the Library panel; no global card selectors. */
+#history.ary-library-panel{width:100%;min-width:0}
+#history .ary-library-view[hidden]{display:none!important;visibility:hidden!important}
+#history .ary-library-view.active:not([hidden]){display:block!important;visibility:visible!important}
+#history .ary-library-list{width:100%;min-width:0}
+#history .ary-library-item{min-width:0}
+#history .ary-library-item-main{min-width:0;overflow-wrap:anywhere}
+#history .ary-library-item-main a{overflow-wrap:anywhere;word-break:break-word}

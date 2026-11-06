@@ -1,0 +1,92 @@
+/* Home workspace only: brand, welcome and downloader landing layout. */
+#home>.v674-top{align-items:center;padding:8px 2px 18px;border-bottom:1px solid #ffffff0b}#home>.v674-top .v674-brand{text-decoration:none;color:var(--v674-text);gap:12px}#home>.v674-top .v674-brand>span:last-child{display:flex;flex-direction:column;line-height:1.05}#home>.v674-top .v674-brand small{font-size:8px;letter-spacing:3px;color:#8ea4c7;margin-top:5px}#home>.v674-top .v674-logo{position:relative;display:grid;place-items:center;width:48px;height:48px;border-radius:16px;background:linear-gradient(140deg,#8b5cf6,#3e9cff 60%,#2dd4bf);box-shadow:0 4px 12px #6650ff22;font-size:24px;color:white}#home>.v674-top .v674-logo span{position:absolute;right:5px;top:3px;font-size:10px}#home>.v674-top .v674-top-actions{display:flex;align-items:center;gap:10px}#home>.v674-top .v674-version{background:#111a30;border-color:#ffffff1c;color:#d6d9ff;font-weight:800}#home>.v674-top .v674-theme-toggle{width:40px;height:40px;border-radius:14px;border:1px solid #ffffff20;background:#18243c;color:#f9dc8a;font-size:20px}
+
+#home>.v89-welcome{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;width:100%;margin:10px 0 18px;padding:clamp(14px,2.5vw,25px) clamp(15px,3vw,28px);border:1px solid rgba(120,157,220,.18);border-radius:24px;background:linear-gradient(112deg,rgba(20,37,65,.96),rgba(14,25,45,.9) 58%,rgba(38,34,76,.72));box-shadow:var(--v89-shadow);overflow:hidden;position:relative}
+#home>.v89-welcome:after{content:"";position:absolute;width:210px;height:210px;right:-65px;top:-120px;border-radius:50%;background:radial-gradient(circle,rgba(84,150,255,.25),transparent 68%);pointer-events:none}
+#home>.v89-welcome .v89-welcome-copy{position:relative;z-index:1;min-width:0}
+#home>.v89-welcome .v89-welcome-kicker{display:block;margin-bottom:7px;color:#9bb8e4;font-size:9px;font-weight:900;letter-spacing:2px}
+#home>.v89-welcome h1{margin:0;font-size:clamp(24px,4.5vw,40px);font-weight:950;line-height:1.08;letter-spacing:-1.2px;background:linear-gradient(95deg,#fff 5%,#a8c9ff 58%,#70e2ed);-webkit-background-clip:text;background-clip:text;color:transparent}
+#home>.v89-welcome h1 span{color:#8ebcff}
+#home>.v89-welcome p{margin:8px 0 0;color:#a7bad5;font-size:12px;line-height:1.55}
+#home>.v89-welcome .v89-welcome-mark{position:relative;z-index:1;display:grid;place-items:center;width:54px;height:54px;flex:0 0 54px;border:1px solid rgba(169,194,255,.24);border-radius:17px;background:linear-gradient(145deg,rgba(121,87,255,.24),rgba(50,190,230,.16));color:#dce8ff;font-size:25px;box-shadow:0 10px 30px rgba(80,120,220,.16)}
+
+#home[hidden]{
+  display:none!important;
+  visibility:hidden!important;
+}
+#home .home-shortcuts{
+  display:grid!important;
+  width:100%!important;
+  max-width:800px!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:10px!important;
+  margin:14px auto 0!important;
+  animation:none!important;
+}
+#home .shortcut{
+  display:flex!important;
+  flex-direction:row!important;
+  align-items:center!important;
+  justify-content:flex-start!important;
+  gap:9px!important;
+  width:100%!important;
+  min-width:0!important;
+  min-height:76px!important;
+  padding:11px 12px!important;
+  border-radius:15px!important;
+  text-align:left!important;
+}
+#home .shortcut-icon{
+  width:36px!important;
+  height:36px!important;
+  flex:0 0 36px!important;
+  border-radius:11px!important;
+}
+#home .shortcut>span:nth-child(2){
+  display:block!important;
+  min-width:0!important;
+  flex:1 1 auto!important;
+}
+#home .shortcut b,
+#home .shortcut small{
+  display:block!important;
+  white-space:normal!important;
+  overflow-wrap:anywhere!important;
+  text-overflow:clip!important;
+}
+#home .shortcut b{
+  font-size:11px!important;
+  line-height:1.25!important;
+}
+#home .shortcut small{
+  margin-top:3px!important;
+  font-size:9px!important;
+  line-height:1.35!important;
+}
+#home .shortcut-arrow{
+  display:block!important;
+  flex:0 0 auto!important;
+  margin-left:auto!important;
+  font-size:18px!important;
+}
+#home .ary-android-home{
+  width:100%!important;
+  margin:16px auto 0!important;
+}
+@media(max-width:380px){
+  #home .home-shortcuts{gap:8px!important}
+  #home .shortcut{min-height:72px!important;padding:9px!important;gap:7px!important}
+  #home .shortcut-icon{width:32px!important;height:32px!important;flex-basis:32px!important}
+  #home .shortcut b{font-size:10px!important}
+  #home .shortcut small{font-size:8px!important}
+}
+
+#home>.v674-top{margin:0 0 12px!important}
+#home>.v89-welcome{margin:10px 0 16px!important}
+@media(max-width:480px){
+ #home>.v674-top{padding:7px 0 10px!important}
+ #home>.v674-top .v674-top-actions{gap:6px!important}
+ #home>.v674-top .v674-version{font-size:9px!important;padding:5px 8px!important}
+ #home>.v89-welcome{gap:10px!important;border-radius:20px!important}
+ #home>.v89-welcome .v89-welcome-mark{width:42px!important;height:42px!important;flex-basis:42px!important}
+}

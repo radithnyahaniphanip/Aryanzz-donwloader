@@ -1,0 +1,196 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Strict ownership map for ARYANZZ workspace UI, styles, scripts, and tool modules.",
+  "rules": [
+    "Edit only the workspace module that owns the requested page or feature.",
+    "Keep CSS selectors rooted under the workspace root; do not add broad body, html, or generic panel overrides to page modules.",
+    "Keep downloader/provider logic separate from Home layout, Profile UI, Owner UI, and navigation.",
+    "Shared navigation may change visibility and route state only; it must not rewrite downloader, profile, owner, or library feature data."
+  ],
+  "workspaces": {
+    "home": {
+      "root": "#home",
+      "css": [
+        "/workspace-home.css"
+      ],
+      "js": [
+        "/workspace-home.js"
+      ],
+      "features": [
+        "homeBrandHeader",
+        "v89Welcome",
+        "downloader landing",
+        "platform picker",
+        "title search"
+      ]
+    },
+    "tools": {
+      "root": "#toolsArea",
+      "css": [
+        "/workspace-tools.css"
+      ],
+      "js": [
+        "/workspace-tools.js"
+      ],
+      "features": [
+        "tool search",
+        "tool category filters",
+        "tool panel visibility"
+      ]
+    },
+    "library": {
+      "root": "#history",
+      "css": [
+        "/workspace-library.css"
+      ],
+      "js": [
+        "/workspace-library.js"
+      ],
+      "storage": [
+        "aryanzz-download-history-v1",
+        "aryanzz-library-favorites-v1"
+      ]
+    },
+    "owner": {
+      "root": "#owner",
+      "css": [
+        "/owner.css"
+      ],
+      "js": [
+        "/owner.js"
+      ]
+    },
+    "profile": {
+      "root": "#profile",
+      "css": [
+        "/v25.css"
+      ],
+      "js": [
+        "/v25.js"
+      ]
+    },
+    "navigation": {
+      "root": ".nav",
+      "css": [
+        "/workspace-navigation.css"
+      ],
+      "js": [
+        "/workspace-navigation.js"
+      ]
+    }
+  },
+  "sharedLayout": {
+    "js": [
+      "/workspace-layout.js"
+    ],
+    "purpose": "One-time DOM ownership and legacy-layout normalization only."
+  },
+  "featureModules": [
+    {
+      "root": "#home .v674-download",
+      "css": [
+        "/downloader.css"
+      ],
+      "js": [
+        "/downloader.js"
+      ],
+      "purpose": "Media link analysis and download engine"
+    },
+    {
+      "root": "#home",
+      "css": [
+        "/v674.css"
+      ],
+      "js": [
+        "/v674.js"
+      ],
+      "purpose": "Platform picker, title search, Color Studio and security widgets"
+    },
+    {
+      "root": "#linkBypass",
+      "css": [
+        "/link-bypass.css"
+      ],
+      "js": [
+        "/link-bypass.js"
+      ]
+    },
+    {
+      "root": "#mediaStudio",
+      "css": [
+        "/media-studio.css"
+      ],
+      "js": [
+        "/media-studio.js"
+      ]
+    },
+    {
+      "root": "#queue",
+      "css": [
+        "/download-queue.css"
+      ],
+      "js": [
+        "/download-queue.js"
+      ]
+    },
+    {
+      "root": "#audioStudio",
+      "css": [
+        "/audio-studio.css"
+      ],
+      "js": [
+        "/audio-studio.js"
+      ]
+    },
+    {
+      "root": "#imageTools",
+      "css": [
+        "/image-studio.css"
+      ],
+      "js": [
+        "/image-studio.js"
+      ]
+    },
+    {
+      "root": "#editor",
+      "css": [
+        "/editor-pro.css"
+      ],
+      "js": [
+        "/editor.js"
+      ]
+    },
+    {
+      "root": "#musicFinder",
+      "css": [
+        "/music-recognition.css"
+      ],
+      "js": [
+        "/music-recognition.js"
+      ]
+    },
+    {
+      "root": "#colorStudio",
+      "css": [
+        "/theme-studio.css"
+      ],
+      "js": [
+        "/theme-studio.js"
+      ]
+    },
+    {
+      "root": "#speed",
+      "css": [],
+      "js": [
+        "/speed-test.js"
+      ]
+    },
+    {
+      "root": "#checker",
+      "css": [],
+      "js": [
+        "/advanced.js"
+      ]
+    }
+  ]
+}

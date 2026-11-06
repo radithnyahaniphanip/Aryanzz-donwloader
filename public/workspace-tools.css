@@ -1,0 +1,18 @@
+/* Tools workspace visibility belongs to the Tools route only. */
+/* V95.2 — strict initial route and balanced home shortcuts */
+#toolsArea[hidden]{
+  display:none!important;
+  visibility:hidden!important;
+}
+#toolsArea>.panel[hidden],
+#toolsArea>.panel:not(.active){
+  display:none!important;
+  visibility:hidden!important;
+}
+#toolsArea>.panel.active:not([hidden]){
+  display:block!important;
+  visibility:visible!important;
+}
+
+#toolsArea{width:100%;min-width:0}
+#toolsArea>.panel{width:100%;min-width:0}

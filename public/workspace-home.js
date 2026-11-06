@@ -1,0 +1,13 @@
+(()=>{"use strict";
+const home=document.getElementById("home");
+if(!home)return;
+home.dataset.workspace="home";
+const header=document.getElementById("homeBrandHeader");
+const welcome=document.getElementById("v89Welcome");
+const download=home.querySelector(".v674-download");
+if(header&&header.parentElement!==home)home.insertBefore(header,home.firstChild);
+if(welcome&&welcome.parentElement!==home)home.insertBefore(welcome,download||null);
+const version=document.querySelector('meta[name="aryanzz-version"]')?.content||"";
+const badge=document.getElementById("homeReleaseVersion");
+if(badge&&version)badge.textContent="V"+version+" · GRATIS";
+})();

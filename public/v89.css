@@ -32,14 +32,6 @@ img,video,canvas,svg{max-width:100%}
 .v674-top-actions{display:flex;align-items:center;justify-content:flex-end;gap:7px;min-width:0}
 .v674-version,.v674-security-indicator{white-space:nowrap!important;font-size:9px!important;padding:7px 9px!important}
 .v674-theme-toggle{width:38px;height:38px;flex:0 0 38px;border:1px solid var(--v89-line-strong)!important;border-radius:12px!important;background:var(--v89-surface-3)!important;color:var(--v89-text)!important}
-.v89-welcome{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;width:100%;margin:10px 0 18px;padding:clamp(14px,2.5vw,25px) clamp(15px,3vw,28px);border:1px solid rgba(120,157,220,.18);border-radius:24px;background:linear-gradient(112deg,rgba(20,37,65,.96),rgba(14,25,45,.9) 58%,rgba(38,34,76,.72));box-shadow:var(--v89-shadow);overflow:hidden;position:relative}
-.v89-welcome:after{content:"";position:absolute;width:210px;height:210px;right:-65px;top:-120px;border-radius:50%;background:radial-gradient(circle,rgba(84,150,255,.25),transparent 68%);pointer-events:none}
-.v89-welcome-copy{position:relative;z-index:1;min-width:0}
-.v89-welcome-kicker{display:block;margin-bottom:7px;color:#9bb8e4;font-size:9px;font-weight:900;letter-spacing:2px}
-.v89-welcome h1{margin:0;font-size:clamp(24px,4.5vw,40px);font-weight:950;line-height:1.08;letter-spacing:-1.2px;background:linear-gradient(95deg,#fff 5%,#a8c9ff 58%,#70e2ed);-webkit-background-clip:text;background-clip:text;color:transparent}
-.v89-welcome h1 span{color:#8ebcff}
-.v89-welcome p{margin:8px 0 0;color:#a7bad5;font-size:12px;line-height:1.55}
-.v89-welcome-mark{position:relative;z-index:1;display:grid;place-items:center;width:54px;height:54px;flex:0 0 54px;border:1px solid rgba(169,194,255,.24);border-radius:17px;background:linear-gradient(145deg,rgba(121,87,255,.24),rgba(50,190,230,.16));color:#dce8ff;font-size:25px;box-shadow:0 10px 30px rgba(80,120,220,.16)}
 .v8814-view-header{display:flex!important;align-items:center;gap:12px;width:100%;margin:0 0 14px!important;padding:11px 14px!important;border:1px solid var(--v89-line)!important;border-radius:17px!important;background:linear-gradient(110deg,rgba(17,31,52,.95),rgba(12,22,39,.95))!important;box-shadow:0 8px 26px rgba(0,0,0,.16)!important}
 .v8814-view-header[hidden]{display:none!important}
 .v8814-view-mark{width:36px!important;height:36px!important;flex:0 0 36px;border-radius:12px!important;background:linear-gradient(135deg,#8e67ff,#399bff)!important}

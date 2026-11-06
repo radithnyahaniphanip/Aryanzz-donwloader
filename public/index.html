@@ -212,9 +212,15 @@ body{background-color:var(--ary-app-bg)}
 </style><link rel="stylesheet" href="/link-bypass.css?v=94.0"><link rel="stylesheet" href="/theme-studio.css?v=__ARYANZZ_VERSION__">
 <link rel="stylesheet" href="/auth-gate.css?v=__ARYANZZ_VERSION__">
 <link rel="stylesheet" href="/v95-ui.css?v=__ARYANZZ_VERSION__">
+<link rel="stylesheet" href="/workspace-home.css?v=__ARYANZZ_VERSION__">
+<link rel="stylesheet" href="/workspace-tools.css?v=__ARYANZZ_VERSION__">
+<link rel="stylesheet" href="/workspace-library.css?v=__ARYANZZ_VERSION__">
+<link rel="stylesheet" href="/workspace-navigation.css?v=__ARYANZZ_VERSION__">
 </head><body class="ary-reduced-motion" data-motion="off" data-view="home">
 <div class="app-shell wrap">
 <section id="home" class="v674-home">
+<header id="homeBrandHeader" class="top v674-top"><a class="brand v674-brand" href="/" aria-label="ARYANZZ Home"><span class="logo v674-logo" aria-hidden="true"><svg width="30" height="30" viewBox="0 0 64 64" focusable="false"><defs><linearGradient id="aryanzzHeaderMark" x1="0" y1="1" x2="1" y2="0"><stop stop-color="#35d9df"/><stop offset=".5" stop-color="#5795ff"/><stop offset="1" stop-color="#b078ff"/></linearGradient></defs><path d="M7 53 24 13q2-5 8-5t8 5l17 40H43L32 26 21 53z" fill="url(#aryanzzHeaderMark)"/><path d="M23 39h18l-4-9H27z" fill="#fff"/><path d="m49 5 3 8 8 3-8 3-3 8-3-8-8-3 8-3z" fill="#fff"/></svg></span><span>ARYANZZ<small>RUANG KREATIF</small></span></a><div class="v674-top-actions"><span class="pill v674-version"><i></i><span id="homeReleaseVersion">V__ARYANZZ_VERSION__ · GRATIS</span></span><span class="v674-security-indicator" id="securityStatusIndicator" role="status" aria-live="polite" title="Memeriksa perlindungan website"><i></i><span>Memeriksa keamanan</span></span></div></header>
+<div class="v89-welcome" id="v89Welcome"><div class="v89-welcome-copy"><span class="v89-welcome-kicker">ARYANZZ · RUANG KREATIF</span><h1>Semua berawal<br><span>dari satu tautan</span></h1><p>Satu ruang terpadu untuk mengunduh, mencari, mengolah, dan mengelola media.</p></div><div class="v89-welcome-mark" aria-hidden="true">✦</div></div>
 <div class="card download v6-download v674-download">
 <div class="v674-download-heading"><div><span class="section-kicker">PENGUNDUH ARYANZZ</span><h2>Mau unduh apa?</h2></div><span class="v674-download-mark">↗</span></div>
 <div class="v674-mode-switch" role="tablist"><button id="downloadLinkMode" class="active" type="button" role="tab" aria-selected="true">↗ Tempel tautan</button><button id="downloadTitleMode" type="button" role="tab" aria-selected="false">⌕ Cari judul</button></div>
@@ -989,132 +995,20 @@ body{background-color:var(--ary-app-bg)}
 
 <footer>© <span id="year"></span> ARYANZZ</footer></div>
 <nav class="nav" aria-label="Navigasi utama"><button class="active" data-nav="home"><span class="nav-icon">⌂</span><span>Beranda</span></button><button data-nav="allTools"><span class="nav-icon">✦</span><span>Alat</span></button><button data-nav="history"><span class="nav-icon">◷</span><span>Pustaka</span></button><button data-nav="owner"><span class="nav-icon">♛</span><span>Pemilik</span></button><button data-nav="profile"><span class="nav-icon">◉</span><span>Profil</span></button></nav>
+<script src="/workspace-home.js?v=__ARYANZZ_VERSION__"></script>
+<script src="/workspace-layout.js?v=__ARYANZZ_VERSION__"></script>
+<script src="/workspace-library.js?v=__ARYANZZ_VERSION__"></script>
+<script src="/workspace-tools.js?v=__ARYANZZ_VERSION__"></script>
+<script src="/workspace-navigation.js?v=__ARYANZZ_VERSION__"></script>
 <script>
-const $=id=>document.getElementById(id);$('year').textContent=new Date().getFullYear();
-function normalizePersonalLayout(){
-  const toolsArea=$('toolsArea'),profilePanel=$('profile'),libraryPanel=$('history');
-  const colorPanel=$('colorStudio'),mediaStudio=$('mediaStudio');
-  if(toolsArea&&colorPanel&&colorPanel.parentElement!==toolsArea)toolsArea.insertBefore(colorPanel,profilePanel||null);
-  if(toolsArea&&mediaStudio&&mediaStudio.parentElement!==toolsArea)toolsArea.insertBefore(mediaStudio,libraryPanel||null);
-  if(profilePanel){
-    const oldBackup=profilePanel.querySelector('.v25-backup-card');
-    if(oldBackup&&libraryPanel){
-      const currentBackup=libraryPanel.querySelector('.v25-backup-card');
-      if(currentBackup&&currentBackup!==oldBackup)oldBackup.remove();
-      else libraryPanel.appendChild(oldBackup);
-    }
-    profilePanel.querySelectorAll('.ary-theme-studio,[data-theme-studio],.v8813-security-center,#ownerLinkEditor,[data-profile-legacy]').forEach(node=>node.remove());
-    profilePanel.querySelectorAll('#exportData,#importData,#restoreAutoBackup').forEach(node=>{
-      const card=node.closest('.v25-backup-card');
-      if(card)card.remove();else node.remove();
-    });
-    profilePanel.querySelectorAll('.v25-profile-card').forEach(card=>{
-      if(/Tema\s*(?:&|dan)\s*Pengalaman|Backup\s*(?:&|dan)\s*Pemulihan|Media Studio Pro|Atur tautan sosial|Security Center/i.test(card.textContent||''))card.remove();
-    });
-    profilePanel.querySelectorAll('button,a,[role="button"]').forEach(node=>{
-      if(/Tema\s*(?:&|dan)\s*Pengalaman|Backup\s*(?:&|dan)\s*Pemulihan|Media Studio Pro|Atur tautan sosial|Security Center/i.test(node.textContent||'')){
-        const card=node.closest('.v25-profile-card,section');
-        if(card&&card!==profilePanel)card.remove();else node.remove();
-      }
-    });
-  }
-  if(libraryPanel&&mediaStudio&&libraryPanel.contains(mediaStudio)&&toolsArea)toolsArea.insertBefore(mediaStudio,libraryPanel);
-}
-function resetPanelScroll(){
-  const root=document.documentElement,body=document.body,wrap=document.querySelector(".wrap");
-  const previous=root.style.scrollBehavior;
-  root.style.scrollBehavior="auto";
-  root.scrollTop=0;body.scrollTop=0;if(wrap)wrap.scrollTop=0;
-  window.scrollTo(0,0);
-  requestAnimationFrame(()=>{
-    root.scrollTop=0;body.scrollTop=0;if(wrap)wrap.scrollTop=0;
-    window.scrollTo(0,0);
-    root.style.scrollBehavior=previous;
-  });
-}
-function panel(id){
-  let panelId=String(id||"");
-  if(panelId==="home")panelId="";
-  const home=$("home"),toolsArea=$("toolsArea");
-  if(panelId){
-    const candidate=$(panelId);
-    if(!candidate||candidate.parentElement!==toolsArea||!candidate.classList.contains("panel"))panelId="allTools";
-  }
-  const isHome=!panelId;
-  document.body.dataset.view=isHome?"home":panelId==="owner"?"owner":"tool";
-  if(home)home.hidden=!isHome;
-  if(toolsArea){
-    toolsArea.hidden=isHome;
-    toolsArea.classList.toggle("v8814-view-active",!isHome);
-  }
-  document.querySelectorAll("#toolsArea>.panel").forEach(p=>{
-    const active=!isHome&&p.id===panelId;
-    p.classList.toggle("active",active);
-    p.hidden=!active;
-    p.inert=!active;
-    p.setAttribute("aria-hidden",active?"false":"true");
-    p.classList.remove("v677-enter","v677-reveal","v25-reveal");
-  });
-  const navKey=isHome?"home":panelId==="history"?"history":panelId==="owner"?"owner":panelId==="profile"?"profile":"allTools";
-  document.querySelectorAll("[data-nav]").forEach(b=>{
-    const active=b.dataset.nav===navKey;
-    b.classList.toggle("active",active);
-    b.setAttribute("aria-current",active?"page":"false");
-  });
-  resetPanelScroll();
-}
-window.aryanzzShowPanel=panel;
-normalizePersonalLayout();
-panel("home");
-document.querySelectorAll('[data-panel]').forEach(b=>b.onclick=()=>panel(b.dataset.panel));document.querySelectorAll('[data-nav]').forEach(b=>b.onclick=()=>panel(b.dataset.nav==='home'?'':b.dataset.nav));
-const API=(window.ARYANZZ_API_BASE||'').replace(new RegExp("/+$"),"");let activeUrl='',activeName='aryanzz-media';
-const historyKey='aryanzz-download-history-v1';
-function readHistory(){try{return JSON.parse(localStorage.getItem(historyKey)||'[]')}catch{return []}}
-function saveHistory(item){const h=[item,...readHistory().filter(x=>x.url!==item.url)].slice(0,12);localStorage.setItem(historyKey,JSON.stringify(h));renderHistory()}
-function renderHistory(){const box=$('historyBox'),h=readHistory();if(!h.length){box.hidden=true;return}box.hidden=false;box.innerHTML='<b>Riwayat unduhan di perangkat ini</b><div id="historyItems"></div><button id="clearHistory" class="tag" style="margin-top:9px">Hapus riwayat</button>';const list=$('historyItems');h.forEach(item=>{const row=document.createElement('div');row.style.cssText='padding:8px 0;border-bottom:1px solid #263852;overflow-wrap:anywhere';const a=document.createElement('a');a.href=item.url;a.target='_blank';a.rel='noopener';a.style.color='#8ec5ff';a.textContent=item.name||item.url;const small=document.createElement('div');small.className='muted';small.textContent=new Date(item.at).toLocaleString();row.append(a,small);list.append(row)});$('clearHistory').onclick=()=>{localStorage.removeItem(historyKey);renderHistory()}}
-const favoritesKey='aryanzz-library-favorites-v1';
-function readFavorites(){try{return JSON.parse(localStorage.getItem(favoritesKey)||'[]')}catch{return []}}
-function writeFavorites(items){localStorage.setItem(favoritesKey,JSON.stringify(items.slice(0,80)));renderLibrary()}
-function escapeLibraryText(v){return String(v||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-function renderLibrary(){
- const hist=readHistory(),favs=readFavorites();
- $('aryLibraryHistoryCount').textContent=hist.length;$('aryLibraryFavoriteCount').textContent=favs.length;
- $('aryLibraryHistoryBadge').textContent=hist.length;$('aryLibraryFavoriteBadge').textContent=favs.length;
- const draw=(id,items,kind)=>{
-  const box=$(id);box.innerHTML='';
-  if(!items.length){const empty=document.createElement('div');empty.className='ary-library-empty-state';empty.innerHTML=kind==='history'?'<span style="font-size:25px">◷</span><b>Belum ada riwayat</b><small>Aktivitas unduhanmu akan muncul di sini.</small>':'<span style="font-size:25px">♡</span><b>Belum ada favorit</b><small>Tekan ikon bintang pada riwayat untuk menyimpan item.</small>';box.append(empty);return}
-  items.forEach((item,index)=>{
-   const row=document.createElement('div');row.className='ary-library-item';
-   const icon=document.createElement('span');icon.className='ary-library-item-icon';icon.textContent=(item.name||'').match(/\.mp3|\.m4a|\.wav/i)?'♫':'▶';
-   const main=document.createElement('div');main.className='ary-library-item-main';
-   const a=document.createElement('a');a.textContent=item.name||item.url||'Media';a.href=item.url||'#';a.target='_blank';a.rel='noopener noreferrer';a.title=item.name||item.url||'';
-   const small=document.createElement('small');small.textContent=item.at?new Date(item.at).toLocaleString():'Disimpan di perangkat ini';main.append(a,small);
-   const action=document.createElement('button');action.type='button';action.className='ary-library-item-action';action.textContent=kind==='history'?(favs.some(x=>x.url===item.url)?'★':'☆'):'×';action.setAttribute('aria-label',kind==='history'?'Simpan ke favorit':'Hapus dari favorit');
-   action.addEventListener('click',()=>{
-    if(kind==='history'){const next=readFavorites();if(next.some(x=>x.url===item.url)){writeFavorites(next.filter(x=>x.url!==item.url))}else{writeFavorites([{...item,savedAt:Date.now()},...next])}}
-    else writeFavorites(readFavorites().filter(x=>x.url!==item.url));
-   });
-   row.append(icon,main,action);box.append(row);
-  });
- };
- draw('historyList',hist,'history');draw('favoriteList',favs,'favorite');
-}
-function setLibraryTab(tab){
- const history=tab==='history';
- $('aryLibraryHistoryTab').classList.toggle('active',history);$('aryLibraryFavoriteTab').classList.toggle('active',!history);
- $('aryLibraryHistoryTab').setAttribute('aria-selected',String(history));$('aryLibraryFavoriteTab').setAttribute('aria-selected',String(!history));
- $('aryLibraryHistoryView').classList.toggle('active',history);$('aryLibraryFavoriteView').classList.toggle('active',!history);
- $('aryLibraryHistoryView').hidden=!history;$('aryLibraryFavoriteView').hidden=history;
-}
-$('aryLibraryHistoryTab').onclick=()=>setLibraryTab('history');$('aryLibraryFavoriteTab').onclick=()=>setLibraryTab('favorite');
-$('clearHistoryV2').onclick=()=>{if(confirm('Hapus semua riwayat pada perangkat ini?')){localStorage.removeItem(historyKey);renderHistory();renderLibrary()}};
-$('clearFavoritesV2').onclick=()=>{if(confirm('Hapus semua favorit pada perangkat ini?')){localStorage.removeItem(favoritesKey);renderLibrary()}};
 
+const $=id=>document.getElementById(id);$('year').textContent=new Date().getFullYear();
+const API=(window.ARYANZZ_API_BASE||'').replace(new RegExp("/+$"),"");let activeUrl='',activeName='aryanzz-media';
 function safeFileName(value){return (value||'aryanzz-media').replace(/[^a-z0-9._-]+/gi,'_').slice(0,90)||'aryanzz-media'}
 function extOf(u){const p=u.pathname.toLowerCase();const m=p.match(/[.](mp4|webm|mov|m4v|mp3|m4a|aac|wav|ogg|oga|flac)$/);return m?m[1]:''}
 function mediaType(ext){return ['mp3','m4a','aac','wav','ogg','oga','flac'].includes(ext)?'audio':'video'}
-function showDirectMedia(u){const out=$('downloadResult'),ext=extOf(u),type=mediaType(ext);activeUrl=u.href;activeName=safeFileName(decodeURIComponent(u.pathname.split('/').pop()||('aryanzz-media.'+ext)));out.innerHTML='';const title=document.createElement('b');title.textContent='File media langsung terdeteksi ✓';const host=document.createElement('div');host.className='muted';host.textContent=u.hostname+' · '+(ext.toUpperCase()||'MEDIA');out.append(title,document.createElement('br'),host);const preview=type==='video'?document.createElement('video'):document.createElement('audio');preview.controls=true;if(type==='video'){preview.controlsList='nodownload noplaybackrate';preview.disablePictureInPicture=true;preview.disableRemotePlayback=true;preview.playsInline=true;preview.style.aspectRatio='auto';preview.style.height='auto';preview.style.objectFit='contain'}preview.preload='metadata';preview.src=u.href;preview.style.cssText='display:block;width:100%;max-height:70svh;margin:12px auto 0;border-radius:12px;object-fit:contain;background:#02060c';if(type==='video'){preview.addEventListener('loadedmetadata',()=>{const w=preview.videoWidth,h=preview.videoHeight;if(w>0&&h>0){const ratio=w/h;preview.dataset.aspectRatio=w+':'+h;preview.dataset.orientation=ratio<.92?'portrait':ratio>1.08?'landscape':'square';preview.style.aspectRatio=w+' / '+h;preview.style.width=ratio<1?Math.min(out.clientWidth||720,window.innerHeight*.7*ratio)+'px':'100%';preview.style.maxWidth='100%';preview.style.maxHeight='70svh';preview.title='Rasio asli '+w+' × '+h+' px'}})}out.append(preview);const btn=document.createElement('button');btn.className='primary';btn.style.marginTop='12px';btn.textContent='Unduh file';btn.onclick=()=>downloadDirect(u.href,activeName);out.append(btn);const note=document.createElement('p');note.className='muted';note.textContent='Pratinjau mengikuti rasio asli media. Gunakan tombol Unduh file untuk menyimpan.';out.append(note);saveHistory({url:u.href,name:activeName,at:Date.now()})}
-async function downloadDirect(url,name){const out=$('downloadResult');const btn=out.querySelector('button');if(btn){btn.disabled=true;btn.textContent='Mengunduh…'}window.dispatchEvent(new CustomEvent('aryanzz:download-start',{detail:{url,name}}));try{const response=await fetch('/api/download',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url})});if(!response.ok){const e=await response.json().catch(()=>({}));throw Error(e.error||'Server tidak dapat mengunduh file')}const blob=await response.blob();if(!blob.size)throw Error('File kosong atau tidak tersedia');const objectUrl=URL.createObjectURL(blob),a=document.createElement('a');a.href=objectUrl;a.download=name||'aryanzz-media';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(objectUrl),60000);if(btn){btn.disabled=false;btn.textContent='Unduh lagi'}saveHistory({url,name,at:Date.now()});window.dispatchEvent(new CustomEvent('aryanzz:download-complete',{detail:{url,name:name||'aryanzz-media',bytes:blob.size}}))}catch(error){window.dispatchEvent(new CustomEvent('aryanzz:download-failed',{detail:{url,error:error.message||'Unduhan gagal'}}));if(btn){btn.disabled=false;btn.textContent='Coba lagi'}const msg=document.createElement('p');msg.className='warning';msg.textContent=error.message||'Unduhan gagal. Periksa apakah URL file publik dan formatnya didukung.';out.append(msg)}}
+function showDirectMedia(u){const out=$('downloadResult'),ext=extOf(u),type=mediaType(ext);activeUrl=u.href;activeName=safeFileName(decodeURIComponent(u.pathname.split('/').pop()||('aryanzz-media.'+ext)));out.innerHTML='';const title=document.createElement('b');title.textContent='File media langsung terdeteksi ✓';const host=document.createElement('div');host.className='muted';host.textContent=u.hostname+' · '+(ext.toUpperCase()||'MEDIA');out.append(title,document.createElement('br'),host);const preview=type==='video'?document.createElement('video'):document.createElement('audio');preview.controls=true;if(type==='video'){preview.controlsList='nodownload noplaybackrate';preview.disablePictureInPicture=true;preview.disableRemotePlayback=true;preview.playsInline=true;preview.style.aspectRatio='auto';preview.style.height='auto';preview.style.objectFit='contain'}preview.preload='metadata';preview.src=u.href;preview.style.cssText='display:block;width:100%;max-height:70svh;margin:12px auto 0;border-radius:12px;object-fit:contain;background:#02060c';if(type==='video'){preview.addEventListener('loadedmetadata',()=>{const w=preview.videoWidth,h=preview.videoHeight;if(w>0&&h>0){const ratio=w/h;preview.dataset.aspectRatio=w+':'+h;preview.dataset.orientation=ratio<.92?'portrait':ratio>1.08?'landscape':'square';preview.style.aspectRatio=w+' / '+h;preview.style.width=ratio<1?Math.min(out.clientWidth||720,window.innerHeight*.7*ratio)+'px':'100%';preview.style.maxWidth='100%';preview.style.maxHeight='70svh';preview.title='Rasio asli '+w+' × '+h+' px'}})}out.append(preview);const btn=document.createElement('button');btn.className='primary';btn.style.marginTop='12px';btn.textContent='Unduh file';btn.onclick=()=>downloadDirect(u.href,activeName);out.append(btn);const note=document.createElement('p');note.className='muted';note.textContent='Pratinjau mengikuti rasio asli media. Gunakan tombol Unduh file untuk menyimpan.';out.append(note);window.ARYANZZLibrary.saveHistory({url:u.href,name:activeName,at:Date.now()})}
+async function downloadDirect(url,name){const out=$('downloadResult');const btn=out.querySelector('button');if(btn){btn.disabled=true;btn.textContent='Mengunduh…'}window.dispatchEvent(new CustomEvent('aryanzz:download-start',{detail:{url,name}}));try{const response=await fetch('/api/download',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url})});if(!response.ok){const e=await response.json().catch(()=>({}));throw Error(e.error||'Server tidak dapat mengunduh file')}const blob=await response.blob();if(!blob.size)throw Error('File kosong atau tidak tersedia');const objectUrl=URL.createObjectURL(blob),a=document.createElement('a');a.href=objectUrl;a.download=name||'aryanzz-media';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(objectUrl),60000);if(btn){btn.disabled=false;btn.textContent='Unduh lagi'}window.ARYANZZLibrary.saveHistory({url,name,at:Date.now()});window.dispatchEvent(new CustomEvent('aryanzz:download-complete',{detail:{url,name:name||'aryanzz-media',bytes:blob.size}}))}catch(error){window.dispatchEvent(new CustomEvent('aryanzz:download-failed',{detail:{url,error:error.message||'Unduhan gagal'}}));if(btn){btn.disabled=false;btn.textContent='Coba lagi'}const msg=document.createElement('p');msg.className='warning';msg.textContent=error.message||'Unduhan gagal. Periksa apakah URL file publik dan formatnya didukung.';out.append(msg)}}
 function addExternalAction(out,label,href){const a=document.createElement('a');a.href=href;a.target='_blank';a.rel='noopener noreferrer';a.className='tag';a.style.display='inline-block';a.style.margin='6px 6px 0 0';a.textContent=label;out.append(a)}
 function showYouTubeDownloader(u){
  const out=$('downloadResult');out.hidden=false;out.innerHTML='';
@@ -1157,7 +1051,7 @@ function showYouTubeDownloader(u){
    const link=document.createElement('a');link.href=ready.url;link.target='_blank';link.rel='noopener noreferrer';link.className='tag';link.style.cssText='display:inline-block;margin-top:8px';link.textContent='Unduh file ↗';
    link.addEventListener('click',()=>window.dispatchEvent(new CustomEvent('aryanzz:download-link-opened',{detail:{url:u.href,name:ready.filename||ready.title||'YouTube media'}})));
    result.append(name,meta,link);
-   saveHistory({url:ready.url,name:ready.filename||((ready.title||'youtube')+'.'+format),at:Date.now()});
+   window.ARYANZZLibrary.saveHistory({url:ready.url,name:ready.filename||((ready.title||'youtube')+'.'+format),at:Date.now()});
   }catch(error){status.textContent=error.message||'Download gagal.';status.className='warning';}
   finally{button.disabled=false;select.disabled=false;button.textContent='Coba lagi';}
  };
@@ -1251,13 +1145,14 @@ $('analyze').onclick=async()=>{
  }
  out.innerHTML='';const b=document.createElement('b');b.textContent='Tautan ini bukan URL file media langsung.';const p=document.createElement('p');p.className='muted';p.textContent='Gunakan tautan file publik yang berakhiran .mp4, .webm, .mov, .mp3, .m4a, .wav, atau format media lain yang didukung.';out.append(b,p);
 }
-async function downloadExtracted(){const b=$('downloadResult').querySelector('button'),mode=$('mode').value;b.disabled=true;b.textContent='Menyiapkan file…';window.dispatchEvent(new CustomEvent('aryanzz:download-start',{detail:{url:activeUrl,mode}}));try{const r=await fetch(API+'/api/download',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:activeUrl,mode})});if(!r.ok){const e=await r.json().catch(()=>({}));throw Error(e.error||'Download gagal')}const blob=await r.blob();if(!blob.size)throw Error('File hasil kosong.');const u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=mode==='audio'?'aryanzz-audio.mp3':'aryanzz-video.mp4';a.click();setTimeout(()=>URL.revokeObjectURL(u),60000);b.textContent='Selesai ✓';saveHistory({url:activeUrl,name:a.download,at:Date.now()});window.dispatchEvent(new CustomEvent('aryanzz:download-complete',{detail:{url:activeUrl,name:a.download,bytes:blob.size}}))}catch(e){window.dispatchEvent(new CustomEvent('aryanzz:download-failed',{detail:{url:activeUrl,error:e.message||'Download gagal'}}));b.disabled=false;b.textContent='Coba lagi';alert(e.message)}}
-renderHistory();renderLibrary();
+async function downloadExtracted(){const b=$('downloadResult').querySelector('button'),mode=$('mode').value;b.disabled=true;b.textContent='Menyiapkan file…';window.dispatchEvent(new CustomEvent('aryanzz:download-start',{detail:{url:activeUrl,mode}}));try{const r=await fetch(API+'/api/download',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:activeUrl,mode})});if(!r.ok){const e=await r.json().catch(()=>({}));throw Error(e.error||'Download gagal')}const blob=await r.blob();if(!blob.size)throw Error('File hasil kosong.');const u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=mode==='audio'?'aryanzz-audio.mp3':'aryanzz-video.mp4';a.click();setTimeout(()=>URL.revokeObjectURL(u),60000);b.textContent='Selesai ✓';window.ARYANZZLibrary.saveHistory({url:activeUrl,name:a.download,at:Date.now()});window.dispatchEvent(new CustomEvent('aryanzz:download-complete',{detail:{url:activeUrl,name:a.download,bytes:blob.size}}))}catch(e){window.dispatchEvent(new CustomEvent('aryanzz:download-failed',{detail:{url:activeUrl,error:e.message||'Download gagal'}}));b.disabled=false;b.textContent='Coba lagi';alert(e.message)}}
+
 $('checkSite').onclick=()=>{const o=$('siteResult');o.hidden=false;try{const u=new URL($('siteUrl').value.trim());if(!/^https?:$/.test(u.protocol))throw 0;o.innerHTML='<b>Format URL valid ✓</b><br>'+u.hostname+'<br><a style="color:#72b6ff" target="_blank" rel="noopener" href="'+u.href+'">Buka website ↗</a><br><small>Status HTTP tidak dapat dipastikan dari browser.</small>';}catch{o.textContent='URL tidak valid. Contoh https://example.com';}};
 // V15.1 Speed Test is initialized from public/v15.js.
 let stream=null;$('camStart').onclick=async()=>{try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false});$('camera').srcObject=stream;$('camStart').hidden=true;$('camStop').hidden=false;$('heartResult').textContent='Kamera aktif. Demo ini belum mengestimasi BPM.';}catch{$('heartResult').textContent='Kamera perlu HTTPS dan izin browser.';}};function stop(){if(stream)stream.getTracks().forEach(t=>t.stop());stream=null;$('camera').srcObject=null;$('camStart').hidden=false;$('camStop').hidden=true;}$('camStop').onclick=stop;window.addEventListener('pagehide',stop);
 let deferred=null;window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferred=e;});$('installBtn').onclick=async()=>{if(deferred){deferred.prompt();await deferred.userChoice;deferred=null;}else $('installMsg').textContent='Gunakan menu Chrome ⋮ → Tambahkan ke layar utama.';};
 if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('/sw.js?v=__ARYANZZ_VERSION__',{updateViaCache:'none'}).catch(()=>{}));
+
 </script><script src="/link-bypass.js?v=94.0" defer></script><script src="/audio-studio.js?v=92.5" defer></script><script src="/media-studio.js?v=92.0" defer></script>
 <script src="/download-queue.js?v=92.0" defer></script><script src="/image-studio.js?v=81.4" defer></script><script src="/advanced.js?v=92.5" defer></script><script src="/v15.js?v=59.5" defer></script><script src="/v25.js?v=__ARYANZZ_VERSION__" defer></script><script src="/owner.js?v=__ARYANZZ_VERSION__" defer></script><script src="/downloader.js?v=94.25.0" defer></script><script src="/v59.js?v=59.5" defer></script><script src="/editor.js?v=65.0" defer></script><script src="/music-recognition.js?v=71.0" defer></script><script src="/v674.js?v=94.25.0" defer></script><script src="/v677.js?v=67.7" defer></script><script src="/v680.js?v=71.0" defer></script><script src="/theme-studio.js?v=__ARYANZZ_VERSION__" defer></script>
 <div id="aryAuthGate" class="ary-auth-gate" hidden role="dialog" aria-modal="true" aria-labelledby="aryAuthTitle">
