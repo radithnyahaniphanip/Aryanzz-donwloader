@@ -1,0 +1,42 @@
+#waQuoteTools[hidden]{display:none!important}
+#waQuoteTools{color:#edf4ff;overflow:hidden}
+#waQuoteTools .waq-hero{display:flex;gap:14px;align-items:center;margin-bottom:18px}
+#waQuoteTools .waq-mark{width:54px;height:54px;flex:0 0 54px;display:grid;place-items:center;border-radius:17px;background:linear-gradient(140deg,#815cff,#d62cae);font-size:26px}
+#waQuoteTools .waq-kicker{font-size:9px;letter-spacing:2px;font-weight:900;color:#7ed8ed}
+#waQuoteTools .waq-hero h2{font-size:25px;margin:5px 0}
+#waQuoteTools .waq-hero p,#waQuoteTools .waq-section>p{font-size:11px;color:#aabbd3;line-height:1.6;margin:0}
+#waQuoteTools .waq-section{margin-top:15px;padding:15px;border:1px solid #6e8bb52b;border-radius:18px;background:linear-gradient(145deg,#13223a,#0d192c)}
+#waQuoteTools .waq-section h3{font-size:14px;margin:0 0 12px}
+#waQuoteTools .waq-tabs,#waQuoteTools .waq-template-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+#waQuoteTools .waq-template-tabs{grid-template-columns:repeat(3,minmax(0,1fr))}
+#waQuoteTools .waq-tabs button,#waQuoteTools .waq-template-tabs button{min-height:42px;border:1px solid #7189ad40;border-radius:11px;background:#0a1426;color:#aebfd8;font-size:11px;font-weight:800}
+#waQuoteTools button.active{background:linear-gradient(110deg,#7058e8,#287fc9);color:white;border-color:#83a8ff}
+#waQuoteTools .waq-field{display:grid;gap:6px;min-width:0;margin:10px 0}
+#waQuoteTools .waq-field>span{font-size:11px;font-weight:800;color:#d5e2f5}
+#waQuoteTools .waq-input,#waQuoteTools .waq-control{width:100%;min-width:0;min-height:43px;padding:10px 11px;border:1px solid #7893b63b;border-radius:11px;background:#081426;color:#f4f7ff;font:inherit;font-size:12px}
+#waQuoteTools textarea.waq-input{resize:vertical;line-height:1.5}
+#waQuoteTools .waq-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+#waQuoteTools .waq-message{padding:12px;margin:10px 0;border:1px solid #7893b62b;border-radius:14px;background:#0a1629}
+#waQuoteTools .waq-message-head{display:flex;justify-content:space-between;align-items:center}
+#waQuoteTools .waq-message-head b{font-size:12px}
+#waQuoteTools .waq-delete{border:1px solid #ff7e8b55;background:#381b2a;color:#ffb5bf;border-radius:8px;padding:7px 10px;font-size:10px}
+#waQuoteTools .waq-primary,#waQuoteTools .waq-secondary{min-height:44px;padding:10px 14px;border-radius:12px;font-size:12px;font-weight:900;border:1px solid transparent}
+#waQuoteTools .waq-primary{width:100%;color:white;background:linear-gradient(105deg,#8158ee,#c52cab)}
+#waQuoteTools .waq-secondary{background:#152744;border-color:#7894b53b;color:#dce9ff}
+#waQuoteTools button:disabled{opacity:.45}
+#waQuoteTools .waq-status{min-height:20px;margin:10px 0 0;color:#72dfbd;font-size:11px}
+#waQuoteTools .waq-preview{display:block;width:100%;max-height:580px;object-fit:contain;border-radius:10px}
+#waQuoteTools .waq-preview-box{padding:10px;border:1px dashed #7893b655;border-radius:14px;background:#070e1b}
+#waQuoteTools .waq-empty{padding:50px 10px;text-align:center;color:#91a5c1;font-size:12px;line-height:2}
+#waQuoteTools .waq-samples{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+#waQuoteTools .waq-sample{padding:10px;border:1px solid #7893b633;border-radius:12px;background:#0a1629;color:#dce8f8;text-align:left;font-size:11px}
+#waQuoteTools .waq-sample b,#waQuoteTools .waq-sample small{display:block;margin-top:5px}
+#waQuoteTools .waq-sample small{font-size:9px;color:#9fb1ca}
+#waQuoteTools .waq-mini{height:55px;border-radius:8px;background:linear-gradient(135deg,#0e2b2c,#10213b);padding:7px;display:flex;flex-direction:column;justify-content:center;gap:5px}
+#waQuoteTools .waq-mini i{height:9px;width:72%;border-radius:8px;background:#263d45}
+#waQuoteTools .waq-mini i:last-child{align-self:flex-end;background:#075d4e;width:60%}
+#waQuoteTools .waq-how{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+#waQuoteTools .waq-step{padding:11px;border:1px solid #7893b62b;border-radius:12px;background:#0a1629}
+#waQuoteTools .waq-step b{display:block;font-size:11px;margin:5px 0}
+#waQuoteTools .waq-step span{font-size:10px;color:#9fb1ca;line-height:1.5}
+@media(max-width:560px){#waQuoteTools{padding:13px!important}#waQuoteTools .waq-section{padding:12px}#waQuoteTools .waq-samples,#waQuoteTools .waq-how{grid-template-columns:1fr}}
