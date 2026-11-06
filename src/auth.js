@@ -239,34 +239,61 @@ async function verifyLegacy(request, env) {
   const user = await env.AUTH_DB.prepare("SELECT id,email,full_name,role,created_at FROM auth_users WHERE id=?1").bind(id).first();
   return createSession(user, env);
 }
+async function sendResetLink(email, resetUrl, env) {
+  const html = '<div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;padding:28px;background:#0b1222;color:#edf4ff;border-radius:16px"><b style="color:#7fdcf1;letter-spacing:2px">ARYANZZ · V1</b><h2>Atur ulang password</h2><p style="color:#b9c8df;line-height:1.6">Buka tautan aman berikut untuk memverifikasi email dan membuat password baru.</p><p style="margin:26px 0"><a href="' + resetUrl + '" style="display:inline-block;padding:13px 20px;border-radius:10px;background:#398cff;color:#fff;text-decoration:none;font-weight:800">Verifikasi email & reset password</a></p><p style="color:#9eafc8;font-size:12px;line-height:1.6">Tautan hanya dapat digunakan sekali dan berlaku 15 menit. Abaikan email ini jika kamu tidak meminta reset password.</p></div>';
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { authorization: "Bearer " + String(env.RESEND_API_KEY), "content-type": "application/json" },
+    body: JSON.stringify({ from: String(env.AUTH_EMAIL_FROM), to: [email], subject: "Tautan reset password ARYANZZ", html })
+  });
+  if (!response.ok) throw new Error("Email reset gagal dikirim.");
+}
+async function resetLinkRow(token, env) {
+  const hash = await digest(String(env.AUTH_SESSION_SECRET) + "|reset-link|" + token);
+  return env.AUTH_DB.prepare("SELECT email,expires_at FROM auth_verifications WHERE purpose='reset_link' AND code_hash=?1 LIMIT 1").bind(hash).first();
+}
 async function startReset(request, env) {
   const b = await bodyOf(request), email = emailOf(b?.email);
   if (!validEmail(email)) return reply({ ok: false, error: "Masukkan email yang valid." }, 400);
   if (limited(request, "reset-start", 4, 600000)) return reply({ ok: false, error: "Terlalu banyak permintaan reset." }, 429);
-  if (!(await captcha(request, b.captchaToken, env))) return reply({ ok: false, error: "Selesaikan CAPTCHA sebelum meminta kode reset." }, 400);
+  if (!(await captcha(request, b.captchaToken, env))) return reply({ ok: false, error: "Selesaikan CAPTCHA sebelum memeriksa email." }, 400);
   const user = await env.AUTH_DB.prepare("SELECT id FROM auth_users WHERE email=?1 COLLATE NOCASE LIMIT 1").bind(email).first();
   if (user) {
-    const result = await issueCode(email, "reset", null, env);
-    if (!result.ok) return reply({ ok: false, error: result.error }, result.status);
+    const token = randomHex(32), now = Date.now();
+    const hash = await digest(String(env.AUTH_SESSION_SECRET) + "|reset-link|" + token);
+    await env.AUTH_DB.prepare("DELETE FROM auth_verifications WHERE email=?1 AND purpose='reset_link'").bind(email).run();
+    await env.AUTH_DB.prepare("INSERT INTO auth_verifications (email,purpose,code_hash,payload_json,created_at,expires_at,attempts,last_sent_at) VALUES (?1,'reset_link',?2,NULL,?3,?4,0,?3)").bind(email, hash, now, now + 15 * 60 * 1000).run();
+    const link = new URL("/", request.url); link.searchParams.set("resetToken", token);
+    try { await sendResetLink(email, link.href, env); }
+    catch {
+      await env.AUTH_DB.prepare("DELETE FROM auth_verifications WHERE email=?1 AND purpose='reset_link'").bind(email).run();
+      return reply({ ok: false, error: "Email reset belum berhasil dikirim. Coba lagi nanti." }, 502);
+    }
   }
-  return reply({ ok: true, message: "Jika email terdaftar, kode reset telah dikirim. Periksa Gmail dan folder spam." });
+  return reply({ ok: true, message: "Jika email cocok dengan akun ARYANZZ, tautan reset aman sudah dikirim ke Gmail." });
+}
+async function checkResetLink(request, env) {
+  const b = await bodyOf(request), token = String(b?.token || "");
+  if (!/^[a-f0-9]{64}$/i.test(token)) return reply({ ok: false, error: "Tautan reset tidak valid atau sudah kedaluwarsa." }, 400);
+  const row = await resetLinkRow(token, env);
+  if (!row || Number(row.expires_at) <= Date.now()) return reply({ ok: false, error: "Tautan reset tidak valid atau sudah kedaluwarsa." }, 400);
+  return reply({ ok: true, valid: true });
 }
 async function verifyReset(request, env) {
-  const b = await bodyOf(request), email = emailOf(b?.email), code = String(b?.code || "").trim();
+  const b = await bodyOf(request), token = String(b?.token || "");
   const password = String(b?.password || ""), confirm = String(b?.passwordConfirm || "");
-  if (!validEmail(email) || !/^\d{6}$/.test(code)) return reply({ ok: false, error: "Email atau kode tidak valid." }, 400);
+  if (!/^[a-f0-9]{64}$/i.test(token)) return reply({ ok: false, error: "Tautan reset tidak valid atau sudah kedaluwarsa." }, 400);
   if (!validPassword(password)) return reply({ ok: false, error: "Password baru minimal 12 karakter, memakai huruf besar, huruf kecil, angka, dan simbol." }, 400);
-  if (password !== confirm) return reply({ ok: false, error: "Konfirmasi password baru belum sama." }, 400);
+  if (password !== confirm) return reply({ ok: false, error: "Ulangi password belum sama." }, 400);
   if (limited(request, "reset-verify", 10, 600000)) return reply({ ok: false, error: "Terlalu banyak percobaan reset password." }, 429);
-  const checked = await verifyCode(email, "reset", code, env);
-  if (checked.error) return reply({ ok: false, error: checked.error }, 400);
-  const user = await env.AUTH_DB.prepare("SELECT id FROM auth_users WHERE email=?1 COLLATE NOCASE LIMIT 1").bind(email).first();
+  const row = await resetLinkRow(token, env);
+  if (!row || Number(row.expires_at) <= Date.now()) return reply({ ok: false, error: "Tautan reset tidak valid atau sudah kedaluwarsa." }, 400);
+  const user = await env.AUTH_DB.prepare("SELECT id FROM auth_users WHERE email=?1 COLLATE NOCASE LIMIT 1").bind(row.email).first();
   if (!user) return reply({ ok: false, error: "Akun tidak ditemukan." }, 404);
   const salt = randomHex(16), hash = await passwordDigest(password, salt), now = Date.now();
-  await env.AUTH_DB.prepare("UPDATE auth_users SET password_salt=?1,password_hash=?2,password_iterations=?3,updated_at=?4 WHERE id=?5")
-    .bind(salt, hash, ITERATIONS, now, user.id).run();
+  await env.AUTH_DB.prepare("UPDATE auth_users SET password_salt=?1,password_hash=?2,password_iterations=?3,updated_at=?4 WHERE id=?5").bind(salt, hash, ITERATIONS, now, user.id).run();
   await env.AUTH_DB.prepare("DELETE FROM auth_sessions WHERE user_id=?1").bind(user.id).run();
-  await env.AUTH_DB.prepare("DELETE FROM auth_verifications WHERE email=?1 AND purpose=?2").bind(email, "reset").run();
+  await env.AUTH_DB.prepare("DELETE FROM auth_verifications WHERE email=?1 AND purpose='reset_link'").bind(row.email).run();
   return reply({ ok: true, message: "Reset password berhasil. Silakan masuk menggunakan password baru." });
 }
 
@@ -288,6 +315,7 @@ export async function handleAuthRequest(request, env) {
     if (path === "/api/auth/legacy/start") return startLegacy(request, env);
     if (path === "/api/auth/legacy/verify") return verifyLegacy(request, env);
     if (path === "/api/auth/reset/start") return startReset(request, env);
+    if (path === "/api/auth/reset/check") return checkResetLink(request, env);
     if (path === "/api/auth/reset/verify") return verifyReset(request, env);
     return reply({ ok: false, error: "Endpoint autentikasi tidak ditemukan." }, 404);
   } catch (error) {
