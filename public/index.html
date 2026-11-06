@@ -214,6 +214,7 @@ body{background-color:var(--ary-app-bg)}
 <link rel="stylesheet" href="/v95-ui.css?v=__ARYANZZ_VERSION__">
 <link rel="stylesheet" href="/workspace-home.css?v=__ARYANZZ_VERSION__">
 <link rel="stylesheet" href="/workspace-tools.css?v=__ARYANZZ_VERSION__">
+<link rel="stylesheet" href="/wa-quote-generator.css?v=__ARYANZZ_VERSION__">
 <link rel="stylesheet" href="/workspace-library.css?v=__ARYANZZ_VERSION__">
 <link rel="stylesheet" href="/workspace-navigation.css?v=__ARYANZZ_VERSION__">
 <link rel="stylesheet" href="/auth-profile-v1.css?v=2">
@@ -291,6 +292,7 @@ body{background-color:var(--ary-app-bg)}
 <button class="tool" data-panel="musicFinder" data-category="media"><div class="ico">♫</div><b>Music Finder</b><small>Kenali lagu dari audio, video, atau mikrofon.</small><span class="v674-tool-category">MEDIA</span></button>
 <button class="tool" data-panel="audioStudio" data-category="media"><div class="ico">♫</div><b>MP4 ke MP3 Converter</b><small>Ubah video MP4 menjadi audio MP3 langsung di perangkat.</small><span class="v674-tool-category">MEDIA</span></button>
 <button class="tool" data-panel="history" data-category="media"><div class="ico">◷</div><b>Library</b><small>Riwayat unduhan dan daftar favorit.</small><span class="v674-tool-category">MEDIA</span></button>
+<button class="tool" data-panel="waQuoteTools" data-category="creative"><div class="ico">☏</div><b>WA Quote Generator</b><small>Buat mockup chat WhatsApp Android dan iPhone, ekspor PNG.</small><span class="v674-tool-category">CREATIVE</span></button>
 <button class="tool" data-panel="imageTools" data-category="creative"><div class="ico">▧</div><b>Image Studio</b><small>Unduh, edit, atur rasio, resolusi, dan ekspor gambar.</small><span class="v674-tool-category">CREATIVE</span></button>
 <button class="tool" data-panel="pdfTools" data-category="creative"><div class="ico">▤</div><b>PDF & Text Tools</b><small>Alat dokumen dan pengolah teks.</small><span class="v674-tool-category">CREATIVE</span></button>
 <button class="tool" data-panel="qrTools" data-category="utility"><div class="ico">▦</div><b>QR Generator</b><small>Buat dan unduh kode QR.</small><span class="v674-tool-category">UTILITY</span></button>
@@ -992,6 +994,17 @@ body{background-color:var(--ary-app-bg)}
   </div>
 </div>
 
+<div class="panel card" id="waQuoteTools" hidden>
+<div class="waq-hero"><div class="waq-mark">☏</div><div><span class="waq-kicker">ARYANZZ · CREATIVE STUDIO</span><h2>WA Quote Generator</h2><p>Buat mockup chat WhatsApp untuk konten Android dan iPhone.</p></div></div>
+<section class="waq-section"><h3>1. Pilih perangkat</h3><div class="waq-tabs"><button type="button" class="active" data-device="android" aria-pressed="true">▣ Android</button><button type="button" data-device="iphone" aria-pressed="false">▯ iPhone</button></div></section>
+<section class="waq-section"><h3>2. Gaya chat</h3><div class="waq-template-tabs"><button type="button" class="active" data-style="realistic">Realistic</button><button type="button" data-style="clean">Clean</button><button type="button" data-style="content">Content</button></div><input id="waqStyle" type="hidden" value="realistic"></section>
+<section class="waq-section"><h3>3. Identitas chat</h3><label class="waq-field"><span>Nama kontak / grup</span><input id="waqName" class="waq-input" maxlength="36" value="Nama Kontak"></label><label class="waq-field"><span>Status kontak</span><select id="waqPresence" class="waq-input"><option>online</option><option>terakhir dilihat hari ini</option><option>sedang mengetik...</option><option value="">Tanpa status</option></select></label></section>
+<section class="waq-section"><h3>4. Susun percakapan</h3><p>Atur isi pesan, pengirim, dan jam chat. Tambahkan beberapa bubble untuk membuat percakapan.</p><div id="waqMessages"></div><button type="button" class="waq-secondary" id="waqAdd">＋ Tambah pesan</button></section>
+<section class="waq-section"><h3>5. Tampilan dan ekspor</h3><div class="waq-row"><label class="waq-field"><span>Tema</span><select id="waqTheme" class="waq-input"><option value="dark">Gelap</option><option value="light">Terang</option></select></label><label class="waq-field"><span>Ukuran gambar</span><select id="waqSize" class="waq-input"><option value="9:16">9:16 · Story</option><option value="4:5">4:5 · Feed</option><option value="1:1">1:1 · Square</option><option value="auto">Auto</option></select></label></div><label class="waq-field"><span>Jam status bar</span><input id="waqClock" class="waq-input" type="time" value="16:56"></label><button class="waq-primary" type="button" id="waqGenerate">✦ Generate Quote</button><p class="waq-status" id="waqStatus" role="status" aria-live="polite">Siap membuat quote.</p></section>
+<section class="waq-section"><h3>6. Preview hasil</h3><div class="waq-preview-box"><div class="waq-empty" id="waqEmpty">▣<br>Hasil quote akan muncul di sini.</div><img class="waq-preview" id="waqPreview" alt="Preview WA Quote" hidden></div><button class="waq-primary" type="button" id="waqDownload" disabled>↓ Download PNG</button></section>
+<section class="waq-section"><h3>7. Contoh template</h3><div class="waq-samples"><button type="button" class="waq-sample" data-preset="simple"><span class="waq-mini"><i></i><i></i></span><b>Quote Clean</b><small>Satu pesan singkat.</small></button><button type="button" class="waq-sample" data-preset="couple"><span class="waq-mini"><i></i><i></i></span><b>Chat Couple</b><small>Percakapan dua arah.</small></button><button type="button" class="waq-sample" data-preset="friends"><span class="waq-mini"><i></i><i></i></span><b>Chat Teman</b><small>Beberapa pesan dan emoji.</small></button></div></section>
+<section class="waq-section"><h3>8. Cara menggunakan</h3><div class="waq-how"><div class="waq-step"><b>01 · Pilih perangkat</b><span>Tentukan Android atau iPhone.</span></div><div class="waq-step"><b>02 · Tulis chat</b><span>Masukkan nama, pesan, dan jam.</span></div><div class="waq-step"><b>03 · Generate</b><span>Periksa hasil preview.</span></div><div class="waq-step"><b>04 · Download</b><span>Simpan gambar PNG untuk konten.</span></div></div></section>
+<button class="back-home" id="waqBack" type="button">← Kembali ke Pusat Alat</button></div>
 </section>
 
 <footer>© <span id="year"></span> ARYANZZ</footer></div>
@@ -1000,6 +1013,7 @@ body{background-color:var(--ary-app-bg)}
 <script src="/workspace-layout.js?v=__ARYANZZ_VERSION__"></script>
 <script src="/workspace-library.js?v=__ARYANZZ_VERSION__"></script>
 <script src="/workspace-tools.js?v=__ARYANZZ_VERSION__"></script>
+<script src="/wa-quote-generator.js?v=__ARYANZZ_VERSION__"></script>
 <script src="/workspace-navigation.js?v=__ARYANZZ_VERSION__"></script>
 <script>
 
