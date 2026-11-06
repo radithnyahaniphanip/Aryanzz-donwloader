@@ -1,5 +1,5 @@
 (()=>{"use strict";
-const meta=document.querySelector('meta[name="aryanzz-version"]');
+const meta=document.querySelector('meta[name="aryanzz-build-id"]');
 const localVersion=String(meta?.content||"").trim();
 const updateKey="aryanzz:auto-update-target";
 const maxAutoRefreshAttempts=3;
@@ -84,7 +84,7 @@ async function checkVersion(){
   const response=await fetch("/api/health?version_check="+Date.now(),{cache:"no-store",credentials:"same-origin",headers:{"cache-control":"no-cache","pragma":"no-cache"}});
   if(!response.ok)return;
   const data=await response.json();
-  const latest=String(data?.version||"").trim();
+  const latest=String(data?.buildId||"").trim();
   if(!/^\d+\.\d+\.\d+$/.test(latest))return;
   if(latest===localVersion){
    if(hasStaleLocalAssetReferences()||hasLegacyProfileLayout()){

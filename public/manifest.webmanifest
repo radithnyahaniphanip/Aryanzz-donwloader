@@ -19,7 +19,7 @@
     "productivity",
     "multimedia"
   ],
-  "version": "__ARYANZZ_VERSION__",
+  "version": "V1",
   "icons": [
     {
       "src": "/favicon.svg?v=__ARYANZZ_VERSION__",
@@ -33,5 +33,6 @@
       "type": "image/svg+xml",
       "purpose": "any maskable"
     }
-  ]
+  ],
+  "buildId": "__ARYANZZ_VERSION__"
 }

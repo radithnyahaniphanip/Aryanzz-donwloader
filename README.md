@@ -407,3 +407,22 @@ Relevant references: Permenkominfo No. 5 Tahun 2020 (as amended), https://jdih.k
 - Give title search a clear external search handoff when internal providers return no verifiable result; external search links are not presented as verified download results.
 - Bump the release line to 95.1.x so the build generator no longer publishes the stale 95.0.x version label.
 - Keep the download checker honest: MP4, image, photo-mode, live-stream, and audio availability depends on the actual public media formats exposed by each source; no login, DRM, CAPTCHA, or private-content restrictions are bypassed.
+
+
+## V1 online accounts, email verification and password recovery
+
+The account gate supports server-backed email/ID login, email-verified registration, one-time verification codes, password confirmation, password reset and migration of existing local accounts. Passwords are PBKDF2-SHA-256 hashes. Sessions use secure HttpOnly cookies. Verification codes expire after 10 minutes and are limited to five attempts. Cloudflare Turnstile is verified by the Worker, not trusted from the browser.
+
+The deployment workflow attempts to create a Cloudflare D1 database named \`aryanzz-auth-db\` if the Cloudflare API token has D1 permissions. If automatic creation is not permitted, create it once with \`npx wrangler d1 create aryanzz-auth-db\` and add its ID as the GitHub Actions secret \`ARYANZZ_AUTH_DB_ID\`. The workflow applies \`migrations/0001_auth.sql\` before deployment.
+
+Add these GitHub Actions repository secrets under Settings → Secrets and variables → Actions:
+
+- \`AUTH_SESSION_SECRET\`: random value of at least 32 characters (generate with \`openssl rand -hex 32\`).
+- \`RESEND_API_KEY\`: API key from Resend.
+- \`AUTH_EMAIL_FROM\`: sender such as \`ARYANZZ <no-reply@your-verified-domain.com>\`; verify the sender domain in Resend first.
+- \`TURNSTILE_SECRET_KEY\`: secret key for the Cloudflare Turnstile widget.
+- \`AUTH_TURNSTILE_SITE_KEY\`: public site key for the same widget.
+
+Set the Turnstile hostname to \`aryanzz-donwloader.radithnyahaniphanip.workers.dev\`. The deployment workflow syncs supplied values to the Worker. Email recipients can use Gmail; the sender address must belong to a domain verified with the email provider.
+
+Until D1 and all five service settings are present, \`/api/auth/config\` reports \`ready: false\`. Existing local accounts remain usable on their original browser, but new online registration and email reset stay disabled rather than pretending verification succeeded. Existing V94/V95 local accounts are not deleted: on the original device, sign in with the old email/ID and password after configuration; ARYANZZ sends a migration code to that email and preserves the account ID after verification. Thereafter, users can sign in with either email or ID.

@@ -450,3 +450,22 @@ body[data-motion="off"] *,body[data-motion="off"] *:before,body[data-motion="off
 @media(prefers-reduced-motion:reduce){
   #profile.ary-profile-v2 .ary-profile2-avatar-animated{animation:none!important;transition:none!important}
 }
+
+
+/* V1 mobile profile avatar: give the portrait enough visual weight against the cover. */
+@media(max-width:620px){
+  #profile.ary-profile-v2 .ary-profile2-identity{gap:14px;padding:17px 15px 20px!important}
+  #profile.ary-profile-v2 .ary-profile2-avatar-wrap,
+  #profile.ary-profile-v2 .ary-profile2-avatar{width:102px!important;height:102px!important}
+  #profile.ary-profile-v2 .ary-profile2-avatar{border-width:5px;border-radius:25px;font-size:34px}
+  #profile.ary-profile-v2 .ary-profile2-identity-copy{flex:1;min-width:0;padding-top:0!important}
+  #profile.ary-profile-v2 .ary-profile2-identity-copy h2{font-size:18px;line-height:1.25}
+  #profile.ary-profile-v2 .ary-profile2-identity-copy p{font-size:11px;line-height:1.45}
+}
+@media(max-width:360px){
+  #profile.ary-profile-v2 .ary-profile2-identity{gap:10px;padding-left:11px!important;padding-right:11px!important}
+  #profile.ary-profile-v2 .ary-profile2-avatar-wrap,
+  #profile.ary-profile-v2 .ary-profile2-avatar{width:88px!important;height:88px!important}
+  #profile.ary-profile-v2 .ary-profile2-avatar{font-size:30px}
+  #profile.ary-profile-v2 .ary-profile2-identity-copy h2{font-size:16px}
+}

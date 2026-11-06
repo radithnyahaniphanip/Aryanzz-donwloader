@@ -50,5 +50,5 @@ writeFileSync(swPath, sw);
 const manifestPath = resolve(root, "public/manifest.webmanifest");
 const manifest = readFileSync(manifestPath, "utf8").replaceAll("__ARYANZZ_VERSION__", version);
 writeFileSync(manifestPath, manifest);
-writeFileSync(resolve(root, "public/release.json"), JSON.stringify({ name: "ARYANZZ", release: publicRelease, releaseName: "Full Release", version, commit, builtAt: new Date().toISOString() }, null, 2) + "\n");
+writeFileSync(resolve(root, "public/release.json"), JSON.stringify({ name: "ARYANZZ", release: publicRelease, releaseName: "Full Release", version: publicRelease, publicVersion: publicRelease, buildId: version, commit, builtAt: new Date().toISOString() }, null, 2) + "\n");
 console.log("[ARYANZZ] Release " + version + " built from commit " + commit);

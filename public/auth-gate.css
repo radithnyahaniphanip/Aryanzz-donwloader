@@ -11,3 +11,18 @@
 .ary-auth-message{min-height:17px;margin:12px 0 0;font-size:11px;color:#91e4c2;line-height:1.5}.ary-auth-message.is-error{color:#ff9ba7}.ary-auth-foot{margin:9px 0 0;padding-top:12px;border-top:1px solid #ffffff12;font-size:9px;line-height:1.5;color:#8498b8}
 @media(max-width:420px){.ary-auth-gate{padding:10px}.ary-auth-shell{max-height:calc(100dvh - 20px);padding:17px;border-radius:20px}.ary-auth-intro{margin:19px 0 14px}}
 @media(prefers-reduced-motion:reduce){.ary-auth-gate *{scroll-behavior:auto!important;transition:none!important}}
+
+
+/* ARYANZZ V1 — verified email account access */
+.ary-auth-tabs[hidden],.ary-auth-captcha[hidden]{display:none!important}
+.ary-auth-form>label{min-width:0}
+.ary-auth-inline-actions{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.ary-auth-link{border:0;background:transparent;color:#91dcf2;padding:5px 0;font-size:11px;font-weight:800;text-align:left}
+.ary-auth-link:hover{text-decoration:underline}
+.ary-auth-secondary{width:100%;border:1px solid #4d6487;border-radius:11px;padding:11px;background:#101d34;color:#dceaff;font-size:11px;font-weight:850}
+.ary-auth-secondary:disabled,.ary-auth-link:disabled{opacity:.5;cursor:not-allowed}
+.ary-auth-verify-code{font-size:23px!important;font-weight:900;letter-spacing:8px;text-align:center}
+.ary-auth-captcha{display:flex;justify-content:center;min-height:66px;margin:8px 0 2px;padding:7px;border:1px solid #ffffff12;border-radius:12px;background:#071020;overflow:hidden}
+.ary-auth-step-note{font-size:10px;line-height:1.6;color:#a9bbd5;margin:0 0 4px}
+
+.ary-auth-gate[hidden],.ary-auth-form[hidden],.ary-auth-tabs[hidden],.ary-auth-captcha[hidden]{display:none!important}
