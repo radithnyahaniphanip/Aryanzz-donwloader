@@ -10,15 +10,17 @@ for(let attempt=0;attempt<24;attempt++){
   try{
     const response=await request("/api/health?release-check="+encodeURIComponent(expectedVersion+"-"+attempt));
     if(response.ok)health=await response.json();
-    if(String(health?.version||"")===expectedVersion)break;
-    lastError=new Error("Worker masih melayani build "+String(health?.version||"kosong")+"; menunggu "+expectedVersion);
+    if(String(health?.buildId||"")===expectedVersion)break;
+    lastError=new Error("Worker masih melayani build "+String(health?.buildId||"kosong")+"; menunggu "+expectedVersion);
   }catch(error){lastError=error;}
   await new Promise(resolve=>setTimeout(resolve,3000));
 }
-assert.match(String(health?.version||""),/^\d+\.\d+\.\d+$/,"Live Worker tidak melaporkan versi build: "+String(lastError?.message||""));
+assert.match(String(health?.buildId||""),/^\d+\.\d+\.\d+$/,"Live Worker tidak melaporkan versi build: "+String(lastError?.message||""));
+assert.equal(health?.version,"V1","Public Worker version must remain V1");
+assert.equal(health?.publicVersion,"V1","Public release channel must remain V1");
 assert.equal(health?.mode,"cloudflare-worker-zero-server-hybrid");
 assert.equal(health?.securityActive,true);
-const version=String(health.version);
+const version=String(health.buildId);
 assert.equal(version,expectedVersion,"Live Worker version does not match the build that was just deployed");
 
 const securityResponse=await request("/api/security/status");
@@ -48,10 +50,11 @@ for(let attempt=0;attempt<15;attempt++){
   const homeResponse=await request("/");
   lastHomepageStatus=homeResponse.status;
   if(homeResponse.ok)html=await homeResponse.text();
-  if(homeResponse.ok&&html.includes('name="aryanzz-version" content="'+version+'"')){homepageReady=true;break;}
+  if(homeResponse.ok&&html.includes('name="aryanzz-build-id" content="'+version+'"')){homepageReady=true;break;}
   await new Promise(resolve=>setTimeout(resolve,2000));
 }
-assert.ok(homepageReady,"Homepage belum menyajikan versi "+version+" setelah menunggu propagasi aset; status HTTP "+lastHomepageStatus);
+assert.ok(homepageReady,"Homepage belum menyajikan build ID "+version+" setelah menunggu propagasi aset; status HTTP "+lastHomepageStatus);
+assert.ok(html.includes('name="aryanzz-version" content="V1"'),"Public homepage version must be V1");
 for(const marker of [
   "/speed-test.js?v="+version,
   'id="networkProfile"',
@@ -151,8 +154,8 @@ async function waitForVersionedJson(path,label){
       const response=await request(target.pathname+target.search);
       if(response.ok){
         const data=await response.json();
-        if(String(data?.version||"")===version)return data;
-        last="versi "+String(data?.version||"kosong");
+        if(String(data?.buildId||"")===version)return data;
+        last="versi "+String(data?.buildId||"kosong");
       }else last="HTTP "+response.status;
     }catch(error){last=String(error.message||error);}
     await new Promise(resolve=>setTimeout(resolve,1500));
