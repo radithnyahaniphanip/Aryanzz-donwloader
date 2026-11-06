@@ -1,2 +1,24 @@
-/* ARYANZZ V1 — block native text copy/context menus while preserving editable fields */
-(()=>{"use strict";const editable=t=>!!t?.closest?.('input,textarea,select,[contenteditable="true"],[contenteditable=""],[data-allow-select],[role="textbox"]');document.addEventListener("contextmenu",e=>{if(!editable(e.target))e.preventDefault()},true);document.addEventListener("copy",e=>{if(!editable(e.target))e.preventDefault()},true);document.addEventListener("cut",e=>{if(!editable(e.target))e.preventDefault()},true);document.addEventListener("selectstart",e=>{if(!editable(e.target))e.preventDefault()},true);document.addEventListener("keydown",e=>{if(editable(e.target))return;if((e.ctrlKey||e.metaKey)&&["c","x","a"].includes(String(e.key||"").toLowerCase()))e.preventDefault()},true)})();
+/* ARYANZZ V1 — prevent text selection/copy across every page and form field.
+   Form controls remain editable and accept normal typing/paste from the keyboard. */
+(()=>{"use strict";
+ const stop=e=>{e.preventDefault();e.stopPropagation();};
+ document.addEventListener("contextmenu",stop,true);
+ document.addEventListener("copy",stop,true);
+ document.addEventListener("cut",stop,true);
+ document.addEventListener("selectstart",stop,true);
+ document.addEventListener("dragstart",stop,true);
+ document.addEventListener("keydown",e=>{
+   if((e.ctrlKey||e.metaKey)&&["c","x","a"].includes(String(e.key||"").toLowerCase()))stop(e);
+ },true);
+ document.addEventListener("selectionchange",()=>{
+   try{
+     const selection=window.getSelection();
+     if(selection&&!selection.isCollapsed)selection.removeAllRanges();
+     const field=document.activeElement;
+     if(field&&/^(INPUT|TEXTAREA)$/.test(field.tagName)&&typeof field.selectionStart==="number"&&field.selectionStart!==field.selectionEnd){
+       const caret=field.selectionEnd;
+       field.setSelectionRange(caret,caret);
+     }
+   }catch{}
+ },true);
+})();
