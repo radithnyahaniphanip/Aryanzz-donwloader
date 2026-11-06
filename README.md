@@ -6,6 +6,25 @@ Production website: https://aryanzz-donwloader.radithnyahaniphanip.workers.dev/
 
 ARYANZZ is a mobile-first creator workspace hosted on Cloudflare Workers. V94.0 adds a compact two-column mobile tools experience, a four-column desktop tools layout, a dedicated popular-tools area, consolidated Profile settings, cleaner original aurora banner styling, persistent About and Help entry points, and a guarded SFL shortlink resolver. The Link Bypass only follows public HTTPS redirects from supported SFL domains; it does not solve CAPTCHA, login, or required verification. V73.0 improves mobile download checkpoints, Chrome background-resume support for direct files, adaptive MP4 progress, speed modes, and thumbnail actions. No Cobalt, Docker Desktop, private extraction server, or paid downloader provider is required.
 
+## V1 online account service setup
+
+The login and registration screens support two modes. When the Cloudflare account service is ready, accounts are stored centrally in D1 and users can sign in with either their email address or ARYANZZ ID. If the required service configuration is missing, the interface deliberately falls back to browser-local accounts and clearly labels that storage mode.
+
+To enable central account storage, configure these GitHub Actions repository secrets:
+
+- `CLOUDFLARE_API_TOKEN`: Cloudflare token with Workers Scripts:Edit and D1:Edit permissions for the target account.
+- `CLOUDFLARE_ACCOUNT_ID`: Cloudflare account ID.
+- `AUTH_SESSION_SECRET`: at least 32 random characters.
+- `RESEND_API_KEY`: Resend API key for registration verification email.
+- `AUTH_EMAIL_FROM`: sender address verified in Resend.
+- `TURNSTILE_SECRET_KEY` and `AUTH_TURNSTILE_SITE_KEY`: matching Cloudflare Turnstile keys.
+
+The deployment workflow creates or locates the `aryanzz-auth-db` D1 database, applies all migrations (including the trusted-device table), syncs configured secrets, and deploys the Worker. If the Cloudflare token cannot create D1 databases, grant D1:Edit or provide `ARYANZZ_AUTH_DB_ID` as a repository secret while retaining D1:Edit for migrations.
+
+After deployment, verify `/api/auth/config` reports `ready: true`. Until then, registrations are local to the browser and cannot be treated as centrally stored accounts. Existing local accounts can be migrated after the online service is enabled using the account migration flow and email ownership check.
+
+Online password recovery uses the server-side trusted-device registry: a device is enrolled during registration, successful login, or legacy-account migration. Recovery requires the same email and a previously enrolled browser/device; it does not send a Gmail OTP. Password changes revoke existing server sessions.
+
 ## V65.0 release scope
 
 | Release stage | Scope |
