@@ -992,19 +992,10 @@ body{background-color:var(--ary-app-bg)}
 <script>
 const $=id=>document.getElementById(id);$('year').textContent=new Date().getFullYear();
 function normalizePersonalLayout(){
-  const home=$('home'),toolsArea=$('toolsArea'),profilePanel=$('profile'),libraryPanel=$('history');
-  const colorPanel=$('colorStudio'),mediaStudio=$('mediaStudio'),aboutPanel=$('about'),helpPanel=$('help');
+  const toolsArea=$('toolsArea'),profilePanel=$('profile'),libraryPanel=$('history');
+  const colorPanel=$('colorStudio'),mediaStudio=$('mediaStudio');
   if(toolsArea&&colorPanel&&colorPanel.parentElement!==toolsArea)toolsArea.insertBefore(colorPanel,profilePanel||null);
   if(toolsArea&&mediaStudio&&mediaStudio.parentElement!==toolsArea)toolsArea.insertBefore(mediaStudio,libraryPanel||null);
-  if(home){
-    [aboutPanel,helpPanel].forEach(node=>{
-      if(!node)return;
-      if(!home.contains(node))home.appendChild(node);
-      node.classList.add('active','ary-home-editorial');
-      node.hidden=false;
-      node.setAttribute('aria-hidden','false');
-    });
-  }
   if(profilePanel){
     const oldBackup=profilePanel.querySelector('.v25-backup-card');
     if(oldBackup&&libraryPanel){
@@ -1045,25 +1036,6 @@ function panel(id){
   let panelId=String(id||"");
   if(panelId==="home")panelId="";
   const home=$("home"),toolsArea=$("toolsArea");
-  if(panelId==="about"||panelId==="help"){
-    document.body.dataset.view="home";
-    if(home)home.hidden=false;
-    if(toolsArea){toolsArea.hidden=true;toolsArea.classList.remove("v8814-view-active");}
-    document.querySelectorAll("#toolsArea>.panel").forEach(p=>{
-      p.classList.remove("active");p.hidden=true;p.inert=true;p.setAttribute("aria-hidden","true");
-    });
-    document.querySelectorAll("[data-nav]").forEach(b=>{
-      const active=b.dataset.nav==="home";b.classList.toggle("active",active);b.setAttribute("aria-current",active?"page":"false");
-    });
-    const target=$(panelId);
-    if(target){
-      const root=document.documentElement,previous=root.style.scrollBehavior;
-      root.style.scrollBehavior="auto";
-      target.scrollIntoView({behavior:"auto",block:"start"});
-      requestAnimationFrame(()=>{root.style.scrollBehavior=previous;});
-    }
-    return;
-  }
   if(panelId){
     const candidate=$(panelId);
     if(!candidate||candidate.parentElement!==toolsArea||!candidate.classList.contains("panel"))panelId="allTools";
