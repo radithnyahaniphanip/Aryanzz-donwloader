@@ -28,8 +28,8 @@
   }
   function setUser(user, localOnly = false) {
     window.aryanzzAuthUser = user || null;
-    const isDeveloper = !!user && String(user.id || "").toUpperCase() === "ARY-ZFTLQPEX92";
-    window.aryanzzIsDeveloper = developer;
+    const isDeveloper=!!user&&String(user.id||"").toUpperCase()==="ARY-ZFTLQPEX92";
+    window.aryanzzIsDeveloper = isDeveloper;
     const id = $("profileRandomId"), copy = $("profileCopyId"), logout = $("accountLogout"), desc = $("profileIdDescription");
     if (id && user) { id.textContent = user.id; id.classList.toggle("ary-developer-id", isDeveloper); id.setAttribute("aria-label", "ID akun ARYANZZ"); }
     if (copy && user) copy.dataset.accountId = user.id;
