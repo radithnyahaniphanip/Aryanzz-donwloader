@@ -144,6 +144,26 @@
       }
     };
     refresh?.addEventListener("click", draw);
+    const banStatus=$("ownerBanStatus"),banId=$("ownerBanAccountId"),banReason=$("ownerBanReason");
+    async function moderate(action){
+      const userId=String(banId?.value||"").trim().toUpperCase();
+      if(!/^ARY-[A-Z0-9]{10}$/.test(userId)){if(banStatus)banStatus.textContent="Masukkan ID akun yang valid.";return;}
+      const reason=String(banReason?.value||"").trim();
+      if(action==="ban"&&reason.length<8){if(banStatus)banStatus.textContent="Alasan minimal 8 karakter.";return;}
+      const button=$(action==="ban"?"ownerBanSubmit":"ownerUnbanSubmit");
+      if(button)button.disabled=true;
+      if(banStatus){banStatus.textContent="Memproses permintaan...";banStatus.dataset.error="";}
+      try{
+        const response=await fetch("/api/auth/admin/"+action,{method:"POST",credentials:"same-origin",headers:{"content-type":"application/json","accept":"application/json"},body:JSON.stringify({userId,reason})});
+        const result=await response.json().catch(()=>({}));
+        if(!response.ok||!result.ok)throw new Error(result.error||"Permintaan moderasi ditolak.");
+        if(banStatus)banStatus.textContent=result.message||"Berhasil.";
+        if(action==="ban"&&banReason)banReason.value="";
+      }catch(error){if(banStatus){banStatus.textContent=error.message;banStatus.dataset.error="1";}}
+      finally{if(button)button.disabled=false;}
+    }
+    $("ownerBanSubmit")?.addEventListener("click",()=>moderate("ban"));
+    $("ownerUnbanSubmit")?.addEventListener("click",()=>moderate("unban"));
     draw();
   }
   function init() {
