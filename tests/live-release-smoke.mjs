@@ -161,9 +161,12 @@ async function waitForVersionedJson(path,label){
 }
 const release=await waitForVersionedJson("/release.json","Metadata release.json");
 const manifest=await waitForVersionedJson("/manifest.webmanifest?v="+version,"PWA manifest");
+assert.equal(release.release,"V1","Public release label must remain V1");
+assert.match(String(manifest.name||""),/\bV1\b/,"Installed PWA name must show the stable V1 release");
 const workspaceManifestResponse=await request("/workspace-manifest.json?v="+version);
 assert.equal(workspaceManifestResponse.status,200,"Workspace ownership manifest tidak tersedia");
 const workspaceManifest=await workspaceManifestResponse.json();
+assert.equal(workspaceManifest.release?.publicVersion,"V1","Live workspace manifest must identify the public V1 release");
 for(const key of ["home","tools","library","owner","profile","navigation"])assert.ok(workspaceManifest.workspaces?.[key]?.root,"Workspace manifest kehilangan pemilik: "+key);
 const swResponse=await request("/sw.js");
 assert.equal(swResponse.status,200,"Service worker tidak tersedia");
