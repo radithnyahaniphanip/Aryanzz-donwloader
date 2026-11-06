@@ -122,7 +122,7 @@ jobs:
           AUTH_TURNSTILE_SITE_KEY: ${{ secrets.AUTH_TURNSTILE_SITE_KEY }}
         run: |
           for name in AUTH_SESSION_SECRET RESEND_API_KEY AUTH_EMAIL_FROM TURNSTILE_SECRET_KEY AUTH_TURNSTILE_SITE_KEY; do
-            value="$(printenv "$name")"
+            value="$(printenv "$name" || true)"
             if [ -n "$value" ]; then
               printf '%s' "$value" | wrangler secret put "$name"
               echo "Synced Worker setting: $name"
