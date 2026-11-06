@@ -220,7 +220,6 @@ body{background-color:var(--ary-app-bg)}
 <link rel="stylesheet" href="/auth-profile-v1.css?v=2">
 <link rel="stylesheet" href="/auth-reset-v1.css?v=2">
 <link rel="stylesheet" href="/text-protection.css?v=__ARYANZZ_VERSION__">
-<link rel="stylesheet" href="/eclipse-rpg.css?v=__ARYANZZ_VERSION__">
 </head><body class="ary-reduced-motion" data-motion="off" data-view="home">
 <div class="app-shell wrap">
 <section id="home" class="v674-home">
@@ -304,7 +303,6 @@ body{background-color:var(--ary-app-bg)}
 <button class="tool" data-panel="colorStudio" data-category="creative"><div class="ico">◈</div><b>Tema &amp; pengalaman</b><small>Color Studio · warna, animasi, dan tampilan ARYANZZ.</small><span class="v674-tool-category">CREATIVE</span></button>
 <button class="tool" data-panel="profile" data-category="personal"><div class="ico">◉</div><b>My Profile</b><small>Profil, ID akun, dan data pribadi.</small><span class="v674-tool-category">PERSONAL</span></button>
 <button class="tool" data-panel="owner" data-category="personal"><div class="ico">♛</div><b>Owner Profile</b><small>Profil kreator dan tautan sosial.</small><span class="v674-tool-category">PERSONAL</span></button>
-<button class="tool" data-panel="eclipseRpg" data-category="creative"><div class="ico">⚔</div><b>Eclipse RPG 2D</b><small>Fantasy adventure · mystery · dungeon · 900 boss.</small><span class="v674-tool-category">GAME · RPG</span></button>
 </div><p class="v674-no-tools" id="toolEmpty" hidden>Tools tidak ditemukan. Coba kata kunci lain.</p></div>
 <div class="panel card v93-bypass-panel" id="linkBypass">
   <div class="v93-bypass-hero"><span class="section-kicker">ARYANZZ · LINK TOOLS</span><div class="v93-bypass-mark">↗</div><h2>Lewati link SFL, langsung ke tujuan.</h2><p>Tempel tautan sf1.gl atau sfl.gl. ARYANZZ akan memeriksa pengalihan yang tersedia dan menampilkan alamat tujuan jika dapat ditemukan.</p></div>
@@ -1025,103 +1023,7 @@ body{background-color:var(--ary-app-bg)}
 <details class="waq-more"><summary>Contoh template & cara menggunakan <span>＋</span></summary><div class="waq-samples"><button type="button" class="waq-sample" data-preset="simple"><span class="waq-mini"><i></i><i></i></span><b>Quote Clean</b><small>Satu pesan singkat.</small></button><button type="button" class="waq-sample" data-preset="couple"><span class="waq-mini"><i></i><i></i></span><b>Chat Couple</b><small>Percakapan dua arah.</small></button><button type="button" class="waq-sample" data-preset="friends"><span class="waq-mini"><i></i><i></i></span><b>Chat Teman</b><small>Beberapa pesan dan emoji.</small></button></div><p class="waq-more-note">Pilih template untuk mengisi contoh percakapan, lalu sesuaikan pesan dan ekspor hasilnya.</p></details>
 <button class="back-home" id="waqBack" type="button">← Kembali ke Pusat Alat</button></div>
 
-<div class="panel card eclipse-panel" id="eclipseRpg" hidden>
-<header class="ecl-hero">
- <div><span class="ecl-kicker">ARYANZZ · FANTASY ADVENTURE</span><h2>ECLIPSE OF THE LOST KINGDOM</h2><p>Jelajahi Mistwood, pecahkan rahasia kuno, tempa equipment, dan tantang 900 penjaga gerhana.</p></div>
- <div class="ecl-hero-actions"><button class="ecl-quiet" id="eclSave" type="button">Simpan</button><button class="ecl-quiet" id="eclExport" type="button">Ekspor Save</button><label class="ecl-quiet" for="eclImportFile">Impor Save</label><input id="eclImportFile" type="file" accept="application/json,.json" hidden></div>
-</header>
-<div class="ecl-intro"><span>247 Equipment</span><span>600 Skill</span><span>900 Boss</span><span>Quest Harian · Mingguan · Bulanan</span><span>Save lokal otomatis</span></div>
-<div class="ecl-shell">
- <aside class="ecl-side">
-  <section class="ecl-player-card">
-   <div class="ecl-player-avatar">⚔</div><h3>Penjelajah Gerhana</h3><small>Level <b id="eclLevel">1</b> · Mistwood Adventurer</small>
-   <div class="ecl-meter"><div class="ecl-meter-label"><span>HP</span><b id="eclHpText">120 / 120</b></div><div class="ecl-meter-track"><i id="eclHpFill"></i></div></div>
-   <div class="ecl-meter"><div class="ecl-meter-label"><span>MP</span><b id="eclMpText">60 / 60</b></div><div class="ecl-meter-track"><i id="eclMpFill"></i></div></div>
-   <div class="ecl-meter"><div class="ecl-meter-label"><span>EXP</span><b id="eclXpText">0 / 132</b></div><div class="ecl-meter-track"><i id="eclXpFill"></i></div></div>
-   <div class="ecl-side-stats"><div><b id="eclAtk">12</b><small>ATK</small></div><div><b id="eclDef">6</b><small>DEF</small></div><div><b id="eclCrit">5%</b><small>CRIT</small></div></div>
-   <div class="ecl-wallet">◈ <span id="eclCoin">250</span> COIN</div>
-  </section>
-  <nav class="ecl-side-nav" aria-label="Menu game">
-   <button class="active" data-ecl-tab="adventure" type="button"><span>⚔</span>Adventure</button>
-   <button data-ecl-tab="inventory" type="button"><span>▣</span>Inventory</button>
-   <button data-ecl-tab="skills" type="button"><span>✧</span>Skill Book</button>
-   <button data-ecl-tab="shop" type="button"><span>◈</span>Shop</button>
-   <button data-ecl-tab="quests" type="button"><span>☷</span>Quest</button>
-   <button data-ecl-tab="bosses" type="button"><span>♛</span>Boss</button>
-   <button data-ecl-tab="codex" type="button"><span>⌘</span>Codex</button>
-   <button data-ecl-tab="skins" type="button"><span>◉</span>Skin</button>
-  </nav>
- </aside>
- <main class="ecl-main">
-  <section class="ecl-view active" data-ecl-view="adventure">
-   <div class="ecl-main-head"><div><h3>World Exploration · Mistwood</h3><p>Bergerak, bertarung, temukan petunjuk, dan buka gerbang boss.</p></div><span class="ecl-kicker">ZONE 01</span></div>
-   <div class="ecl-stage">
-    <canvas id="eclCanvas" width="960" height="540" aria-label="Dunia game RPG 2D Mistwood"></canvas>
-    <div class="ecl-boss-hud" id="eclBossHud" hidden><b id="eclBossName">Boss</b><div class="ecl-boss-track"><i id="eclBossHpFill"></i></div><small id="eclBossHpText">100 / 100 HP</small></div>
-    <div class="ecl-interact-hint" id="eclInteractHint" hidden></div>
-   </div>
-   <div class="ecl-stage-bottom"><div class="ecl-controls-note">PC: WASD / panah bergerak · Space menyerang · Shift dodge · Q block · E interaksi · 1–4 skill</div>
-    <div class="ecl-consumables"><button id="eclPotionHp" type="button">♥ HP Potion</button><button id="eclPotionMp" type="button">✧ Mana Potion</button></div>
-   </div>
-   <div class="ecl-touch-controls">
-    <div class="ecl-dpad"><button data-ecl-hold="up" type="button">▲</button><button data-ecl-hold="left" type="button">◀</button><button data-ecl-hold="down" type="button">▼</button><button data-ecl-hold="right" type="button">▶</button></div>
-    <div class="ecl-action-pad"><button id="eclAttackButton" type="button">ATTACK</button><button id="eclDodgeButton" type="button">DODGE</button><button id="eclBlockButton" type="button">BLOCK</button><button id="eclInteractButton" type="button">INTERACT</button></div>
-   </div>
-   <div class="ecl-skill-bar">
-    <button data-ecl-cast="0" type="button">1 · Skill<small id="eclSkillSlot0">Ember Slash</small></button>
-    <button data-ecl-cast="1" type="button">2 · Skill<small id="eclSkillSlot1">Frost Lance</small></button>
-    <button data-ecl-cast="2" type="button">3 · Skill<small id="eclSkillSlot2">Storm Arc</small></button>
-    <button data-ecl-cast="3" type="button">4 · Skill<small id="eclSkillSlot3">Shadow Step</small></button>
-   </div>
-   <div class="ecl-log" id="eclLog" aria-live="polite"></div>
-  </section>
-  <section class="ecl-view" data-ecl-view="inventory" hidden>
-   <div class="ecl-main-head"><div><h3>Inventory & Equipment</h3><p>Setiap jenis equipment mempunyai statistik dan efek pasif yang berbeda.</p></div><span class="ecl-kicker">247 ITEMS</span></div>
-   <div class="ecl-equipped-grid" id="eclEquipped"></div>
-   <div class="ecl-toolbar"><span class="ecl-kicker">KOLEKSI MILIKMU</span></div>
-   <div class="ecl-grid" id="eclInventoryGrid"></div>
-   <div class="ecl-pagination"><button id="eclInventoryPrev" type="button">←</button><span id="eclInventoryPage">1 / 1</span><button id="eclInventoryNext" type="button">→</button></div>
-  </section>
-  <section class="ecl-view" data-ecl-view="skills" hidden>
-   <div class="ecl-main-head"><div><h3>Skill Book</h3><p>600 skill unik: damage, elemental, healing, shield, dash, summon, dan buff.</p></div><b class="ecl-kicker" id="eclSkillPoints">8 Skill Points</b></div>
-   <div class="ecl-toolbar"><input id="eclSkillSearch" type="search" placeholder="Cari skill, elemen, atau fungsi..."></div>
-   <div class="ecl-grid" id="eclSkillsGrid"></div>
-   <div class="ecl-pagination"><button id="eclSkillsPrev" type="button">←</button><span id="eclSkillsPage">1 / 50</span><button id="eclSkillsNext" type="button">→</button></div>
-  </section>
-  <section class="ecl-view" data-ecl-view="shop" hidden>
-   <div class="ecl-main-head"><div><h3>Blacksmith & Merchant</h3><p>Beli equipment, potion, dan material upgrade menggunakan coin.</p></div><b class="ecl-kicker" id="eclShopCoin">250 Koin</b></div>
-   <div class="ecl-grid" id="eclShopGrid"></div>
-  </section>
-  <section class="ecl-view" data-ecl-view="quests" hidden>
-   <div class="ecl-main-head"><div><h3>Quest Board</h3><p>Misi berubah otomatis sesuai periode dan hadiah diklaim saat target selesai.</p></div><span class="ecl-kicker" id="eclQuestTimer">Reset dalam --:--:--</span></div>
-   <div class="ecl-quest-tabs"><button class="active" data-ecl-period="daily" type="button">Harian · 3</button><button data-ecl-period="weekly" type="button">Mingguan · 5</button><button data-ecl-period="monthly" type="button">Bulanan · 8</button></div>
-   <div id="eclQuestList"></div>
-  </section>
-  <section class="ecl-view" data-ecl-view="bosses" hidden>
-   <div class="ecl-main-head"><div><h3>Boss Archive</h3><p>900 boss dengan HP, ATK, DEF, pola serangan, dan syarat level bertahap.</p></div><span class="ecl-kicker" id="eclBossProgress">0 / 900 Boss dikalahkan</span></div>
-   <div class="ecl-toolbar"><input id="eclBossSearch" type="search" placeholder="Cari boss atau nomor..."></div>
-   <div class="ecl-grid" id="eclBossGrid"></div>
-   <div class="ecl-pagination"><button id="eclBossPrev" type="button">←</button><span id="eclBossPage">1 / 75</span><button id="eclBossNext" type="button">→</button></div>
-  </section>
-  <section class="ecl-view" data-ecl-view="codex" hidden>
-   <div class="ecl-main-head"><div><h3>Codex · Catatan Dunia</h3><p>Arsip equipment, skill, boss, dan misteri yang sudah kamu temukan.</p></div><span class="ecl-kicker">LORE ARCHIVE</span></div>
-   <div id="eclCodexStats"></div>
-  </section>
-  <section class="ecl-view" data-ecl-view="skins" hidden>
-   <div class="ecl-main-head"><div><h3>Character Skins</h3><p>Buka skin, ubah tampilan karakter, dan kumpulkan aura khusus.</p></div><span class="ecl-kicker">HERO CUSTOMIZATION</span></div>
-   <div class="ecl-skin-grid" id="eclSkinGrid"></div>
-  </section>
-  <button class="ecl-back" id="eclBackHome" data-panel="" type="button">← Kembali ke Pusat Alat ARYANZZ</button>
- </main>
-</div>
-<div class="ecl-toast" id="eclToast" role="status" aria-live="polite"></div>
-<div class="ecl-modal" id="eclPuzzleModal" hidden>
- <div class="ecl-modal-card"><span class="ecl-kicker">ANCIENT RUNE PUZZLE</span><h3>Segel Peti Gerhana</h3><p>Petunjuk prasasti: Bintang → Bulan → Matahari → Mahkota. Pilih simbol dalam urutan yang benar.</p>
-  <div class="ecl-rune-grid"><button data-ecl-rune="1" type="button">☾ Bulan</button><button data-ecl-rune="2" type="button">♛ Mahkota</button><button data-ecl-rune="3" type="button">✦ Bintang</button><button data-ecl-rune="4" type="button">☼ Matahari</button></div>
-  <p class="ecl-modal-status" id="eclPuzzleStatus">Urutkan empat simbol kuno.</p><button class="ecl-quiet" id="eclPuzzleClose" type="button">Tutup</button>
- </div>
-</div>
-</div>
+
 </section>
 
 <footer>© <span id="year"></span> ARYANZZ</footer></div>
@@ -1132,7 +1034,6 @@ body{background-color:var(--ary-app-bg)}
 <script src="/workspace-tools.js?v=__ARYANZZ_VERSION__"></script>
 <script src="/wa-quote-generator.js?v=__ARYANZZ_VERSION__"></script>
 <script src="/workspace-navigation.js?v=__ARYANZZ_VERSION__"></script>
-<script src="/eclipse-rpg.js?v=__ARYANZZ_VERSION__" defer></script>
 <script>
 
 const $=id=>document.getElementById(id);$('year').textContent=new Date().getFullYear();
