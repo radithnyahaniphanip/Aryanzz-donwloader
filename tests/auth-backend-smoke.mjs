@@ -12,7 +12,9 @@ assert.ok(backend.includes("Number(row.attempts) >= 5"), "OTP attempts must be b
 for (const table of ["auth_users","auth_verifications","auth_sessions"]) assert.ok(migration.includes("CREATE TABLE IF NOT EXISTS " + table));
 const config = await handleAuthRequest(new Request("https://aryanzz.example/api/auth/config"), {});
 assert.equal(config.status, 200);
-assert.equal((await config.json()).ready, false, "Auth must fail closed until service configuration exists");
+const configBody = await config.json();
+assert.equal(configBody.ready, false, "Auth must fail closed until service configuration exists");
+assert.ok(configBody.missing.includes("Cloudflare D1 (AUTH_DB)"), "Config should report a missing D1 binding without exposing secrets");
 const unavailable = await handleAuthRequest(new Request("https://aryanzz.example/api/auth/register/start", {
   method: "POST", headers: { "content-type": "application/json" },
   body: JSON.stringify({ email: "person@gmail.com", password: "StrongPassword!123", passwordConfirm: "StrongPassword!123" })

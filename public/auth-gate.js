@@ -194,12 +194,17 @@
     const registerTab = document.querySelector('[data-auth-mode="register"]'); if (registerTab) registerTab.hidden = !config.ready;
     if ($("aryAuthFoot")) $("aryAuthFoot").textContent = config.ready
       ? "Akun tersimpan secara online. Verifikasi email diperlukan untuk pendaftaran dan reset password."
-      : "Layanan akun online belum dikonfigurasi. Akun lokal lama masih dapat masuk dari perangkat asal; pendaftaran baru dan reset email menunggu konfigurasi.";
+      : "Layanan akun online belum siap: " + (Array.isArray(config.missing) ? config.missing.join(", ") : "konfigurasi server") + ". Akun lokal lama tetap dapat masuk dari perangkat asal.";
     if (config.ready) {
-      loadCaptcha();
       try { const result = await get("/api/auth/me"); setUser(result.user); return; } catch {}
-      setUser(null); mode(readUsers()?.length ? "login" : "register");
-      if (readUsers()?.length) say("Akun lokal lama terdeteksi. Masuk dengan email/ID dan password untuk memindahkannya ke sistem online.");
+      const oldUsers = readUsers(), oldSession = localSession();
+      const activeLegacy = oldSession && Array.isArray(oldUsers) ? oldUsers.find(user => user.id === oldSession.id) : null;
+      setUser(null); mode(oldUsers?.length ? "login" : "register"); loadCaptcha();
+      if (activeLegacy) {
+        pendingLegacy = activeLegacy;
+        $("aryLegacyMigrate").hidden = false;
+        say("Sesi akun lama ditemukan di perangkat ini. Selesaikan CAPTCHA lalu pilih Kirim kode migrasi untuk memindahkan akun melalui verifikasi email.");
+      } else if (oldUsers?.length) say("Akun lokal lama terdeteksi. Masuk dengan email/ID dan password untuk memindahkannya ke sistem online.");
       return;
     }
     const users = readUsers(), session = localSession();

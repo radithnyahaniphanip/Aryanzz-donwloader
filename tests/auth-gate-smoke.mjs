@@ -15,5 +15,7 @@ assert.ok(client.includes("password !== confirm"), "Registration and reset must 
 assert.ok(client.includes("identifier"), "Login must accept email or account ID");
 assert.ok(client.includes("challenges.cloudflare.com/turnstile"), "CAPTCHA widget must be loaded");
 assert.ok(client.includes("aryanzz.local.accounts.v94"), "Old local accounts must be preserved for migration");
+assert.ok(client.includes("activeLegacy"), "An active local session can migrate without re-entering the old password");
+assert.ok(client.includes("window.turnstile.reset"), "CAPTCHA must be reset after use");
 assert.ok(client.includes('window.aryanzzIsDeveloper = isDeveloper'), "Developer UI state must use the existing protected account ID");
 console.log("ARYANZZ V1 auth gate client checks passed.");

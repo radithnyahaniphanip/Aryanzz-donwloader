@@ -37,11 +37,17 @@ function equal(a, b) {
   for (let i = 0; i < a.length; i++) value |= a.charCodeAt(i) ^ b.charCodeAt(i);
   return value === 0;
 }
-function ready(env) {
-  return !!(env.AUTH_DB && typeof env.AUTH_DB.prepare === "function" &&
-    String(env.AUTH_SESSION_SECRET || "").length >= 32 && env.RESEND_API_KEY &&
-    env.AUTH_EMAIL_FROM && env.TURNSTILE_SECRET_KEY && env.AUTH_TURNSTILE_SITE_KEY);
+function missingConfig(env) {
+  const missing = [];
+  if (!env.AUTH_DB || typeof env.AUTH_DB.prepare !== "function") missing.push("Cloudflare D1 (AUTH_DB)");
+  if (String(env.AUTH_SESSION_SECRET || "").length < 32) missing.push("AUTH_SESSION_SECRET");
+  if (!String(env.RESEND_API_KEY || "").trim()) missing.push("RESEND_API_KEY");
+  if (!String(env.AUTH_EMAIL_FROM || "").trim()) missing.push("AUTH_EMAIL_FROM (verified sender)");
+  if (!String(env.TURNSTILE_SECRET_KEY || "").trim()) missing.push("TURNSTILE_SECRET_KEY");
+  if (!String(env.AUTH_TURNSTILE_SITE_KEY || "").trim()) missing.push("AUTH_TURNSTILE_SITE_KEY");
+  return missing;
 }
+function ready(env) { return missingConfig(env).length === 0; }
 function limited(request, name, max, windowMs) {
   const key = name + "|" + String(request.headers.get("cf-connecting-ip") || "unknown").slice(0, 80);
   const now = Date.now();
@@ -267,9 +273,9 @@ async function verifyReset(request, env) {
 export async function handleAuthRequest(request, env) {
   const url = new URL(request.url), path = url.pathname;
   if (path === "/api/auth/config" && request.method === "GET") {
-    const active = ready(env);
-    return reply({ ok: true, ready: active, publicVersion: "V1", captchaSiteKey: String(env.AUTH_TURNSTILE_SITE_KEY || ""),
-      message: active ? "Layanan akun online siap." : "Layanan akun online menunggu konfigurasi database, email, sesi dan CAPTCHA." });
+    const missing = missingConfig(env), active = missing.length === 0;
+    return reply({ ok: true, ready: active, publicVersion: "V1", captchaSiteKey: String(env.AUTH_TURNSTILE_SITE_KEY || ""), missing,
+      message: active ? "Layanan akun online siap." : "Layanan akun online menunggu konfigurasi: " + missing.join(", ") + "." });
   }
   if (path === "/api/auth/logout" && request.method === "POST") return logout(request, env);
   if (!ready(env)) return reply({ ok: false, code: "AUTH_NOT_CONFIGURED", error: "Layanan akun online belum dikonfigurasi. Akun lokal lama tetap dapat digunakan pada perangkat asal." }, 503);
