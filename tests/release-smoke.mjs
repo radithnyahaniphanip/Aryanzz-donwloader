@@ -11,6 +11,7 @@ const platformCatalog = read("../src/platform-catalog.js");
 const sw = read("../public/sw.js");
 const searchJs = read("../public/v674.js");
 const unifiedCss = read("../public/v89.css");
+const appUiCss = read("../public/v95-ui.css");
 const converterJs = read("../public/audio-studio.js");
 const mediaStudioJs = read("../public/media-studio.js");
 const mediaStudioCss = read("../public/media-studio.css");
@@ -226,6 +227,9 @@ const checks = [
   ["Unified responsive app shell is loaded", html.includes("/v89.css?v=93.2") && unifiedCss.includes("V89.0 — ONE UNIFIED ECOSYSTEM")],
   ["Redundant global brand header, welcome banner, and connected view card are removed", !html.includes('class="top v674-top"') && !html.includes('id="v89Welcome"') && !html.includes('id="appViewHeader"')],
   ["Tool panels share one responsive shell", unifiedCss.includes("#toolsArea>.panel{display:none;width:100%") && unifiedCss.includes("#toolsArea>.panel.active{display:block!important")],
+  ["Home, Tools, and the shared footer are contained by one app shell with no empty connection badge", html.includes('<div class="app-shell wrap">') && html.indexOf('<section id="home"')>html.indexOf('<div class="app-shell wrap">') && html.indexOf('<section id="toolsArea"')>html.indexOf('<div class="app-shell wrap">') && html.includes('</footer></div>\n<nav class="nav"') && !html.includes('<span class="v8814-view-state">') && !html.includes('TERHUBUNG')],
+  ["Profile and Owner no longer duplicate page labels, status pills, navigation, or footer", !html.includes('ary-profile2-private') && !html.includes('ACCOUNT CENTER') && !html.includes('perangkat yang terhubung') && !html.includes('ary-owner2-topbar') && !html.includes('ary-owner2-footer') && !html.includes('Terhubung dengan ARYANZZ')],
+  ["V95.2 shared UI stylesheet is loaded and included in the offline shell cache", html.includes('/v95-ui.css?v=__ARYANZZ_VERSION__') && sw.includes('/v95-ui.css?v=__ARYANZZ_VERSION__') && appUiCss.includes('.app-shell.wrap') && appUiCss.includes('.nav button.active') && appUiCss.includes('#profile.ary-profile-v2')],
   ["Mobile navigation stays fixed inside viewport", unifiedCss.includes(".nav{position:fixed!important")],
   ["Security status endpoint remains available", worker.includes('url.pathname==="/api/security/status"')],
   ["Security middleware wraps Worker requests", worker.includes("export default {fetch:securityFetch};")],
