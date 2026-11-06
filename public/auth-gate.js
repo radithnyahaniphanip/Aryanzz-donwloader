@@ -42,7 +42,7 @@
     document.body.classList.toggle("ary-developer-account", isDeveloper);
     if (gate) gate.hidden = !!user;
     document.body.classList.toggle("ary-authenticated", !!user);
-    if ($("profileName") && user?.fullName && !$("profileName").value.trim()) $("profileName").value = user.fullName;
+    if ($("profileName") && user?.fullName && ["","Pengguna ARYANZZ","Anggota ARYANZZ"].includes($("profileName").value.trim())) $("profileName").value = user.fullName;
     if ($("profileSummary")) $("profileSummary").textContent = String(user?.fullName || "Anggota ARYANZZ");
   }
   function showStep(id) {

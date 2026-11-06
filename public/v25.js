@@ -162,7 +162,9 @@
   function setupProfilePreview(){
     const name=$("profileName"),bio=$("profileBio"),saved=read(PROFILE_KEY,{});
     const accountName=String(window.aryanzzAuthUser?.fullName||"Anggota ARYANZZ").trim().slice(0,40);
-    if(name)name.value=String(saved.name||accountName);
+    const savedName=String(saved.name||"").trim();
+    const initialName=savedName&&!["Pengguna ARYANZZ","Anggota ARYANZZ"].includes(savedName)?savedName:accountName;
+    if(name)name.value=initialName;
     if(bio)bio.value=String(saved.bio||"");
     const update=()=>{
       const profile={name:String(name?.value||"").trim().slice(0,40),bio:String(bio?.value||"").trim().slice(0,160),updatedAt:Date.now()};
