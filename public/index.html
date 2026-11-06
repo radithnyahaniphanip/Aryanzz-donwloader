@@ -213,9 +213,7 @@ body{background-color:var(--ary-app-bg)}
 <link rel="stylesheet" href="/auth-gate.css?v=__ARYANZZ_VERSION__">
 </head><body class="ary-reduced-motion" data-motion="off">
 <div class="wrap">
-<header class="top v674-top"><a class="brand v674-brand" href="/" aria-label="ARYANZZ Home"><span class="logo v674-logo" aria-hidden="true"><svg width="30" height="30" viewBox="0 0 64 64" focusable="false"><defs><linearGradient id="aryanzzHeaderMark" x1="0" y1="1" x2="1" y2="0"><stop stop-color="#35d9df"/><stop offset=".5" stop-color="#5795ff"/><stop offset="1" stop-color="#b078ff"/></linearGradient></defs><path d="M7 53 24 13q2-5 8-5t8 5l17 40H43L32 26 21 53z" fill="url(#aryanzzHeaderMark)"/><path d="M23 39h18l-4-9H27z" fill="#fff"/><path d="m49 5 3 8 8 3-8 3-3 8-3-8-8-3 8-3z" fill="#fff"/></svg></span><span>ARYANZZ<small>RUANG KREATIF</small></span></a><div class="v674-top-actions"><span class="pill v674-version"><i></i> V__ARYANZZ_VERSION__ · GRATIS</span><span class="v674-security-indicator" id="securityStatusIndicator" role="status" aria-live="polite" title="Memeriksa perlindungan website"><i></i><span>Memeriksa keamanan</span></span></div></header>
-<div class="v89-welcome" id="v89Welcome"><div class="v89-welcome-copy"><span class="v89-welcome-kicker">ARYANZZ · RUANG KREATIF</span><h1>Semua berawal<br><span>dari satu tautan</span></h1><p>Satu ruang terpadu untuk mengunduh, mencari, mengolah, dan mengelola media.</p></div><div class="v89-welcome-mark" aria-hidden="true">✦</div></div>
-<div class="v8814-view-header" id="appViewHeader" hidden><span class="v8814-view-mark">A+</span><div><small>ARYANZZ · RUANG KREATIF</small><b id="appViewTitle">Pusat Alat</b></div><span class="v8814-view-state">TERHUBUNG</span></div>
+<span class="v8814-view-state">TERHUBUNG</span></div>
 <section id="home" class="v674-home">
 <div class="card download v6-download v674-download">
 <div class="v674-download-heading"><div><span class="section-kicker">PENGUNDUH ARYANZZ</span><h2>Mau unduh apa?</h2></div><span class="v674-download-mark">↗</span></div>
@@ -1058,13 +1056,10 @@ function resetPanelScroll(){
 function panel(id){
   let panelId=String(id||"");
   if(panelId==="home")panelId="";
-  const home=$("home"),toolsArea=$("toolsArea"),welcome=$("v89Welcome");
-  const viewHeader=$("appViewHeader"),viewTitle=$("appViewTitle");
+  const home=$("home"),toolsArea=$("toolsArea");
   if(panelId==="about"||panelId==="help"){
     document.body.dataset.view="home";
     if(home)home.hidden=false;
-    if(welcome)welcome.hidden=false;
-    if(viewHeader)viewHeader.hidden=true;
     if(toolsArea){toolsArea.hidden=true;toolsArea.classList.remove("v8814-view-active");}
     document.querySelectorAll("#toolsArea>.panel").forEach(p=>{
       p.classList.remove("active");p.hidden=true;p.inert=true;p.setAttribute("aria-hidden","true");
@@ -1088,8 +1083,6 @@ function panel(id){
   const isHome=!panelId;
   document.body.dataset.view=isHome?"home":panelId==="owner"?"owner":"tool";
   if(home)home.hidden=!isHome;
-  if(welcome)welcome.hidden=!isHome;
-  if(viewHeader)viewHeader.hidden=isHome;
   if(toolsArea){
     toolsArea.hidden=isHome;
     toolsArea.classList.toggle("v8814-view-active",!isHome);
@@ -1108,12 +1101,6 @@ function panel(id){
     b.classList.toggle("active",active);
     b.setAttribute("aria-current",active?"page":"false");
   });
-  const target=isHome?home:$(panelId);
-  if(viewTitle&&viewHeader&&!isHome&&target){
-    const titles={allTools:"Pusat Alat",history:"Pustaka",owner:"Pemilik",profile:"Profil"};
-    const heading=target.querySelector("h1,h2,h3");
-    viewTitle.textContent=titles[panelId]||(heading?heading.textContent.trim():"Ruang Kreatif");
-  }
   resetPanelScroll();
 }
 window.aryanzzShowPanel=panel;
