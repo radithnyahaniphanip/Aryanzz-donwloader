@@ -537,7 +537,7 @@ console.log("✔ Image search validates short queries and image proxy blocks loc
 const healthResponse=await worker.fetch(new Request("https://aryanzz.example/api/health"),{});
 assert.equal(healthResponse.status,200);
 const health=await healthResponse.json();
-assert.equal(health.version,"88.14");
+assert.equal(health.version,"V1");
 assert.equal(health.securityActive,true);
 assert.equal(health.selfHostedDownloader,false);
 assert.equal(health.youtubeDownloader,true);
@@ -1337,7 +1337,7 @@ try{
 
   const health=await worker.fetch(new Request("https://aryanzz.example/api/health"),{});
   const healthData=await health.json();
-  assert.equal(healthData.version,"88.14");
+  assert.equal(healthData.version,"V1");
   assert.equal(healthData.cobalt,false);
   assert.equal(healthData.paidYoutubeProvider,false);
   console.log("✔ Worker health reports V88.2 with no Cobalt or paid YouTube provider");
