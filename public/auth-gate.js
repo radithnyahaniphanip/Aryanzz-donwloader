@@ -193,7 +193,7 @@
         const captchaToken = takeCaptcha(); if (!captchaToken) return;
         const result = await post("/api/auth/register/start", {
           fullName, email, password, passwordConfirm: confirm,
-          redeemCode: $("aryRegRedeem").value.trim(), captchaToken, deviceHash
+          captchaToken, deviceHash
         });
         pendingEmail = email; $("aryRegisterVerifyEmail").textContent = email;
         showStep("aryRegisterVerifyForm");
