@@ -6,8 +6,8 @@ const client = fs.readFileSync(new URL("../public/auth-gate.js", import.meta.url
 for (const id of ["aryRegPasswordConfirm","aryLoginIdentifier","aryAuthCaptcha","aryForgotPassword","aryRegisterVerifyForm","aryResetStartForm","aryResetVerifyForm","profileSummary"]) {
   assert.ok(html.includes('id="' + id + '"') || html.includes('id="' + id + '"'), "Missing auth/profile control: " + id);
 }
-assert.ok(client.includes("async function login") && client.includes("config.ready") && client.includes("Login lokal dinonaktifkan"), "Login must require the protected server authentication service");
-assert.ok(client.includes("async function register") && client.includes("Pendaftaran sementara ditutup") && client.includes("/api/auth/register/start"), "Registration must require the protected server authentication service");
+assert.ok(client.includes("async function login") && client.includes("config.ready") && client.includes("Login online belum aktif"), "Login must require the protected server authentication service");
+assert.ok(client.includes("async function register") && client.includes("Pendaftaran sementara ditutup") && client.includes("registrationReady") && client.includes("/api/auth/register/start"), "Registration must require server authentication and verified email delivery");
 assert.ok(html.includes('id="aryResetProgressFill"') && html.includes('id="aryResetPasswordStage"'), "Password reset must show device-check progress and new-password stage");
 assert.ok(client.includes("currentDeviceHash") && client.includes("deviceKeyHash"), "Password reset must match the registered browser device");
 assert.ok(client.includes("/api/auth/legacy/start"), "Legacy accounts need a verified migration path");
@@ -20,7 +20,10 @@ assert.ok(html.includes('id="profileAccountEmail"') && html.includes('id="profil
 assert.ok(client.includes("checkLocalCaptcha") && client.includes("refreshLocalCaptcha"), "Local human verification must be present on auth forms");
 assert.ok(client.includes("aryanzz.local.accounts.v94"), "Old local accounts must be preserved for migration");
 assert.ok(client.includes("aryanzz.local.accounts.v94") && client.includes("Login lokal dinonaktifkan") && !client.includes("const sessionUser = session && Array.isArray(users)"), "Legacy account data must be preserved for migration but insecure local sessions must not restore");
-assert.ok(html.includes('id="aryLoginPasswordConfirm"') && html.includes('id="aryLoginCaptchaAnswer"'), "Login must include password confirmation and human verification");
+assert.ok(!html.includes('id="aryLoginPasswordConfirm"') && !html.includes('id="aryLoginConfirmEye"'), "Login must not ask users to confirm the password a second time");
+assert.ok(client.includes("registrationReady") && client.includes("missingRegistration"), "Registration readiness and email-delivery requirements must be separate from login readiness");
+assert.ok(client.includes("missingLogin.join") && client.includes("missingRegistration.join"), "Auth UI must show exact missing configuration names without exposing secret values");
+assert.ok(client.includes("node.hidden = true"), "Local arithmetic CAPTCHA must not be presented as a substitute for server CAPTCHA");
 assert.ok(html.includes('id="aryRegCaptchaAnswer"'), "Registration must include human verification");
 assert.ok(!html.includes('id="aryRecoveryCodeDisplay"') && !html.includes('id="aryResetRecoveryCode"'), "Recovery Code UI must be removed");
 assert.ok(client.includes('window.aryanzzIsDeveloper = isDeveloper'), "Developer UI state must use the existing protected account ID");
