@@ -84,21 +84,29 @@ loadPrestige();
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 let plans=[];
 const panel=document.createElement("section");panel.id="aryMembershipPanel";panel.className="panel ary-membership";panel.hidden=true;
-panel.innerHTML='<div class="ary-mem-head"><div><span class="ary-mem-eyebrow">ARYANZZ V1 · MEMBER CENTER</span><h2>Membership Center</h2><p>Pilih paket untuk mendukung pengembangan ARYANZZ. Free Member tetap tersedia.</p></div><div class="ary-mem-current" id="aryMemCurrent">Memeriksa akun…</div></div><div class="ary-mem-grid" id="aryMemPlans"></div><div class="ary-mem-history"><div class="ary-mem-history-head"><h3>Riwayat pesanan</h3><button type="button" id="aryMemRefresh">Muat ulang</button></div><div id="aryMemOrders">Login untuk melihat riwayat.</div></div><p class="ary-mem-note" id="aryMemNote" role="status">Pembayaran belum diaktifkan. Pesanan hanya dibuat sebagai draft sampai metode pembayaran dan penerima dana dikonfigurasi.</p><section class="ary-mem-admin" id="aryMemAdmin" hidden><h3>Owner · Kode redeem Legendary</h3><div class="ary-mem-admin-row"><label>Jumlah kode<input id="aryRedeemQuantity" type="number" min="1" max="100" value="10"></label><label>Kuota per kode<input id="aryRedeemMax" type="number" min="1" max="10000" value="1"></label><label>Kedaluwarsa kode (hari)<input id="aryRedeemExpiry" type="number" min="0" max="365" value="30"></label></div><button type="button" id="aryGenerateRedeemCodes">Buat kode redeem</button><textarea id="aryGeneratedRedeemCodes" rows="5" readonly placeholder="Kode yang dibuat akan muncul di sini. Simpan sekarang; kode hanya ditampilkan satu kali."></textarea></section>';
+panel.innerHTML='<div class="ary-mem-head"><div><span class="ary-mem-eyebrow">ARYANZZ V1 · MEMBER CENTER</span><h2>Membership Center</h2><p>Pilih paket, lihat manfaat, dan bayar melalui QRIS. Free Member tetap tersedia.</p></div><div class="ary-mem-current" id="aryMemCurrent">Memeriksa akun…</div></div><div class="ary-mem-grid" id="aryMemPlans"></div><section class="ary-mem-payment" id="aryMemPayment"><div><span class="ary-mem-eyebrow">PEMBAYARAN RESMI</span><h3>QRIS</h3><p id="aryMemPaymentNote">Memeriksa konfigurasi pembayaran…</p></div><div class="ary-mem-qris" id="aryMemQris" hidden></div></section><div class="ary-mem-history"><div class="ary-mem-history-head"><h3>Riwayat pesanan</h3><button type="button" id="aryMemRefresh">Muat ulang</button></div><div id="aryMemOrders">Login untuk melihat riwayat.</div></div><p class="ary-mem-note" id="aryMemNote" role="status">Harga paket merupakan rancangan. Pembayaran hanya dapat dilakukan setelah QRIS merchant resmi dikonfigurasi.</p><section class="ary-mem-admin" id="aryMemAdmin" hidden><h3>Owner · Kode redeem Legendary</h3><div class="ary-mem-admin-row"><label>Jumlah kode<input id="aryRedeemQuantity" type="number" min="1" max="100" value="10"></label><label>Kuota per kode<input id="aryRedeemMax" type="number" min="1" max="10000" value="1"></label><label>Kedaluwarsa kode (hari)<input id="aryRedeemExpiry" type="number" min="0" max="365" value="30"></label></div><button type="button" id="aryGenerateRedeemCodes">Buat kode redeem</button><textarea id="aryGeneratedRedeemCodes" rows="5" readonly placeholder="Kode yang dibuat akan muncul di sini. Simpan sekarang; kode hanya ditampilkan satu kali."></textarea></section>'
 root.append(panel);
-const button=document.createElement("button");button.type="button";button.dataset.panel=panel.id;button.textContent="Membership";button.className="ary-mem-nav";nav.append(button);
+const button=document.createElement("button");button.type="button";button.dataset.nav="membership";button.textContent="Membership";button.className="ary-mem-nav";nav.append(button);
+let paymentConfig={enabled:false,qrisImageUrl:""};
 async function loadCatalog(){
- const note=document.getElementById("aryMemNote");
+ const note=document.getElementById("aryMemNote"),paymentNote=document.getElementById("aryMemPaymentNote"),qris=document.getElementById("aryMemQris");
  try{
-  const response=await fetch("/api/membership/catalog",{cache:"no-store",headers:{accept:"application/json"}});
-  const data=await response.json();
-  if(!response.ok||!data.ok||!Array.isArray(data.plans))throw Error(data.error||"Katalog Membership belum tersedia.");
-  plans=data.plans.map(p=>({...p,term:p.durationDays===null?"Lifetime":p.durationDays+" hari",desc:p.summary||""}));
-  if(note)note.textContent="Harga pada tujuh paket masih berupa rancangan dan belum final. Pembayaran belum dibuka; jangan melakukan transfer. Free Member tetap gratis.";
+  const [catalogResponse,paymentResponse]=await Promise.all([fetch("/api/membership/catalog",{cache:"no-store"}),fetch("/api/membership/payment-config",{cache:"no-store"})]);
+  const data=await catalogResponse.json(),payment=await paymentResponse.json();
+  if(!catalogResponse.ok||!data.ok||!Array.isArray(data.plans))throw Error(data.error||"Katalog Membership belum tersedia.");
+  paymentConfig={enabled:!!payment.enabled,qrisImageUrl:String(payment.qrisImageUrl||"")};
+  plans=data.plans.map(p=>({...p,term:p.durationDays===null?"Permanen":p.durationDays+" hari",desc:p.summary||""}));
+  if(paymentNote)paymentNote.textContent=paymentConfig.enabled?"QRIS merchant ARYANZZ tersedia. Setelah membuat pesanan, scan kode dan tunggu verifikasi pemilik.":"QRIS belum dikonfigurasi. Paket dan harga sudah bisa dilihat, tetapi pembayaran belum dibuka.";
+  if(qris&&paymentConfig.enabled)qris.innerHTML='<img src="'+esc(paymentConfig.qrisImageUrl)+'" alt="QRIS merchant ARYANZZ"><small>QRIS resmi · pastikan nama merchant benar sebelum membayar.</small>';
+  if(qris)qris.hidden=!paymentConfig.enabled;
+  if(note)note.textContent="Harga paket saat ini merupakan rancangan yang ditampilkan untuk ditinjau. Jangan transfer ke QRIS lain di luar QRIS resmi yang tampil di sini.";
   renderPlans();
- }catch(error){if(note)note.textContent=error.message}
+ }catch(error){if(note)note.textContent=error.message;if(paymentNote)paymentNote.textContent=error.message}
 }
-function renderPlans(){document.getElementById("aryMemPlans").innerHTML=plans.map((p,i)=>'<article class="ary-mem-card '+(i===2?"ary-mem-featured":"")+'"><div class="ary-mem-card-top"><span>'+String(i+1).padStart(2,"0")+' / MEMBERSHIP</span><b>'+esc(p.name)+'</b></div><div class="ary-mem-price">'+money(p.price)+'</div><div class="ary-mem-term">'+p.term+'</div><p>'+esc(p.desc)+'</p><button type="button" data-buy="'+p.id+'">Buat draft pesanan</button></article>').join("")}
+function renderPlans(){
+ const host=document.getElementById("aryMemPlans");
+ host.innerHTML=plans.map((p,i)=>'<article class="ary-mem-card '+(i===2?"ary-mem-featured":"")+'"><div class="ary-mem-card-top"><span>'+String(i+1).padStart(2,"0")+' / MEMBERSHIP</span><b>'+esc(p.name)+'</b></div><div class="ary-mem-price">'+money(p.price)+'</div><div class="ary-mem-term">'+p.term+'</div><p>'+esc(p.desc)+'</p><button type="button" data-buy="'+esc(p.id)+'" '+(paymentConfig.enabled?"":"disabled")+'>'+(paymentConfig.enabled?"Lanjut bayar QRIS":"QRIS belum tersedia")+'</button></article>').join("")
+}
 async function load(){
  const current=document.getElementById("aryMemCurrent"),orders=document.getElementById("aryMemOrders"),note=document.getElementById("aryMemNote");
  try{const r=await fetch("/api/membership/me",{credentials:"same-origin",cache:"no-store"});const d=await r.json();
@@ -114,7 +122,7 @@ async function load(){
 panel.addEventListener("click",async e=>{
  const buy=e.target.closest("[data-buy]");if(!buy)return;
  buy.disabled=true;const p=plans.find(x=>x.id===buy.dataset.buy);const note=document.getElementById("aryMemNote");
- try{const r=await fetch("/api/membership/orders",{method:"POST",credentials:"same-origin",headers:{"content-type":"application/json"},body:JSON.stringify({planId:p.id})});const d=await r.json();if(!r.ok||!d.ok)throw Error(d.error||"Pesanan gagal dibuat.");note.textContent="Pesanan "+d.order.id+" berhasil dibuat sebagai draft. Pembayaran belum tersedia; jangan transfer sebelum instruksi pembayaran resmi muncul.";await load()}
+ try{if(!paymentConfig.enabled)throw Error("QRIS merchant belum dikonfigurasi. Pesanan belum dibuat.");const r=await fetch("/api/membership/orders",{method:"POST",credentials:"same-origin",headers:{"content-type":"application/json"},body:JSON.stringify({planId:p.id,paymentProvider:"qris"})});const d=await r.json();if(!r.ok||!d.ok)throw Error(d.error||"Pesanan gagal dibuat.");note.textContent="Pesanan "+d.order.id+" dibuat. Scan QRIS di atas dengan nominal tepat "+money(d.order.amount)+", lalu tunggu verifikasi pemilik.";await load()}
  catch(err){note.textContent=err.message}finally{buy.disabled=false}
 });
 document.getElementById("aryMemRefresh").addEventListener("click",load);
@@ -129,5 +137,36 @@ document.getElementById("aryGenerateRedeemCodes")?.addEventListener("click",asyn
  }catch(e){note.textContent=e.message||"Gagal membuat kode."}
  finally{button.disabled=false;button.textContent="Buat kode redeem"}
 });
+const toolGrid=document.getElementById("toolGrid");
+const cosmeticsPanel=document.createElement("section");
+cosmeticsPanel.id="aryCosmeticsStudio";cosmeticsPanel.className="panel card ary-cosmetics-studio";cosmeticsPanel.hidden=true;
+cosmeticsPanel.innerHTML='<div class="ary-mem-eyebrow">ARYANZZ CREATIVE LAB · PERSONALIZATION</div><h2>Avatar & Background Studio</h2><p class="ary-cosmetics-intro">Kelola koleksi avatar frame dan latar profil. Efek kosmetik hanya diterapkan pada akun yang memilikinya.</p><div class="ary-cosmetics-preview"><div class="ary-cosmetics-avatar" id="aryCosmeticPreviewAvatar">A</div><div><b id="aryCosmeticPreviewName">Profile Preview</b><small id="aryCosmeticPreviewTier">Pilih koleksi untuk melihat efek</small></div></div><div class="ary-cosmetics-section"><h3>Avatar Frame</h3><div class="ary-cosmetics-grid" id="aryAvatarCosmetics"></div></div><div class="ary-cosmetics-section"><h3>Profile Background</h3><div class="ary-cosmetics-grid" id="aryBackgroundCosmetics"></div></div><p class="ary-cosmetics-status" id="aryCosmeticsStatus" role="status">Memuat koleksi akun…</p></section>';
+root.append(cosmeticsPanel);
+if(toolGrid&&!toolGrid.querySelector('[data-panel="aryCosmeticsStudio"]')){
+ const card=document.createElement("button");card.type="button";card.className="tool";card.dataset.panel="aryCosmeticsStudio";card.dataset.category="personal";card.innerHTML='<div class="ico">✧</div><b>Avatar & Background Studio</b><small>Pasang, ganti, dan kelola kosmetik profil eksklusif.</small><span class="v674-tool-category">PERSONALIZATION</span>';toolGrid.insertBefore(card,toolGrid.firstChild);
+}
+function cosmeticCard(item,kind){
+ const active=!!item.equipped,label=kind==="avatar"?"Legendary Avatar Frame":"Legendary Aurora Background";
+ return '<article class="ary-cosmetic-card '+(active?"is-equipped":"")+'"><div class="ary-cosmetic-art '+(kind==="avatar"?"frame-art":"background-art")+'"><span>✦</span></div><b>'+label+'</b><small>'+(active?"Sedang digunakan":"Koleksi permanen")+'</small><button type="button" data-equip="'+item.cosmetic_id+'">'+(active?"Sedang dipakai":"Gunakan")+'</button></article>';
+}
+async function loadCosmeticsStudio(){
+ const status=document.getElementById("aryCosmeticsStatus"),avatarHost=document.getElementById("aryAvatarCosmetics"),backgroundHost=document.getElementById("aryBackgroundCosmetics");
+ try{
+  const r=await fetch("/api/cosmetics/me",{credentials:"same-origin",cache:"no-store"}),d=await r.json();
+  if(!r.ok||!d.ok){avatarHost.innerHTML="";backgroundHost.innerHTML="";status.textContent=r.status===401?"Login untuk melihat dan mengatur koleksi kosmetik.":(d.error||"Koleksi belum tersedia.");return}
+  const items=d.items||[],avatar=items.filter(x=>x.cosmetic_id==="legendary-avatar-frame"),background=items.filter(x=>x.cosmetic_id==="legendary-aurora-background");
+  avatarHost.innerHTML=avatar.length?avatar.map(x=>cosmeticCard(x,"avatar")).join(""):'<div class="ary-cosmetic-empty">Belum memiliki avatar frame. Klaim kode Legendary dari Profil → ID Akun.</div>';
+  backgroundHost.innerHTML=background.length?background.map(x=>cosmeticCard(x,"background")).join(""):'<div class="ary-cosmetic-empty">Belum memiliki background. Klaim kode Legendary dari Profil → ID Akun.</div>';
+  status.textContent="Koleksi dimuat: "+avatar.length+" avatar frame · "+background.length+" background.";
+  document.getElementById("aryCosmeticPreviewTier").textContent=items.some(x=>x.equipped)?"Koleksi eksklusif akun ini":"Belum ada kosmetik aktif";
+  loadPrestige();
+ }catch(e){status.textContent="Gagal memuat koleksi: "+e.message}
+}
+cosmeticsPanel.addEventListener("click",async event=>{
+ const button=event.target.closest("[data-equip]");if(!button)return;button.disabled=true;
+ try{const r=await fetch("/api/cosmetics/equip",{method:"POST",credentials:"same-origin",headers:{"content-type":"application/json"},body:JSON.stringify({cosmeticId:button.dataset.equip})});const d=await r.json();if(!r.ok||!d.ok)throw Error(d.error||"Kosmetik tidak dapat diterapkan.");document.getElementById("aryCosmeticsStatus").textContent=d.message;await loadCosmeticsStudio()}
+ catch(e){document.getElementById("aryCosmeticsStatus").textContent=e.message}finally{button.disabled=false}
+});
+
 loadCatalog();load();
 })();
