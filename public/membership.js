@@ -98,10 +98,10 @@ async function loadCatalog(){
   if(!catalogResponse.ok||!data.ok||!Array.isArray(data.plans))throw Error(data.error||"Katalog Membership belum tersedia.");
   paymentConfig={enabled:!!payment.enabled,qrisImageUrl:String(payment.qrisImageUrl||"")};
   plans=data.plans.map(p=>({...p,term:p.durationDays===null?"Permanen":p.durationDays+" hari",desc:p.summary||""}));
-  if(paymentNote)paymentNote.textContent=paymentConfig.enabled?"QRIS merchant ARYANZZ tersedia. Setelah membuat pesanan, scan kode dan tunggu verifikasi pemilik.":"QRIS belum dikonfigurasi. Paket dan harga sudah bisa dilihat, tetapi pembayaran belum dibuka.";
+  if(paymentNote)paymentNote.textContent=paymentConfig.enabled?(payment.automaticActivation?"QRIS tersedia. Aktivasi otomatis menunggu callback payment gateway terverifikasi.":"QRIS tersedia. QRIS statis tidak mengirim notifikasi otomatis; pembayaran perlu dicek sampai integrasi gateway resmi aktif."):"QRIS belum dikonfigurasi. Paket dan harga sudah bisa dilihat, tetapi pembayaran belum dibuka.";
   if(qris&&paymentConfig.enabled)qris.innerHTML='<img src="'+esc(paymentConfig.qrisImageUrl)+'" alt="QRIS merchant ARYANZZ"><small>QRIS resmi · pastikan nama merchant benar sebelum membayar.</small>';
   if(qris)qris.hidden=!paymentConfig.enabled;
-  if(note)note.textContent="Harga paket saat ini merupakan rancangan yang ditampilkan untuk ditinjau. Jangan transfer ke QRIS lain di luar QRIS resmi yang tampil di sini.";
+  if(note)note.textContent="Masukkan nominal tepat sesuai pesanan. QRIS statis GoPay Merchant tidak dapat mendeteksi pembayaran sendiri; aktivasi otomatis memerlukan API/payment notification resmi.";
   renderPlans();
  }catch(error){if(note)note.textContent=error.message;if(paymentNote)paymentNote.textContent=error.message}
 }
@@ -130,7 +130,7 @@ async function load(){
  const isAdmin=d.user?.id==="ARY-ZFTLQPEX92"||["owner","admin","developer"].includes(role);
  if(adminPanel)adminPanel.hidden=!isAdmin;
  if(isAdmin)loadAdminOrders();
- orders.innerHTML=(d.orders||[]).length?(d.orders||[]).map(o=>'<div class="ary-mem-order"><div><b>'+esc(o.id)+'</b><small>'+esc(o.plan_id)+' · '+money(o.amount)+' · '+new Date(o.created_at).toLocaleString("id-ID")+'</small></div><span class="ary-mem-status">'+esc(o.status)+'</span></div>').join(""):"Belum ada pesanan.";
+ orders.innerHTML=(d.orders||[]).length?(d.orders||[]).map(o=>'<div class="ary-mem-order"><div><b>'+esc(o.id)+'</b><small>'+esc(o.plan_id)+' · '+money(o.amount)+' · '+new Date(o.created_at).toLocaleString("id-ID")+'</small></div><span class="ary-mem-status">'+esc(o.status)+'</span></div>').join(""):"Belum ada pesanan.";syncMembershipPolling();
  }catch(e){current.textContent="Status belum tersedia";orders.textContent=e.message;note.textContent=e.message}
 }
 panel.addEventListener("click",async e=>{
@@ -153,10 +153,13 @@ panel.addEventListener("click",async e=>{
  }
  const buy=e.target.closest("[data-buy]");if(!buy)return;
  buy.disabled=true;const p=plans.find(x=>x.id===buy.dataset.buy);const note=document.getElementById("aryMemNote");
- try{if(!paymentConfig.enabled)throw Error("QRIS merchant belum dikonfigurasi. Pesanan belum dibuat.");const r=await fetch("/api/membership/orders",{method:"POST",credentials:"same-origin",headers:{"content-type":"application/json"},body:JSON.stringify({planId:p.id,paymentProvider:"qris"})});const d=await r.json();if(!r.ok||!d.ok)throw Error(d.error||"Pesanan gagal dibuat.");note.textContent="Pesanan "+d.order.id+" dibuat. Scan QRIS di atas dengan nominal tepat "+money(d.order.amount)+", lalu tunggu verifikasi pemilik.";await load()}
+ try{if(!paymentConfig.enabled)throw Error("QRIS merchant belum dikonfigurasi. Pesanan belum dibuat.");const r=await fetch("/api/membership/orders",{method:"POST",credentials:"same-origin",headers:{"content-type":"application/json"},body:JSON.stringify({planId:p.id,paymentProvider:"qris"})});const d=await r.json();if(!r.ok||!d.ok)throw Error(d.error||"Pesanan gagal dibuat.");note.textContent="Pesanan "+d.order.id+" dibuat. Scan QRIS dan masukkan nominal tepat "+money(d.order.amount)+". Status diperbarui setelah gateway mengirim notifikasi pembayaran terverifikasi.";await load()}
  catch(err){note.textContent=err.message}finally{buy.disabled=false}
 });
 document.getElementById("aryMemRefresh").addEventListener("click",load);
+let membershipPoll=null;
+function syncMembershipPolling(){const hasPending=[...document.querySelectorAll("#aryMemOrders .ary-mem-status")].some(el=>el.textContent.trim()==="pending");if(hasPending&&!membershipPoll)membershipPoll=setInterval(()=>{if(!document.hidden&&!panel.hidden)load()},12000);if(!hasPending&&membershipPoll){clearInterval(membershipPoll);membershipPoll=null}}
+document.addEventListener("visibilitychange",()=>{if(!document.hidden&&!panel.hidden)load()});
 document.getElementById("aryMemAdminRefresh")?.addEventListener("click",loadAdminOrders);
 document.addEventListener("click",event=>{
  const navItem=event.target.closest("[data-nav]");
