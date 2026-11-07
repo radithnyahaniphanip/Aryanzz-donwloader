@@ -123,7 +123,7 @@ function findEocd(bytes){
  return -1;
 }
 async function extractZip(file){
- const bytes=await readFile(file,MAX_FILE),view=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength),eocd=findEocd(bytes);
+ const bytes=await readFile(file,MAX_TOTAL),view=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength),eocd=findEocd(bytes);
  if(eocd<0)throw new Error("Struktur ZIP tidak valid atau arsip ZIP64 tidak didukung.");
  const count=view.getUint16(eocd+10,true),cdSize=view.getUint32(eocd+12,true),cdOffset=view.getUint32(eocd+16,true);
  if(count===0xffff||cdSize===0xffffffff||cdOffset===0xffffffff)throw new Error("ZIP64 belum didukung pada mode ringan.");
