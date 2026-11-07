@@ -165,10 +165,12 @@ export async function moderationGate(request,env){
   const deviceHash=await digest(lockToken.toLowerCase());
   const lockOwner=await env.AUTH_DB.prepare("SELECT d.user_id FROM auth_device_lock_accounts d JOIN auth_user_bans b ON b.user_id=d.user_id WHERE d.lock_hash=?1 LIMIT 1").bind(deviceHash).first();
   if(!lockOwner&&!await isDeviceBanned(deviceHash,env))return null;
+  const blockedId=String(lockOwner?.user_id||"");
   const url=new URL(request.url);
-  if(url.pathname.startsWith("/api/"))return reply({ok:false,code:"DEVICE_BANNED",error:"Akunmu diblokir permanen. Hubungi pembuat ARYANZZ untuk peninjauan."},403);
-  if(request.method!=="GET"&&request.method!=="HEAD")return reply({ok:false,code:"DEVICE_BANNED",error:"Akunmu diblokir permanen."},403);
-  const html='<!doctype html><html lang="id"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Akunmu diblokir · ARYANZZ</title><style>*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;background:radial-gradient(ellipse at 15% 10%,#163a60,transparent 48%),#070d19;color:#edf5ff;font:16px system-ui,sans-serif}.card{width:min(100%,440px);padding:30px;border:1px solid #344b68;border-radius:24px;background:#0c1929;box-shadow:0 24px 80px #0008}.mark{font-size:38px}h1{margin:12px 0;color:#ff8797;font-size:27px}p{color:#b6c5d8;line-height:1.65}.btn{display:block;margin-top:22px;padding:14px;border-radius:13px;background:#19c8cf;color:#04151d;text-decoration:none;text-align:center;font-weight:800}.small{font-size:12px;color:#8194aa}</style><main class="card"><div class="mark">⛔</div><h1>Akunmu diblokir</h1><p>Akses ARYANZZ dari perangkat ini telah dihentikan karena pelanggaran aturan. Jika kamu merasa keputusan ini keliru, hubungi pembuat website untuk meminta peninjauan.</p><a class="btn" href="https://wa.me/6282110767071?text=Halo%20pembuat%20ARYANZZ%2C%20saya%20ingin%20meminta%20peninjauan%20pemblokiran%20akun%20saya." target="_blank" rel="noopener noreferrer">Hubungi pembuat · WhatsApp</a><p class="small">Nomor bantuan: 082110767071 · ARYANZZ V1</p></main></html>';
+  if(url.pathname.startsWith("/api/"))return reply({ok:false,code:"DEVICE_BANNED",userId:blockedId,error:"ID kamu telah di-banned. Silakan hubungi dukungan WhatsApp 082110767071. ID: "+blockedId},403);
+  if(request.method!=="GET"&&request.method!=="HEAD")return reply({ok:false,code:"DEVICE_BANNED",userId:blockedId,error:"ID kamu telah di-banned. Hubungi dukungan WhatsApp 082110767071."},403);
+  const safeId=blockedId.replace(/[^A-Z0-9-]/g,"");
+  const html='<!doctype html><html lang="id"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>ID diblokir · ARYANZZ</title><style>*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;background:radial-gradient(ellipse at 15% 10%,#163a60,transparent 48%),#070d19;color:#edf5ff;font:16px system-ui,sans-serif}.card{width:min(100%,440px);padding:30px;border:1px solid #344b68;border-radius:24px;background:#0c1929;box-shadow:0 24px 80px #0008}.mark{font-size:38px}h1{margin:12px 0;color:#ff8797;font-size:27px}p{color:#b6c5d8;line-height:1.65}.id{display:block;margin:16px 0;padding:12px;border:1px solid #344b68;border-radius:12px;color:#fff;font-weight:800;letter-spacing:.08em}.btn{display:block;margin-top:22px;padding:14px;border-radius:13px;background:#19c8cf;color:#04151d;text-decoration:none;text-align:center;font-weight:800}.small{font-size:12px;color:#8194aa}</style><main class="card"><div class="mark">⛔</div><h1>ID kamu telah di-banned</h1><p>Akses ke ARYANZZ dihentikan karena pelanggaran aturan. Jika kamu ingin meminta peninjauan, hubungi dukungan melalui WhatsApp.</p><span class="id">'+safeId+'</span><a class="btn" href="https://wa.me/6282110767071?text=Halo%20dukungan%20ARYANZZ%2C%20saya%20ingin%20meminta%20peninjauan%20pemblokiran%20ID%20'+encodeURIComponent(safeId)+'." target="_blank" rel="noopener noreferrer">Hubungi dukungan WhatsApp · 082110767071</a><p class="small">ID ARYANZZ diblokir oleh administrator.</p></main></html>';
   return new Response(html,{status:403,headers:{"content-type":"text/html; charset=utf-8","cache-control":"no-store, no-cache, must-revalidate","x-robots-tag":"noindex, nofollow"}});
 }
 async function rememberTrustedDevice(userId, deviceHash, env) {
@@ -232,7 +234,7 @@ async function adminModerate(request, env, action) {
     await env.AUTH_DB.prepare("DELETE FROM auth_user_bans WHERE user_id=?1").bind(userId).run();
     await env.AUTH_DB.prepare("DELETE FROM auth_banned_devices WHERE user_id=?1").bind(userId).run();
     await env.AUTH_DB.prepare("INSERT INTO auth_moderation_events (user_id,action,reason,actor_id,created_at) VALUES (?1,'unban',?2,?3,?4)").bind(userId,wasBanned?.reason||"Blokir dilepas oleh administrator.",admin.id,now).run();
-    return reply({ok:true,restored:true,message:"Akunmu dipulihkan. Pemblokiran akun dan perangkat yang tercatat telah dilepas. Silakan masuk kembali."});
+    return reply({ok:true,restored:true,message:"Akunmu telah dipulihkan. Silakan buka kembali website ARYANZZ."});
   }
   const reason=String(b?.reason||"").trim().replace(/\s+/g," ").slice(0,500);
   if(reason.length<8) return reply({ok:false,error:"Alasan pemblokiran minimal 8 karakter."},400);
@@ -243,7 +245,55 @@ async function adminModerate(request, env, action) {
   }
   await env.AUTH_DB.prepare("DELETE FROM auth_sessions WHERE user_id=?1").bind(userId).run();
   await env.AUTH_DB.prepare("INSERT INTO auth_moderation_events (user_id,action,reason,actor_id,created_at) VALUES (?1,'ban',?2,?3,?4)").bind(userId,reason,admin.id,now).run();
-  return reply({ok:true,message:"Akun diblokir permanen. Semua sesi dicabut dan perangkat tepercaya yang tercatat dimasukkan ke daftar blokir."});
+  return reply({ok:true,message:"ID pengguna telah di-banned. Semua sesi dicabut dan perangkat yang tercatat diblokir."});
+}
+
+async function guestBootstrap(request,env){
+  if(!env.AUTH_DB||typeof env.AUTH_DB.prepare!=="function"||String(env.AUTH_SESSION_SECRET||"").length<32)
+    return reply({ok:false,code:"GUEST_ACCESS_NOT_READY",error:"Akses publik sedang menyiapkan database keamanan. Coba muat ulang beberapa saat lagi."},503);
+  const existingLock=deviceLockTokenFrom(request),lockToken=existingLock||randomHex(32),lockHash=await digest(lockToken.toLowerCase()),now=Date.now();
+  let user=await env.AUTH_DB.prepare("SELECT u.id,u.email,u.full_name,u.role,u.created_at FROM auth_device_lock_accounts d JOIN auth_users u ON u.id=d.user_id WHERE d.lock_hash=?1 LIMIT 1").bind(lockHash).first();
+  if(!user){
+    const currentToken=tokenFrom(request);
+    if(/^[a-f0-9]{64}$/i.test(currentToken)){
+      user=await env.AUTH_DB.prepare("SELECT u.id,u.email,u.full_name,u.role,u.created_at FROM auth_sessions s JOIN auth_users u ON u.id=s.user_id WHERE s.token_hash=?1 AND s.expires_at>?2 LIMIT 1").bind(await digest(currentToken),now).first();
+    }
+  }
+  if(!user){
+    for(let attempt=0;attempt<6&&!user;attempt++){
+      const id=accountId(),email="guest-"+id.toLowerCase()+"@guest.aryanzz.invalid",salt=randomHex(16),passwordHash=randomHex(32);
+      await env.AUTH_DB.prepare("INSERT OR IGNORE INTO auth_users (id,email,full_name,password_salt,password_hash,password_iterations,role,created_at,updated_at) VALUES (?1,?2,'Pengunjung ARYANZZ',?3,?4,?5,'guest',?6,?6)").bind(id,email,salt,passwordHash,ITERATIONS,now).run();
+      user=await env.AUTH_DB.prepare("SELECT id,email,full_name,role,created_at FROM auth_users WHERE id=?1 LIMIT 1").bind(id).first();
+    }
+    if(!user)return reply({ok:false,error:"ID pengunjung belum dapat dibuat. Silakan muat ulang halaman."},503);
+  }
+  await env.AUTH_DB.prepare("INSERT INTO auth_device_lock_accounts (lock_hash,user_id,created_at,last_seen_at) VALUES (?1,?2,?3,?3) ON CONFLICT(lock_hash) DO NOTHING").bind(lockHash,user.id,now).run();
+  const mapped=await env.AUTH_DB.prepare("SELECT u.id,u.email,u.full_name,u.role,u.created_at FROM auth_device_lock_accounts d JOIN auth_users u ON u.id=d.user_id WHERE d.lock_hash=?1 LIMIT 1").bind(lockHash).first();
+  if(!mapped)return reply({ok:false,error:"Identitas perangkat belum dapat disimpan. Silakan muat ulang halaman."},503);
+  user=mapped;
+  await env.AUTH_DB.prepare("UPDATE auth_device_lock_accounts SET last_seen_at=?1 WHERE lock_hash=?2").bind(now,lockHash).run();
+  const banned=await userBan(user.id,env);
+  if(banned)return reply({ok:false,code:"ACCOUNT_BANNED",userId:user.id,error:"ID kamu telah di-banned. Silakan hubungi dukungan WhatsApp 082110767071."},403);
+  const currentToken=tokenFrom(request);
+  let activeSession=false;
+  if(/^[a-f0-9]{64}$/i.test(currentToken)){
+    const row=await env.AUTH_DB.prepare("SELECT token_hash FROM auth_sessions WHERE token_hash=?1 AND user_id=?2 AND expires_at>?3 LIMIT 1").bind(await digest(currentToken),user.id,now).first();
+    activeSession=!!row;
+  }
+  let sessionToken=currentToken;
+  if(!activeSession){
+    sessionToken=randomHex(32);
+    await env.AUTH_DB.prepare("INSERT INTO auth_sessions (token_hash,user_id,created_at,expires_at) VALUES (?1,?2,?3,?4)").bind(await digest(sessionToken),user.id,now,now+SESSION_TTL).run();
+    await env.AUTH_DB.prepare("DELETE FROM auth_sessions WHERE expires_at<=?1").bind(now).run();
+  }
+  const lastEvent=await env.AUTH_DB.prepare("SELECT action,created_at FROM auth_moderation_events WHERE user_id=?1 ORDER BY created_at DESC LIMIT 1").bind(user.id).first().catch(()=>null);
+  const restored=lastEvent?.action==="unban"?Number(lastEvent.created_at||0):0;
+  const guest=user.role==="guest";
+  const publicUserData=guest?{id:user.id,fullName:"Pengunjung ARYANZZ",role:"guest",guest:true,createdAt:Number(user.created_at||now)}:publicUser(user);
+  const headers=new Headers();
+  if(!existingLock)headers.append("set-cookie",DEVICE_LOCK_COOKIE+"="+lockToken+"; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=63072000");
+  if(!activeSession)headers.append("set-cookie",COOKIE+"="+sessionToken+"; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age="+Math.floor(SESSION_TTL/1000));
+  return reply({ok:true,guest,publicAccess:true,user:publicUserData,restoredAt:restored},200,headers);
 }
 
 async function createSession(row, env, extra = {}, request = null) {
@@ -338,6 +388,8 @@ async function login(request, env) {
   if (!equal(await passwordDigest(password, user.password_salt, iterations), String(user.password_hash || ""))) {
     return reply({ ok: false, code: "INVALID_CREDENTIALS", error: "Email/ID atau password tidak cocok." }, 401);
   }
+  const adminAllowed=user.id==="ARY-ZFTLQPEX92"||["owner","admin","developer"].includes(String(user.role||"").toLowerCase());
+  if(!adminAllowed)return reply({ok:false,code:"PUBLIC_LOGIN_DISABLED",error:"Pengguna ARYANZZ tidak perlu login. Akses akun hanya tersedia untuk administrator melalui halaman pemilik."},403);
   const primary = await primaryDeviceOwner(deviceHash, env);
   const previouslyTrusted = await trustedDeviceOwner(deviceHash, env);
   if ((primary && primary.user_id !== user.id) || (previouslyTrusted && previouslyTrusted.user_id !== user.id)) return primaryAccountNotice();
@@ -501,10 +553,13 @@ export async function handleAuthRequest(request, env) {
   const moderationReady=!!env.AUTH_DB&&typeof env.AUTH_DB.prepare==="function"&&String(env.AUTH_SESSION_SECRET||"").length>=32;
   if(path==="/api/auth/admin/ban"&&request.method==="POST")return moderationReady?adminModerate(request,env,"ban"):reply({ok:false,code:"MODERATION_NOT_CONFIGURED",error:"Moderasi online membutuhkan database D1 dan AUTH_SESSION_SECRET."},503);
   if(path==="/api/auth/admin/unban"&&request.method==="POST")return moderationReady?adminModerate(request,env,"unban"):reply({ok:false,code:"MODERATION_NOT_CONFIGURED",error:"Moderasi online membutuhkan database D1 dan AUTH_SESSION_SECRET."},503);
+  if(path==="/api/auth/guest/bootstrap"&&request.method==="GET")return guestBootstrap(request,env);
   if (!ready(env)) return reply({ ok: false, code: "AUTH_NOT_CONFIGURED", error: "Layanan akun online belum dikonfigurasi. Login akun lokal dinonaktifkan sampai perlindungan akun server siap." }, 503);
   try {
     if (path === "/api/auth/me" && request.method === "GET") return me(request, env);
     if (request.method !== "POST") return reply({ ok: false, error: "Metode tidak diizinkan." }, 405);
+    if (["/api/auth/register/start","/api/auth/register/verify","/api/auth/legacy/start","/api/auth/legacy/verify"].includes(path))
+      return reply({ok:false,code:"REGISTRATION_DISABLED",error:"Pendaftaran ARYANZZ telah dinonaktifkan. Pengunjung mendapatkan ID otomatis tanpa perlu mendaftar."},410);
     if (path === "/api/auth/register/start") {
       if (!String(env.RESEND_API_KEY || "").trim() || !String(env.AUTH_EMAIL_FROM || "").trim()) return reply({ok:false,code:"EMAIL_DELIVERY_NOT_CONFIGURED",error:"Pendaftaran belum tersedia karena layanan email verifikasi belum dikonfigurasi."},503);
       return startRegister(request, env);
