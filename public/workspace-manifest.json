@@ -207,6 +207,16 @@
         "/wa-quote-generator.js"
       ],
       "purpose": "Create WhatsApp-style chat mockups for Android and iPhone and export PNG locally."
+    },
+    {
+      "root": "#aryGuideOverlay (runtime-created)",
+      "css": [
+        "/workspace-guides.css"
+      ],
+      "js": [
+        "/workspace-guides.js"
+      ],
+      "purpose": "Searchable, responsive tutorials for all 21 tools, contextual help launchers, and locally saved learning progress."
     }
   ],
   "release": {
