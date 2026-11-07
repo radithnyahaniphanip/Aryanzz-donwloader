@@ -350,3 +350,7 @@ body[data-view="owner"] .nav button[data-nav="owner"]{font-weight:1000}
 .ary-membership-admin-note{display:block}.ary-membership-admin-note textarea{display:block;width:100%;min-height:55px;margin-top:5px;border:1px solid #334c6b;border-radius:8px;background:#081321;color:#fff;padding:9px}
 .ary-membership-admin-actions{display:flex;gap:8px;flex-wrap:wrap}.ary-membership-admin-actions button[data-membership-review="approve"]{background:#15523f;border-color:#287b5d}.ary-membership-admin-actions button[data-membership-review="reject"]{background:#4b242b;border-color:#82414c}
 @media(max-width:520px){.ary-membership-admin-head{align-items:flex-start;flex-direction:column}.ary-membership-admin-head button{width:100%}.ary-membership-admin-actions button{flex:1}}
+
+.ary-owner2-admin-entry{display:flex;justify-content:flex-end;margin:10px 0 16px}
+.ary-owner2-admin-entry a{display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:9px 14px;border:1px solid #3d6387;border-radius:11px;background:#10243a;color:#dff7ff;text-decoration:none;font-size:12px;font-weight:800}
+.ary-owner2-admin-entry a:focus-visible{outline:3px solid #4fd6e6;outline-offset:3px}
