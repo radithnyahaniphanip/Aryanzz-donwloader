@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS redeem_redemptions (
   code_hash TEXT NOT NULL,
   user_id TEXT NOT NULL,
   redeemed_at INTEGER NOT NULL,
-  reward_expires_at INTEGER NOT NULL,
+  reward_expires_at INTEGER,
   UNIQUE(code_hash,user_id),
   FOREIGN KEY (code_hash) REFERENCES redeem_codes(code_hash) ON DELETE CASCADE,
   FOREIGN KEY (user_id) REFERENCES auth_users(id) ON DELETE CASCADE
