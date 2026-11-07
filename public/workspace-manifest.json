@@ -5,7 +5,8 @@
     "Edit only the workspace module that owns the requested page or feature.",
     "Keep CSS selectors rooted under the workspace root; do not add broad body, html, or generic panel overrides to page modules.",
     "Keep downloader/provider logic separate from Home layout, Profile UI, Owner UI, and navigation.",
-    "Shared navigation may change visibility and route state only; it must not rewrite downloader, profile, owner, or library feature data."
+    "Shared navigation may change visibility and route state only; it must not rewrite downloader, profile, owner, or library feature data.",
+    "Auth UI, auth API, and security controls are owned by Auth and Security modules. Profile, Owner, Tools, Library, and Downloader must not edit auth assets or authentication storage."
   ],
   "workspaces": {
     "home": {
@@ -82,6 +83,36 @@
       ],
       "js": [
         "/workspace-navigation.js"
+      ]
+    },
+    "auth": {
+      "root": "#aryAuthGate",
+      "css": [
+        "/auth-gate.css"
+      ],
+      "js": [
+        "/auth-gate.js"
+      ],
+      "features": [
+        "server login",
+        "registration and email verification",
+        "password recovery",
+        "session restoration",
+        "account status messaging"
+      ]
+    },
+    "security": {
+      "root": "Worker /api/auth/*",
+      "css": [],
+      "js": [
+        "src/auth.js"
+      ],
+      "features": [
+        "server-side sessions",
+        "device identity",
+        "rate limiting",
+        "CAPTCHA verification",
+        "moderation and audit"
       ]
     }
   },
@@ -238,5 +269,15 @@
     "status": "full-release",
     "updatePolicy": "Keep the public release label fixed at V1. Internal build identifiers may advance only for cache invalidation, deployment verification, and recovery checkpoints.",
     "architecture": "One release with independently owned feature modules. Do not flatten unrelated feature logic into a single handler or stylesheet."
+  },
+  "architectureGuard": {
+    "policy": "Changes must stay within the owning module. Shared shell changes require an explicit cross-module reason and regression coverage.",
+    "moduleOwnership": "workspace-manifest.json",
+    "requiredChecks": [
+      "module-boundaries-smoke",
+      "auth-gate-smoke",
+      "auth-backend-smoke",
+      "release-smoke"
+    ]
   }
 }
