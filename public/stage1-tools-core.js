@@ -191,7 +191,7 @@ document.addEventListener("click",event=>{
 });
 async function boot(){
  try{
-  const response=await fetch("/stage1-tools-panel.html?v=__ARYANZZ_VERSION__",{cache:"no-cache"});
+  const response=await fetch("/stage1-tools-panel.html",{cache:"no-cache"});
   if(!response.ok)throw new Error("Panel alat tidak dapat dimuat (HTTP "+response.status+").");
   const markup=await response.text();
   if(!markup.includes('id="v1ltApp"'))throw new Error("Struktur panel alat tidak valid.");
