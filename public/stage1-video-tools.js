@@ -121,6 +121,7 @@ stage.register("video-lightweight",(root,core)=>{
    const type=$("v1ltFrameFormat").value;frameBlob=await core.canvasBlob(frameCanvas,type,.94);frameName=core.safeName(frameFile.files[0].name.replace(/\.[^.]+$/,""))+"-frame-"+time.toFixed(1)+"."+(type==="image/png"?"png":"jpg");
    frameCanvas.hidden=false;$("v1ltFrameDownload").disabled=false;setStatus("v1ltFrameStatus","Frame berhasil diambil pada "+time.toFixed(2)+" detik.","success");
   }catch(error){setStatus("v1ltFrameStatus",error.message,"error")}
+  finally{frameCapture.disabled=!Number.isFinite(frameVideo.duration)}
  });
  $("v1ltFrameDownload")?.addEventListener("click",()=>{if(frameBlob)core.downloadBlob(frameBlob,frameName)});
  const sheetVideo=$("v1ltSheetVideo"),sheetFile=$("v1ltSheetFile"),sheetRun=$("v1ltSheetGenerate"),sheetCanvas=$("v1ltSheetCanvas");
