@@ -23,7 +23,7 @@ const catalog=await handleMembership(new Request("https://aryanzz.example/api/me
 assert.equal(catalog.status,200);
 const catalogBody=await catalog.json();assert.equal(catalogBody.plans.length,7);assert.equal(catalogBody.free.id,"free");
 assert.equal(catalogBody.pricingStatus,"proposed");
-assert.equal(catalogBody.paymentEnabled,false);
+assert.equal(catalogBody.paymentEnabled,true,"Checkout is enabled when D1 is bound and the merchant QRIS is built in.");
 assert.equal(catalogBody.qrAvailable,true,"The supplied merchant QRIS must be available even when checkout database is not ready");
 const qrisConfig=await handleMembership(new Request("https://aryanzz.example/api/membership/payment-config"),{});
 const qrisConfigBody=await qrisConfig.json();assert.equal(qrisConfigBody.enabled,true);assert.equal(qrisConfigBody.checkoutEnabled,false);assert.ok(qrisConfigBody.qrisImageUrl.startsWith("data:image/png;base64,"));
