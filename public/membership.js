@@ -2,20 +2,23 @@
 const root=document.getElementById("toolsArea");const nav=document.querySelector(".nav");if(!root||!nav)return;
 const money=n=>"Rp"+Number(n).toLocaleString("id-ID");
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const plans=[
-{id:"starter",name:"Starter",price:80000,term:"30 hari",desc:"Paket pengenalan Membership ARYANZZ."},
-{id:"plus",name:"Plus",price:140000,term:"60 hari",desc:"Akses Membership untuk dua bulan."},
-{id:"pro",name:"Pro",price:189000,term:"90 hari",desc:"Paket Membership tiga bulan."},
-{id:"elite",name:"Elite",price:328000,term:"180 hari",desc:"Akses Membership enam bulan."},
-{id:"ultimate",name:"Ultimate",price:500000,term:"365 hari",desc:"Akses Membership satu tahun."},
-{id:"lifetime",name:"Lifetime",price:1800000,term:"Lifetime",desc:"Membership tanpa tanggal kedaluwarsa."},
-{id:"founder",name:"Founder Signature",price:5900000,term:"Lifetime",desc:"Paket pendukung pendiri dengan identitas khusus."}
-];
+let plans=[];
 const panel=document.createElement("section");panel.id="aryMembershipPanel";panel.className="panel ary-membership";panel.hidden=true;
 panel.innerHTML='<div class="ary-mem-head"><div><span class="ary-mem-eyebrow">ARYANZZ V1 · MEMBER CENTER</span><h2>Membership Center</h2><p>Pilih paket untuk mendukung pengembangan ARYANZZ. Free Member tetap tersedia.</p></div><div class="ary-mem-current" id="aryMemCurrent">Memeriksa akun…</div></div><div class="ary-mem-grid" id="aryMemPlans"></div><div class="ary-mem-history"><div class="ary-mem-history-head"><h3>Riwayat pesanan</h3><button type="button" id="aryMemRefresh">Muat ulang</button></div><div id="aryMemOrders">Login untuk melihat riwayat.</div></div><p class="ary-mem-note" id="aryMemNote" role="status">Pembayaran belum diaktifkan. Pesanan hanya dibuat sebagai draft sampai metode pembayaran dan penerima dana dikonfigurasi.</p>';
 root.append(panel);
 const button=document.createElement("button");button.type="button";button.dataset.panel=panel.id;button.textContent="Membership";button.className="ary-mem-nav";nav.append(button);
-function renderPlans(){document.getElementById("aryMemPlans").innerHTML=plans.map((p,i)=>'<article class="ary-mem-card '+(i===2?"ary-mem-featured":"")+'"><div class="ary-mem-card-top"><span>'+String(i+1).padStart(2,"0")+' / MEMBERSHIP</span><b>'+esc(p.name)+'</b></div><div class="ary-mem-price">'+money(p.price)+'</div><div class="ary-mem-term">'+p.term+'</div><p>'+esc(p.desc)+'</p><button type="button" data-buy="'+p.id+'">Buat pesanan</button></article>').join("")}
+async function loadCatalog(){
+ const note=document.getElementById("aryMemNote");
+ try{
+  const response=await fetch("/api/membership/catalog",{cache:"no-store",headers:{accept:"application/json"}});
+  const data=await response.json();
+  if(!response.ok||!data.ok||!Array.isArray(data.plans))throw Error(data.error||"Katalog Membership belum tersedia.");
+  plans=data.plans.map(p=>({...p,term:p.durationDays===null?"Lifetime":p.durationDays+" hari",desc:p.summary||""}));
+  if(note)note.textContent="Harga pada tujuh paket masih berupa rancangan dan belum final. Pembayaran belum dibuka; jangan melakukan transfer. Free Member tetap gratis.";
+  renderPlans();
+ }catch(error){if(note)note.textContent=error.message}
+}
+function renderPlans(){document.getElementById("aryMemPlans").innerHTML=plans.map((p,i)=>'<article class="ary-mem-card '+(i===2?"ary-mem-featured":"")+'"><div class="ary-mem-card-top"><span>'+String(i+1).padStart(2,"0")+' / MEMBERSHIP</span><b>'+esc(p.name)+'</b></div><div class="ary-mem-price">'+money(p.price)+'</div><div class="ary-mem-term">'+p.term+'</div><p>'+esc(p.desc)+'</p><button type="button" data-buy="'+p.id+'">Buat draft pesanan</button></article>').join("")}
 async function load(){
  const current=document.getElementById("aryMemCurrent"),orders=document.getElementById("aryMemOrders"),note=document.getElementById("aryMemNote");
  try{const r=await fetch("/api/membership/me",{credentials:"same-origin",cache:"no-store"});const d=await r.json();
@@ -32,5 +35,5 @@ panel.addEventListener("click",async e=>{
  catch(err){note.textContent=err.message}finally{buy.disabled=false}
 });
 document.getElementById("aryMemRefresh").addEventListener("click",load);
-renderPlans();load();
+loadCatalog();load();
 })();
