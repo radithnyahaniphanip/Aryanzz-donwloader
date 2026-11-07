@@ -42,3 +42,14 @@ body.ary-legendary-background:after{content:"";position:fixed;inset:0;z-index:-1
 @keyframes aryLegendaryStars{to{background-position:190px 170px,-260px 220px,230px -240px,-310px 280px}}
 @media(prefers-reduced-motion:reduce){.ary-legendary-frame,.ary-legendary-frame:before,.ary-legendary-frame:after,.ary-legendary-banner:after,body.ary-legendary-background:after{animation:none!important}}
 @media(max-width:460px){.ary-redeem-form{grid-template-columns:1fr}.ary-redeem-form button{min-height:42px}}
+
+
+.ary-mem-admin{margin-top:16px;padding:16px;border:1px solid #8d6bd0;border-radius:16px;background:linear-gradient(145deg,#251d40,#111a2b)}
+.ary-mem-admin[hidden]{display:none!important}
+.ary-mem-admin h3{margin:0 0 12px;font-size:15px;color:#e9d9ff}
+.ary-mem-admin-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+.ary-mem-admin-row label{display:grid;gap:5px;color:#aebed5;font-size:10px}
+.ary-mem-admin-row input,.ary-mem-admin textarea{width:100%;min-width:0;box-sizing:border-box;border:1px solid #425879;border-radius:9px;padding:10px;background:#091526;color:#f4f7ff}
+.ary-mem-admin>button{margin-top:12px;border:0;border-radius:10px;padding:11px 15px;background:linear-gradient(110deg,#9465ff,#37c4e6);color:white;font-weight:900}
+.ary-mem-admin textarea{display:block;margin-top:12px;resize:vertical;font:12px/1.6 ui-monospace,monospace}
+@media(max-width:520px){.ary-mem-admin-row{grid-template-columns:1fr}}
