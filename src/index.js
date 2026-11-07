@@ -465,7 +465,7 @@ async function freePublicMediaInfo(rawUrl,requestUrl){
     snackvideo:"Gunakan tautan share video publik, bukan halaman profil atau halaman aplikasi.",
     capcut:"Gunakan tautan share hasil video yang dapat diputar publik. Draft pribadi dan template/proyek yang belum diekspor bukan file MP4 yang bisa diunduh.",
     pinterest:"Gunakan tautan Pin publik yang berisi video; Pin gambar tidak dapat diunduh sebagai MP4.",
-    facebook:"Gunakan tautan video/Reels publik yang bisa diputar tanpa login.",
+    facebook:"Gunakan tautan postingan publik. Postingan foto diproses melalui ekstraksi gambar, sedangkan lagu hanya dapat diunduh jika halaman publik menyediakan stream audio langsung. Postingan privat, login-only, DRM, atau musik yang tidak diekspos sebagai file audio tidak dapat dipaksa diunduh.",
     twitter:"Gunakan tautan post X yang memuat video publik; post teks atau gambar tidak menghasilkan MP4.",
     reddit:"Gunakan post Reddit atau v.redd.it yang memuat video publik; beberapa video memakai audio terpisah.",
     vimeo:"Gunakan video Vimeo publik yang tidak dibatasi password atau pengaturan privasi.",
@@ -629,7 +629,7 @@ async function freePublicMediaInfo(rawUrl,requestUrl){
   const userMessage=restricted
     ? "TikTok tidak mengirim stream video publik untuk tautan ini. Provider juga gagal mengambil metadata; video mungkin dibatasi usia, privasi, wilayah, atau memerlukan login. Coba tautan video lain yang dapat diputar tanpa login."
     : label+" belum bisa diproses oleh provider gratis. "+(primaryError||"Provider tidak mengembalikan hasil.").slice(0,320)+" "+(guidance[key]||"Periksa kembali tautan publik.");
-  return json({ok:false,error:userMessage,diagnostics:primaryError.slice(0,1100),errorType:restricted?"source_unavailable_or_restricted":"provider_unavailable",provider:"Fallback cascade",fallbackTried:key==="tiktok",canonicalUrl:canonicalUrl!==rawUrl?canonicalUrl:undefined},502);
+  return json({ok:false,error:userMessage,diagnostics:primaryError.slice(0,1100),errorType:restricted?"source_unavailable_or_restricted":"provider_unavailable",provider:"Fallback cascade",fallbackTried:true,canonicalUrl:canonicalUrl!==rawUrl?canonicalUrl:undefined},502);
 }
 
 function mediaAsciiAt(bytes,offset,value){
