@@ -7,7 +7,6 @@ const empty=root?.querySelector("#toolEmpty");
 if(!root||!input||!grid||!filters)return;
 root.dataset.workspace="tools";
 let category="all";
-const cards=[...grid.querySelectorAll(".tool")];
 function apply(){
  let visible=0;
  const query=input.value.toLowerCase().trim();
