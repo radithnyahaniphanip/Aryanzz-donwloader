@@ -94,3 +94,25 @@ body.ary-legendary-background{background-image:radial-gradient(ellipse at 12% 15
 .ary-mem-nav{display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:3px!important}
 .ary-mem-nav-logo{display:grid;place-items:center;width:23px;height:23px;border-radius:8px;background:linear-gradient(135deg,#9c67ff,#35d4e8);color:#fff;font-size:15px;line-height:1;box-shadow:0 0 13px #8d6aff66}
 .ary-mem-nav-label{display:block;font-size:10px;line-height:1.1}
+
+/* Device-local Studio catalog: available without account database. */
+.ary-cosmetic-card{min-width:0}
+.ary-cosmetic-card small{min-height:34px;line-height:1.5}
+.local-art-aurora{background:conic-gradient(from 20deg,#4de4f2,#a46aff,#fff0a8,#3e9dff,#4de4f2)}
+.local-art-royal{background:linear-gradient(135deg,#270b16,#a62e35 35%,#f3c76b 50%,#4b101b 75%,#100c18)}
+.local-art-nebula{background:radial-gradient(circle at 25% 35%,#f2a5ff,transparent 25%),radial-gradient(circle at 70% 65%,#43c9ff,transparent 32%),linear-gradient(135deg,#100c2e,#34205d)}
+.local-art-obsidian{background:repeating-linear-gradient(135deg,#0c1019 0 8px,#303b4c 9px 11px,#101827 12px 19px)}
+.local-art-crimson{background:radial-gradient(ellipse at 25% 20%,#ff9b42aa,transparent 42%),linear-gradient(140deg,#160713,#781c2d 55%,#100a16)}
+.local-art-midnight{background:radial-gradient(circle at 70% 25%,#74d9ff88,transparent 22%),radial-gradient(circle at 20% 75%,#9275ff88,transparent 30%),linear-gradient(145deg,#061327,#12294c)}
+.ary-local-frame-aurora{border:5px solid #9c78ff!important;outline:3px solid #55dce8!important;box-shadow:0 0 0 6px #f3d68c,0 0 25px #55dce8!important}
+.ary-local-frame-royal{border:5px double #f3c76b!important;outline:3px solid #8e2639!important;box-shadow:0 0 0 6px #27101a,0 0 22px #d74d54!important}
+.ary-local-frame-nebula{border:5px solid #bb83ff!important;outline:3px dashed #54d7ff!important;box-shadow:0 0 0 6px #251449,0 0 25px #9b62ff!important}
+.ary-local-frame-obsidian{border:5px ridge #a9bbd1!important;outline:3px solid #34465d!important;box-shadow:0 0 0 6px #111923,0 0 22px #9eb5c9!important}
+body.ary-local-bg-aurora{background-image:radial-gradient(ellipse at 15% 12%,#25d7d866,transparent 35%),radial-gradient(ellipse at 82% 28%,#9a5cff66,transparent 38%),linear-gradient(145deg,#071326,#171033 58%,#071a2a)!important}
+body.ary-local-bg-crimson{background-image:radial-gradient(ellipse at 20% 15%,#ef4d4d55,transparent 38%),radial-gradient(ellipse at 80% 80%,#e8a63f44,transparent 35%),linear-gradient(145deg,#170711,#310d1c 55%,#080b18)!important}
+body.ary-local-bg-nebula{background-image:radial-gradient(ellipse at 20% 25%,#a65cff77,transparent 35%),radial-gradient(ellipse at 80% 65%,#27b8ed66,transparent 38%),linear-gradient(145deg,#080b20,#1c1640 55%,#080b18)!important}
+body.ary-local-bg-midnight{background-image:radial-gradient(ellipse at 15% 18%,#3da7e955,transparent 35%),radial-gradient(ellipse at 85% 70%,#5a76d455,transparent 38%),linear-gradient(145deg,#06111f,#102743 58%,#050b16)!important}
+.ary-local-banner-aurora{background:linear-gradient(120deg,#173e66,#55327e,#1b6171)!important}
+.ary-local-banner-crimson{background:linear-gradient(120deg,#320c1a,#8a2535,#6c431b)!important}
+.ary-local-banner-nebula{background:linear-gradient(120deg,#1a1749,#56327f,#154c70)!important}
+.ary-local-banner-midnight{background:linear-gradient(120deg,#091c36,#1d4169,#17234c)!important}
