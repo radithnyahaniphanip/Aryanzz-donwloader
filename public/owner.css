@@ -333,3 +333,20 @@ body[data-view="owner"] .nav button[data-nav="owner"]{font-weight:1000}
 }
 
 .ary-ban-tools{margin-top:16px;padding:14px;border:1px solid #7893b633;border-radius:14px;background:#091626}.ary-ban-tools h4{margin:0 0 6px;color:#f2f6ff;font-size:14px}.ary-ban-tools>p{font-size:10px;line-height:1.6;color:#9fb1ca}.ary-ban-tools label{display:grid;gap:5px;margin:9px 0;color:#cbdcf1;font-size:11px;font-weight:700}.ary-ban-tools textarea{resize:vertical;min-height:62px}.ary-ban-actions{display:flex;gap:8px;flex-wrap:wrap}.ary-ban-actions>*{flex:1;min-width:130px}.ary-ban-unban{border:1px solid #7d96b94a;background:#17263b;color:#dce8fb;border-radius:10px;padding:10px;font-weight:800;font-size:11px}#ownerBanStatus{min-height:16px;margin:8px 0 0;color:#8fe0c0;font-size:11px}#ownerBanStatus[data-error="1"]{color:#ff9aa8}
+
+/* ARYANZZ V1 Membership order moderation — scoped inside Owner security center */
+.ary-membership-admin{margin-top:18px;padding:15px;border:1px solid #34506f;border-radius:15px;background:#0b1728}
+.ary-membership-admin-head,.ary-membership-admin-order-top{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.ary-membership-admin-head h4{margin:0;font-size:16px}.ary-membership-admin-head p{margin:5px 0;color:#9aacc8;font-size:12px;line-height:1.5}
+.ary-membership-admin-head button,.ary-membership-admin-actions button{border:1px solid #365d87;border-radius:9px;background:#183456;color:#e8f3ff;padding:9px 12px;font-weight:700}
+.ary-membership-admin-list{display:grid;gap:10px;margin-top:12px}
+.ary-membership-admin-order{border:1px solid #2b4361;border-radius:12px;padding:12px;background:#101e31}
+.ary-membership-admin-order-top b,.ary-membership-admin-order-top small{display:block;overflow-wrap:anywhere}.ary-membership-admin-order-top small{font-size:11px;color:#9aacc8;margin-top:4px}
+.ary-membership-admin-order-top span{font-size:10px;font-weight:800;color:#f0ca79;border:1px solid #725a31;border-radius:20px;padding:5px 8px}
+.ary-membership-admin-order-top span[data-status="paid"]{color:#79e5b5;border-color:#28664e}
+.ary-membership-admin-order p{font-size:12px;color:#b8c9df}
+.ary-membership-admin-confirm,.ary-membership-admin-note{display:flex;gap:8px;align-items:flex-start;margin:10px 0;color:#d7e5f7;font-size:12px;line-height:1.5}
+.ary-membership-admin-confirm input{margin-top:3px}
+.ary-membership-admin-note{display:block}.ary-membership-admin-note textarea{display:block;width:100%;min-height:55px;margin-top:5px;border:1px solid #334c6b;border-radius:8px;background:#081321;color:#fff;padding:9px}
+.ary-membership-admin-actions{display:flex;gap:8px;flex-wrap:wrap}.ary-membership-admin-actions button[data-membership-review="approve"]{background:#15523f;border-color:#287b5d}.ary-membership-admin-actions button[data-membership-review="reject"]{background:#4b242b;border-color:#82414c}
+@media(max-width:520px){.ary-membership-admin-head{align-items:flex-start;flex-direction:column}.ary-membership-admin-head button{width:100%}.ary-membership-admin-actions button{flex:1}}
