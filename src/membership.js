@@ -34,7 +34,6 @@ async function membershipFor(userId,env){
 }
 async function handleCosmetics(request,env){
  const url=new URL(request.url),path=url.pathname;
- if(path==="/api/cosmetics/me"||path==="/api/redeem/claim"||path==="/api/membership/admin/redeem-codes")return handleCosmetics(request,env);
  if(!env.AUTH_DB||typeof env.AUTH_DB.prepare!=="function")return json({ok:false,error:"Database akun belum dikonfigurasi."},503);
  const user=await currentUser(request,env);
  if(!user)return json({ok:false,error:"Silakan login terlebih dahulu."},401);
@@ -94,6 +93,7 @@ async function handleCosmetics(request,env){
 
 async function handleMembership(request,env){
  const url=new URL(request.url),path=url.pathname;
+ if(path==="/api/cosmetics/me"||path==="/api/redeem/claim"||path==="/api/membership/admin/redeem-codes")return handleCosmetics(request,env);
  if(!env.AUTH_DB||typeof env.AUTH_DB.prepare!=="function")return json({ok:false,error:"Database akun belum dikonfigurasi."},503);
  if(path==="/api/membership/catalog"&&request.method==="GET")return json({ok:true,pricingStatus:"proposed",paymentEnabled:false,plans:PLANS,free:{id:"free",name:"Free Member",price:0,summary:"Tetap tersedia tanpa pembayaran."}});
  if(path==="/api/membership/me"&&request.method==="GET"){
