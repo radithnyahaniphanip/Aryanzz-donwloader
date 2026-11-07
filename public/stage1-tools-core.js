@@ -83,11 +83,20 @@ function dosDate(date=new Date()){
 }
 function u16(view,offset,value){view.setUint16(offset,value,true)}
 function u32(view,offset,value){view.setUint32(offset,value>>>0,true)}
-async function transformRaw(bytes,mode){
+async function transformRaw(bytes,mode,maxOutput=MAX_FILE){
  const Constructor=mode==="compress"?globalThis.CompressionStream:globalThis.DecompressionStream;
  if(typeof Constructor!=="function")throw new Error("Browser tidak mendukung kompresi DEFLATE untuk ZIP ini.");
  const stream=new Blob([bytes]).stream().pipeThrough(new Constructor("deflate-raw"));
- return new Uint8Array(await new Response(stream).arrayBuffer());
+ const reader=stream.getReader(),chunks=[];let total=0;
+ try{
+  while(true){
+   const {done,value}=await reader.read();if(done)break;
+   total+=value.byteLength;
+   if(total>maxOutput){await reader.cancel();throw new Error("Isi hasil ZIP melewati batas aman "+formatBytes(maxOutput)+".");}
+   chunks.push(new Uint8Array(value));
+  }
+ }finally{try{reader.releaseLock()}catch{}}
+ return concatBytes(chunks);
 }
 async function createZip(entries){
  if(!Array.isArray(entries)||!entries.length)throw new Error("Tambahkan minimal satu file.");
@@ -143,7 +152,7 @@ async function extractZip(file){
   const localNameLen=view.getUint16(localOffset+26,true),localExtraLen=view.getUint16(localOffset+28,true),dataStart=localOffset+30+localNameLen+localExtraLen,dataEnd=dataStart+compressedSize;
   if(dataEnd>bytes.length)throw new Error("Isi file ZIP terpotong.");
   const packed=bytes.slice(dataStart,dataEnd);
-  const data=method===0?packed:await transformRaw(packed,"decompress");
+  const data=method===0?packed:await transformRaw(packed,"decompress",size);
   if(data.length!==size||crc32(data)!==checksum)throw new Error("Pemeriksaan integritas gagal untuk "+name+".");
   out.push({name:safeName(name.split("/").pop()||"file.bin"),data:new Blob([data],{type:"application/octet-stream"})});
  }
