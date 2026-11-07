@@ -48,3 +48,8 @@ assert.ok(ui.includes("Lanjut bayar QRIS")&&ui.includes("QRIS belum tersedia"),"
 assert.ok(ui.includes('data-panel="aryCosmeticsStudio"')&&ui.includes("loadCosmeticsStudio()"),"Opening Avatar & Background Studio must load the account inventory");
 
 assert.ok(ui.includes('navItem.dataset.nav==="membership"){load();loadCatalog()}')&&ui.includes('navItem.dataset.nav==="profile")loadPrestige()'),"Membership and redeem status must refresh when their navigation tabs open after login");
+
+const ownerMarkup=fs.readFileSync(new URL("../public/index.html",import.meta.url),"utf8");
+const ownerScript=fs.readFileSync(new URL("../public/owner.js",import.meta.url),"utf8");
+assert.ok(!ownerMarkup.includes("Pesanan Membership")&&!ownerScript.includes("ownerMembershipRefresh"),"Owner panel must not contain Membership order management");
+assert.ok(ui.includes("ary-mem-nav-logo")&&ui.includes("ary-mem-nav-label"),"Membership nav must show its branded logo and label");
