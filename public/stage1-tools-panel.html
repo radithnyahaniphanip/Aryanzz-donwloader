@@ -1,0 +1,143 @@
+<div class="v1lt-shell" id="v1ltApp">
+  <header class="v1lt-hero">
+    <div><span class="v1lt-kicker">ARYANZZ V1 · LIGHTWEIGHT LAB</span><h2>Tools Studio</h2><p>14 alat praktis untuk memeriksa video, mengolah gambar, mengelola file, dan membantu pekerjaan developer. Proses lokal di perangkat jika memungkinkan.</p></div>
+    <div class="v1lt-hero-mark" aria-hidden="true">✦</div>
+  </header>
+  <div class="v1lt-hub" id="v1ltHub">
+    <div class="v1lt-section-heading"><div><span class="v1lt-kicker">PILIH ALAT</span><h3>Lightweight Tools</h3><p>Ketuk salah satu alat untuk mulai. File asli tidak diubah.</p></div><span class="v1lt-count">14 TOOLS</span></div>
+    <div class="v1lt-grid">
+      <button type="button" class="v1lt-tool-card" data-v1lt-open="video-metadata"><span class="v1lt-card-icon">▣</span><b>Video Metadata Inspector</b><small>Periksa durasi, resolusi, codec MP4, FPS, bitrate perkiraan, dan track audio.</small><em>VIDEO</em></button>
+      <button type="button" class="v1lt-tool-card" data-v1lt-open="video-frame"><span class="v1lt-card-icon">▧</span><b>Video Frame Extractor</b><small>Ambil frame pada detik tertentu dan ekspor PNG atau JPG.</small><em>VIDEO</em></button>
+      <button type="button" class="v1lt-tool-card" data-v1lt-open="video-sheet"><span class="v1lt-card-icon">▦</span><b>Video Contact Sheet</b><small>Buat lembar thumbnail dari beberapa titik dalam video.</small><em>VIDEO</em></button>
+      <button type="button" class="v1lt-tool-card" data-v1lt-open="image-exif"><span class="v1lt-card-icon">◉</span><b>EXIF Inspector</b><small>Lihat dimensi, kamera, tanggal, orientasi, dan keberadaan GPS.</small><em>IMAGE</em></button>
+      <button type="button" class="v1lt-tool-card" data-v1lt-open="image-palette"><span class="v1lt-card-icon">◈</span><b>Color Palette Extractor</b><small>Ekstrak warna dominan dan unduh palet sebagai CSS.</small><em>IMAGE</em></button>
+      <button type="button" class="v1lt-tool-card" data-v1lt-open="image-blur"><span class="v1lt-card-icon">◌</span><b>Privacy Blur</b><small>Blur, pixelate, atau tutup bagian sensitif foto dengan kuas.</small><em>IMAGE</em></button>
+      <button type="button" class="v1lt-tool-card" data-v1lt-open="image-sticker"><span class="v1lt-card-icon">✧</span><b>Sticker Maker</b><small>Hapus latar manual, atur outline dan bayangan, ekspor PNG.</small><em>IMAGE</em></button>
+      <button type="button" class="v1lt-tool-card" data-v1lt-open="file-zip"><span class="v1lt-card-icon">▤</span><b>ZIP Creator & Extractor</b><small>Buat ZIP dan ekstrak arsip ZIP yang didukung browser.</small><em>FILES</em></button>
+      <button type="button" class="v1lt-tool-card" data-v1lt-open="file-rename"><span class="v1lt-card-icon">✎</span><b>Batch File Renamer</b><small>Atur nama banyak file sekaligus dan unduh sebagai ZIP.</small><em>FILES</em></button>
+      <button type="button" class="v1lt-tool-card" data-v1lt-open="file-duplicates"><span class="v1lt-card-icon">⧉</span><b>Duplicate File Finder</b><small>Temukan file identik menggunakan hash SHA-256.</small><em>FILES</em></button>
+      <button type="button" class="v1lt-tool-card" data-v1lt-open="file-split"><span class="v1lt-card-icon">⇄</span><b>File Splitter & Joiner</b><small>Pecah file menjadi bagian dan gabungkan kembali.</small><em>FILES</em></button>
+      <button type="button" class="v1lt-tool-card" data-v1lt-open="file-csv"><span class="v1lt-card-icon">▥</span><b>CSV Viewer & Filter</b><small>Baca, cari, sortir, filter, dan ekspor CSV.</small><em>FILES</em></button>
+      <button type="button" class="v1lt-tool-card" data-v1lt-open="dev-jwt"><span class="v1lt-card-icon">{ }</span><b>JWT Decoder</b><small>Baca header, payload, dan waktu kedaluwarsa token.</small><em>DEVELOPER</em></button>
+      <button type="button" class="v1lt-tool-card" data-v1lt-open="dev-regex"><span class="v1lt-card-icon">.*</span><b>Regex Playground</b><small>Uji pola regex dengan highlight dan batas waktu worker.</small><em>DEVELOPER</em></button>
+    </div>
+    <p class="v1lt-privacy-note"><span>◆</span> File lokal diproses di browser. ARYANZZ tidak mengunggah file pilihanmu untuk alat-alat ini.</p>
+  </div>
+
+  <section class="v1lt-view" data-v1lt-view="video-metadata" hidden>
+    <div class="v1lt-view-head"><button type="button" class="v1lt-back" data-v1lt-back>← Semua alat</button><span class="v1lt-kicker">VIDEO · 01</span><h3>Video Metadata Inspector</h3><p>Periksa metadata yang tersedia dari file video lokal. Codec dan FPS dibaca langsung dari struktur MP4 bila dapat dikenali.</p></div>
+    <label class="v1lt-upload">Pilih video<input id="v1ltMetaFile" type="file" accept="video/*"></label>
+    <div class="v1lt-status" id="v1ltMetaStatus" role="status" aria-live="polite">Pilih file video untuk mulai.</div>
+    <div class="v1lt-result-grid" id="v1ltMetaResult"><div class="v1lt-empty">Metadata akan muncul di sini.</div></div>
+  </section>
+
+  <section class="v1lt-view" data-v1lt-view="video-frame" hidden>
+    <div class="v1lt-view-head"><button type="button" class="v1lt-back" data-v1lt-back>← Semua alat</button><span class="v1lt-kicker">VIDEO · 02</span><h3>Video Frame Extractor</h3><p>Pilih posisi waktu, lihat frame aktual, lalu simpan sebagai gambar.</p></div>
+    <label class="v1lt-upload">Pilih video<input id="v1ltFrameFile" type="file" accept="video/*"></label>
+    <video id="v1ltFrameVideo" class="v1lt-hidden-media" preload="metadata" playsinline></video>
+    <div class="v1lt-control-grid"><label>Posisi waktu (detik)<input id="v1ltFrameTime" type="number" min="0" step="0.1" value="0"></label><label>Format hasil<select id="v1ltFrameFormat"><option value="image/png">PNG</option><option value="image/jpeg">JPG</option></select></label></div>
+    <button type="button" class="v1lt-primary" id="v1ltFrameCapture" disabled>Ambil frame</button>
+    <div class="v1lt-status" id="v1ltFrameStatus" role="status" aria-live="polite">Belum ada video dipilih.</div>
+    <canvas id="v1ltFrameCanvas" class="v1lt-canvas" hidden></canvas>
+    <button type="button" class="v1lt-secondary" id="v1ltFrameDownload" disabled>Unduh frame</button>
+  </section>
+
+  <section class="v1lt-view" data-v1lt-view="video-sheet" hidden>
+    <div class="v1lt-view-head"><button type="button" class="v1lt-back" data-v1lt-back>← Semua alat</button><span class="v1lt-kicker">VIDEO · 03</span><h3>Video Contact Sheet</h3><p>Buat kumpulan thumbnail yang diambil merata dari durasi video.</p></div>
+    <label class="v1lt-upload">Pilih video<input id="v1ltSheetFile" type="file" accept="video/*"></label>
+    <video id="v1ltSheetVideo" class="v1lt-hidden-media" preload="metadata" playsinline></video>
+    <div class="v1lt-control-grid"><label>Jumlah thumbnail<select id="v1ltSheetCount"><option>8</option><option selected>12</option><option>16</option><option>24</option><option>32</option><option>40</option></select></label><label>Kolom<select id="v1ltSheetColumns"><option>2</option><option selected>3</option><option>4</option><option>5</option></select></label></div>
+    <button type="button" class="v1lt-primary" id="v1ltSheetGenerate" disabled>Buat contact sheet</button>
+    <div class="v1lt-status" id="v1ltSheetStatus" role="status" aria-live="polite">Pilih video untuk mulai.</div>
+    <div class="v1lt-progress"><i id="v1ltSheetProgress"></i></div>
+    <canvas id="v1ltSheetCanvas" class="v1lt-canvas" hidden></canvas>
+    <button type="button" class="v1lt-secondary" id="v1ltSheetDownload" disabled>Unduh contact sheet</button>
+  </section>
+
+  <section class="v1lt-view" data-v1lt-view="image-exif" hidden>
+    <div class="v1lt-view-head"><button type="button" class="v1lt-back" data-v1lt-back>← Semua alat</button><span class="v1lt-kicker">IMAGE · 04</span><h3>EXIF Inspector</h3><p>Baca metadata foto. Lokasi GPS hanya ditandai tersedia/tidak tersedia agar koordinat tidak terpampang tanpa sengaja.</p></div>
+    <label class="v1lt-upload">Pilih foto<input id="v1ltExifFile" type="file" accept="image/*"></label>
+    <div class="v1lt-status" id="v1ltExifStatus" role="status" aria-live="polite">Pilih foto JPG untuk membaca EXIF. Format lain tetap menampilkan dimensi.</div>
+    <div class="v1lt-result-grid" id="v1ltExifResult"><div class="v1lt-empty">Informasi foto akan muncul di sini.</div></div>
+  </section>
+
+  <section class="v1lt-view" data-v1lt-view="image-palette" hidden>
+    <div class="v1lt-view-head"><button type="button" class="v1lt-back" data-v1lt-back>← Semua alat</button><span class="v1lt-kicker">IMAGE · 05</span><h3>Color Palette Extractor</h3><p>Ambil hingga delapan warna dominan dari foto dan unduh sebagai file CSS.</p></div>
+    <label class="v1lt-upload">Pilih gambar<input id="v1ltPaletteFile" type="file" accept="image/*"></label>
+    <div class="v1lt-status" id="v1ltPaletteStatus" role="status" aria-live="polite">Pilih gambar untuk membuat palet.</div>
+    <div class="v1lt-palette" id="v1ltPaletteResult"></div>
+    <button type="button" class="v1lt-secondary" id="v1ltPaletteDownload" disabled>Unduh palet CSS</button>
+  </section>
+
+  <section class="v1lt-view" data-v1lt-view="image-blur" hidden>
+    <div class="v1lt-view-head"><button type="button" class="v1lt-back" data-v1lt-back>← Semua alat</button><span class="v1lt-kicker">IMAGE · 06</span><h3>Privacy Blur</h3><p>Usapkan kuas pada bagian foto yang ingin disamarkan. Perubahan hanya diterapkan pada area yang kamu tandai.</p></div>
+    <label class="v1lt-upload">Pilih gambar<input id="v1ltBlurFile" type="file" accept="image/*"></label>
+    <div class="v1lt-control-grid"><label>Mode<select id="v1ltBlurMode"><option value="blur">Blur</option><option value="pixel">Pixelate</option><option value="solid">Tutup warna solid</option></select></label><label>Ukuran kuas <output id="v1ltBlurBrushValue">36 px</output><input id="v1ltBlurBrush" type="range" min="8" max="180" value="36"></label><label>Warna penutup<input id="v1ltBlurColor" type="color" value="#111827"></label></div>
+    <div class="v1lt-canvas-wrap"><canvas id="v1ltBlurCanvas" class="v1lt-canvas" hidden aria-label="Area gambar untuk ditandai"></canvas></div>
+    <div class="v1lt-actions"><button type="button" class="v1lt-secondary" id="v1ltBlurUndo" disabled>Undo goresan</button><button type="button" class="v1lt-secondary" id="v1ltBlurReset" disabled>Reset</button><button type="button" class="v1lt-primary" id="v1ltBlurExport" disabled>Ekspor PNG</button></div>
+    <div class="v1lt-status" id="v1ltBlurStatus" role="status" aria-live="polite">Pilih gambar, lalu usapkan kuas pada area sensitif.</div>
+  </section>
+
+  <section class="v1lt-view" data-v1lt-view="image-sticker" hidden>
+    <div class="v1lt-view-head"><button type="button" class="v1lt-back" data-v1lt-back>← Semua alat</button><span class="v1lt-kicker">IMAGE · 07</span><h3>Sticker Maker</h3><p>Hapus latar secara manual dengan kuas, lalu buat outline dan bayangan. PNG transparan direkomendasikan.</p></div>
+    <label class="v1lt-upload">Pilih gambar<input id="v1ltStickerFile" type="file" accept="image/*"></label>
+    <div class="v1lt-control-grid"><label>Mode kuas<select id="v1ltStickerMode"><option value="erase">Hapus latar</option><option value="restore">Pulihkan gambar</option></select></label><label>Ukuran kuas <output id="v1ltStickerBrushValue">32 px</output><input id="v1ltStickerBrush" type="range" min="4" max="160" value="32"></label><label>Tebal outline <output id="v1ltStickerOutlineValue">12 px</output><input id="v1ltStickerOutline" type="range" min="0" max="48" value="12"></label><label>Warna outline<input id="v1ltStickerColor" type="color" value="#ffffff"></label><label>Bayangan<input id="v1ltStickerShadow" type="checkbox" checked></label></div>
+    <canvas id="v1ltStickerCanvas" class="v1lt-canvas" hidden aria-label="Area edit stiker"></canvas>
+    <div class="v1lt-actions"><button type="button" class="v1lt-secondary" id="v1ltStickerReset" disabled>Reset gambar</button><button type="button" class="v1lt-primary" id="v1ltStickerExport" disabled>Ekspor stiker PNG</button></div>
+    <div class="v1lt-status" id="v1ltStickerStatus" role="status" aria-live="polite">Pilih gambar untuk mulai membuat stiker.</div>
+  </section>
+
+  <section class="v1lt-view" data-v1lt-view="file-zip" hidden>
+    <div class="v1lt-view-head"><button type="button" class="v1lt-back" data-v1lt-back>← Semua alat</button><span class="v1lt-kicker">FILES · 08</span><h3>ZIP Creator & Extractor</h3><p>Buat ZIP atau ekstrak arsip ZIP. Arsip terenkripsi dan ZIP64 tidak didukung pada rilis ringan ini.</p></div>
+    <div class="v1lt-subtool"><h4>Buat arsip ZIP</h4><label class="v1lt-upload">Pilih beberapa file<input id="v1ltZipFiles" type="file" multiple></label><button type="button" class="v1lt-primary" id="v1ltZipCreate" disabled>Buat ZIP</button><div class="v1lt-status" id="v1ltZipCreateStatus" role="status" aria-live="polite">Pilih file yang ingin dikemas.</div></div>
+    <div class="v1lt-subtool"><h4>Ekstrak arsip ZIP</h4><label class="v1lt-upload">Pilih file ZIP<input id="v1ltZipArchive" type="file" accept=".zip,application/zip"></label><button type="button" class="v1lt-primary" id="v1ltZipExtract" disabled>Ekstrak ZIP</button><div class="v1lt-status" id="v1ltZipExtractStatus" role="status" aria-live="polite">Pilih arsip ZIP untuk dibaca.</div><div class="v1lt-file-list" id="v1ltZipExtractList"></div></div>
+  </section>
+
+  <section class="v1lt-view" data-v1lt-view="file-rename" hidden>
+    <div class="v1lt-view-head"><button type="button" class="v1lt-back" data-v1lt-back>← Semua alat</button><span class="v1lt-kicker">FILES · 09</span><h3>Batch File Renamer</h3><p>Nama file asli di perangkat tidak diubah. Hasil nama baru dikemas ke ZIP agar aman dan mudah diunduh.</p></div>
+    <label class="v1lt-upload">Pilih beberapa file<input id="v1ltRenameFiles" type="file" multiple></label>
+    <div class="v1lt-control-grid"><label>Prefix<input id="v1ltRenamePrefix" type="text" maxlength="40" placeholder="contoh_"></label><label>Suffix<input id="v1ltRenameSuffix" type="text" maxlength="40" placeholder="_final"></label><label>Ganti teks lama<input id="v1ltRenameFrom" type="text" maxlength="40" placeholder="opsional"></label><label>Menjadi<input id="v1ltRenameTo" type="text" maxlength="40" placeholder="opsional"></label></div>
+    <button type="button" class="v1lt-secondary" id="v1ltRenamePreview" disabled>Perbarui preview nama</button><div class="v1lt-file-list" id="v1ltRenameList"></div>
+    <button type="button" class="v1lt-primary" id="v1ltRenameExport" disabled>Unduh ZIP nama baru</button><div class="v1lt-status" id="v1ltRenameStatus" role="status" aria-live="polite">Pilih file untuk membuat pola nama.</div>
+  </section>
+
+  <section class="v1lt-view" data-v1lt-view="file-duplicates" hidden>
+    <div class="v1lt-view-head"><button type="button" class="v1lt-back" data-v1lt-back>← Semua alat</button><span class="v1lt-kicker">FILES · 10</span><h3>Duplicate File Finder</h3><p>File dianggap duplikat hanya jika ukuran dan hash SHA-256 sama. Alat ini membuat laporan; tidak menghapus file dari perangkat.</p></div>
+    <label class="v1lt-upload">Pilih beberapa file<input id="v1ltDuplicateFiles" type="file" multiple></label>
+    <button type="button" class="v1lt-primary" id="v1ltDuplicateScan" disabled>Periksa duplikat</button>
+    <div class="v1lt-status" id="v1ltDuplicateStatus" role="status" aria-live="polite">Pilih file untuk mulai memindai.</div><div class="v1lt-file-list" id="v1ltDuplicateResult"></div>
+    <button type="button" class="v1lt-secondary" id="v1ltDuplicateReport" disabled>Unduh laporan CSV</button>
+  </section>
+
+  <section class="v1lt-view" data-v1lt-view="file-split" hidden>
+    <div class="v1lt-view-head"><button type="button" class="v1lt-back" data-v1lt-back>← Semua alat</button><span class="v1lt-kicker">FILES · 11</span><h3>File Splitter & Joiner</h3><p>Pecah file menjadi beberapa bagian dalam ZIP, atau gabungkan bagian yang memiliki pola nama berurutan.</p></div>
+    <div class="v1lt-subtool"><h4>Pecah file</h4><label class="v1lt-upload">Pilih file<input id="v1ltSplitFile" type="file"></label><label class="v1lt-inline-label">Ukuran tiap bagian<select id="v1ltSplitSize"><option value="1">1 MB</option><option value="5" selected>5 MB</option><option value="10">10 MB</option><option value="25">25 MB</option><option value="50">50 MB</option></select></label><button type="button" class="v1lt-primary" id="v1ltSplitRun" disabled>Pecah dan unduh ZIP</button><div class="v1lt-status" id="v1ltSplitStatus" role="status" aria-live="polite">Pilih file yang ingin dipecah.</div></div>
+    <div class="v1lt-subtool"><h4>Gabungkan bagian</h4><label class="v1lt-upload">Pilih bagian file<input id="v1ltJoinFiles" type="file" multiple></label><button type="button" class="v1lt-primary" id="v1ltJoinRun" disabled>Gabungkan file</button><div class="v1lt-status" id="v1ltJoinStatus" role="status" aria-live="polite">Pilih bagian .part001, .part002, dan seterusnya.</div></div>
+  </section>
+
+  <section class="v1lt-view" data-v1lt-view="file-csv" hidden>
+    <div class="v1lt-view-head"><button type="button" class="v1lt-back" data-v1lt-back>← Semua alat</button><span class="v1lt-kicker">FILES · 12</span><h3>CSV Viewer & Filter</h3><p>Baca CSV dengan delimiter koma, titik koma, atau tab. Cari data, sortir kolom, lalu ekspor hasil yang sudah difilter.</p></div>
+    <label class="v1lt-upload">Pilih file CSV<input id="v1ltCsvFile" type="file" accept=".csv,text/csv,.tsv,text/tab-separated-values"></label>
+    <div class="v1lt-control-grid"><label>Cari dalam tabel<input id="v1ltCsvSearch" type="search" placeholder="Ketik kata kunci..." disabled></label><label>Baris per halaman<select id="v1ltCsvPageSize" disabled><option>10</option><option selected>25</option><option>50</option><option>100</option></select></label></div>
+    <div class="v1lt-status" id="v1ltCsvStatus" role="status" aria-live="polite">Pilih CSV untuk ditampilkan.</div><div class="v1lt-table-wrap" id="v1ltCsvTable"></div>
+    <div class="v1lt-actions"><button type="button" class="v1lt-secondary" id="v1ltCsvPrev" disabled>← Sebelumnya</button><span id="v1ltCsvPage">0 / 0</span><button type="button" class="v1lt-secondary" id="v1ltCsvNext" disabled>Berikutnya →</button><button type="button" class="v1lt-primary" id="v1ltCsvExport" disabled>Ekspor CSV</button></div>
+  </section>
+
+  <section class="v1lt-view" data-v1lt-view="dev-jwt" hidden>
+    <div class="v1lt-view-head"><button type="button" class="v1lt-back" data-v1lt-back>← Semua alat</button><span class="v1lt-kicker">DEVELOPER · 13</span><h3>JWT Decoder</h3><p>Dekode header dan payload JWT di browser. Pembacaan ini tidak memverifikasi tanda tangan token.</p></div>
+    <label class="v1lt-field-label">Tempel token<input id="v1ltJwtInput" type="text" autocomplete="off" spellcheck="false" placeholder="eyJhbGciOi..."></label>
+    <button type="button" class="v1lt-primary" id="v1ltJwtDecode">Decode JWT</button><div class="v1lt-status" id="v1ltJwtStatus" role="status" aria-live="polite">Token tidak dikirim ke server.</div>
+    <div class="v1lt-json-grid"><section><h4>Header</h4><pre id="v1ltJwtHeader">Belum ada data.</pre></section><section><h4>Payload</h4><pre id="v1ltJwtPayload">Belum ada data.</pre></section></div>
+    <div class="v1lt-result-grid" id="v1ltJwtClaims"></div>
+  </section>
+
+  <section class="v1lt-view" data-v1lt-view="dev-regex" hidden>
+    <div class="v1lt-view-head"><button type="button" class="v1lt-back" data-v1lt-back>← Semua alat</button><span class="v1lt-kicker">DEVELOPER · 14</span><h3>Regex Playground</h3><p>Uji regular expression terhadap teks. Eksekusi dilakukan di Web Worker terpisah dengan batas waktu untuk mengurangi risiko pola yang terlalu berat.</p></div>
+    <div class="v1lt-control-grid"><label>Pola regex<input id="v1ltRegexPattern" type="text" spellcheck="false" placeholder="(ary|anz)+"></label><label>Flags<input id="v1ltRegexFlags" type="text" maxlength="6" value="gi" spellcheck="false" placeholder="gi"></label></div>
+    <label class="v1lt-field-label">Teks uji<textarea id="v1ltRegexText" rows="7" placeholder="Masukkan teks yang ingin diuji..."></textarea></label>
+    <button type="button" class="v1lt-primary" id="v1ltRegexRun">Jalankan regex</button><div class="v1lt-status" id="v1ltRegexStatus" role="status" aria-live="polite">Masukkan pola dan teks untuk mulai.</div>
+    <div class="v1lt-regex-result"><div id="v1ltRegexSummary"></div><pre id="v1ltRegexHighlight" class="v1lt-highlight"></pre></div>
+  </section>
+
+  <footer class="v1lt-footer"><span>ARYANZZ V1 · Tools berjalan secara modular.</span><button type="button" data-panel="allTools">Kembali ke Pusat Alat</button></footer>
+</div>
