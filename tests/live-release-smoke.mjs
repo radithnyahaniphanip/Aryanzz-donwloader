@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 
-const base=(process.env.WORKER_URL||"https://aryanzz-donwloader.radithnyahaniphanip.workers.dev").replace(/\/$/,"");
+const base=(process.env.WORKER_URL||"https://aryanzz-donwloader.aryanz.workers.dev").replace(/\/$/,"");
 const request=(path,init={})=>fetch(base+path,{cache:"no-store",signal:AbortSignal.timeout(15000),...init});
 
 const expectedVersion=String(process.env.EXPECTED_BUILD_VERSION||"");
