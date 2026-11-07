@@ -1,4 +1,4 @@
-const base=(process.env.WORKER_URL||"https://aryanzz-donwloader.radithnyahaniphanip.workers.dev").replace(/\/$/,"");
+const base=(process.env.WORKER_URL||"https://aryanzz-donwloader.aryanz.workers.dev").replace(/\/$/,"");
 const tiktok="https://vt.tiktok.com/ZSPNASKHN/";
 const instagram="https://www.instagram.com/p/Dek72MYE141/?xtok=OWdvNjR4dmZscnlx";
 const probes=[
