@@ -381,7 +381,7 @@ async function verifyLegacy(request, env) {
   await env.AUTH_DB.prepare("DELETE FROM auth_verifications WHERE email=?1 AND purpose=?2").bind(email, "legacy").run();
   const user = await env.AUTH_DB.prepare("SELECT id,email,full_name,role,created_at FROM auth_users WHERE id=?1").bind(id).first();
   await rememberTrustedDevice(id, deviceHash, env);
-  return createSession(user, env);
+  return createSession(user, env, {}, request);
 }
 async function sendResetLink(email, resetUrl, env) {
   const html = '<div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;padding:28px;background:#0b1222;color:#edf4ff;border-radius:16px"><b style="color:#7fdcf1;letter-spacing:2px">ARYANZZ · V1</b><h2>Atur ulang password</h2><p style="color:#b9c8df;line-height:1.6">Buka tautan aman berikut untuk memverifikasi email dan membuat password baru.</p><p style="margin:26px 0"><a href="' + resetUrl + '" style="display:inline-block;padding:13px 20px;border-radius:10px;background:#398cff;color:#fff;text-decoration:none;font-weight:800">Verifikasi email & reset password</a></p><p style="color:#9eafc8;font-size:12px;line-height:1.6">Tautan hanya dapat digunakan sekali dan berlaku 15 menit. Abaikan email ini jika kamu tidak meminta reset password.</p></div>';
