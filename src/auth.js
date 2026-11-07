@@ -283,7 +283,7 @@ async function startRegister(request, env) {
   return reply({ ok: true, message: "Kode verifikasi 6 digit telah dikirim ke email kamu." });
 }
 async function verifyRegister(request, env) {
-  const b = await bodyOf(request), email = emailOf(b?.email), code = String(b?.code || "").trim(), deviceHash = String(b?.deviceHash || "");
+  const b = await bodyOf(request), email = emailOf(b?.email), code = String(b?.code || "").trim(), deviceHash = await effectiveDeviceHash(request,b?.deviceHash,env);
   if (!validEmail(email) || !/^\d{6}$/.test(code) || !validDeviceHash(deviceHash)) return reply({ ok: false, error: "Email, kode, atau identitas perangkat tidak valid." }, 400);
   if (await isDeviceBanned(deviceHash, env)) return reply({ok:false,code:"DEVICE_BANNED",error:"Pendaftaran ditolak. Perangkat ini terkait dengan akun yang diblokir permanen."},403);
   if (await primaryDeviceOwner(deviceHash, env) || await trustedDeviceOwner(deviceHash, env)) return primaryAccountNotice();
@@ -308,7 +308,7 @@ async function verifyRegister(request, env) {
   return createSession(user, env);
 }
 async function login(request, env) {
-  const b = await bodyOf(request), identifier = String(b?.identifier || "").trim().slice(0, 254), password = String(b?.password || ""), deviceHash = String(b?.deviceHash || "");
+  const b = await bodyOf(request), identifier = String(b?.identifier || "").trim().slice(0, 254), password = String(b?.password || ""), deviceHash = await effectiveDeviceHash(request,b?.deviceHash,env);
   if (!identifier || !password || password.length > 128) return reply({ ok: false, error: "Masukkan email/ID dan password." }, 400);
   if (!validDeviceHash(deviceHash)) return reply({ok:false,error:"Identitas browser tidak valid. Muat ulang halaman dan coba lagi."},400);
   if (await isDeviceBanned(deviceHash, env)) return reply({ok:false,code:"DEVICE_BANNED",error:"Akses ditolak. Perangkat ini terkait dengan akun yang diblokir permanen."},403);
@@ -347,7 +347,7 @@ async function startLegacy(request, env) {
   return reply({ ok: true, message: "Kode verifikasi pemindahan akun dikirim ke email kamu." });
 }
 async function verifyLegacy(request, env) {
-  const b = await bodyOf(request), email = emailOf(b?.email), code = String(b?.code || "").trim(), deviceHash = String(b?.deviceHash || "");
+  const b = await bodyOf(request), email = emailOf(b?.email), code = String(b?.code || "").trim(), deviceHash = await effectiveDeviceHash(request,b?.deviceHash,env);
   if (!validDeviceHash(deviceHash)) return reply({ ok: false, error: "Identitas perangkat tidak valid." }, 400);
   if (await isDeviceBanned(deviceHash, env)) return reply({ok:false,code:"DEVICE_BANNED",error:"Pemindahan akun ditolak. Perangkat ini terkait dengan akun yang diblokir permanen."},403);
   if (!validEmail(email) || !/^\d{6}$/.test(code)) return reply({ ok: false, error: "Email atau kode tidak valid." }, 400);
@@ -382,7 +382,7 @@ async function resetLinkRow(token, env) {
   return env.AUTH_DB.prepare("SELECT email,expires_at FROM auth_verifications WHERE purpose='reset_link' AND code_hash=?1 LIMIT 1").bind(hash).first();
 }
 async function startDeviceReset(request, env) {
-  const b = await bodyOf(request), email = emailOf(b?.email), deviceHash = String(b?.deviceHash || "");
+  const b = await bodyOf(request), email = emailOf(b?.email), deviceHash = await effectiveDeviceHash(request,b?.deviceHash,env);
   if (!validEmail(email) || !validDeviceHash(deviceHash)) return reply({ ok: false, error: "Email atau identitas perangkat tidak valid." }, 400);
   if (limited(request, "device-reset-start", 4, 600000)) return reply({ ok: false, error: "Terlalu banyak pemeriksaan. Tunggu beberapa menit." }, 429);
   if (!(await captcha(request, b.captchaToken, env))) return reply({ ok: false, error: "Selesaikan CAPTCHA sebelum memeriksa perangkat." }, 400);
