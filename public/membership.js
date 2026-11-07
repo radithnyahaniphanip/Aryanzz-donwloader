@@ -137,7 +137,8 @@ panel.addEventListener("click",async e=>{
  try{if(!paymentConfig.enabled)throw Error("QRIS merchant belum dikonfigurasi. Pesanan belum dibuat.");const r=await fetch("/api/membership/orders",{method:"POST",credentials:"same-origin",headers:{"content-type":"application/json"},body:JSON.stringify({planId:p.id,paymentProvider:"qris"})});const d=await r.json();if(!r.ok||!d.ok)throw Error(d.error||"Pesanan gagal dibuat.");note.textContent="Pesanan "+d.order.id+" dibuat. Scan QRIS di atas dengan nominal tepat "+money(d.order.amount)+", lalu tunggu verifikasi pemilik.";await load()}
  catch(err){note.textContent=err.message}finally{buy.disabled=false}
 });
-document.getElementById("aryMemRefresh").addEventListener("click",load);\ndocument.getElementById("aryMemAdminRefresh")?.addEventListener("click",loadAdminOrders);
+document.getElementById("aryMemRefresh").addEventListener("click",load);
+document.getElementById("aryMemAdminRefresh")?.addEventListener("click",loadAdminOrders);
 document.addEventListener("click",event=>{
  const navItem=event.target.closest("[data-nav]");
  if(!navItem)return;
@@ -152,7 +153,8 @@ document.getElementById("aryGenerateRedeemCodes")?.addEventListener("click",asyn
   const payload={quantity:Number(document.getElementById("aryRedeemQuantity").value),maxRedemptions:Number(document.getElementById("aryRedeemMax").value),expiresInDays:Number(document.getElementById("aryRedeemExpiry").value),note:"Legendary avatar frame + animated background · 3 days after claim"};
   const r=await fetch("/api/membership/admin/redeem-codes",{method:"POST",credentials:"same-origin",headers:{"content-type":"application/json"},body:JSON.stringify(payload)});
   const d=await r.json();if(!r.ok||!d.ok)throw Error(d.error||"Gagal membuat kode.");
-  output.value=(d.codes||[]).join("\n");note.textContent="Berhasil membuat "+d.quantity+" kode. Salin dan simpan sekarang; kode lengkap hanya ditampilkan satu kali.";
+  output.value=(d.codes||[]).join("
+");note.textContent="Berhasil membuat "+d.quantity+" kode. Salin dan simpan sekarang; kode lengkap hanya ditampilkan satu kali.";
  }catch(e){note.textContent=e.message||"Gagal membuat kode."}
  finally{button.disabled=false;button.textContent="Buat kode redeem"}
 });
