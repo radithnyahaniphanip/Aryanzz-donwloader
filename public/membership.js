@@ -7,7 +7,7 @@ if(accountCard&&!document.getElementById("aryRedeemProfile")){
  const redeem=document.createElement("div");
  redeem.id="aryRedeemProfile";
  redeem.className="ary-redeem-profile";
- redeem.innerHTML='<div class="ary-redeem-heading"><b>REDEEM & PRESTIGE</b><small>Masukkan kode hadiah eksklusif</small></div><div class="ary-redeem-form"><input id="aryRedeemCode" type="text" maxlength="40" autocomplete="off" placeholder="ARY-LEGEND-XXXXXXXXXXXX" aria-label="Kode redeem"><button id="aryRedeemSubmit" type="button">Klaim hadiah</button></div><p id="aryRedeemStatus" role="status" aria-live="polite">Hadiah Legendary tersedia selama 3 hari setelah kode berhasil digunakan.</p><div id="aryPrestigeActive" class="ary-prestige-active" hidden></div>';
+ redeem.innerHTML='<div class="ary-redeem-heading"><b>REDEEM & PRESTIGE</b><small>Masukkan kode hadiah eksklusif</small></div><div class="ary-redeem-form"><input id="aryRedeemCode" type="text" maxlength="40" autocomplete="off" placeholder="ARY-LEGEND-XXXXXXXXXXXX" aria-label="Kode redeem"><button id="aryRedeemSubmit" type="button">Klaim hadiah</button></div><p id="aryRedeemStatus" role="status" aria-live="polite">Klaim hadiah hanya tersedia selama 3 hari pertama setelah akun dibuat.</p><div id="aryPrestigeActive" class="ary-prestige-active" hidden></div>';
  const note=accountCard.querySelector("#profileAccountNote");
  if(note)note.insertAdjacentElement("afterend",redeem);else accountCard.append(redeem);
 }
