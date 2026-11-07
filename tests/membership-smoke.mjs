@@ -24,6 +24,11 @@ assert.equal(catalog.status,200);
 const catalogBody=await catalog.json();assert.equal(catalogBody.plans.length,7);assert.equal(catalogBody.free.id,"free");
 assert.equal(catalogBody.pricingStatus,"proposed");
 assert.equal(catalogBody.paymentEnabled,false);
+assert.equal(catalogBody.qrAvailable,true,"The supplied merchant QRIS must be available even when checkout database is not ready");
+const qrisConfig=await handleMembership(new Request("https://aryanzz.example/api/membership/payment-config"),{});
+const qrisConfigBody=await qrisConfig.json();assert.equal(qrisConfigBody.enabled,true);assert.equal(qrisConfigBody.checkoutEnabled,false);assert.ok(qrisConfigBody.qrisImageUrl.startsWith("data:image/png;base64,"));
+const qrisAsset=await handleMembership(new Request("https://aryanzz.example/api/membership/qris.svg"),{});
+assert.equal(qrisAsset.status,404,"No SVG QR endpoint is used when the QR image is embedded as a data URI.");
 console.log("ARYANZZ V1 Membership catalog, auth gate, migration, and fail-closed review checks passed.");
 assert.ok(backend.includes("automaticWebhookReady:String(env.MEMBERSHIP_WEBHOOK_SECRET||\"\").length>=32"),"Payment config must distinguish static QRIS from an activated callback bridge");
 assert.ok(ui.includes("QRIS statis tidak mengirim notifikasi otomatis")&&ui.includes("syncMembershipPolling"),"Checkout must explain static QRIS limits and refresh pending payment status");
@@ -43,9 +48,9 @@ assert.equal(redeemUnauth.status,401);
 
 assert.ok(backend.includes("/api/cosmetics/equip"),"Users can equip only cosmetics they own");
 assert.ok(backend.includes("/api/membership/payment-config"),"Membership exposes official QRIS configuration state");
-assert.ok(backend.includes("MEMBERSHIP_QRIS_IMAGE_URL"),"QRIS image must come from owner-configured environment value");
+assert.ok(backend.includes("MEMBERSHIP_QRIS_IMAGE_URL")&&backend.includes("DEFAULT_MERCHANT_QRIS_DATA_URI"),"The supplied GoPay Merchant QRIS must be available as default image, with owner override support");
 assert.ok(ui.includes("Avatar & Background Studio")&&ui.includes("aryCosmeticsStudio"),"Avatar and background management must be available in Tools");
-assert.ok(ui.includes("Lanjut bayar QRIS")&&ui.includes("QRIS belum tersedia"),"Membership checkout must not create orders before official QRIS is configured");
+assert.ok(ui.includes("Lanjut bayar QRIS")&&ui.includes("Database belum aktif")&&ui.includes("checkoutEnabled"),"Membership checkout must remain disabled until central account storage is configured while still showing the QRIS image");
 
 assert.ok(ui.includes('data-panel="aryCosmeticsStudio"')&&ui.includes("loadCosmeticsStudio()"),"Opening Avatar & Background Studio must load the account inventory");
 
