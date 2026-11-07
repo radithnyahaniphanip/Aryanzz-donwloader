@@ -148,12 +148,21 @@ async function effectiveDeviceHash(request,supplied,env){
   if(lockToken)return await digest(lockToken.toLowerCase());
   return String(supplied||"");
 }
+async function rememberDeviceLock(userId,request,env){
+  const lockToken=deviceLockTokenFrom(request);
+  if(!lockToken)return false;
+  const lockHash=await digest(lockToken.toLowerCase()),now=Date.now();
+  await env.AUTH_DB.prepare("INSERT INTO auth_device_lock_accounts (lock_hash,user_id,created_at,last_seen_at) VALUES (?1,?2,?3,?3) ON CONFLICT(lock_hash) DO UPDATE SET last_seen_at=excluded.last_seen_at WHERE auth_device_lock_accounts.user_id=excluded.user_id").bind(lockHash,userId,now).run();
+  const row=await env.AUTH_DB.prepare("SELECT user_id FROM auth_device_lock_accounts WHERE lock_hash=?1 LIMIT 1").bind(lockHash).first();
+  return !!row&&row.user_id===userId;
+}
 export async function moderationGate(request,env){
   if(!env.AUTH_DB||typeof env.AUTH_DB.prepare!=="function"||String(env.AUTH_SESSION_SECRET||"").length<32)return null;
   const lockToken=deviceLockTokenFrom(request);
   if(!lockToken)return null;
   const deviceHash=await digest(lockToken.toLowerCase());
-  if(!await isDeviceBanned(deviceHash,env))return null;
+  const lockOwner=await env.AUTH_DB.prepare("SELECT d.user_id FROM auth_device_lock_accounts d JOIN auth_user_bans b ON b.user_id=d.user_id WHERE d.lock_hash=?1 LIMIT 1").bind(deviceHash).first();
+  if(!lockOwner&&!await isDeviceBanned(deviceHash,env))return null;
   const url=new URL(request.url);
   if(url.pathname.startsWith("/api/"))return reply({ok:false,code:"DEVICE_BANNED",error:"Akunmu diblokir permanen. Hubungi pembuat ARYANZZ untuk peninjauan."},403);
   if(request.method!=="GET"&&request.method!=="HEAD")return reply({ok:false,code:"DEVICE_BANNED",error:"Akunmu diblokir permanen."},403);
@@ -235,7 +244,8 @@ async function adminModerate(request, env, action) {
   return reply({ok:true,message:"Akun diblokir permanen. Semua sesi dicabut dan perangkat tepercaya yang tercatat dimasukkan ke daftar blokir."});
 }
 
-async function createSession(row, env, extra = {}) {
+async function createSession(row, env, extra = {}, request = null) {
+  if(request)await rememberDeviceLock(row.id,request,env);
   const token = randomHex(32), now = Date.now();
   await env.AUTH_DB.prepare("INSERT INTO auth_sessions (token_hash,user_id,created_at,expires_at) VALUES (?1,?2,?3,?4)")
     .bind(await digest(token), row.id, now, now + SESSION_TTL).run();
@@ -309,7 +319,7 @@ async function verifyRegister(request, env) {
     return primaryAccountNotice();
   }
   await rememberTrustedDevice(id, deviceHash, env);
-  return createSession(user, env);
+  return createSession(user, env, {}, request);
 }
 async function login(request, env) {
   const b = await bodyOf(request), identifier = String(b?.identifier || "").trim().slice(0, 254), password = String(b?.password || ""), deviceHash = await effectiveDeviceHash(request,b?.deviceHash,env);
@@ -333,7 +343,7 @@ async function login(request, env) {
   await rememberTrustedDevice(user.id, deviceHash, env);
   const lastModeration=await env.AUTH_DB.prepare("SELECT action,created_at FROM auth_moderation_events WHERE user_id=?1 ORDER BY created_at DESC LIMIT 1").bind(user.id).first();
   const restored=lastModeration?.action==="unban"&&Date.now()-Number(lastModeration.created_at||0)<30*24*60*60*1000;
-  return createSession(user, env, restored?{restored:true,message:"Akunmu dipulihkan. Selamat datang kembali di ARYANZZ."}:{});
+  return createSession(user, env, restored?{restored:true,message:"Akunmu dipulihkan. Selamat datang kembali di ARYANZZ."}:{}, request);
 }
 async function startLegacy(request, env) {
   const b = await bodyOf(request), old = b?.legacy || {};
