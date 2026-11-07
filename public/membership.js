@@ -110,7 +110,7 @@ async function loadCatalog(){
 }
 function renderPlans(){
  const host=document.getElementById("aryMemPlans");
- host.innerHTML=plans.map((p,i)=>'<article class="ary-mem-card '+(i===2?"ary-mem-featured":"")+'"><div class="ary-mem-card-top"><span>'+String(i+1).padStart(2,"0")+' / MEMBERSHIP</span><b>'+esc(p.name)+'</b></div><div class="ary-mem-price">'+money(p.price)+'</div><div class="ary-mem-term">'+p.term+'</div><p>'+esc(p.desc)+'</p><button type="button" data-buy="'+esc(p.id)+'" '+'>Bayar sekarang+'</button></article>').join("")
+ host.innerHTML=plans.map((p,i)=>'<article class="ary-mem-card '+(i===2?"ary-mem-featured":"")+'"><div class="ary-mem-card-top"><span>'+String(i+1).padStart(2,"0")+' / MEMBERSHIP</span><b>'+esc(p.name)+'</b></div><div class="ary-mem-price">'+money(p.price)+'</div><div class="ary-mem-term">'+p.term+'</div><p>'+esc(p.desc)+'</p><button type="button" data-buy="'+esc(p.id)+'">Bayar sekarang</button></article>').join("")
 }
 async function loadAdminOrders(){
  const host=document.getElementById("aryMemAdminOrders");if(!host)return;
