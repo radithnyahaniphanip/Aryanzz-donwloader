@@ -9,6 +9,7 @@
   const randomId = () => "ARY-" + Array.from(crypto.getRandomValues(new Uint8Array(10)), v => alphabet[v % alphabet.length]).join("");
   function setIdentity(user, localOnly = false) {
     if (!user || !/^ARY-[A-Z0-9]{10}$/i.test(String(user.id || ""))) return;
+    if (!localOnly) { try { localStorage.setItem(LOCAL_ID_KEY, String(user.id)); } catch {} }
     const role = String(user.role || "guest").toLowerCase();
     const isAdmin = ["owner", "admin", "developer"].includes(role) || String(user.id).toUpperCase() === "ARY-ZFTLQPEX92";
     window.aryanzzAuthUser = user;
