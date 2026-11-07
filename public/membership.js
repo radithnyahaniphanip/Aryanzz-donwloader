@@ -164,6 +164,7 @@ async function loadCosmeticsStudio(){
   loadPrestige();
  }catch(e){status.textContent="Gagal memuat koleksi: "+e.message}
 }
+document.addEventListener("click",event=>{if(event.target.closest('[data-panel="aryCosmeticsStudio"]'))loadCosmeticsStudio()});
 cosmeticsPanel.addEventListener("click",async event=>{
  const button=event.target.closest("[data-equip]");if(!button)return;button.disabled=true;
  try{const r=await fetch("/api/cosmetics/equip",{method:"POST",credentials:"same-origin",headers:{"content-type":"application/json"},body:JSON.stringify({cosmeticId:button.dataset.equip})});const d=await r.json();if(!r.ok||!d.ok)throw Error(d.error||"Kosmetik tidak dapat diterapkan.");document.getElementById("aryCosmeticsStatus").textContent=d.message;await loadCosmeticsStudio()}
