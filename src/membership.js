@@ -195,7 +195,7 @@ async function handleMembership(request,env){
   const apiKeyReady=/^sk_(test|live)_/.test(String(env.POKETO_SECRET_KEY||""));
   const webhookReady=/^whsec_/.test(String(env.POKETO_WEBHOOK_SECRET||""));
   const missing=[];if(!dbReady)missing.push("AUTH_DB · database D1 ARYANZZ");if(!apiKeyReady)missing.push("POKETO_SECRET_KEY · API key sandbox/live");if(!webhookReady)missing.push("POKETO_WEBHOOK_SECRET · signing secret webhook");
-  return json({ok:true,enabled:apiKeyReady,checkoutEnabled:dbReady,dbReady,apiKeyReady,automaticWebhookReady:webhookReady,webhookReady,provider:"Poketo",mode:env.POKETO_MODE==="live"?"live":"sandbox",webhookUrl:new URL("/api/membership/webhook",url.origin).toString(),missing,message:missing.length?"Pembayaran belum siap: "+missing.join("; "):"Checkout Poketo dan aktivasi otomatis siap. Metode pembayaran ditampilkan pada checkout resmi."});
+  return json({ok:true,enabled:apiKeyReady,checkoutEnabled:dbReady,dbReady,apiKeyReady,automaticWebhookReady:webhookReady,webhookReady,provider:"Poketo",mode:poketoMode(env),webhookUrl:new URL("/api/membership/webhook",url.origin).toString(),missing,message:missing.length?"Pembayaran belum siap: "+missing.join("; "):"Checkout Poketo dan aktivasi otomatis siap. Metode pembayaran ditampilkan pada checkout resmi."});
  }
  if(!env.AUTH_DB||typeof env.AUTH_DB.prepare!=="function")return json({ok:false,error:"Database akun belum dikonfigurasi."},503);
  if(path==="/api/membership/me"&&request.method==="GET"){
