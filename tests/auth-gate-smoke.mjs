@@ -25,3 +25,6 @@ assert.ok(html.includes('id="aryRegCaptchaAnswer"'), "Registration must include 
 assert.ok(!html.includes('id="aryRecoveryCodeDisplay"') && !html.includes('id="aryResetRecoveryCode"'), "Recovery Code UI must be removed");
 assert.ok(client.includes('window.aryanzzIsDeveloper = isDeveloper'), "Developer UI state must use the existing protected account ID");
 console.log("ARYANZZ V1 auth gate client checks passed.");
+
+assert.ok(client.includes("resetUsesLocalAccount"), "Legacy local accounts must be eligible for same-device password reset when the server has no migrated account");
+assert.ok(client.includes('["DEVICE_NOT_RECOGNIZED","ACCOUNT_NOT_FOUND"].includes(serverError.code)'), "Reset must fall back only for unmigrated local accounts, not arbitrary server errors");
