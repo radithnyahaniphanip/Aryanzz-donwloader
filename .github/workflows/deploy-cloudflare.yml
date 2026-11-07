@@ -39,6 +39,7 @@ jobs:
           node --check tests/release-smoke.mjs
           node --check tests/profile-motion-avatar-smoke.mjs
           node --check tests/auth-gate-smoke.mjs
+          node --check tests/module-boundaries-smoke.mjs
           node --check tests/auth-backend-smoke.mjs
           node --check tests/membership-smoke.mjs
           node --check tests/live-release-smoke.mjs
