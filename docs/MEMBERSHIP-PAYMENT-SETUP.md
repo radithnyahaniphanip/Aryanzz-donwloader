@@ -20,13 +20,15 @@ The deployment workflow syncs both secrets to the production Worker. Existing AU
 
 ## Payment webhook contract
 
-Endpoint: POST https://aryanzz-donwloader.radithnyahaniphanip.workers.dev/api/membership/webhooks/payment
+Endpoint: POST https://aryanzz-donwloader.radithnyahaniphanip.workers.dev/api/membership/webhook
 
-Headers: Authorization: Bearer <MEMBERSHIP_WEBHOOK_SECRET>; Content-Type: application/json
+Headers: Content-Type: application/json; X-ARYANZZ-TIMESTAMP: <13-digit Unix milliseconds>; X-ARYANZZ-SIGNATURE: <lowercase hex HMAC-SHA256>
 
 Body for a confirmed successful payment:
 
 {"orderId":"ARYM-ORDER-ID","transactionId":"UNIQUE-PROVIDER-TRANSACTION-ID","amount":80000,"status":"paid"}
+
+Signature calculation (server-side only): create the canonical string timestamp.orderId.amount.transactionId.status, then calculate HMAC-SHA256 using MEMBERSHIP_WEBHOOK_SECRET as the key. Send the timestamp and 64-character lowercase hexadecimal digest in the headers. The timestamp must be within five minutes of Worker time. Never calculate this signature in browser code.
 
 Rules:
 - Send the callback only from a trusted server-side payment integration after it has independently verified the provider's transaction status.
@@ -36,7 +38,7 @@ Rules:
 - Failed, pending, cancelled or expired provider statuses never activate Membership.
 - Never call this endpoint from browser JavaScript or expose the webhook secret to customers.
 
-This endpoint is a generic trusted-bridge contract. It does not mean GoPay Merchant static QRIS directly supports this callback. Connect only an official provider API/notification or a properly authorized payment service that can verify the transaction. Do not use notification scraping, device accessibility listeners, or unofficial app automation as payment proof.
+This endpoint is a generic signed trusted-bridge contract. It does not mean GoPay Merchant static QRIS directly supports this callback. Connect only an official provider API/notification or a properly authorized payment service that can verify the transaction. Do not use notification scraping, device accessibility listeners, or unofficial app automation as payment proof.
 
 ## Test before launch
 1. Configure D1 and confirm migrations have completed.
