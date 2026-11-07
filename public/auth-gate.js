@@ -250,7 +250,6 @@
     const identifier = $("aryLoginIdentifier").value.trim(), password = $("aryLoginPassword").value;
     if (!config.ready) return say("Login online belum aktif. Pemilik website perlu menyelesaikan konfigurasi keamanan server.", true);
     if (!identifier || !password) return say("Masukkan email/ID dan password.", true);
-    if (password !== confirm) return say("Konfirmasi password belum sama.", true);
     const button = $("aryLoginSubmit"); button.disabled = true; button.textContent = "Memeriksa…";
     try {
       if (config.ready) {
