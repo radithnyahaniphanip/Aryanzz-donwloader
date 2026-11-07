@@ -168,3 +168,10 @@ body.ary-local-bg-midnight{background-image:radial-gradient(ellipse at 15% 18%,#
 .ary-auth-blocked-card p{color:#b9c8dc;line-height:1.7}
 .ary-auth-blocked-contact{display:block;margin-top:22px;padding:14px 16px;border-radius:13px;background:linear-gradient(110deg,#1ad0d0,#8ee5d5);color:#06212a!important;text-align:center;text-decoration:none!important;font-weight:850;box-shadow:0 8px 26px rgba(26,208,208,.16)}
 .ary-auth-blocked-contact:focus-visible{outline:3px solid #fff;outline-offset:3px}
+
+/* Guest checkout contact details; email is not used for account authentication. */
+.ary-mem-customer-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:14px 0;padding:14px;border:1px solid var(--line,#26364d);border-radius:14px;background:var(--surface-2,#101827)}
+.ary-mem-customer-fields label{display:grid;gap:7px;color:var(--text,#edf4ff);font-size:13px;font-weight:700}
+.ary-mem-customer-fields input{width:100%;min-width:0;padding:12px;border:1px solid var(--line,#26364d);border-radius:11px;background:var(--surface,#091321);color:var(--text,#edf4ff);font:inherit}
+.ary-mem-customer-fields small{grid-column:1/-1;color:var(--muted,#91a2bc);font-size:11px;line-height:1.5}
+@media(max-width:560px){.ary-mem-customer-fields{grid-template-columns:1fr}}
