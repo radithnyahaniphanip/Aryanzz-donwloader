@@ -24,3 +24,11 @@ const catalogBody=await catalog.json();assert.equal(catalogBody.plans.length,7);
 assert.equal(catalogBody.pricingStatus,"proposed");
 assert.equal(catalogBody.paymentEnabled,false);
 console.log("ARYANZZ V1 Membership catalog, auth gate, migration, and fail-closed review checks passed.");
+
+assert.ok(backend.includes("/api/redeem/claim"),"Redeem claim endpoint must be implemented");
+assert.ok(backend.includes("3*24*60*60*1000"),"Legendary reward must expire three days after claim");
+assert.ok(backend.includes("legendary-avatar-frame")&&backend.includes("legendary-aurora-background"),"Redeem grants both avatar frame and animated profile background");
+assert.ok(backend.includes("/api/membership/admin/redeem-codes"),"Owner must be able to generate redeem codes");
+assert.ok(backend.includes("max_redemptions<")===false,"Code quota is enforced by conditional database update");
+assert.ok(ui.includes("aryRedeemProfile")&&ui.includes("aryPrestigeActive")&&ui.includes("/api/cosmetics/me"),"Profile account card must expose redeem UI and live countdown");
+assert.ok(css.includes(".ary-legendary-frame")&&css.includes(".ary-legendary-background")&&css.includes("prefers-reduced-motion"),"Prestige cosmetics must be animated and respect reduced motion");
