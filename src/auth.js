@@ -155,6 +155,11 @@ async function primaryDeviceOwner(deviceHash, env) {
   const hash = await digest(String(env.AUTH_SESSION_SECRET) + "|primary-device|" + String(deviceHash).toLowerCase());
   return await env.AUTH_DB.prepare("SELECT user_id FROM auth_device_accounts WHERE device_hash=?1 LIMIT 1").bind(hash).first();
 }
+async function trustedDeviceOwner(deviceHash, env) {
+  if (!validDeviceHash(deviceHash)) return null;
+  const hash = await digest(String(env.AUTH_SESSION_SECRET) + "|trusted-device|" + String(deviceHash).toLowerCase());
+  return await env.AUTH_DB.prepare("SELECT user_id FROM auth_trusted_devices WHERE device_hash=?1 ORDER BY last_seen_at DESC LIMIT 1").bind(hash).first();
+}
 async function claimPrimaryDevice(userId, deviceHash, env) {
   if (!validDeviceHash(deviceHash)) return false;
   const hash = await digest(String(env.AUTH_SESSION_SECRET) + "|primary-device|" + String(deviceHash).toLowerCase());
@@ -235,7 +240,8 @@ async function startRegister(request, env) {
   const deviceHash = String(b.deviceHash || "");
   if (!validDeviceHash(deviceHash)) return reply({ok:false,error:"Identitas browser tidak valid. Muat ulang halaman dan coba lagi."},400);
   const primary = await primaryDeviceOwner(deviceHash, env);
-  if (primary) return primaryAccountNotice();
+  const previouslyTrusted = await trustedDeviceOwner(deviceHash, env);
+  if (primary || previouslyTrusted) return primaryAccountNotice();
   const exists = await env.AUTH_DB.prepare("SELECT id FROM auth_users WHERE email=?1 COLLATE NOCASE LIMIT 1").bind(email).first();
   if (exists) return reply({ ok: false, code: "EMAIL_EXISTS", error: "Email sudah terdaftar. Silakan masuk atau reset password." }, 409);
   const salt = randomHex(16), passwordHash = await passwordDigest(password, salt);
@@ -249,7 +255,7 @@ async function verifyRegister(request, env) {
   const b = await bodyOf(request), email = emailOf(b?.email), code = String(b?.code || "").trim(), deviceHash = String(b?.deviceHash || "");
   if (!validEmail(email) || !/^\d{6}$/.test(code) || !validDeviceHash(deviceHash)) return reply({ ok: false, error: "Email, kode, atau identitas perangkat tidak valid." }, 400);
   if (await isDeviceBanned(deviceHash, env)) return reply({ok:false,code:"DEVICE_BANNED",error:"Pendaftaran ditolak. Perangkat ini terkait dengan akun yang diblokir permanen."},403);
-  if (await primaryDeviceOwner(deviceHash, env)) return primaryAccountNotice();
+  if (await primaryDeviceOwner(deviceHash, env) || await trustedDeviceOwner(deviceHash, env)) return primaryAccountNotice();
   if (limited(request, "register-verify", 12, 600000)) return reply({ ok: false, error: "Terlalu banyak percobaan kode." }, 429);
   const checked = await verifyCode(email, "register", code, env);
   if (checked.error) return reply({ ok: false, error: checked.error }, 400);
