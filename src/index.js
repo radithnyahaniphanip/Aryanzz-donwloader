@@ -1,6 +1,7 @@
 const BUILD_VERSION = "__ARYANZZ_VERSION__";
 import { PLATFORM_CATALOG, PLATFORM_DOMAINS, PLATFORM_CATALOG_BY_ID, platformForHost } from "./platform-catalog.js";
 import { handleAuthRequest } from "./auth.js";
+import { handleMembership } from "./membership.js";
 const MEDIA_EXT = new Set(["mp4","webm","mov","m4v","mkv","avi","mpeg","mpg","m2ts","mts","ts","3gp","ogv","asf","wmv","mp3","m4a","aac","wav","ogg","oga","flac","opus","wma","aiff","aif","mka"]);
 const MAX_BYTES = 100 * 1024 * 1024;
 function json(data,status=200){return new Response(JSON.stringify(data),{status,headers:{"content-type":"application/json; charset=utf-8","cache-control":"no-store"}})}
@@ -3215,6 +3216,7 @@ const workerHandler = {async fetch(request,env){
    if(url.pathname==="/api/youtube/hybrid/thumbnail"&&request.method==="GET")return hybridYoutubeThumbnail(request);
   if(url.pathname==="/api/youtube/info"&&request.method==="GET")return youtubeInfo(request,env);
     if(url.pathname==="/api/security/status"&&request.method==="GET")return json({ok:true,security:{active:true,mode:"worker-edge-defense",controls:["origin-validation","method-allowlist","content-type-validation","request-size-guard","per-ip-endpoint-rate-limits","content-security-policy","strict-transport-security","frame-protection","mime-sniffing-protection","request-id","sanitized-error-handling"],events:{blockedOrigin:SECURITY_EVENTS.blockedOrigin,rateLimited:SECURITY_EVENTS.rateLimited,oversizedRequest:SECURITY_EVENTS.oversizedRequest,blockedMethod:SECURITY_EVENTS.blockedMethod},note:"Event counters are per Worker isolate and are not a global security incident log."}});
+  if(url.pathname.startsWith("/api/membership/"))return handleMembership(request,env);
   if(url.pathname.startsWith("/api/auth/"))return handleAuthRequest(request,env);
   if(url.pathname==="/api/health"&&request.method==="GET")return json({ok:true,service:"ARYANZZ",version:"V1",publicVersion:"V1",buildId:env.ARYANZZ_BUILD_VERSION||BUILD_VERSION,securityActive:true,mode:"cloudflare-worker-zero-server-hybrid",directMediaDownload:true,selfHostedDownloader:false,youtubeDownloader:true,youtubeApiKeyConfigured:false,cobalt:false,paidYoutubeProvider:false,musicRecognitionConfigured:!!env.AUDD_API_TOKEN,musicFallbackReady:false,musicVideoRecognitionReady:false,platformExtraction:true,platformBackend:"public-free-community-api"});
   if(url.pathname==="/api/social-file"&&request.method==="GET")return socialMediaFile(request);

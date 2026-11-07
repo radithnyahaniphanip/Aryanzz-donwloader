@@ -26,3 +26,19 @@
 .ary-auth-step-note{font-size:10px;line-height:1.6;color:#a9bbd5;margin:0 0 4px}
 
 .ary-auth-gate[hidden],.ary-auth-form[hidden],.ary-auth-tabs[hidden],.ary-auth-captcha[hidden]{display:none!important}
+
+/* ARYANZZ V1 — animated eye controls for password visibility */
+.ary-auth-password button{display:grid;place-items:center;min-width:44px;cursor:pointer;transition:background .2s ease,border-color .2s ease,transform .2s ease}
+.ary-auth-password button:active{transform:scale(.92)}
+.ary-eye-svg{width:21px;height:21px;overflow:visible;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.ary-eye-outline{transform-origin:12px 12px;animation:aryEyeBlink .24s ease both}
+.ary-eye-pupil{fill:currentColor;stroke:none;transform-origin:12px 12px;animation:aryEyePupil .24s ease both}
+.ary-eye-glint{stroke:#fff;stroke-width:1.2}
+.ary-eye-slash{stroke:#f4f7ff;stroke-width:2.2;stroke-dasharray:26;animation:aryEyeSlash .24s ease both}
+.ary-eye-svg.is-open .ary-eye-slash{opacity:0}
+.ary-eye-svg.is-closed .ary-eye-slash{opacity:1}
+.ary-auth-password button[data-visible="true"]{color:#9ce8ff;border-color:#62c6e8;background:#17314a}
+@keyframes aryEyeBlink{0%{transform:scaleY(.72)}65%{transform:scaleY(1.08)}100%{transform:scaleY(1)}}
+@keyframes aryEyePupil{0%{transform:scale(.72)}100%{transform:scale(1)}}
+@keyframes aryEyeSlash{0%{stroke-dashoffset:26;opacity:0}100%{stroke-dashoffset:0;opacity:1}}
+@media(prefers-reduced-motion:reduce){.ary-eye-outline,.ary-eye-pupil,.ary-eye-slash{animation:none!important}}

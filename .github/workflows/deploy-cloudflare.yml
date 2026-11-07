@@ -32,6 +32,7 @@ jobs:
         run: |
           node --check src/index.js
           node --check src/auth.js
+          node --check src/membership.js
           node --check src/platform-catalog.js
           node --check scripts/build-version.mjs
           node --input-type=module -e 'import fs from "node:fs"; const html=fs.readFileSync("public/index.html","utf8"); const refs=[...html.matchAll(/<script[^>]*src="([^"]+\.js[^"]*)"/g)].map(m=>m[1]).filter(ref=>ref.startsWith("/")); const paths=[...new Set(refs.map(ref=>"public/"+new URL(ref,"https://aryanzz.local").pathname.slice(1)))]; for(const path of paths){if(!fs.existsSync(path))throw new Error("Missing script asset: "+path); console.log("Checking "+path); const {spawnSync}=await import("node:child_process"); const result=spawnSync(process.execPath,["--check",path],{stdio:"inherit"}); if(result.status!==0)process.exit(result.status||1);} console.log("All "+paths.length+" loaded JavaScript assets passed syntax checks.");'
@@ -39,6 +40,7 @@ jobs:
           node --check tests/profile-motion-avatar-smoke.mjs
           node --check tests/auth-gate-smoke.mjs
           node --check tests/auth-backend-smoke.mjs
+          node --check tests/membership-smoke.mjs
           node --check tests/live-release-smoke.mjs
           node --check tests/live-platform-matrix.mjs
           node --check tests/live-tiktok-user-link.mjs
@@ -49,7 +51,9 @@ jobs:
           node --check tests/social-media-file-probe.mjs
           node -e "const fs=require('fs');const h=fs.readFileSync('public/index.html','utf8');const s=h.indexOf('<script>')+8;const e=h.indexOf('</script>',s);if(s<8||e<s)throw Error('Inline script missing');new Function(h.slice(s,e));console.log('Inline script syntax OK')"
       - name: Run release smoke tests
-        run: npm run test:release
+        run: |
+          node tests/membership-smoke.mjs
+          npm run test:release
       - name: Run legacy regression suite (diagnostic only)
         continue-on-error: true
         run: npm test

@@ -43,9 +43,25 @@
     const input = $(inputId), bar = $(barId), label = $(labelId), names = ["Lemah", "Menengah", "Kuat", "Lebih kuat"], widths = ["18%", "42%", "72%", "100%"];
     input?.addEventListener("input", () => { const n = passwordStrength(input.value), i = Math.max(0, n - 1); if (bar) bar.style.width = input.value ? widths[i] : "0%"; if (label) label.textContent = input.value ? "Kekuatan password: " + names[i] : "Kekuatan password: belum diisi"; });
   }
+  const eyeSvg = visible => visible
+    ? '<svg class="ary-eye-svg is-open" viewBox="0 0 24 24" aria-hidden="true"><path class="ary-eye-outline" d="M2.2 12s3.4-6.2 9.8-6.2S21.8 12 21.8 12 18.4 18.2 12 18.2 2.2 12 2.2 12Z"/><circle class="ary-eye-pupil" cx="12" cy="12" r="3.1"/><path class="ary-eye-glint" d="M10.9 10.9a1.4 1.4 0 0 1 2.2 1.6"/></svg>'
+    : '<svg class="ary-eye-svg is-closed" viewBox="0 0 24 24" aria-hidden="true"><path class="ary-eye-outline" d="M2.2 12s3.4-6.2 9.8-6.2S21.8 12 21.8 12 18.4 18.2 12 18.2 2.2 12 2.2 12Z"/><circle class="ary-eye-pupil" cx="12" cy="12" r="3.1"/><path class="ary-eye-slash" d="M3 3 21 21"/></svg>';
   function togglePassword(inputId, buttonId) {
     const input = $(inputId), button = $(buttonId); if (!input || !button) return;
-    button.addEventListener("click", () => { const visible = input.type === "password"; input.type = visible ? "text" : "password"; button.textContent = visible ? "◌" : "◉"; button.setAttribute("aria-label", visible ? "Sembunyikan password" : "Lihat password"); });
+    const paint = visible => {
+      button.innerHTML = eyeSvg(visible);
+      button.dataset.visible = visible ? "true" : "false";
+      button.setAttribute("aria-pressed", visible ? "true" : "false");
+      button.setAttribute("aria-label", visible ? "Sembunyikan password" : "Lihat password");
+      button.title = visible ? "Sembunyikan password" : "Lihat password";
+    };
+    paint(input.type === "text");
+    button.addEventListener("click", () => {
+      const visible = input.type === "password";
+      input.type = visible ? "text" : "password";
+      paint(visible);
+      input.focus({ preventScroll: true });
+    });
   }
   function setUser(user, localOnly = false) {
     window.aryanzzAuthUser = user || null;
@@ -121,7 +137,7 @@
     const mount = $("aryAuthCaptcha"); if (!mount) return;
     const render = () => {
       if (!window.turnstile || widgetId !== null) return;
-      try { widgetId = window.turnstile.render(mount, { sitekey: config.captchaSiteKey, theme: "dark", callback: token => { captchaToken = String(token || ""); }, "expired-callback": () => { captchaToken = ""; }, "error-callback": () => { captchaToken = ""; say("CAPTCHA gagal dimuat. Muat ulang halaman.", true); } }); }
+      try { widgetId = window.turnstile.render(mount, { sitekey: config.captchaSiteKey, theme: "light", callback: token => { captchaToken = String(token || ""); }, "expired-callback": () => { captchaToken = ""; }, "error-callback": () => { captchaToken = ""; say("CAPTCHA gagal dimuat. Muat ulang halaman.", true); } }); }
       catch { say("CAPTCHA belum dapat dimuat. Periksa konfigurasi Turnstile.", true); }
     };
     if (window.turnstile) { render(); return; }
@@ -370,7 +386,7 @@
   async function init() {
     if (!gate) return;
     gate.hidden = true;
-    [["aryRegPassword","aryRegEye"],["aryRegPasswordConfirm","aryRegConfirmEye"],["aryLoginPassword","aryLoginEye"],["aryLoginPasswordConfirm","aryLoginConfirmEye"],["aryResetPassword","aryResetEye"],["aryResetPasswordConfirm","aryResetConfirmEye"]].forEach(pair => togglePassword(pair[0], pair[1]));
+    [["aryRegPassword","aryRegEye"],["aryRegPasswordConfirm","aryRegConfirmEye"],["aryLoginPassword","aryLoginEye"],["aryLoginPasswordConfirm","aryLoginConfirmEye"],["aryResetPassword","aryResetEye"],["aryResetPasswordConfirm","aryResetConfirmEye"],["aryLegacyResetPassword","aryLegacyResetEye"],["aryLegacyResetPasswordConfirm","aryLegacyResetConfirmEye"]].forEach(pair => togglePassword(pair[0], pair[1]));
     initStrength("aryRegPassword","aryStrengthBar","aryStrengthLabel"); initStrength("aryResetPassword","aryResetStrengthBar","aryResetStrengthLabel");
     document.querySelectorAll("[data-auth-mode]").forEach(button => button.addEventListener("click", () => mode(button.dataset.authMode)));
     $("aryRegisterForm")?.addEventListener("submit", register); $("aryLoginForm")?.addEventListener("submit", login);
