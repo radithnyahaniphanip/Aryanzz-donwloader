@@ -59,7 +59,7 @@
     card.append(mark, title, detail, help); gate.append(card); gate.hidden = false;
     document.body.classList.remove("ary-authenticated");
   }
-  function localFallback() {
+  function localFallback(message = "Website dapat digunakan tanpa login. ID sementara ini belum tersinkron dengan server moderasi.", error = true) {
     let id = "";
     try { id = localStorage.getItem(LOCAL_ID_KEY) || ""; } catch {}
     if (!/^ARY-[A-Z0-9]{10}$/i.test(id)) {
@@ -67,7 +67,7 @@
       try { localStorage.setItem(LOCAL_ID_KEY, id); } catch {}
     }
     setIdentity({ id, fullName: "Pengunjung ARYANZZ", role: "guest", guest: true }, true);
-    showNotice("Website dapat digunakan tanpa login. ID sementara ini belum tersinkron dengan server moderasi.", true);
+    showNotice(message, error);
     return { ok: false, localOnly: true, user: window.aryanzzAuthUser };
   }
   async function bootstrap() {
@@ -94,6 +94,7 @@
   }
   window.aryanzzGuestReady = bootstrap().catch(error => {
     console.warn("[ARYANZZ] Guest identity fallback:", error?.message || "unavailable");
+    if(error?.code==="ADMIN_SESSION_REQUIRED")return localFallback("Akses publik tetap tersedia. Sesi administrator berakhir; gunakan /?owner=1 untuk masuk kembali ke panel admin.",false);
     return localFallback();
   });
 })();
