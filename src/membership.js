@@ -10,9 +10,10 @@ const PLANS=[
 {id:"founder",name:"Founder Signature",price:5900000,durationDays:null,badge:"Founder",summary:"Paket pendukung pendiri dengan identitas khusus."}
 ];
 const json=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:{"content-type":"application/json; charset=utf-8","cache-control":"no-store"}});
+const DEFAULT_MERCHANT_QRIS_DATA_URI="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAcgAAAHIAQAAAADi2kdHAAADiUlEQVR42u1cvY4eQQizo7z/KzsF4EFXRalYxVd9O7c0RvwZz1L4x79fiGUsYxnLWMbyf7X8DQCs36L6QYQoEBBF/69/Awq2l/0JlVcFLv9RoiCofMz9ZrA97U8Q5bbV7VLgnIkEytFsnwbb+5YSOA6UCJEQWGcCFGw/Ep+OyaqhFYesKBU6NhVsv+JPTYrt4li1FN0RlUPL0wq29y1J8lVHB+QUzelrud4Mtict+ZPvIybl1oTy4yDYfsCSVSprUOloJEESoASRM7Jw3g62X4jPmliqjj5GYYetT4Lt5fhkx2eHIu1dVXktosjlNdje7ockdrmUoMUFqcbR4otcUYPt6Xy7KNtOrVVIgSH71MNLNbwKtrfrZ3F7Jm/xeHfat8ulwfasJSS5JAqQ+ldnXpnp24yfJAXbw/m22aCqlp1w+xA7B/OdBdvL8wrd+0zyneeplzSHy+w/z1tOY8vZmU165fgQkDpK0w99oL91RNJ9kAP15dt+CLbH+1s6kxZ1IDzXOhXPa8H2rOVvzyd8Ofa1PeIbXmYcVeLzuCW7XtaESdqFozgRpZYveGoJtnfr53B4gOvjOtgVFAgf/4l+yL3sZozeeAprxmYbGmzvWlqUObFJLzv7dI0tfRZs71qalpW4OFrVwYhwNe8E29v9bWsyuzKaeHdfa2k8F6MUbO/OK0PcLuGX7Dk9T9eb2X8e92f5ipL7V77tmJVD8j4088rxfNtXV/r20Sqg3d/SQfx01cH28vz5RhS82OyOVr5nNixg5s/T/sSSBi3/Yj2Mw5vcDbZHLVufoBEnzKOwpHx6P0e6EH3C7f7WI+aLSk6b1Po+Ty7B9ro/5bWYmQOr+ezHIRuYffYXLGVXcnWxmpqqoYyU+Dwfn9PqOBhbFda37jtuufSbwfbyvGJJwtP00YJqS8Z21xtsD1t2QM6FXdKkfK2w63aLOFdcgu11SxKSBX3V8JLzHQy1MKxUCk3yBtuz9fN93WTIgvctk+Fw5yDYfoAfmofV4a7vJ7yvSa3xM9iejs8uo8XHq+fP2oZ6oOEmHILtYUtpqiekJy/RUEfeqwhVZ4Pt8fnTCpPuhJbmT09z/SRGwfa0P9/fU1B7faa5GNqak8TnRyypmkmaiPfkib3Wjr7vA/H5lEJDAq2vgfWS25cdsv88Pq/wpVr8vN+7GlxgfXIz2N6fP4NQLGMZy1jGMpZ/9fcHtN8zewvu/VIAAAAASUVORK5CYII=";
 function safeQrisImage(env){
  const raw=String(env.MEMBERSHIP_QRIS_IMAGE_URL||"").trim();
- if(!raw)return "";
+ if(!raw)return DEFAULT_MERCHANT_QRIS_DATA_URI;
  try{const u=new URL(raw);if(u.protocol!=="https:"||u.username||u.password||u.hostname==="localhost"||u.hostname.endsWith(".local"))return "";return u.href}catch{return ""}
 }
 const sha=async value=>Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256",new TextEncoder().encode(value))),b=>b.toString(16).padStart(2,"0")).join("");
@@ -159,7 +160,7 @@ async function handleMembership(request,env){
  if(path==="/api/membership/webhook")return membershipWebhook(request,env);
  if(path==="/api/cosmetics/me"||path==="/api/cosmetics/equip"||path==="/api/redeem/claim"||path==="/api/membership/admin/redeem-codes")return handleCosmetics(request,env);
  if(path==="/api/membership/catalog"&&request.method==="GET")return json({ok:true,pricingStatus:"proposed",paymentEnabled:!!safeQrisImage(env),plans:PLANS,free:{id:"free",name:"Free Member",price:0,summary:"Tetap tersedia tanpa pembayaran."}});
- if(path==="/api/membership/payment-config"&&request.method==="GET")return json({ok:true,enabled:!!safeQrisImage(env),provider:"QRIS",qrisImageUrl:safeQrisImage(env),verification:"manual_until_gateway_connected",automaticWebhookReady:String(env.MEMBERSHIP_WEBHOOK_SECRET||"").length>=32,message:safeQrisImage(env)?"QRIS merchant tersedia. Untuk aktivasi otomatis, hubungkan penyedia pembayaran yang mengirim webhook bertanda tangan ke endpoint ARYANZZ.":"QRIS belum dikonfigurasi oleh pemilik ARYANZZ."});
+ if(path==="/api/membership/payment-config"&&request.method==="GET")return json({ok:true,enabled:!!safeQrisImage(env),checkoutEnabled:!!env.AUTH_DB,provider:"QRIS",qrisImageUrl:safeQrisImage(env),verification:"manual_until_gateway_connected",automaticWebhookReady:String(env.MEMBERSHIP_WEBHOOK_SECRET||"").length>=32,message:safeQrisImage(env)?"QRIS merchant tersedia. Untuk aktivasi otomatis, hubungkan penyedia pembayaran yang mengirim webhook bertanda tangan ke endpoint ARYANZZ.":"QRIS belum dikonfigurasi oleh pemilik ARYANZZ."});
  if(!env.AUTH_DB||typeof env.AUTH_DB.prepare!=="function")return json({ok:false,error:"Database akun belum dikonfigurasi."},503);
  if(path==="/api/membership/me"&&request.method==="GET"){
   const user=await currentUser(request,env);if(!user)return json({ok:false,error:"Silakan login terlebih dahulu."},401);
