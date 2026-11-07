@@ -1866,7 +1866,7 @@ function socialNetworkPlan(selected=0){
       const audioHint = make("p", "muted", directMedia?(info.type==="audio"?"File audio langsung diunduh melalui Chrome; pengelola unduhan browser menangani kecepatan dan percobaan ulang.":"File video langsung diunduh melalui Chrome; sumber yang mendukung Range dapat dilanjutkan oleh pengelola unduhan."):isYouTube?(info.providerReady?(progressiveHeights.length?"MP4 langsung diprioritaskan. Chrome mengelola unduhan di latar belakang; mode kecepatan berlaku pada stream terpisah yang mendukung Range.":"Sumber memisahkan video dan suara; ARYANZZ merakitnya menjadi satu MP4. Potongan 1 MB disimpan lokal. Jika halaman tertutup, buka link yang sama, periksa lagi, lalu tekan Unduh untuk melanjutkan. Tab harus tetap terbuka saat tahap perakitan MP4. Mode kecepatan memakai 1, 3, atau 5 jalur bila server mendukung Range."):"Provider belum menyediakan stream saat ini; coba lagi nanti."):"Tautan platform perlu provider yang mendukung ekstraksi. Tautan file langsung memakai pengelola unduhan Chrome.");
       const note = make("p", "youtube-note", "Hanya unduh konten milikmu atau yang diizinkan.");
       audioHint.hidden=true;
-      box.append(formatLabel, mode, qualityLabel, quality, qualityHint, outputNameLabel, outputName, speedLabel, speedSelect, speedHint, note);
+      box.append(formatLabel, mode, qualityLabel, quality, qualityHint, outputNameLabel, outputNameWrap, speedLabel, speedSelect, speedHint, note);
       outputName.addEventListener("input",()=>{info.outputName=outputName.value.trim().slice(0,90);});
       info.outputName=outputName.value.trim();
 
