@@ -40,11 +40,18 @@ function showNotice(version){
  const message=document.createElement("span");message.textContent="Pembaruan ARYANZZ V1 sudah tersedia. Muat ulang untuk menggunakan perbaikan terbaru.";
  const button=document.createElement("button");button.type="button";button.textContent="Muat versi terbaru";
  button.style.cssText="border:0;border-radius:10px;padding:9px 12px;background:linear-gradient(110deg,#9160ff,#328dff);color:white;font-weight:800;white-space:nowrap";
- button.addEventListener("click",()=>{
+ button.addEventListener("click",async()=>{
+  button.disabled=true;
+  button.textContent="Memuat…";
+  clearUpdateState();
+  try{sessionStorage.removeItem(updateKey)}catch{}
+  try{await unregisterServiceWorkers()}catch{}
+  try{await clearOldCaches()}catch{}
   const retry=new URL(location.href);
-  retry.searchParams.set("aryanzz_update",version);
-  retry.searchParams.set("aryanzz_attempt","0");
-  retry.searchParams.set("aryanzz_refresh",String(Date.now()));
+  retry.searchParams.delete("aryanzz_update");
+  retry.searchParams.delete("aryanzz_attempt");
+  retry.searchParams.delete("aryanzz_refresh");
+  retry.searchParams.set("aryanzz_force_reload",String(Date.now()));
   location.replace(retry.href);
  });
  bar.append(message,button);document.body.append(bar);
