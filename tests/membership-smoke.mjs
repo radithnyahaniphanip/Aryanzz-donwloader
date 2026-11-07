@@ -38,3 +38,9 @@ assert.ok(css.includes(".ary-legendary-frame")&&css.includes(".ary-legendary-bac
 for(const table of ["auth_device_accounts","redeem_codes","redeem_redemptions","user_cosmetics"])assert.ok(prestigeMigration.includes("CREATE TABLE IF NOT EXISTS "+table),"Missing prestige migration table "+table);
 const redeemUnauth=await handleMembership(new Request("https://aryanzz.example/api/redeem/claim",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({code:"ARY-LEGEND-TESTCODE"})}),{AUTH_DB:{prepare(){throw new Error("should not query without a session")}},AUTH_SESSION_SECRET:"x".repeat(40)});
 assert.equal(redeemUnauth.status,401);
+
+assert.ok(backend.includes("/api/cosmetics/equip"),"Users can equip only cosmetics they own");
+assert.ok(backend.includes("/api/membership/payment-config"),"Membership exposes official QRIS configuration state");
+assert.ok(backend.includes("MEMBERSHIP_QRIS_IMAGE_URL"),"QRIS image must come from owner-configured environment value");
+assert.ok(ui.includes("Avatar & Background Studio")&&ui.includes("aryCosmeticsStudio"),"Avatar and background management must be available in Tools");
+assert.ok(ui.includes("Lanjut bayar QRIS")&&ui.includes("QRIS belum tersedia"),"Membership checkout must not create orders before official QRIS is configured");
