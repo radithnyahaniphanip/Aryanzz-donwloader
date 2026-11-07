@@ -18,6 +18,7 @@ assert.ok(auth.includes("auth_user_bans") && auth.includes("ID kamu telah di-ban
 assert.ok(auth.includes("Akunmu telah dipulihkan. Silakan buka kembali website ARYANZZ."), "Restoration must tell the visitor public access has returned");
 assert.ok(gate.includes('get("owner") === "1"') && gate.includes("if(!ownerMode){setUser(null);return;}"), "Only the explicit owner route may display the admin login");
 assert.ok(guest.includes("/api/auth/guest/bootstrap") && guest.includes("aryanzz.public.guest.id.v1"), "The public client must bootstrap a server ID and use a local fallback only when the server is unavailable");
+assert.ok(guest.includes('localStorage.setItem(LOCAL_ID_KEY, String(user.id))'), "The server-issued ID must remain available as a stable local fallback during temporary outages");
 assert.ok(guest.includes("Akunmu telah dipulihkan") && guest.includes("082110767071"), "The guest client must display restoration notice and WhatsApp support");
 assert.ok(guest.includes('document.addEventListener("DOMContentLoaded", start, { once: true })'), "Guest identity bootstrap must wait until the earlier auth-gate initialization has completed");
 assert.ok(guest.includes("guestCopyBound") && guest.includes("navigator.clipboard.writeText"), "The automatically generated ID must be copyable from Profile");
