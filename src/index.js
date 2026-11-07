@@ -252,7 +252,7 @@ function extractGenericPublicMediaCandidates(html,pageUrl){
     for(const [key,item] of Object.entries(value)){
       if(typeof item==="string"){
         if(/^(?:videoUrl|video_url|playUrl|play_url|downloadUrl|download_url|streamUrl|stream_url)$/i.test(key)||(key==="contentUrl"&&type.includes("video")))add(item,"video",value.encodingFormat||value.fileFormat||"","Video");
-        if(/^(?:audioUrl|audio_url|audioDownloadUrl|audio_download_url)$/i.test(key)||(key==="contentUrl"&&type.includes("audio")))add(item,"audio",value.encodingFormat||value.fileFormat||"","Audio");
+        if(/^(?:audioUrl|audio_url|audioDownloadUrl|audio_download_url|musicUrl|music_url|musicDownloadUrl|music_download_url|soundUrl|sound_url|originalAudioUrl|original_audio_url|playableUrl|playable_url)$/i.test(key)||(key==="contentUrl"&&type.includes("audio")))add(item,"audio",value.encodingFormat||value.fileFormat||value.mimeType||"","Audio / soundtrack");
       }else if(item&&typeof item==="object")walk(item,type,depth+1);
     }
   };
@@ -265,7 +265,7 @@ function extractGenericPublicMediaCandidates(html,pageUrl){
   const decoded=decode(html);
   const patterns=[
     {regex:/"(?:contentUrl|videoUrl|video_url|playUrl|play_url|downloadUrl|download_url|streamUrl|stream_url)"\s*:\s*"((?:\\.|[^"\\])+)"/gi,mode:"video"},
-    {regex:/"(?:audioUrl|audio_url|audioDownloadUrl|audio_download_url)"\s*:\s*"((?:\\.|[^"\\])+)"/gi,mode:"audio"}
+    {regex:/"(?:audioUrl|audio_url|audioDownloadUrl|audio_download_url|musicUrl|music_url|musicDownloadUrl|music_download_url|soundUrl|sound_url|originalAudioUrl|original_audio_url|playableUrl|playable_url)"\s*:\s*"((?:\\.|[^"\\])+)"/gi,mode:"audio"}
   ];
   for(const pattern of patterns)for(const match of decoded.matchAll(pattern.regex))add(match[1],pattern.mode,"",pattern.mode==="audio"?"Audio":"Video");
   return output.slice(0,20);
@@ -289,8 +289,9 @@ async function platformMediaInfo(request){
   const raw=String(body?.url||"").trim();
   if(raw.length>3000)return json({error:"Tautan terlalu panjang."},400);
   let parsed;try{parsed=new URL(raw)}catch{return json({error:"Tautan tidak valid."},400)}
-  if(!["http:","https:"].includes(parsed.protocol)||parsed.username||parsed.password)return json({error:"Gunakan tautan publik HTTP/HTTPS yang valid."},400);
+  if(!["http:","https:"].includes(parsed.protocol)||parsed.username||parsed.password||parsed.port)return json({error:"Gunakan tautan publik HTTP/HTTPS yang valid."},400);
   const platformEntry=platformForHost(parsed.hostname);
+  if(parsed.protocol==="http:"&&platformEntry)parsed.protocol="https:";
   if(!platformEntry)return json({ok:false,error:"GAGAL — domain tautan tidak dikenali sebagai platform yang didukung."},400);
   const key=platformEntry.providerKey;
   const expected=String(body?.expectedPlatform||"").toLowerCase();
@@ -1427,8 +1428,10 @@ async function fetchSocialPostHtml(pageUrl,timeoutMs=18000){
     if(!response)throw new Error(lastResponseError||"Halaman sumber tidak dapat dibaca.");
     if([301,302,303,307,308].includes(response.status)){
       const location=response.headers.get("location");if(!location)throw new Error("Pengalihan postingan tidak memiliki alamat tujuan.");
-      const next=safePublicMediaUrl(new URL(location,current.href).href);
-      if(!next)throw new Error("Pengalihan postingan menuju alamat yang tidak aman.");
+      const redirectUrl=new URL(location,current.href);
+      if(redirectUrl.protocol==="http:"&&isPlatformLink(redirectUrl.href))redirectUrl.protocol="https:";
+      const next=safePublicMediaUrl(redirectUrl.href);
+      if(!next)throw new Error("Pengalihan postingan menuju alamat yang tidak aman atau HTTPS tidak tersedia.");
       current=next;continue;
     }
     if(!response.ok)throw new Error("Halaman sumber menjawab HTTP "+response.status+".");
