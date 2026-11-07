@@ -75,6 +75,30 @@ assert.equal(extracted.length, 2, "ZIP reader extracts all entries");
 assert.equal(await extracted[0].data.text(), "ARYANZZ Stage 1", "ZIP round-trip preserves file contents");
 assert.equal(await extracted[1].data.text(), "id,name\n1,Aura", "ZIP round-trip preserves UTF-8 text");
 
+const zipSlip = await core.createZip([{ name: "safe.txt", data: new Blob(["safe"]) }]);
+const zipSlipBytes = new Uint8Array(await zipSlip.arrayBuffer());
+const zipSlipView = new DataView(zipSlipBytes.buffer, zipSlipBytes.byteOffset, zipSlipBytes.byteLength);
+let centralOffset = -1;
+for (let i = 0; i + 46 <= zipSlipBytes.length; i++) {
+  if (zipSlipView.getUint32(i, true) === 0x02014b50) { centralOffset = i; break; }
+}
+assert.ok(centralOffset >= 0, "ZIP central directory exists");
+zipSlipBytes.set(new TextEncoder().encode("../x.txt"), centralOffset + 46);
+await assert.rejects(core.extractZip(new FileShim(new Blob([zipSlipBytes]), "unsafe.zip")), /jalur file yang tidak aman/, "ZIP extraction rejects path traversal");
+
+const compressedZip = await core.createZip([{ name: "repeat.txt", data: new Blob(["A".repeat(100000)]) }]);
+const compressedBytes = new Uint8Array(await compressedZip.arrayBuffer());
+const compressedView = new DataView(compressedBytes.buffer, compressedBytes.byteOffset, compressedBytes.byteLength);
+let compressedCentral = -1;
+for (let i = 0; i + 46 <= compressedBytes.length; i++) {
+  if (compressedView.getUint32(i, true) === 0x02014b50) { compressedCentral = i; break; }
+}
+assert.ok(compressedCentral >= 0, "compressed ZIP central directory exists");
+if (compressedView.getUint16(compressedCentral + 10, true) === 8) {
+  compressedView.setUint32(compressedCentral + 24, 64, true);
+  await assert.rejects(core.extractZip(new FileShim(new Blob([compressedBytes]), "oversized.zip")), /melewati batas aman/, "ZIP extraction bounds DEFLATE output to the declared size");
+}
+
 const parsed = core.parseCsv('id,name,note\r\n1,"Aura, A.","said ""hello"""\r\n2,B,"two"');
 assert.deepEqual(Array.from(parsed.headers), ["id", "name", "note"]);
 assert.equal(parsed.rows.length, 2);
