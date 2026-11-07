@@ -33,19 +33,11 @@ console.log("ARYANZZ V1 Membership catalog, auth gate, migration, and fail-close
 assert.ok(backend.includes("automaticWebhookReady:String(env.POKETO_WEBHOOK_SECRET||\"\").startsWith(\"whsec_\")"),"Payment config must expose Poketo webhook readiness without exposing secrets");
 assert.ok(ui.includes("checkout resmi Poketo")&&ui.includes("syncMembershipPolling"),"Checkout must use Poketo hosted checkout and refresh pending payment status");
 
-assert.ok(backend.includes("/api/redeem/claim"),"Redeem claim endpoint must be implemented");
-assert.ok(backend.includes("3*24*60*60*1000")&&backend.includes("redeemWindowExpiresAt"),"Redeem window must close three days after account creation");
-assert.ok(backend.includes("const expires=null"),"Claimed Legendary cosmetics must remain permanent after the three-day redemption window");
-assert.ok(backend.includes("legendary-avatar-frame")&&backend.includes("legendary-aurora-background"),"Redeem grants both avatar frame and animated profile background");
-assert.ok(backend.includes("/api/membership/admin/redeem-codes"),"Owner must be able to generate redeem codes");
-assert.ok(backend.includes("redeemed_count<max_redemptions"),"Code quota is enforced by conditional database update");
-assert.ok(ui.includes("aryRedeemProfile")&&ui.includes("aryPrestigeActive")&&ui.includes("/api/cosmetics/me")&&ui.includes("updateRedeemWindow")&&ui.includes("d.redeemAvailable"),"Profile account card must expose redeem UI and a three-day new-account countdown");
+assert.ok(ui.includes("aryRedeemProfile")&&ui.includes("aryPrestigeActive")&&ui.includes("LOCAL_PRESTIGE_KEY")&&ui.includes("accountRedeemCode"),"Prestige redeem must use a device-local account-ID-bound code");
+assert.ok(ui.includes("activeAccountId()")&&ui.includes("writeLocalPrestige")&&ui.includes("legendary-avatar-frame")===false,"Redeem must match the active ARYANZZ account ID and save its entitlement locally without a backend request");
+assert.ok(ui.includes("ARYANZZ-V1-LEGENDARY-ACCOUNT-REDEEM")&&ui.includes("crypto.subtle.digest"),"Account-bound redeem codes must be reproducible offline by the owner");
+assert.ok(!ui.includes("/api/redeem/claim")&&!ui.includes("/api/membership/admin/redeem-codes")&&!ui.includes("/api/cosmetics/me"),"Prestige redeem and local cosmetics must not depend on backend endpoints");
 assert.ok(css.includes(".ary-legendary-frame")&&css.includes(".ary-legendary-background")&&css.includes("prefers-reduced-motion"),"Prestige cosmetics must be animated and respect reduced motion");
-
-for(const table of ["auth_device_accounts","redeem_codes","redeem_redemptions","user_cosmetics"])assert.ok(prestigeMigration.includes("CREATE TABLE IF NOT EXISTS "+table),"Missing prestige migration table "+table);
-const redeemUnauth=await handleMembership(new Request("https://aryanzz.example/api/redeem/claim",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({code:"ARY-LEGEND-TESTCODE"})}),{AUTH_DB:{prepare(){throw new Error("should not query without a session")}},AUTH_SESSION_SECRET:"x".repeat(40)});
-assert.equal(redeemUnauth.status,401);
-
 assert.ok(backend.includes("/api/cosmetics/equip"),"Users can equip only cosmetics they own");
 assert.ok(backend.includes("/api/membership/payment-config"),"Membership exposes official QRIS configuration state");
 assert.ok(backend.includes("POKETO_SECRET_KEY")&&backend.includes("https://poketo.id/api/v1/invoices"),"Membership must create invoices using the Poketo API");
@@ -54,7 +46,7 @@ assert.ok(ui.includes("Bayar sekarang")&&ui.includes("paymentUrl")&&ui.includes(
 
 assert.ok(ui.includes('data-panel="aryCosmeticsStudio"')&&ui.includes("loadCosmeticsStudio()"),"Opening Avatar & Background Studio must load the account inventory");
 
-assert.ok(ui.includes('navItem.dataset.nav==="membership"){load();loadCatalog()}')&&ui.includes('navItem.dataset.nav==="profile")loadPrestige()'),"Membership and redeem status must refresh when their navigation tabs open after login");
+assert.ok(ui.includes('navItem.dataset.nav==="membership"){load();loadCatalog()}')&&ui.includes('navItem.dataset.nav==="profile"){applyLocalCosmetics();loadPrestige()}')&&ui.includes('aryanzz:auth-change'),"Membership and local cosmetics refresh on navigation and account changes");
 
 const ownerMarkup=fs.readFileSync(new URL("../public/index.html",import.meta.url),"utf8");
 const ownerScript=fs.readFileSync(new URL("../public/owner.js",import.meta.url),"utf8");
@@ -66,9 +58,11 @@ const studioCss=fs.readFileSync(new URL("../public/membership.css",import.meta.u
 const platformBackend=fs.readFileSync(new URL("../src/index.js",import.meta.url),"utf8");
 for(const id of ["local-frame-aurora","local-frame-royal","local-frame-nebula","local-frame-obsidian","local-bg-aurora","local-bg-crimson","local-bg-nebula","local-bg-midnight"])assert.ok(studioUi.includes(id),"Missing device-local cosmetic preset "+id);
 assert.ok(studioUi.includes("aryanzz.cosmetics.local.v1")&&studioUi.includes("localStorage.setItem"),"Studio must save selected cosmetics locally without D1");
-assert.ok(studioUi.includes("Mode perangkat aktif")&&studioUi.includes("applyLocalCosmetics()"),"Studio must render and apply local presets even if the account database is unavailable");
-for(const cls of ["ary-local-frame-aurora","ary-local-frame-royal","ary-local-frame-nebula","ary-local-frame-obsidian","ary-local-bg-aurora","ary-local-bg-crimson","ary-local-bg-nebula","ary-local-bg-midnight"])assert.ok(studioCss.includes(cls),"Missing cosmetic presentation style "+cls);
+assert.ok(studioUi.includes("Mode lokal aktif")&&studioUi.includes("applyLocalCosmetics()")&&!studioUi.includes("/api/cosmetics/me"),"Studio must apply local presets immediately without a database dependency");
+for(const cls of ["ary-local-frame-aurora","ary-local-frame-royal","ary-local-frame-nebula","ary-local-frame-obsidian","ary-local-bg-aurora","ary-local-bg-crimson","ary-local-bg-nebula","ary-local-bg-midnight","ary-local-profile-bg-aurora","ary-local-profile-bg-crimson"])assert.ok(studioCss.includes(cls),"Missing cosmetic presentation style "+cls);
 assert.ok(platformBackend.includes("Promise.any(tasks)")&&platformBackend.includes("snackVideoNativePageFallback(rawUrl,requestUrl,8500)"),"SnackVideo public fallback providers must race concurrently with bounded timeouts");
+assert.ok(platformBackend.includes('if(parsed.protocol==="http:"&&platformEntry)parsed.protocol="https:"'),"Known social platform links must normalize to HTTPS before provider extraction");
+assert.ok(platformBackend.includes("musicDownloadUrl")&&platformBackend.includes("originalAudioUrl"),"Public page fallback must inspect audio and soundtrack URL metadata");
 
 const membershipBackend=fs.readFileSync(new URL("../src/membership.js",import.meta.url),"utf8");
 assert.ok(membershipBackend.includes("/api/membership/webhook")&&membershipBackend.includes("POKETO_WEBHOOK_SECRET")&&membershipBackend.includes("Poketo-Signature")&&membershipBackend.includes("crypto.subtle.sign"),"Membership webhook must verify the official Poketo HMAC signature");
