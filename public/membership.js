@@ -208,5 +208,6 @@ cosmeticsPanel.addEventListener("click",event=>{
  catch{document.getElementById("aryCosmeticsStatus").textContent="Penyimpanan browser penuh atau dinonaktifkan. Kosmetik tidak dapat disimpan."}
 });
 window.addEventListener("storage",event=>{if(event.key===LOCAL_COSMETICS_KEY)applyLocalCosmetics()});
+applyLocalCosmetics();
 loadCatalog();load();
 })();
