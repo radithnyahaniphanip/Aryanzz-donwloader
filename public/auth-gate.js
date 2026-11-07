@@ -394,7 +394,7 @@
       resetVerifiedUserId = ""; resetDeviceToken = ""; resetUsesLocalAccount = false;
       $("aryResetPassword").value = ""; $("aryResetPasswordConfirm").value = "";
       $("aryResetPassword").disabled = true; $("aryResetPasswordConfirm").disabled = true;
-      $("aryLoginPassword").value = ""; $("aryLoginPasswordConfirm").value = "";
+      $("aryLoginPassword").value = "";
       mode("login"); $("aryLoginIdentifier").value = email;
       say("✓ Reset password berhasil. Silakan masuk menggunakan email dan password baru.");
     } catch (error) { say(error.message, true); }
