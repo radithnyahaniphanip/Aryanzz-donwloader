@@ -56,7 +56,7 @@ loadPrestige();
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 let plans=[];
 const panel=document.createElement("section");panel.id="aryMembershipPanel";panel.className="panel ary-membership";panel.hidden=true;
-panel.innerHTML='<div class="ary-mem-head"><div><span class="ary-mem-eyebrow">ARYANZZ V1 · MEMBER CENTER</span><h2>Membership Center</h2><p>Pilih paket untuk mendukung pengembangan ARYANZZ. Free Member tetap tersedia.</p></div><div class="ary-mem-current" id="aryMemCurrent">Memeriksa akun…</div></div><div class="ary-mem-grid" id="aryMemPlans"></div><div class="ary-mem-history"><div class="ary-mem-history-head"><h3>Riwayat pesanan</h3><button type="button" id="aryMemRefresh">Muat ulang</button></div><div id="aryMemOrders">Login untuk melihat riwayat.</div></div><p class="ary-mem-note" id="aryMemNote" role="status">Pembayaran belum diaktifkan. Pesanan hanya dibuat sebagai draft sampai metode pembayaran dan penerima dana dikonfigurasi.</p>';
+panel.innerHTML='<div class="ary-mem-head"><div><span class="ary-mem-eyebrow">ARYANZZ V1 · MEMBER CENTER</span><h2>Membership Center</h2><p>Pilih paket untuk mendukung pengembangan ARYANZZ. Free Member tetap tersedia.</p></div><div class="ary-mem-current" id="aryMemCurrent">Memeriksa akun…</div></div><div class="ary-mem-grid" id="aryMemPlans"></div><div class="ary-mem-history"><div class="ary-mem-history-head"><h3>Riwayat pesanan</h3><button type="button" id="aryMemRefresh">Muat ulang</button></div><div id="aryMemOrders">Login untuk melihat riwayat.</div></div><p class="ary-mem-note" id="aryMemNote" role="status">Pembayaran belum diaktifkan. Pesanan hanya dibuat sebagai draft sampai metode pembayaran dan penerima dana dikonfigurasi.</p><section class="ary-mem-admin" id="aryMemAdmin" hidden><h3>Owner · Kode redeem Legendary</h3><div class="ary-mem-admin-row"><label>Jumlah kode<input id="aryRedeemQuantity" type="number" min="1" max="100" value="10"></label><label>Kuota per kode<input id="aryRedeemMax" type="number" min="1" max="10000" value="1"></label><label>Kedaluwarsa kode (hari)<input id="aryRedeemExpiry" type="number" min="0" max="365" value="30"></label></div><button type="button" id="aryGenerateRedeemCodes">Buat kode redeem</button><textarea id="aryGeneratedRedeemCodes" rows="5" readonly placeholder="Kode yang dibuat akan muncul di sini. Simpan sekarang; kode hanya ditampilkan satu kali."></textarea></section>';
 root.append(panel);
 const button=document.createElement("button");button.type="button";button.dataset.panel=panel.id;button.textContent="Membership";button.className="ary-mem-nav";nav.append(button);
 async function loadCatalog(){
@@ -77,6 +77,9 @@ async function load(){
  if(r.status===401){current.textContent="Free Member · Login diperlukan";orders.textContent="Masuk ke akun ARYANZZ untuk melihat Membership dan pesanan.";return}
  if(!r.ok||!d.ok)throw Error(d.error||"Gagal memuat Membership.");
  const m=d.membership;current.innerHTML='<b>'+esc(m.planName||"Free Member")+'</b><small>'+esc(m.status==="active"?"Aktif":m.status==="expired"?"Kedaluwarsa":"Free Member")+(m.expiresAt?" · berakhir "+new Date(m.expiresAt).toLocaleDateString("id-ID"):"")+'</small>';
+ const role=String(d.user?.role||"").toLowerCase();
+ const adminPanel=document.getElementById("aryMemAdmin");
+ if(adminPanel)adminPanel.hidden=!(d.user?.id==="ARY-ZFTLQPEX92"||["owner","admin","developer"].includes(role));
  orders.innerHTML=(d.orders||[]).length?(d.orders||[]).map(o=>'<div class="ary-mem-order"><div><b>'+esc(o.id)+'</b><small>'+esc(o.plan_id)+' · '+money(o.amount)+' · '+new Date(o.created_at).toLocaleString("id-ID")+'</small></div><span class="ary-mem-status">'+esc(o.status)+'</span></div>').join(""):"Belum ada pesanan.";
  }catch(e){current.textContent="Status belum tersedia";orders.textContent=e.message;note.textContent=e.message}
 }
@@ -87,5 +90,16 @@ panel.addEventListener("click",async e=>{
  catch(err){note.textContent=err.message}finally{buy.disabled=false}
 });
 document.getElementById("aryMemRefresh").addEventListener("click",load);
+document.getElementById("aryGenerateRedeemCodes")?.addEventListener("click",async()=>{
+ const button=document.getElementById("aryGenerateRedeemCodes"),output=document.getElementById("aryGeneratedRedeemCodes"),note=document.getElementById("aryMemNote");
+ button.disabled=true;button.textContent="Membuat kode…";
+ try{
+  const payload={quantity:Number(document.getElementById("aryRedeemQuantity").value),maxRedemptions:Number(document.getElementById("aryRedeemMax").value),expiresInDays:Number(document.getElementById("aryRedeemExpiry").value),note:"Legendary avatar frame + animated background · 3 days after claim"};
+  const r=await fetch("/api/membership/admin/redeem-codes",{method:"POST",credentials:"same-origin",headers:{"content-type":"application/json"},body:JSON.stringify(payload)});
+  const d=await r.json();if(!r.ok||!d.ok)throw Error(d.error||"Gagal membuat kode.");
+  output.value=(d.codes||[]).join("\\n");note.textContent="Berhasil membuat "+d.quantity+" kode. Salin dan simpan sekarang; kode lengkap hanya ditampilkan satu kali.";
+ }catch(e){note.textContent=e.message||"Gagal membuat kode."}
+ finally{button.disabled=false;button.textContent="Buat kode redeem"}
+});
 loadCatalog();load();
 })();
