@@ -36,3 +36,8 @@ assert.ok(backend.includes("auth_device_accounts"),"Server registration must use
 assert.ok(backend.includes("primaryDeviceOwner(deviceHash, env)"),"Registration/login must check the existing primary account on this browser installation");
 assert.ok(backend.includes("previouslyTrusted.user_id !== user.id"),"Legacy trusted-device ownership must be preserved when upgrading to the primary-device registry");
 assert.ok(backend.includes("Dilarang membuat akun baru di perangkat ini"),"Duplicate-account block must explain that the primary account should be used");
+
+assert.ok(backend.includes("moderationGate") && backend.includes("DEVICE_BANNED"),"Banned device must be rejected by the Worker before serving routes");
+assert.ok(backend.includes("auth_moderation_events") && backend.includes("restored:true"),"Ban and restoration actions must be audited and restored login must be announced");
+assert.ok(backend.includes("aryanzz_device_lock") && backend.includes("HttpOnly; Secure; SameSite=Lax"),"Device lock identity must be issued in a secure HttpOnly cookie");
+assert.ok(backend.includes("MODERATION_NOT_CONFIGURED"),"Moderation endpoints must fail closed when D1 or session secret is missing");
