@@ -83,14 +83,14 @@ const panel=document.createElement("section");panel.id="aryMembershipPanel";pane
 panel.innerHTML='<div class="ary-mem-head"><div><span class="ary-mem-eyebrow">ARYANZZ V1 · MEMBER CENTER</span><h2>Membership Center</h2><p>Pilih paket Membership, lanjutkan ke checkout Poketo, lalu bayar dengan metode yang tersedia di akunmu.</p></div><div class="ary-mem-current" id="aryMemCurrent">Memeriksa akun…</div></div><div class="ary-mem-grid" id="aryMemPlans"></div><section class="ary-mem-payment" id="aryMemPayment"><div><span class="ary-mem-eyebrow">CHECKOUT PEMBAYARAN</span><h3>Poketo Payment</h3><p id="aryMemPaymentNote">Memeriksa koneksi Poketo…</p><div class="ary-mem-methods" id="aryMemMethods"><span>Metode pembayaran dimuat saat checkout.</span></div></div><div class="ary-mem-secure-mark">🔒<b>Checkout aman</b><small>Pembayaran diproses di halaman resmi Poketo. ARYANZZ tidak meminta PIN, OTP, atau password e-wallet.</small></div></section><div class="ary-mem-history"><div class="ary-mem-history-head"><h3>Riwayat pesanan</h3><button type="button" id="aryMemRefresh">Muat ulang</button></div><div id="aryMemOrders">Login untuk melihat riwayat.</div></div><p class="ary-mem-note" id="aryMemNote" role="status">Harga paket merupakan rancangan. Pembayaran hanya dapat dilakukan setelah QRIS merchant resmi dikonfigurasi.</p><section class="ary-mem-admin" id="aryMemAdmin" hidden><div class="ary-mem-admin-orders"><div class="ary-mem-history-head"><h3>Owner · Verifikasi pembayaran QRIS</h3><button type="button" id="aryMemAdminRefresh">Muat ulang pesanan</button></div><p class="ary-mem-note">Status pembayaran diperbarui otomatis dari webhook Poketo yang tanda tangannya diverifikasi server. Tidak ada aktivasi manual dari browser.</p><div id="aryMemAdminOrders">Memuat pesanan…</div></div><h3>Owner · Kode redeem berdasarkan ID akun</h3><p class="ary-mem-note">Masukkan ID akun penerima. Kode akan dibuat langsung di browser tanpa database redeem.</p><label class="ary-redeem-owner-id">ID akun penerima<input id="aryRedeemTargetId" type="text" maxlength="40" placeholder="ARY-XXXXXXXXXX"></label><button type="button" id="aryGenerateRedeemCodes">Buat kode khusus akun</button><textarea id="aryGeneratedRedeemCodes" rows="3" readonly placeholder="Kode khusus akun akan muncul di sini."></textarea></section>'
 root.append(panel);
 const button=document.createElement("button");button.type="button";button.dataset.nav="membership";button.innerHTML='<span class="ary-mem-nav-logo" aria-hidden="true">✦</span><span class="ary-mem-nav-label">Membership</span>';button.className="ary-mem-nav";nav.insertBefore(button,nav.children[2]||null);
-let paymentConfig={enabled:false,checkoutEnabled:false,provider:"Poketo",mode:"sandbox"};
+let paymentConfig={enabled:false,checkoutEnabled:false,automaticWebhookReady:false,missing:["Konfigurasi pembayaran belum terbaca"],provider:"Poketo",mode:"sandbox"};
 async function loadCatalog(){
  const note=document.getElementById("aryMemNote"),paymentNote=document.getElementById("aryMemPaymentNote"),qris=document.getElementById("aryMemQris");
  try{
   const [catalogResponse,paymentResponse]=await Promise.all([fetch("/api/membership/catalog",{cache:"no-store"}),fetch("/api/membership/payment-config",{cache:"no-store"})]);
   const data=await catalogResponse.json(),payment=await paymentResponse.json();
   if(!catalogResponse.ok||!data.ok||!Array.isArray(data.plans))throw Error(data.error||"Katalog Membership belum tersedia.");
-  paymentConfig={enabled:!!payment.enabled,checkoutEnabled:!!payment.checkoutEnabled,provider:String(payment.provider||"Poketo"),mode:String(payment.mode||"sandbox"),automaticWebhookReady:!!payment.automaticWebhookReady};
+  paymentConfig={enabled:!!payment.apiKeyReady||!!payment.enabled,checkoutEnabled:!!payment.dbReady||!!payment.checkoutEnabled,automaticWebhookReady:!!payment.webhookReady||!!payment.automaticWebhookReady,missing:Array.isArray(payment.missing)?payment.missing:[],provider:String(payment.provider||"Poketo"),mode:String(payment.mode||"sandbox")};
   plans=data.plans.map(p=>({...p,term:p.durationDays===null?"Permanen":p.durationDays+" hari",desc:p.summary||""}));
   const methodHost=document.getElementById("aryMemMethods");
   if(methodHost&&paymentConfig.enabled){
@@ -101,7 +101,7 @@ async function loadCatalog(){
     methodHost.innerHTML=available.length?available.map(x=>'<span class="ary-mem-method-chip">'+esc(x.name||x.label||x.code||x.id||"Pembayaran")+'</span>').join(""):'<span>Metode pembayaran akan ditampilkan pada checkout Poketo.</span>';
    }catch{methodHost.textContent="Pilihan metode pembayaran akan muncul di halaman checkout Poketo."}
   }
-  if(paymentNote)paymentNote.textContent=!paymentConfig.checkoutEnabled?"Database akun ARYANZZ belum aktif.":(!paymentConfig.enabled?"API key Poketo belum dipasang.":(paymentConfig.automaticWebhookReady?"Terhubung ke Poketo · mode "+paymentConfig.mode+". Pilih metode pembayaran pada halaman checkout resmi.":"API key tersedia, tetapi webhook signing secret belum dikonfigurasi."));
+  if(paymentNote)paymentNote.textContent=paymentConfig.missing.length?"Belum siap: "+paymentConfig.missing.join(" · "):"Terhubung ke Poketo · mode "+paymentConfig.mode+". Pilih metode pembayaran pada halaman checkout resmi.";
   if(qris)qris.innerHTML="";
   if(qris)qris.hidden=true;
   if(note)note.textContent="Pembayaran dilakukan melalui checkout resmi Poketo. Membership hanya aktif setelah invoice berstatus paid dan webhook berhasil diverifikasi server.";
@@ -110,7 +110,7 @@ async function loadCatalog(){
 }
 function renderPlans(){
  const host=document.getElementById("aryMemPlans");
- host.innerHTML=plans.map((p,i)=>'<article class="ary-mem-card '+(i===2?"ary-mem-featured":"")+'"><div class="ary-mem-card-top"><span>'+String(i+1).padStart(2,"0")+' / MEMBERSHIP</span><b>'+esc(p.name)+'</b></div><div class="ary-mem-price">'+money(p.price)+'</div><div class="ary-mem-term">'+p.term+'</div><p>'+esc(p.desc)+'</p><button type="button" data-buy="'+esc(p.id)+'" '+(paymentConfig.checkoutEnabled&&paymentConfig.enabled?"":"disabled")+'>'+(paymentConfig.checkoutEnabled&&paymentConfig.enabled?"Bayar sekarang":"Pembayaran belum tersedia")+'</button></article>').join("")
+ host.innerHTML=plans.map((p,i)=>'<article class="ary-mem-card '+(i===2?"ary-mem-featured":"")+'"><div class="ary-mem-card-top"><span>'+String(i+1).padStart(2,"0")+' / MEMBERSHIP</span><b>'+esc(p.name)+'</b></div><div class="ary-mem-price">'+money(p.price)+'</div><div class="ary-mem-term">'+p.term+'</div><p>'+esc(p.desc)+'</p><button type="button" data-buy="'+esc(p.id)+'" '+'>Bayar sekarang+'</button></article>').join("")
 }
 async function loadAdminOrders(){
  const host=document.getElementById("aryMemAdminOrders");if(!host)return;
@@ -156,7 +156,7 @@ panel.addEventListener("click",async e=>{
  }
  const buy=e.target.closest("[data-buy]");if(!buy)return;
  buy.disabled=true;const p=plans.find(x=>x.id===buy.dataset.buy);const note=document.getElementById("aryMemNote");
- try{if(!paymentConfig.checkoutEnabled||!paymentConfig.enabled)throw Error("Pembayaran Poketo belum dikonfigurasi atau database akun belum aktif.");const r=await fetch("/api/membership/orders",{method:"POST",credentials:"same-origin",headers:{"content-type":"application/json"},body:JSON.stringify({planId:p.id,paymentProvider:"poketo"})});const d=await r.json();if(!r.ok||!d.ok)throw Error(d.error||"Invoice gagal dibuat.");if(!d.payment?.paymentUrl)throw Error("Link checkout Poketo tidak tersedia.");note.textContent="Invoice "+d.order.id+" berhasil dibuat. Mengarahkan ke checkout Poketo…";await load();window.location.assign(d.payment.paymentUrl)}
+ try{if(!paymentConfig.checkoutEnabled||!paymentConfig.enabled||!paymentConfig.automaticWebhookReady)throw Error("Pembayaran belum dapat diproses: "+(paymentConfig.missing.join(" · ")||"konfigurasi server belum lengkap")+".");if(!p)throw Error("Paket Membership tidak ditemukan.");const r=await fetch("/api/membership/orders",{method:"POST",credentials:"same-origin",headers:{"content-type":"application/json"},body:JSON.stringify({planId:p.id,paymentProvider:"poketo"})});const d=await r.json();if(!r.ok||!d.ok)throw Error(d.error||"Invoice gagal dibuat.");if(!d.payment?.paymentUrl)throw Error("Link checkout Poketo tidak tersedia.");note.textContent="Invoice "+d.order.id+" berhasil dibuat. Mengarahkan ke checkout Poketo…";await load();window.location.assign(d.payment.paymentUrl)}
  catch(err){note.textContent=err.message}finally{buy.disabled=false}
 });
 document.getElementById("aryMemRefresh").addEventListener("click",load);
