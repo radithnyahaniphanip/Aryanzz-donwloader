@@ -62,8 +62,8 @@ stage.register("video-lightweight",(root,core)=>{
  }
  async function loadVideo(video,file){
   if(video.dataset.objectUrl)URL.revokeObjectURL(video.dataset.objectUrl);
-  const url=URL.createObjectURL(file);video.dataset.objectUrl=url;video.src=url;video.load();
-  if(video.readyState<1)await core.waitEvent(video,"loadedmetadata",20000);
+  const url=URL.createObjectURL(file);video.dataset.objectUrl=url;video.src=url;
+  const ready=video.readyState<1?core.waitEvent(video,"loadedmetadata",20000):Promise.resolve();video.load();await ready;
   if(!Number.isFinite(video.duration)||video.videoWidth<1||video.videoHeight<1)throw new Error("Metadata video tidak dapat dibaca.");
   return video;
  }
