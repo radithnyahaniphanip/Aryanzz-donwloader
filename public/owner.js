@@ -164,42 +164,6 @@
     }
     $("ownerBanSubmit")?.addEventListener("click",()=>moderate("ban"));
     $("ownerUnbanSubmit")?.addEventListener("click",()=>moderate("unban"));
-    const membershipRefresh=$("ownerMembershipRefresh"),membershipStatus=$("ownerMembershipStatus"),membershipOrders=$("ownerMembershipOrders");
-    async function loadMembershipOrders(){
-      if(membershipRefresh)membershipRefresh.disabled=true;
-      if(membershipStatus)membershipStatus.textContent="Memuat pesanan Membership...";
-      try{
-        const response=await fetch("/api/membership/admin/orders",{credentials:"same-origin",cache:"no-store",headers:{accept:"application/json"}});
-        const data=await response.json().catch(()=>({}));
-        if(!response.ok||!data.ok)throw new Error(data.error||"Gagal memuat pesanan.");
-        const rows=Array.isArray(data.orders)?data.orders:[];
-        if(membershipStatus)membershipStatus.textContent=rows.length+" pesanan ditemukan.";
-        if(membershipOrders)membershipOrders.innerHTML=rows.length?rows.map(order=>{
-          const status=String(order.status||"");
-          const pending=status==="pending";
-          return '<article class="ary-membership-admin-order"><div class="ary-membership-admin-order-top"><div><b>'+escapeMembershipText(order.full_name||"Anggota")+'</b><small>'+escapeMembershipText(order.email||"")+' · '+escapeMembershipText(order.id)+'</small></div><span data-status="'+escapeMembershipText(status)+'">'+escapeMembershipText(status.toUpperCase())+'</span></div><p>'+escapeMembershipText(order.plan_id)+' · Rp'+Number(order.amount||0).toLocaleString("id-ID")+' · '+new Date(Number(order.created_at)||0).toLocaleString("id-ID")+'</p>'+(pending?'<label class="ary-membership-admin-confirm"><input type="checkbox" data-payment-confirm="'+escapeMembershipText(order.id)+'"> Saya sudah memeriksa rekening penerima dan memastikan dana benar-benar masuk.</label><label class="ary-membership-admin-note">Catatan pemeriksaan<textarea data-payment-note="'+escapeMembershipText(order.id)+'" maxlength="300" placeholder="Opsional"></textarea></label><div class="ary-membership-admin-actions"><button type="button" data-membership-review="approve" data-order="'+escapeMembershipText(order.id)+'">Verifikasi & aktifkan</button><button type="button" data-membership-review="reject" data-order="'+escapeMembershipText(order.id)+'">Tolak pesanan</button></div>':'')+'</article>';
-        }).join(""):"Belum ada pesanan Membership.";
-      }catch(error){if(membershipStatus)membershipStatus.textContent=error.message;if(membershipOrders)membershipOrders.replaceChildren();}
-      finally{if(membershipRefresh)membershipRefresh.disabled=false;}
-    }
-    function escapeMembershipText(value){return String(value??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));}
-    membershipRefresh?.addEventListener("click",loadMembershipOrders);
-    membershipOrders?.addEventListener("click",async event=>{
-      const action=event.target.closest("[data-membership-review]");if(!action)return;
-      const orderId=action.dataset.order||"",decision=action.dataset.membershipReview||"";
-      const confirmation=membershipOrders.querySelector('[data-payment-confirm="'+CSS.escape(orderId)+'"]');
-      if(decision==="approve"&&!confirmation?.checked){if(membershipStatus)membershipStatus.textContent="Konfirmasi penerimaan dana wajib dicentang.";return;}
-      action.disabled=true;
-      try{
-        const note=membershipOrders.querySelector('[data-payment-note="'+CSS.escape(orderId)+'"]')?.value||"";
-        const response=await fetch("/api/membership/admin/review",{method:"POST",credentials:"same-origin",headers:{"content-type":"application/json","accept":"application/json"},body:JSON.stringify({orderId,decision,paymentVerified:decision==="approve"&&confirmation?.checked===true,note})});
-        const data=await response.json().catch(()=>({}));
-        if(!response.ok||!data.ok)throw new Error(data.error||"Pemeriksaan pesanan gagal.");
-        if(membershipStatus)membershipStatus.textContent=data.message||"Pesanan diperbarui.";
-        await loadMembershipOrders();
-      }catch(error){if(membershipStatus)membershipStatus.textContent=error.message;action.disabled=false;}
-    });
-    loadMembershipOrders();
     draw();
   }
   function init() {
