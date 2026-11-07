@@ -24,7 +24,7 @@ stage.register("video-lightweight",(root,core)=>{
   const scale=v.getUint32(p+12,false),duration=v.getUint32(p+16,false);return scale?duration/scale:null;
  }
  function parseMp4(bytes){
-  const top=parseBoxes(bytes),moov=child(top,"moov");if(!moov)return null;
+  const top=parseBoxes(bytes);let moov=child(top,"moov");\n  if(!moov){for(let i=4;i+4<=bytes.length;i++){if(bytes[i]===0x6d&&bytes[i+1]===0x6f&&bytes[i+2]===0x6f&&bytes[i+3]===0x76){const start=i-4,size=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength).getUint32(start,false);if(size>=8&&start+size<=bytes.length){moov={type:"moov",start,size,header:8,payload:start+8,end:start+size};break}}}}\n  if(!moov)return null;
   const moovBoxes=parseBoxes(bytes,moov.payload,moov.end),mvhd=child(moovBoxes,"mvhd");
   let videoCodec="Tidak terbaca",fps=null,audio=false,video=false;
   for(const trak of moovBoxes.filter(x=>x.type==="trak")){
@@ -94,7 +94,7 @@ stage.register("video-lightweight",(root,core)=>{
     ["Video codec",mp4?.videoCodec||"Tidak tersedia untuk parser ringan"],["FPS rata-rata",mp4?.fps?mp4.fps.toFixed(2)+" fps":"Tidak tersedia"],["Audio track",mp4?mp4.audio?"Terdeteksi":"Tidak terdeteksi":"Tidak dapat diperiksa"],["Container",/\.mp4$|\.m4v$/i.test(file.name)?"MP4 / M4V":"Mengikuti tipe file"],["Terakhir diubah",file.lastModified?new Date(file.lastModified).toLocaleString():"Tidak tersedia"]
    ];
    core.resultPairs("v1ltMetaResult",pairs);setStatus("v1ltMetaStatus","Metadata berhasil dibaca. Bitrate adalah estimasi berdasarkan ukuran file total; codec/FPS hanya ditampilkan bila struktur MP4 dapat dianalisis.","success");
-   video.removeAttribute("src");video.load();
+   video.removeAttribute("src");video.load();if(video.dataset.objectUrl){URL.revokeObjectURL(video.dataset.objectUrl);delete video.dataset.objectUrl;}
   }catch(error){setStatus("v1ltMetaStatus",error.message||"Gagal membaca video.","error")}
  });
  function gcdRatio(w,h){let a=w,b=h;while(b){const t=b;b=a%b;a=t}return a?(w/a)+":"+(h/a):"—"}
