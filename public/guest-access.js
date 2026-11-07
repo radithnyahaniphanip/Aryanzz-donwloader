@@ -103,9 +103,18 @@
     }
     return data;
   }
-  window.aryanzzGuestReady = bootstrap().catch(error => {
-    console.warn("[ARYANZZ] Guest identity fallback:", error?.message || "unavailable");
-    if(error?.code==="ADMIN_SESSION_REQUIRED")return localFallback("Akses publik tetap tersedia. Sesi administrator berakhir; gunakan /?owner=1 untuk masuk kembali ke panel admin.",false);
-    return localFallback();
+  window.aryanzzGuestReady = new Promise(resolve => {
+    const start = () => {
+      bootstrap().catch(error => {
+        console.warn("[ARYANZZ] Guest identity fallback:", error?.message || "unavailable");
+        if(error?.code==="ADMIN_SESSION_REQUIRED")return localFallback("Akses publik tetap tersedia. Sesi administrator berakhir; gunakan /?owner=1 untuk masuk kembali ke panel admin.",false);
+        return localFallback();
+      }).then(resolve);
+    };
+    // auth-gate.js registers its DOMContentLoaded handler first; wait for it
+    // so the public guest identity cannot be overwritten by setUser(null).
+    if (document.readyState === "loading" || document.readyState === "interactive") {
+      document.addEventListener("DOMContentLoaded", start, { once: true });
+    } else start();
   });
 })();
