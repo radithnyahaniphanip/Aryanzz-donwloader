@@ -78,7 +78,9 @@
         showBlocked(data.userId || "", data.error || "ID ini diblokir.");
         return data;
       }
-      throw new Error(data.error || "ID pengunjung belum dapat disinkronkan.");
+      const failure = new Error(data.error || "ID pengunjung belum dapat disinkronkan.");
+      failure.code = data.code || "";
+      throw failure;
     }
     setIdentity(data.user, false);
     if (data.restoredAt) {
