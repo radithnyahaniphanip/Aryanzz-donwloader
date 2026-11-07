@@ -210,13 +210,17 @@ async function handleMembership(request,env){
   if(!/^whsec_/.test(String(env.POKETO_WEBHOOK_SECRET||"")))return json({ok:false,error:"POKETO_WEBHOOK_SECRET belum terpasang. Pembayaran ditahan agar tidak ada transaksi tanpa aktivasi Membership otomatis."},503);
   let body;try{body=await request.json()}catch{return json({ok:false,error:"Data pesanan tidak valid."},400)}
   const plan=PLANS.find(p=>p.id===String(body?.planId||""));if(!plan)return json({ok:false,error:"Paket Membership tidak ditemukan."},400);
+  const guest=String(user.role||"").toLowerCase()==="guest";
+  const customerEmail=guest?String(body?.customerEmail||"").trim().toLowerCase():String(user.email||"").trim().toLowerCase();
+  const customerName=guest?String(body?.customerName||"Pengunjung ARYANZZ").trim().replace(/\s+/g," ").slice(0,100):String(user.full_name||"Pengguna ARYANZZ").slice(0,100);
+  if(guest&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerEmail))return json({ok:false,error:"Masukkan email aktif untuk menerima detail invoice. Email ini hanya untuk pembayaran, bukan untuk login."},400);
   await env.AUTH_DB.prepare("UPDATE membership_orders SET status='expired',note='Invoice melewati batas pembayaran' WHERE user_id=?1 AND status='pending' AND created_at<=?2").bind(user.id,Date.now()-24*60*60*1000).run();
   const pending=await env.AUTH_DB.prepare("SELECT id FROM membership_orders WHERE user_id=?1 AND status='pending' AND created_at>?2 LIMIT 1").bind(user.id,Date.now()-24*60*60*1000).first();
   if(pending)return json({ok:false,error:"Masih ada invoice yang menunggu pembayaran.",orderId:pending.id},409);
   const now=Date.now(),id="ARYM-"+now.toString(36).toUpperCase()+"-"+crypto.randomUUID().slice(0,8).toUpperCase();
   await env.AUTH_DB.prepare("INSERT INTO membership_orders (id,user_id,plan_id,amount,status,payment_provider,created_at) VALUES (?1,?2,?3,?4,'pending','poketo',?5)").bind(id,user.id,plan.id,plan.price,now).run();
   const site=new URL(request.url).origin;
-  const payload={referenceId:id,amount:plan.price,title:"ARYANZZ Membership · "+plan.name,description:"Membership "+plan.name+" selama "+(plan.durationDays===null?"permanen":plan.durationDays+" hari"),customer:{name:String(user.full_name||user.email||"Pengguna ARYANZZ").slice(0,100),email:user.email},expiresInMinutes:1440,redirectUrl:site+"/?membership=return&order="+encodeURIComponent(id),metadata:{orderId:id,userId:user.id,planId:plan.id}};
+  const payload={referenceId:id,amount:plan.price,title:"ARYANZZ Membership · "+plan.name,description:"Membership "+plan.name+" selama "+(plan.durationDays===null?"permanen":plan.durationDays+" hari"),customer:{name:customerName,email:customerEmail},expiresInMinutes:1440,redirectUrl:site+"/?membership=return&order="+encodeURIComponent(id),metadata:{orderId:id,userId:user.id,planId:plan.id}};
   let response,data;
   try{
    response=await fetch("https://poketo.id/api/v1/invoices",{method:"POST",headers:{"authorization":"Bearer "+env.POKETO_SECRET_KEY,"content-type":"application/json","idempotency-key":id},body:JSON.stringify(payload),signal:AbortSignal.timeout(15000)});
