@@ -2,6 +2,7 @@
   "use strict";
   const $ = id => document.getElementById(id);
   const gate = $("aryAuthGate"), message = $("aryAuthMessage");
+  const ownerMode = new URLSearchParams(location.search).get("owner") === "1";
   const USERS_KEY = "aryanzz.local.accounts.v94", SESSION_KEY = "aryanzz.local.session.v94", DEVICE_KEY = "aryanzz.device.key.v1";
   let config = { ready: false, moderationReady:false, captchaSiteKey: "" }, widgetId = null, captchaToken = "", pendingEmail = "", pendingLegacy = null, pendingResetToken = new URLSearchParams(location.search).get("resetToken") || "", resetVerifiedUserId = "", resetDeviceToken = "", resetUsesLocalAccount = false;
 
@@ -76,7 +77,7 @@
   }
   function setUser(user, localOnly = false) {
     window.aryanzzAuthUser = user || null;
-    const isDeveloper=!!user&&String(user.id||"").toUpperCase()==="ARY-ZFTLQPEX92";
+    const isDeveloper=!!user&&(String(user.id||"").toUpperCase()==="ARY-ZFTLQPEX92"||["owner","admin","developer"].includes(String(user.role||"").toLowerCase()));
     window.aryanzzIsDeveloper = isDeveloper;
     const id = $("profileRandomId"), copy = $("profileCopyId"), logout = $("accountLogout"), desc = $("profileIdDescription");
     if (id && user) { id.textContent = user.id; id.classList.toggle("ary-developer-id", isDeveloper); id.setAttribute("aria-label", "ID akun ARYANZZ"); }
@@ -91,7 +92,7 @@
     if (security) security.hidden=!isDeveloper;
     if (ownerEdit) ownerEdit.hidden=!isDeveloper;
     document.body.classList.toggle("ary-developer-account", isDeveloper);
-    if (gate) gate.hidden = !!user;
+    if (gate) gate.hidden = !ownerMode || !!user;
     document.body.classList.toggle("ary-authenticated", !!user);
     if ($("profileName") && user?.fullName && ["","Pengguna ARYANZZ","Anggota ARYANZZ"].includes($("profileName").value.trim())) $("profileName").value = user.fullName;
     if ($("profileSummary")) $("profileSummary").textContent = String(user?.fullName || "Anggota ARYANZZ");
@@ -431,6 +432,12 @@
     $("aryLegacyMigrate")?.addEventListener("click", startLegacyMigration);
     $("aryLegacyMigrate").hidden = true;
     $("accountLogout")?.addEventListener("click", async () => { try { await post("/api/auth/logout", {}); } catch {} try { localStorage.removeItem(SESSION_KEY); } catch {} setUser(null); mode("login"); say("Kamu sudah keluar dari akun."); });
+    if(!ownerMode){setUser(null);return;}
+    const registerTab=document.querySelector('[data-auth-mode="register"]');
+    if(registerTab)registerTab.hidden=true;
+    const authTabs=$("aryAuthTabs");if(authTabs)authTabs.hidden=true;
+    if($("aryAuthTitle"))$("aryAuthTitle").textContent="Akses administrator ARYANZZ";
+    if($("aryAuthFoot"))$("aryAuthFoot").textContent="Halaman khusus pemilik dan administrator. Pengunjung tidak perlu login atau mendaftar.";
     config = { ready:false, registrationReady:false, moderationReady:false, captchaSiteKey:"", missingLogin:[], missingRegistration:[] };
     try {
       const remoteConfig = await get("/api/auth/config");
@@ -438,9 +445,12 @@
     } catch(error) {
       if(error.code==="ACCOUNT_BANNED"||error.code==="DEVICE_BANNED"){showModerationBlock(error.message);return;}
     }
-    const registerTab = document.querySelector('[data-auth-mode="register"]'); if (registerTab) registerTab.hidden = false;
+    const registerTab = document.querySelector('[data-auth-mode="register"]'); if (registerTab) registerTab.hidden = true;
+    const authTabs=$("aryAuthTabs");if(authTabs)authTabs.hidden=true;
     refreshLocalCaptcha("aryReg"); refreshLocalCaptcha("aryLogin"); refreshLocalCaptcha("aryReset");
     setUser(null);mode("login");
+    if($("aryAuthTitle"))$("aryAuthTitle").textContent="Akses administrator ARYANZZ";
+    if($("aryAuthIntro"))$("aryAuthIntro").querySelector("p")?.replaceChildren(document.createTextNode("Masuk khusus pemilik dan administrator. Pengunjung ARYANZZ tidak perlu daftar atau login."));
     if (config.ready) {
       if ($("aryRegisterSubmit")) $("aryRegisterSubmit").disabled = false;
       if ($("aryAuthFoot")) $("aryAuthFoot").textContent = "Akun tersimpan di server ARYANZZ dan dilindungi pemeriksaan moderasi perangkat.";
