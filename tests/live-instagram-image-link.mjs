@@ -1,4 +1,4 @@
-const base=(process.env.WORKER_URL||"https://aryanzz-donwloader.radithnyahaniphanip.workers.dev").replace(/\/$/,"");
+const base=(process.env.WORKER_URL||"https://aryanzz-donwloader.aryanz.workers.dev").replace(/\/$/,"");
 const sourceUrl="https://www.instagram.com/p/Dek72MYE141/?xtok=OWdvNjR4dmZscnlx";
 const report={test:"user-supplied Instagram post image and video extraction",sourceUrl,status:null,title:null,platform:null,imageCount:0,previewStatus:null,previewMime:null,previewDisposition:null,signatureValid:false,downloadUrlAvailable:false,videoInfoStatus:null,videoInfoType:null,imageOnly:false,videoFormatCount:0,videoProbeStatus:null,videoProbeMime:null,videoProbeValid:false,videoProbeAttempts:[],videoError:null,error:null};
 try{
