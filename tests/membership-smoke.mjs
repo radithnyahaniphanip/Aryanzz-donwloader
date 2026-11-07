@@ -66,7 +66,7 @@ for(const cls of ["ary-local-frame-aurora","ary-local-frame-royal","ary-local-fr
 assert.ok(platformBackend.includes("Promise.any(tasks)")&&platformBackend.includes("snackVideoNativePageFallback(rawUrl,requestUrl,8500)"),"SnackVideo public fallback providers must race concurrently with bounded timeouts");
 
 const membershipBackend=fs.readFileSync(new URL("../src/membership.js",import.meta.url),"utf8");
-assert.ok(membershipBackend.includes("/api/membership/webhooks/payment")&&membershipBackend.includes("MEMBERSHIP_WEBHOOK_SECRET")&&membershipBackend.includes("authorization"),"Membership webhook must authenticate trusted server-to-server callbacks");
+assert.ok(membershipBackend.includes("/api/membership/webhook")&&membershipBackend.includes("MEMBERSHIP_WEBHOOK_SECRET")&&membershipBackend.includes("crypto.subtle.sign")&&membershipBackend.includes("x-aryanzz-signature"),"Membership webhook must authenticate trusted server-to-server callbacks");
 assert.ok(membershipBackend.includes("Number(order.amount)!==amount")&&membershipBackend.includes("provider_transaction_id")&&membershipBackend.includes("transactionId"),"Webhook must match the exact order amount and persist a unique provider transaction ID");
 assert.ok(membershipBackend.includes("env.AUTH_DB.batch")&&membershipBackend.includes("changes()=1")&&membershipBackend.includes("membershipActivated:true"),"Verified webhook must atomically mark an order paid and activate membership once");
 assert.ok(studioUi.includes("loadAdminOrders")&&studioUi.includes("data-review-order")&&studioUi.includes("paymentVerified:decision==="),"Owner must be able to review pending QRIS orders and explicitly confirm funds before manual approval");
