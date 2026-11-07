@@ -34,7 +34,7 @@ assert.ok(backend.includes("automaticWebhookReady:String(env.POKETO_WEBHOOK_SECR
 assert.ok(ui.includes("checkout resmi Poketo")&&ui.includes("syncMembershipPolling"),"Checkout must use Poketo hosted checkout and refresh pending payment status");
 
 assert.ok(ui.includes("aryRedeemProfile")&&ui.includes("aryPrestigeActive")&&ui.includes("LOCAL_PRESTIGE_KEY")&&ui.includes("accountRedeemCode"),"Prestige redeem must use a device-local account-ID-bound code");
-assert.ok(ui.includes("activeAccountId()")&&ui.includes("writeLocalPrestige")&&ui.includes("legendary-avatar-frame")===false,"Redeem must match the active ARYANZZ account ID and save its entitlement locally without a backend request");
+assert.ok(ui.includes("activeAccountId()")&&ui.includes("writeLocalPrestige")&&ui.includes("record.accountId===accountId"),"Redeem must match the active ARYANZZ account ID and save its entitlement locally without a backend request");
 assert.ok(ui.includes("ARYANZZ-V1-LEGENDARY-ACCOUNT-REDEEM")&&ui.includes("crypto.subtle.digest"),"Account-bound redeem codes must be reproducible offline by the owner");
 assert.ok(!ui.includes("/api/redeem/claim")&&!ui.includes("/api/membership/admin/redeem-codes")&&!ui.includes("/api/cosmetics/me"),"Prestige redeem and local cosmetics must not depend on backend endpoints");
 assert.ok(css.includes(".ary-legendary-frame")&&css.includes(".ary-legendary-background")&&css.includes("prefers-reduced-motion"),"Prestige cosmetics must be animated and respect reduced motion");
