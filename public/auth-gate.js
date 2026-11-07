@@ -3,7 +3,7 @@
   const $ = id => document.getElementById(id);
   const gate = $("aryAuthGate"), message = $("aryAuthMessage");
   const USERS_KEY = "aryanzz.local.accounts.v94", SESSION_KEY = "aryanzz.local.session.v94", DEVICE_KEY = "aryanzz.device.key.v1";
-  let config = { ready: false, captchaSiteKey: "" }, widgetId = null, captchaToken = "", pendingEmail = "", pendingLegacy = null, pendingResetToken = new URLSearchParams(location.search).get("resetToken") || "", resetVerifiedUserId = "", resetDeviceToken = "";
+  let config = { ready: false, captchaSiteKey: "" }, widgetId = null, captchaToken = "", pendingEmail = "", pendingLegacy = null, pendingResetToken = new URLSearchParams(location.search).get("resetToken") || "", resetVerifiedUserId = "", resetDeviceToken = "", resetUsesLocalAccount = false;
 
   const say = (value, error = false) => { if (message) { message.textContent = value; message.classList.toggle("is-error", !!error); } };
   const readUsers = () => { try { const raw = localStorage.getItem(USERS_KEY); if (raw === null) return []; const value = JSON.parse(raw); return Array.isArray(value) ? value : null; } catch { return null; } };
@@ -100,7 +100,7 @@
   function mode(value) {
     if (value !== "reset") resetVerifiedUserId = "";
     if (value === "reset") {
-      resetVerifiedUserId = ""; resetDeviceToken = "";
+      resetVerifiedUserId = ""; resetDeviceToken = ""; resetUsesLocalAccount = false;
       if ($("aryResetCheckPanel")) $("aryResetCheckPanel").hidden = true;
       if ($("aryResetProgressFill")) $("aryResetProgressFill").style.width = "0%";
       if ($("aryResetProgressPercent")) $("aryResetProgressPercent").textContent = "0%";
@@ -307,10 +307,25 @@
       try {
         await animateDeviceCheck();
         if (config.ready) {
-          const result = await post("/api/auth/reset/device/start", {
-            email, deviceHash: await currentDeviceHash(), captchaToken
-          });
-          resetVerifiedUserId = result.userId; resetDeviceToken = result.token;
+          try {
+            const result = await post("/api/auth/reset/device/start", {
+              email, deviceHash: await currentDeviceHash(), captchaToken
+            });
+            resetVerifiedUserId = result.userId; resetDeviceToken = result.token;
+            resetUsesLocalAccount = false;
+          } catch (serverError) {
+            if (!["DEVICE_NOT_RECOGNIZED","ACCOUNT_NOT_FOUND"].includes(serverError.code)) throw serverError;
+            const localUsers = readUsers();
+            if (!Array.isArray(localUsers)) throw serverError;
+            const localUser = localUsers.find(item => storedEmail(item) === email && item.localOnly !== false);
+            if (!localUser) throw serverError;
+            const deviceHash = await currentDeviceHash();
+            if (!localUser.deviceKeyHash || !equal(String(localUser.deviceKeyHash), deviceHash)) {
+              throw new Error("Email ditemukan pada akun lama yang tersimpan di browser, tetapi perangkat ini tidak cocok. Gunakan browser asal akun tersebut.");
+            }
+            resetVerifiedUserId = localUser.id;
+            resetUsesLocalAccount = true;
+          }
         } else {
           const user = users.find(item => storedEmail(item) === email);
           if (!user) { say("Email ini belum terdaftar pada browser/perangkat ini.", true); return; }
@@ -320,6 +335,7 @@
             return;
           }
           resetVerifiedUserId = user.id;
+          resetUsesLocalAccount = true;
         }
         $("aryResetProgressFill").style.width = "100%";
         $("aryResetProgressPercent").textContent = "100%";
@@ -341,7 +357,7 @@
     if (password !== confirm) return say("Ulangi password baru belum sama.", true);
     try {
       button.disabled = true; button.textContent = "Menyimpan password…";
-      if (config.ready) {
+      if (config.ready && !resetUsesLocalAccount) {
         await post("/api/auth/reset/device/verify", {
           email, token: resetDeviceToken, password, passwordConfirm: confirm
         });
@@ -359,7 +375,7 @@
         users[index].salt = salt; users[index].iterations = 250000;
         localStorage.setItem(USERS_KEY, JSON.stringify(users));
       }
-      resetVerifiedUserId = ""; resetDeviceToken = "";
+      resetVerifiedUserId = ""; resetDeviceToken = ""; resetUsesLocalAccount = false;
       $("aryResetPassword").value = ""; $("aryResetPasswordConfirm").value = "";
       $("aryResetPassword").disabled = true; $("aryResetPasswordConfirm").disabled = true;
       $("aryLoginPassword").value = ""; $("aryLoginPasswordConfirm").value = "";
