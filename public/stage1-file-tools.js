@@ -85,6 +85,7 @@ stage.register("file-lightweight",(root,core)=>{
   try{
    if(file.size>core.MAX_TOTAL)throw new Error("File melebihi batas 250 MB.");
    const chunkSize=Number($("v1ltSplitSize").value)*1024*1024,parts=[],base=core.safeName(file.name);
+   if(file.size===0)parts.push({name:base+".part001",data:file});
    for(let offset=0,index=1;offset<file.size;offset+=chunkSize,index++){
     const partName=base+".part"+String(index).padStart(3,"0");
     parts.push({name:partName,data:file.slice(offset,Math.min(file.size,offset+chunkSize))});
