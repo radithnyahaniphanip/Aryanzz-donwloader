@@ -39,5 +39,7 @@ assert.ok(backend.includes("Dilarang membuat akun baru di perangkat ini"),"Dupli
 
 assert.ok(backend.includes("moderationGate") && backend.includes("DEVICE_BANNED"),"Banned device must be rejected by the Worker before serving routes");
 assert.ok(backend.includes("auth_moderation_events") && backend.includes("restored:true"),"Ban and restoration actions must be audited and restored login must be announced");
+assert.ok(backend.includes("auth_device_lock_accounts") && backend.includes("rememberDeviceLock"),"The server-issued device lock must be linked to authenticated accounts so account bans also block the same browser installation");
+assert.ok(fs.readFileSync(new URL("../migrations/0008_device_lock_accounts.sql", import.meta.url), "utf8").includes("lock_hash TEXT PRIMARY KEY"),"Device lock ownership must be stored as a unique server-side hash");
 assert.ok(backend.includes("aryanzz_device_lock") && backend.includes("HttpOnly; Secure; SameSite=Lax"),"Device lock identity must be issued in a secure HttpOnly cookie");
 assert.ok(backend.includes("MODERATION_NOT_CONFIGURED"),"Moderation endpoints must fail closed when D1 or session secret is missing");
