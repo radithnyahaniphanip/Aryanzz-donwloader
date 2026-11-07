@@ -25,7 +25,7 @@ const catalogBody=await catalog.json();assert.equal(catalogBody.plans.length,7);
 assert.equal(catalogBody.pricingStatus,"proposed");
 assert.equal(catalogBody.paymentEnabled,false);
 console.log("ARYANZZ V1 Membership catalog, auth gate, migration, and fail-closed review checks passed.");
-assert.ok(backend.includes("automaticActivation:!!env.MEMBERSHIP_WEBHOOK_SECRET"),"Payment config must distinguish static QRIS from an activated callback bridge");
+assert.ok(backend.includes("automaticWebhookReady:String(env.MEMBERSHIP_WEBHOOK_SECRET||\"\").length>=32"),"Payment config must distinguish static QRIS from an activated callback bridge");
 assert.ok(ui.includes("QRIS statis tidak mengirim notifikasi otomatis")&&ui.includes("syncMembershipPolling"),"Checkout must explain static QRIS limits and refresh pending payment status");
 
 assert.ok(backend.includes("/api/redeem/claim"),"Redeem claim endpoint must be implemented");
