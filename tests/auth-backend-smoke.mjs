@@ -43,3 +43,25 @@ assert.ok(backend.includes("auth_device_lock_accounts") && backend.includes("rem
 assert.ok(fs.readFileSync(new URL("../migrations/0008_device_lock_accounts.sql", import.meta.url), "utf8").includes("lock_hash TEXT PRIMARY KEY"),"Device lock ownership must be stored as a unique server-side hash");
 assert.ok(backend.includes("aryanzz_device_lock") && backend.includes("HttpOnly; Secure; SameSite=Lax"),"Device lock identity must be issued in a secure HttpOnly cookie");
 assert.ok(backend.includes("MODERATION_NOT_CONFIGURED"),"Moderation endpoints must fail closed when D1 or session secret is missing");
+
+const loginReadyConfig = await handleAuthRequest(new Request("https://aryanzz.example/api/auth/config"), {
+  AUTH_DB: { prepare() { return {}; } },
+  AUTH_SESSION_SECRET: "s".repeat(40),
+  TURNSTILE_SECRET_KEY: "turnstile-secret",
+  AUTH_TURNSTILE_SITE_KEY: "turnstile-site"
+});
+const loginReadyBody = await loginReadyConfig.json();
+assert.equal(loginReadyBody.loginReady, true, "A configured server must allow login even if email delivery is not configured");
+assert.equal(loginReadyBody.registrationReady, false, "Registration must remain disabled without a verified email sender");
+assert.ok(loginReadyBody.missingRegistration.includes("RESEND_API_KEY") && loginReadyBody.missingRegistration.includes("AUTH_EMAIL_FROM (verified sender)"), "Registration config diagnostics must name missing email settings");
+const fullReadyConfig = await handleAuthRequest(new Request("https://aryanzz.example/api/auth/config"), {
+  AUTH_DB: { prepare() { return {}; } },
+  AUTH_SESSION_SECRET: "s".repeat(40),
+  TURNSTILE_SECRET_KEY: "turnstile-secret",
+  AUTH_TURNSTILE_SITE_KEY: "turnstile-site",
+  RESEND_API_KEY: "resend-secret",
+  AUTH_EMAIL_FROM: "ARYANZZ <auth@example.com>"
+});
+const fullReadyBody = await fullReadyConfig.json();
+assert.equal(fullReadyBody.loginReady, true);
+assert.equal(fullReadyBody.registrationReady, true, "Verified email delivery must unlock registration");
