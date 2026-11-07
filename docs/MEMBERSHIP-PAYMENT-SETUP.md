@@ -9,6 +9,16 @@
 - Until an official payment API or trusted payment-notification bridge is connected, the owner must check the incoming GoPay Merchant transaction and approve/reject the matching pending order from the owner-only Membership verification area.
 - Membership is activated only after the owner confirms that the exact amount was received, or after an authenticated payment webhook has verified the exact order ID, transaction ID, and amount.
 
+## Required account database setup
+
+The live production check must show `checkoutEnabled: true` before users can create orders. If it is false, the Worker has no `AUTH_DB` binding yet.
+
+1. In Cloudflare Dashboard, open Workers & Pages → `aryanzz-donwloader` → Settings → Bindings.
+2. Add a D1 database binding with variable name `AUTH_DB` and select (or create) database `aryanzz-auth-db`.
+3. In GitHub repository Settings → Secrets and variables → Actions, add `ARYANZZ_AUTH_DB_ID` with that D1 database UUID. Ensure `CLOUDFLARE_API_TOKEN` has D1:Edit permission so deployment can apply migrations.
+4. Ensure `AUTH_SESSION_SECRET` is set. For the complete online login/registration flow, also configure `RESEND_API_KEY`, `AUTH_EMAIL_FROM` (verified sender), `TURNSTILE_SECRET_KEY`, and `AUTH_TURNSTILE_SITE_KEY`.
+5. Push or run the deployment workflow again, then verify `/api/auth/config` reports `ready: true` and `/api/membership/payment-config` reports `checkoutEnabled: true`.
+
 ## Cloudflare / GitHub settings
 
 Add these GitHub Actions repository secrets:
