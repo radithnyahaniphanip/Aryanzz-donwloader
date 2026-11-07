@@ -484,11 +484,15 @@ async function verifyReset(request, env) {
 export async function handleAuthRequest(request, env) {
   const url = new URL(request.url), path = url.pathname;
   if (path === "/api/auth/config" && request.method === "GET") {
-    const missing = missingConfig(env), active = missing.length === 0;
+    const missing = missingConfig(env);
+    const loginReady = ready(env);
+    const registrationReady = loginReady && !!String(env.RESEND_API_KEY || "").trim() && !!String(env.AUTH_EMAIL_FROM || "").trim();
+    const missingLogin = missing.filter(item => ["Cloudflare D1 (AUTH_DB)","AUTH_SESSION_SECRET","TURNSTILE_SECRET_KEY","AUTH_TURNSTILE_SITE_KEY"].includes(item));
+    const missingRegistration = missing.filter(item => ["RESEND_API_KEY","AUTH_EMAIL_FROM (verified sender)"].includes(item));
     const moderationReady=!!env.AUTH_DB&&typeof env.AUTH_DB.prepare==="function"&&String(env.AUTH_SESSION_SECRET||"").length>=32;
     const existing=deviceLockTokenFrom(request),lockToken=existing||randomHex(32);
-    return reply({ ok: true, ready: active, moderationReady, publicVersion: "V1", captchaSiteKey: String(env.AUTH_TURNSTILE_SITE_KEY || ""), missing,
-      message: active ? "Layanan akun online siap." : "Layanan akun online menunggu konfigurasi: " + missing.join(", ") + "." },
+    return reply({ ok: true, ready: loginReady, loginReady, registrationReady, moderationReady, publicVersion: "V1", captchaSiteKey: String(env.AUTH_TURNSTILE_SITE_KEY || ""), missing, missingLogin, missingRegistration,
+      message: loginReady ? (registrationReady ? "Layanan akun online siap." : "Login siap; pendaftaran menunggu konfigurasi pengiriman email.") : "Layanan akun online menunggu konfigurasi: " + missingLogin.join(", ") + "." },
       200,existing?{}:{"set-cookie":DEVICE_LOCK_COOKIE+"="+lockToken+"; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=63072000"});
   }
   if (path === "/api/auth/logout" && request.method === "POST") return logout(request, env);
@@ -499,7 +503,10 @@ export async function handleAuthRequest(request, env) {
   try {
     if (path === "/api/auth/me" && request.method === "GET") return me(request, env);
     if (request.method !== "POST") return reply({ ok: false, error: "Metode tidak diizinkan." }, 405);
-    if (path === "/api/auth/register/start") return startRegister(request, env);
+    if (path === "/api/auth/register/start") {
+      if (!String(env.RESEND_API_KEY || "").trim() || !String(env.AUTH_EMAIL_FROM || "").trim()) return reply({ok:false,code:"EMAIL_DELIVERY_NOT_CONFIGURED",error:"Pendaftaran belum tersedia karena layanan email verifikasi belum dikonfigurasi."},503);
+      return startRegister(request, env);
+    }
     if (path === "/api/auth/register/verify") return verifyRegister(request, env);
     if (path === "/api/auth/login") return login(request, env);
     if (path === "/api/auth/legacy/start") return startLegacy(request, env);
