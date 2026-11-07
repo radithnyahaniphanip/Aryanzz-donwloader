@@ -460,7 +460,7 @@
       } catch(error) {
         if(error.code==="ACCOUNT_BANNED"||error.code==="DEVICE_BANNED"){showModerationBlock(error.message);return}
       }
-      say(config.registrationReady ? "Layanan akun online siap. Masuk atau daftar menggunakan email atau ID ARYANZZ." : "Login siap. Pendaftaran sementara tidak tersedia karena email verifikasi belum dikonfigurasi: " + config.missingRegistration.join(", "), !config.registrationReady);
+      say("Akses administrator siap. Pengunjung ARYANZZ tidak perlu daftar atau login.");
     } else {
       if ($("aryAuthFoot")) $("aryAuthFoot").textContent = "Login lokal dinonaktifkan. Akun hanya dapat digunakan setelah layanan keamanan server aktif.";
       if ($("aryLoginSubmit")) $("aryLoginSubmit").disabled = true;
