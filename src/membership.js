@@ -1,5 +1,6 @@
 const COOKIE="aryanzz_session";
 const ADMIN_ID="ARY-ZFTLQPEX92";
+function poketoMode(env){const explicit=String(env.POKETO_MODE||"").toLowerCase();if(explicit==="live"||explicit==="sandbox")return explicit;return String(env.POKETO_SECRET_KEY||"").startsWith("sk_live_")?"live":"sandbox";}
 const PLANS=[
 {id:"starter",name:"Starter",price:80000,durationDays:30,badge:"Starter",summary:"Paket pengenalan Membership ARYANZZ."},
 {id:"plus",name:"Plus",price:140000,durationDays:60,badge:"Plus",summary:"Akses Membership untuk dua bulan."},
@@ -150,7 +151,7 @@ async function membershipWebhook(request,env){
  if(!orderId)return json({ok:false,error:"Referensi pesanan tidak ditemukan."},400);
  const order=await env.AUTH_DB.prepare("SELECT * FROM membership_orders WHERE id=?1 LIMIT 1").bind(orderId).first();
  if(!order)return json({ok:false,error:"Pesanan ARYANZZ tidak ditemukan."},404);
- if(String(event.environment||"")!==String(env.POKETO_MODE==="live"?"live":"sandbox"))return json({ok:false,error:"Environment Poketo tidak cocok dengan mode ARYANZZ."},409);
+ if(String(event.environment||"")!==String(poketoMode(env)))return json({ok:false,error:"Environment Poketo tidak cocok dengan mode ARYANZZ."},409);
  const invoiceId=String(invoice.id||"").slice(0,160);
  if(type==="invoice.paid"){
   const amount=Number(invoice.amount);
