@@ -162,7 +162,7 @@ panel.addEventListener("click",async e=>{
  }
  const buy=e.target.closest("[data-buy]");if(!buy)return;
  buy.disabled=true;const p=plans.find(x=>x.id===buy.dataset.buy);const note=document.getElementById("aryMemNote");
- try{if(!paymentConfig.checkoutEnabled)throw Error("Database akun ARYANZZ belum aktif. Pesanan belum dapat dibuat.");const r=await fetch("/api/membership/orders",{method:"POST",credentials:"same-origin",headers:{"content-type":"application/json"},body:JSON.stringify({planId:p.id,paymentProvider:"qris"})});const d=await r.json();if(!r.ok||!d.ok)throw Error(d.error||"Pesanan gagal dibuat.");note.textContent="Pesanan "+d.order.id+" dibuat. Scan QRIS dan masukkan nominal tepat "+money(d.order.amount)+". Status diperbarui setelah gateway mengirim notifikasi pembayaran terverifikasi.";await load()}
+ try{if(!paymentConfig.checkoutEnabled||!paymentConfig.enabled)throw Error("Pembayaran Poketo belum dikonfigurasi atau database akun belum aktif.");const r=await fetch("/api/membership/orders",{method:"POST",credentials:"same-origin",headers:{"content-type":"application/json"},body:JSON.stringify({planId:p.id,paymentProvider:"poketo"})});const d=await r.json();if(!r.ok||!d.ok)throw Error(d.error||"Invoice gagal dibuat.");if(!d.payment?.paymentUrl)throw Error("Link checkout Poketo tidak tersedia.");note.textContent="Invoice "+d.order.id+" berhasil dibuat. Mengarahkan ke checkout Poketo…";await load();window.location.assign(d.payment.paymentUrl)}
  catch(err){note.textContent=err.message}finally{buy.disabled=false}
 });
 document.getElementById("aryMemRefresh").addEventListener("click",load);
