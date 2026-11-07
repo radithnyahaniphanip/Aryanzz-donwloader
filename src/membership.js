@@ -121,7 +121,7 @@ async function verifyPoketoWebhook(request,env){
  const header=String(request.headers.get("Poketo-Signature")||"");
  const parts=Object.fromEntries(header.split(",").map(x=>{const i=x.indexOf("=");return i<0?[x,""]:[x.slice(0,i).trim(),x.slice(i+1).trim()]}));
  const timestamp=String(parts.t||""),signature=String(parts.v1||"");
- if(!/^\\d{10}$/.test(timestamp)||Math.abs(Date.now()/1000-Number(timestamp))>300||!/^[a-f0-9]{64}$/i.test(signature))return null;
+ if(!/^\d{10}$/.test(timestamp)||Math.abs(Date.now()/1000-Number(timestamp))>300||!/^[a-f0-9]{64}$/i.test(signature))return null;
  const bodyText=new TextDecoder().decode(raw);
  const key=await crypto.subtle.importKey("raw",new TextEncoder().encode(secret),{name:"HMAC",hash:"SHA-256"},false,["sign"]);
  const signed=new TextEncoder().encode(timestamp+"."+bodyText);
@@ -173,9 +173,10 @@ async function membershipWebhook(request,env){
   return json({ok:true,message:"Pembayaran Poketo terverifikasi. Membership aktif.",orderId});
  }
  if(["invoice.expired","invoice.cancelled","invoice.refunded"].includes(type)){
-  const next=type==="invoice.expired"?"expired":type==="invoice.cancelled"?"rejected":"refunded";
+  const next=type==="invoice.expired"?"expired":"rejected";
   await env.AUTH_DB.batch([
    env.AUTH_DB.prepare("UPDATE membership_orders SET status=?1,note=?2 WHERE id=?3 AND status IN ('pending','paid')").bind(next,"Status diperbarui oleh webhook Poketo: "+type,orderId),
+   ...(type==="invoice.refunded"&&order.status==="paid"?[env.AUTH_DB.prepare("UPDATE user_memberships SET status='revoked',updated_at=?1 WHERE user_id=?2 AND plan_id=?3 AND started_at=?4 AND status='active'").bind(Date.now(),order.user_id,order.plan_id,Number(order.paid_at||0))]:[]),
    env.AUTH_DB.prepare("INSERT OR IGNORE INTO poketo_webhook_events (event_id,event_type,received_at) VALUES (?1,?2,?3)").bind(eventId,type,Date.now())
   ]);
   return json({ok:true,message:"Status invoice diperbarui."});
