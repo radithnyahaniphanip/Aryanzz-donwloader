@@ -96,9 +96,18 @@ async function loadCatalog(){
   const [catalogResponse,paymentResponse]=await Promise.all([fetch("/api/membership/catalog",{cache:"no-store"}),fetch("/api/membership/payment-config",{cache:"no-store"})]);
   const data=await catalogResponse.json(),payment=await paymentResponse.json();
   if(!catalogResponse.ok||!data.ok||!Array.isArray(data.plans))throw Error(data.error||"Katalog Membership belum tersedia.");
-  paymentConfig={enabled:!!payment.enabled,checkoutEnabled:!!payment.checkoutEnabled,provider:String(payment.provider||"Poketo"),mode:String(payment.mode||"sandbox")};
+  paymentConfig={enabled:!!payment.enabled,checkoutEnabled:!!payment.checkoutEnabled,provider:String(payment.provider||"Poketo"),mode:String(payment.mode||"sandbox"),automaticWebhookReady:!!payment.automaticWebhookReady};
   plans=data.plans.map(p=>({...p,term:p.durationDays===null?"Permanen":p.durationDays+" hari",desc:p.summary||""}));
-  if(paymentNote)paymentNote.textContent=!paymentConfig.checkoutEnabled?"Database akun ARYANZZ belum aktif.":(!paymentConfig.enabled?"API key Poketo belum dipasang.":(payment.automaticWebhookReady?"Terhubung ke Poketo · mode "+paymentConfig.mode+". Pilih metode pembayaran pada halaman checkout resmi.":"API key tersedia, tetapi webhook signing secret belum dikonfigurasi."));
+  const methodHost=document.getElementById("aryMemMethods");
+  if(methodHost&&paymentConfig.enabled){
+   try{
+    const mr=await fetch("/api/membership/payment-methods?amount=80000",{cache:"no-store"}),md=await mr.json();
+    const raw=md.methods,items=Array.isArray(raw)?raw:(Array.isArray(raw?.methods)?raw.methods:(Array.isArray(md.data)?md.data:[]));
+    const available=items.filter(x=>x&&(x.available!==false)&&(x.enabled!==false));
+    methodHost.innerHTML=available.length?available.map(x=>'<span class="ary-mem-method-chip">'+esc(x.name||x.label||x.code||x.id||"Pembayaran")+'</span>').join(""):'<span>Metode pembayaran akan ditampilkan pada checkout Poketo.</span>';
+   }catch{methodHost.textContent="Pilihan metode pembayaran akan muncul di halaman checkout Poketo."}
+  }
+  if(paymentNote)paymentNote.textContent=!paymentConfig.checkoutEnabled?"Database akun ARYANZZ belum aktif.":(!paymentConfig.enabled?"API key Poketo belum dipasang.":(paymentConfig.automaticWebhookReady?"Terhubung ke Poketo · mode "+paymentConfig.mode+". Pilih metode pembayaran pada halaman checkout resmi.":"API key tersedia, tetapi webhook signing secret belum dikonfigurasi."));
   if(qris)qris.innerHTML="";
   if(qris)qris.hidden=true;
   if(note)note.textContent="Pembayaran dilakukan melalui checkout resmi Poketo. Membership hanya aktif setelah invoice berstatus paid dan webhook berhasil diverifikasi server.";
