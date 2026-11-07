@@ -62,4 +62,6 @@ document.addEventListener("click",event=>{
  if(panelButton)showPanel(panelButton.dataset.panel);
 });
 showPanel("home");
+const membershipScript=document.createElement("script");membershipScript.src="/membership.js?v=1";membershipScript.defer=true;document.head.appendChild(membershipScript);
+const membershipStyle=document.createElement("link");membershipStyle.rel="stylesheet";membershipStyle.href="/membership.css?v=1";document.head.appendChild(membershipStyle);
 })();
