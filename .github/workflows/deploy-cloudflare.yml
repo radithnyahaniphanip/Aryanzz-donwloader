@@ -41,6 +41,7 @@ jobs:
           node --check tests/auth-gate-smoke.mjs
           node --check tests/module-boundaries-smoke.mjs
           node --check tests/auth-backend-smoke.mjs
+          node --check tests/live-runtime-config-smoke.mjs
           node --check tests/membership-payment-smoke.mjs
           node --check tests/membership-smoke.mjs
           node --check tests/live-release-smoke.mjs
@@ -157,6 +158,10 @@ jobs:
         env:
           WORKER_URL: https://aryanzz-donwloader.aryanz.workers.dev
         run: node tests/live-release-smoke.mjs
+      - name: Verify production D1, Turnstile and Poketo bindings
+        env:
+          WORKER_URL: https://aryanzz-donwloader.aryanz.workers.dev
+        run: node tests/live-runtime-config-smoke.mjs
       - name: Create automatic recovery checkpoint
         if: success()
         uses: actions/github-script@v7
