@@ -111,7 +111,7 @@
   }
   function mode(value) {
     if (value !== "reset") resetVerifiedUserId = "";
-    if (value === "register" && !config.registrationReady) { say("Pendaftaran belum tersedia. Layanan email verifikasi belum dikonfigurasi.", true); value = "login"; }
+    
     if (value === "reset") {
       resetVerifiedUserId = ""; resetDeviceToken = ""; resetUsesLocalAccount = false;
       if ($("aryResetCheckPanel")) $("aryResetCheckPanel").hidden = true;
@@ -125,6 +125,7 @@
     }
     showStep(value === "register" ? "aryRegisterForm" : value === "reset" ? "aryResetStartForm" : "aryLoginForm");
     document.querySelectorAll("[data-auth-mode]").forEach(button => button.classList.toggle("active", button.dataset.authMode === value));
+    if (value === "register" && !config.registrationReady) say("Formulir pendaftaran tetap tersedia, tetapi pengiriman kode verifikasi belum aktif. Pemilik website perlu mengonfigurasi layanan email verifikasi.", true);
   }
   async function post(path, data) {
     const response = await fetch(path, { method: "POST", credentials: "same-origin", cache: "no-store", headers: { "content-type": "application/json", accept: "application/json" }, body: JSON.stringify(data) });
@@ -437,11 +438,11 @@
     } catch(error) {
       if(error.code==="ACCOUNT_BANNED"||error.code==="DEVICE_BANNED"){showModerationBlock(error.message);return;}
     }
-    const registerTab = document.querySelector('[data-auth-mode="register"]'); if (registerTab) registerTab.hidden = !config.registrationReady;
+    const registerTab = document.querySelector('[data-auth-mode="register"]'); if (registerTab) registerTab.hidden = false;
     refreshLocalCaptcha("aryReg"); refreshLocalCaptcha("aryLogin"); refreshLocalCaptcha("aryReset");
     setUser(null);mode("login");
     if (config.ready) {
-      if ($("aryRegisterSubmit")) $("aryRegisterSubmit").disabled = !config.registrationReady;
+      if ($("aryRegisterSubmit")) $("aryRegisterSubmit").disabled = false;
       if ($("aryAuthFoot")) $("aryAuthFoot").textContent = "Akun tersimpan di server ARYANZZ dan dilindungi pemeriksaan moderasi perangkat.";
       loadCaptcha();
       try {
