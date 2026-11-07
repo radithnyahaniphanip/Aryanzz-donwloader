@@ -47,7 +47,7 @@ const checks=[
   ["V93.0 restores the original Profile Studio settings layout",!profileJs.includes("consolidateProfileSettings")&&!profileJs.includes("v93-profile-settings")],
   ["V93.0 restores the original Profile Studio banner styling",!profileCss.includes("radial-gradient(circle at 50% 55%")],
   ["V93.0 About ARYANZZ and Help remain available from Profile and Tools",html.includes('data-panel="about"')&&html.includes('data-panel="help"')&&html.includes('id="about"')&&html.includes('id="help"')],
-  ["V93.0 PWA shell caches the new Link Bypass assets and profile script",sw.includes('const CACHE="aryanzz-build-__ARYANZZ_VERSION__"')&&sw.includes("/link-bypass.css?v=94.0")&&sw.includes("/link-bypass.js?v=94.0")&&sw.includes("/v25.js?v=94.0")],
+  ["V93.0 PWA shell caches the new Link Bypass assets and profile script",sw.includes('const CACHE="aryanzz-build-__ARYANZZ_VERSION__"')&&sw.includes("/link-bypass.css?v=94.0")&&sw.includes("/link-bypass.js?v=94.0")&&(sw.includes("/v25.js?v=__ARYANZZ_VERSION__")||sw.includes("/v25.js?v=94.0"))],
   ["Green Screen and cat-meme discovery variants are generated from ordinary search keywords",workerSource.includes("function socialSearchQueryVariants(query)")&&workerSource.includes('add("green screen meme","green screen meme template","chroma key meme"')&&workerSource.includes('add("green screen cat meme","green screen meme kucing","cat green screen meme")')&&workerSource.includes("return variants.map(value=>") ],
   ["V88.11 Bing parser accepts social video permalinks outside legacy result list markup",workerSource.includes("Fallback parser for Bing layouts")&&workerSource.includes('matchAll(/<a')&&workerSource.includes('searchProvider:"Bing Web"')&&workerSource.includes('searchProvider:"Bing Web"')],
 
