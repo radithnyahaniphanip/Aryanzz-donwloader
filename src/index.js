@@ -1090,7 +1090,7 @@ async function searchSocial(request){
     const pages=await Promise.all(variants.flatMap(term=>searchSites.map(async searchSite=>{
       const url=new URL("https://html.duckduckgo.com/html/");url.searchParams.set("q",(searchSite?searchSite+" ":"")+term);
       try{
-        const response=await fetch(url.href,{headers:{accept:"text/html","user-agent":"Mozilla/5.0 (compatible; ARYANZZ/86.2; +https://aryanzz-donwloader.radithnyahaniphanip.workers.dev)"},signal:AbortSignal.timeout(10000),cache:"no-store"});
+        const response=await fetch(url.href,{headers:{accept:"text/html","user-agent":"Mozilla/5.0 (compatible; ARYANZZ/86.2; +https://aryanzz-donwloader.aryanz.workers.dev)"},signal:AbortSignal.timeout(10000),cache:"no-store"});
         return response.ok?await response.text():"";
       }catch{return ""}
     })));
@@ -3188,15 +3188,15 @@ const workerHandler = {async fetch(request,env){
   // Serve crawler files explicitly so Google receives deterministic XML/plain-text MIME types.
   if(url.pathname==="/sitemap.xml"&&request.method==="GET"){
     const lastmod=new Date().toISOString().slice(0,10);
-    const xml='<?xml version="1.0" encoding="UTF-8"?>\\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\\n  <url>\\n    <loc>https://aryanzz-donwloader.radithnyahaniphanip.workers.dev/</loc>\\n    <lastmod>'+lastmod+'</lastmod>\\n  </url>\\n</urlset>\\n';
+    const xml='<?xml version="1.0" encoding="UTF-8"?>\\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\\n  <url>\\n    <loc>https://aryanzz-donwloader.aryanz.workers.dev/</loc>\\n    <lastmod>'+lastmod+'</lastmod>\\n  </url>\\n</urlset>\\n';
     return new Response(xml,{status:200,headers:{"content-type":"application/xml; charset=utf-8","cache-control":"public, max-age=3600","x-content-type-options":"nosniff"}});
   }
   if(url.pathname==="/sitemap.txt"&&request.method==="GET"){
-    const sitemap="https://aryanzz-donwloader.radithnyahaniphanip.workers.dev/\n";
+    const sitemap="https://aryanzz-donwloader.aryanz.workers.dev/\n";
     return new Response(sitemap,{status:200,headers:{"content-type":"text/plain; charset=utf-8","cache-control":"public, max-age=3600","x-content-type-options":"nosniff"}});
   }
   if(url.pathname==="/robots.txt"&&request.method==="GET"){
-    const robots='User-agent: *\\nAllow: /\\nDisallow: /api/\\n\\nSitemap: https://aryanzz-donwloader.radithnyahaniphanip.workers.dev/sitemap.xml\\n';
+    const robots='User-agent: *\\nAllow: /\\nDisallow: /api/\\n\\nSitemap: https://aryanzz-donwloader.aryanz.workers.dev/sitemap.xml\\n';
     return new Response(robots,{status:200,headers:{"content-type":"text/plain; charset=utf-8","cache-control":"public, max-age=3600","x-content-type-options":"nosniff"}});
   }
   if(request.method==="OPTIONS"&&url.pathname.startsWith("/api/"))return new Response(null,{status:204,headers:{"access-control-allow-origin":url.origin,"access-control-allow-methods":"GET,POST,OPTIONS","access-control-allow-headers":"Content-Type"}});
