@@ -11,6 +11,7 @@ const membership = read("src/membership.js");
 const membershipUi = read("public/membership.js");
 
 assert.ok(auth.includes("/api/auth/guest/bootstrap") && auth.includes("async function guestBootstrap"), "Guest identity must be issued by the server");
+assert.ok(auth.includes('limited(request,"guest-bootstrap",60,60000)'), "Automatic guest ID creation must be rate-limited to reduce bot abuse");
 assert.ok(auth.includes("INSERT INTO auth_device_lock_accounts") && auth.includes("role,created_at,updated_at"), "Guest IDs must be linked to a server-side device lock and persistent auth row");
 assert.ok(auth.includes("PUBLIC_LOGIN_DISABLED") && auth.includes("REGISTRATION_DISABLED"), "Public member login and registration must be disabled");
 assert.ok(auth.includes("auth_user_bans") && auth.includes("ID kamu telah di-banned"), "Moderation must block the guest ID and show the requested banned state");
