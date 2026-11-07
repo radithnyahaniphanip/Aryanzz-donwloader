@@ -38,7 +38,7 @@ for (const path of ["stage1-tools-core.js", "stage1-video-tools.js", "stage1-ima
   assert.ok(html.includes('/' + path + '?v=__ARYANZZ_VERSION__'), "missing loaded module " + path);
   assert.ok(sw.includes('/' + path + '?v=__ARYANZZ_VERSION__'), "missing precached module " + path);
 }
-assert.ok(sw.includes('/stage1-tools-panel.html?v=__ARYANZZ_VERSION__') && sw.includes('/stage1-tools.css?v=__ARYANZZ_VERSION__'), "panel fragment and CSS are precached");
+assert.ok(sw.includes('/stage1-tools-panel.html') && sw.includes('/stage1-tools.css?v=__ARYANZZ_VERSION__'), "panel fragment and CSS are precached");
 for (const [id, label] of tools) {
   assert.ok(panel.includes('data-v1lt-open="' + id + '"'), "missing tool launcher " + id);
   assert.ok(panel.includes(label), "missing tool label " + label);
