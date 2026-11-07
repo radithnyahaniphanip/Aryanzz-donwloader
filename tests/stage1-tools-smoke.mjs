@@ -44,7 +44,7 @@ for (const [id, label] of tools) {
   assert.ok(panel.includes(label), "missing tool label " + label);
 }
 assert.equal(tools.length, 14, "Stage 1 must contain exactly 14 tools");
-assert.ok(video.includes('register("video-lightweight"') && video.includes("parseMp4") && video.includes("contact sheet"), "video module registers real media processing");
+assert.ok(video.includes('register("video-lightweight"') && video.includes("parseMp4") && video.includes("v1ltSheetGenerate"), "video module registers real media processing");
 assert.ok(image.includes('register("image-lightweight"') && image.includes("readJpegExif") && image.includes("renderBlur"), "image module registers EXIF, palette, blur and sticker processing");
 assert.ok(files.includes('register("file-lightweight"') && files.includes("createZip") && files.includes("subtle.digest") && files.includes("parseCsv"), "file module registers ZIP, hashing and CSV operations");
 assert.ok(developer.includes('register("developer-lightweight"') && developer.includes("decodePart") && developer.includes("new Worker"), "developer module registers JWT and isolated regex processing");
