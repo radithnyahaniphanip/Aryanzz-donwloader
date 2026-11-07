@@ -133,6 +133,30 @@ function tokenFrom(request) {
   const part = cookie.split(";").map(value => value.trim()).find(value => value.startsWith(COOKIE + "="));
   return part ? part.slice(COOKIE.length + 1) : "";
 }
+const DEVICE_LOCK_COOKIE = "aryanzz_device_lock";
+function deviceLockTokenFrom(request){
+  const cookie=String(request.headers.get("cookie")||"");
+  const part=cookie.split(";").map(value=>value.trim()).find(value=>value.startsWith(DEVICE_LOCK_COOKIE+"="));
+  const token=part?part.slice(DEVICE_LOCK_COOKIE.length+1):"";
+  return /^[a-f0-9]{64}$/i.test(token)?token:"";
+}
+async function effectiveDeviceHash(request,supplied,env){
+  const lockToken=deviceLockTokenFrom(request);
+  if(lockToken)return await digest(lockToken.toLowerCase());
+  return String(supplied||"");
+}
+export async function moderationGate(request,env){
+  if(!env.AUTH_DB||typeof env.AUTH_DB.prepare!=="function"||String(env.AUTH_SESSION_SECRET||"").length<32)return null;
+  const lockToken=deviceLockTokenFrom(request);
+  if(!lockToken)return null;
+  const deviceHash=await digest(lockToken.toLowerCase());
+  if(!await isDeviceBanned(deviceHash,env))return null;
+  const url=new URL(request.url);
+  if(url.pathname.startsWith("/api/"))return reply({ok:false,code:"DEVICE_BANNED",error:"Akunmu diblokir permanen. Hubungi pembuat ARYANZZ untuk peninjauan."},403);
+  if(request.method!=="GET"&&request.method!=="HEAD")return reply({ok:false,code:"DEVICE_BANNED",error:"Akunmu diblokir permanen."},403);
+  const html='<!doctype html><html lang="id"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Akunmu diblokir · ARYANZZ</title><style>*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;background:radial-gradient(ellipse at 15% 10%,#163a60,transparent 48%),#070d19;color:#edf5ff;font:16px system-ui,sans-serif}.card{width:min(100%,440px);padding:30px;border:1px solid #344b68;border-radius:24px;background:#0c1929;box-shadow:0 24px 80px #0008}.mark{font-size:38px}h1{margin:12px 0;color:#ff8797;font-size:27px}p{color:#b6c5d8;line-height:1.65}.btn{display:block;margin-top:22px;padding:14px;border-radius:13px;background:#19c8cf;color:#04151d;text-decoration:none;text-align:center;font-weight:800}.small{font-size:12px;color:#8194aa}</style><main class="card"><div class="mark">⛔</div><h1>Akunmu diblokir</h1><p>Akses ARYANZZ dari perangkat ini telah dihentikan karena pelanggaran aturan. Jika kamu merasa keputusan ini keliru, hubungi pembuat website untuk meminta peninjauan.</p><a class="btn" href="https://wa.me/6282110767071?text=Halo%20pembuat%20ARYANZZ%2C%20saya%20ingin%20meminta%20peninjauan%20pemblokiran%20akun%20saya." target="_blank" rel="noopener noreferrer">Hubungi pembuat · WhatsApp</a><p class="small">Nomor bantuan: 082110767071 · ARYANZZ V1</p></main></html>';
+  return new Response(html,{status:403,headers:{"content-type":"text/html; charset=utf-8","cache-control":"no-store, no-cache, must-revalidate","x-robots-tag":"noindex, nofollow"}});
+}
 async function rememberTrustedDevice(userId, deviceHash, env) {
   if (!validDeviceHash(deviceHash)) return false;
   const now = Date.now();
@@ -179,6 +203,8 @@ async function userBan(userId, env) {
 async function adminModerate(request, env, action) {
   const token=tokenFrom(request);
   if(!/^[a-f0-9]{64}$/i.test(token)) return reply({ok:false,error:"Sesi admin tidak valid."},401);
+  const requestOrigin=request.headers.get("origin");
+  if(requestOrigin&&requestOrigin!==new URL(request.url).origin)return reply({ok:false,error:"Permintaan lintas situs ditolak."},403);
   const admin=await env.AUTH_DB.prepare("SELECT u.id,u.role FROM auth_sessions s JOIN auth_users u ON u.id=s.user_id WHERE s.token_hash=?1 AND s.expires_at>?2 LIMIT 1").bind(await digest(token),Date.now()).first();
   if(!admin||(admin.id!=="ARY-ZFTLQPEX92"&&!["owner","admin","developer"].includes(String(admin.role||"").toLowerCase()))) return reply({ok:false,error:"Akses khusus pemilik website."},403);
   const b=await bodyOf(request),userId=String(b?.userId||"").trim().toUpperCase();
@@ -186,19 +212,24 @@ async function adminModerate(request, env, action) {
   if(userId===admin.id) return reply({ok:false,error:"Akun pemilik tidak dapat diblokir dari panel ini."},400);
   const target=await env.AUTH_DB.prepare("SELECT id FROM auth_users WHERE id=?1 LIMIT 1").bind(userId).first();
   if(!target) return reply({ok:false,error:"Akun tidak ditemukan."},404);
+  const now=Date.now();
   if(action==="unban"){
+    const wasBanned=await userBan(userId,env);
     await env.AUTH_DB.prepare("DELETE FROM auth_user_bans WHERE user_id=?1").bind(userId).run();
     await env.AUTH_DB.prepare("DELETE FROM auth_banned_devices WHERE user_id=?1").bind(userId).run();
-    return reply({ok:true,message:"Blokir akun dilepas. Blokir perangkat tetap berlaku bila perangkat pernah masuk daftar blokir."});
+    await env.AUTH_DB.prepare("INSERT INTO auth_moderation_events (user_id,action,reason,actor_id,created_at) VALUES (?1,'unban',?2,?3,?4)").bind(userId,wasBanned?.reason||"Blokir dilepas oleh administrator.",admin.id,now).run();
+    return reply({ok:true,restored:true,message:"Akunmu dipulihkan. Pemblokiran akun dan perangkat yang tercatat telah dilepas. Silakan masuk kembali."});
   }
   const reason=String(b?.reason||"").trim().replace(/\s+/g," ").slice(0,500);
   if(reason.length<8) return reply({ok:false,error:"Alasan pemblokiran minimal 8 karakter."},400);
-  const now=Date.now();
   await env.AUTH_DB.prepare("INSERT INTO auth_user_bans (user_id,reason,banned_by,created_at) VALUES (?1,?2,?3,?4) ON CONFLICT(user_id) DO UPDATE SET reason=excluded.reason,banned_by=excluded.banned_by,created_at=excluded.created_at").bind(userId,reason,admin.id,now).run();
-  const devices=await env.AUTH_DB.prepare("SELECT device_hash FROM auth_trusted_devices WHERE user_id=?1").bind(userId).all();
-  for(const row of devices.results||[]) await env.AUTH_DB.prepare("undefined").bind(row.device_hash,userId,reason,admin.id,now).run();
+  const devices=await env.AUTH_DB.prepare("SELECT device_hash FROM auth_trusted_devices WHERE user_id=?1 UNION SELECT device_hash FROM auth_device_accounts WHERE user_id=?1").bind(userId).all();
+  for(const row of devices.results||[]){
+    await env.AUTH_DB.prepare("INSERT INTO auth_banned_devices (device_hash,user_id,reason,banned_by,created_at) VALUES (?1,?2,?3,?4,?5) ON CONFLICT(device_hash) DO UPDATE SET user_id=excluded.user_id,reason=excluded.reason,banned_by=excluded.banned_by,created_at=excluded.created_at").bind(row.device_hash,userId,reason,admin.id,now).run();
+  }
   await env.AUTH_DB.prepare("DELETE FROM auth_sessions WHERE user_id=?1").bind(userId).run();
-  return reply({ok:true,message:"Akun diblokir permanen, semua sesi dicabut, dan perangkat tepercaya akun ini masuk daftar blokir."});
+  await env.AUTH_DB.prepare("INSERT INTO auth_moderation_events (user_id,action,reason,actor_id,created_at) VALUES (?1,'ban',?2,?3,?4)").bind(userId,reason,admin.id,now).run();
+  return reply({ok:true,message:"Akun diblokir permanen. Semua sesi dicabut dan perangkat tepercaya yang tercatat dimasukkan ke daftar blokir."});
 }
 
 async function createSession(row, env) {
@@ -237,7 +268,7 @@ async function startRegister(request, env) {
   if (password !== String(b.passwordConfirm || "")) return reply({ ok: false, error: "Konfirmasi password belum sama." }, 400);
   if (limited(request, "register", 5, 600000)) return reply({ ok: false, error: "Terlalu banyak percobaan pendaftaran." }, 429);
   if (!(await captcha(request, b.captchaToken, env))) return reply({ ok: false, error: "Verifikasi CAPTCHA belum berhasil." }, 400);
-  const deviceHash = String(b.deviceHash || "");
+  const deviceHash = await effectiveDeviceHash(request,b.deviceHash,env);
   if (!validDeviceHash(deviceHash)) return reply({ok:false,error:"Identitas browser tidak valid. Muat ulang halaman dan coba lagi."},400);
   const primary = await primaryDeviceOwner(deviceHash, env);
   const previouslyTrusted = await trustedDeviceOwner(deviceHash, env);
@@ -439,15 +470,19 @@ export async function handleAuthRequest(request, env) {
   const url = new URL(request.url), path = url.pathname;
   if (path === "/api/auth/config" && request.method === "GET") {
     const missing = missingConfig(env), active = missing.length === 0;
-    return reply({ ok: true, ready: active, publicVersion: "V1", captchaSiteKey: String(env.AUTH_TURNSTILE_SITE_KEY || ""), missing,
-      message: active ? "Layanan akun online siap." : "Layanan akun online menunggu konfigurasi: " + missing.join(", ") + "." });
+    const moderationReady=!!env.AUTH_DB&&typeof env.AUTH_DB.prepare==="function"&&String(env.AUTH_SESSION_SECRET||"").length>=32;
+    const existing=deviceLockTokenFrom(request),lockToken=existing||randomHex(32);
+    return reply({ ok: true, ready: active, moderationReady, publicVersion: "V1", captchaSiteKey: String(env.AUTH_TURNSTILE_SITE_KEY || ""), missing,
+      message: active ? "Layanan akun online siap." : "Layanan akun online menunggu konfigurasi: " + missing.join(", ") + "." },
+      200,existing?{}:{"set-cookie":DEVICE_LOCK_COOKIE+"="+lockToken+"; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=63072000"});
   }
   if (path === "/api/auth/logout" && request.method === "POST") return logout(request, env);
-  if (!ready(env)) return reply({ ok: false, code: "AUTH_NOT_CONFIGURED", error: "Layanan akun online belum dikonfigurasi. Akun lokal lama tetap dapat digunakan pada perangkat asal." }, 503);
+  const moderationReady=!!env.AUTH_DB&&typeof env.AUTH_DB.prepare==="function"&&String(env.AUTH_SESSION_SECRET||"").length>=32;
+  if(path==="/api/auth/admin/ban"&&request.method==="POST")return moderationReady?adminModerate(request,env,"ban"):reply({ok:false,code:"MODERATION_NOT_CONFIGURED",error:"Moderasi online membutuhkan database D1 dan AUTH_SESSION_SECRET."},503);
+  if(path==="/api/auth/admin/unban"&&request.method==="POST")return moderationReady?adminModerate(request,env,"unban"):reply({ok:false,code:"MODERATION_NOT_CONFIGURED",error:"Moderasi online membutuhkan database D1 dan AUTH_SESSION_SECRET."},503);
+  if (!ready(env)) return reply({ ok: false, code: "AUTH_NOT_CONFIGURED", error: "Layanan akun online belum dikonfigurasi. Login akun lokal dinonaktifkan sampai perlindungan akun server siap." }, 503);
   try {
     if (path === "/api/auth/me" && request.method === "GET") return me(request, env);
-    if (path === "/api/auth/admin/ban" && request.method === "POST") return adminModerate(request, env, "ban");
-    if (path === "/api/auth/admin/unban" && request.method === "POST") return adminModerate(request, env, "unban");
     if (request.method !== "POST") return reply({ ok: false, error: "Metode tidak diizinkan." }, 405);
     if (path === "/api/auth/register/start") return startRegister(request, env);
     if (path === "/api/auth/register/verify") return verifyRegister(request, env);
