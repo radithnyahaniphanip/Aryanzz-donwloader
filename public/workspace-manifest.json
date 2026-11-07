@@ -217,6 +217,20 @@
         "/workspace-guides.js"
       ],
       "purpose": "Searchable, responsive tutorials for all 21 tools, contextual help launchers, and locally saved learning progress."
+    },
+    {
+      "root": "#v1LightTools",
+      "css": [
+        "/stage1-tools.css"
+      ],
+      "js": [
+        "/stage1-tools-core.js",
+        "/stage1-video-tools.js",
+        "/stage1-image-tools.js",
+        "/stage1-file-tools.js",
+        "/stage1-dev-tools.js"
+      ],
+      "purpose": "Stage 1 modular lightweight tools: video metadata/frame/contact sheet, image EXIF/palette/privacy/stickers, ZIP/rename/duplicate/split/CSV, JWT and regex. Browser-local processing."
     }
   ],
   "release": {
