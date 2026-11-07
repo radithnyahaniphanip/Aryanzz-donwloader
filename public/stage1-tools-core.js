@@ -84,7 +84,7 @@ function dosDate(date=new Date()){
 function u16(view,offset,value){view.setUint16(offset,value,true)}
 function u32(view,offset,value){view.setUint32(offset,value>>>0,true)}
 async function transformRaw(bytes,mode){
- const Constructor=mode==="compress"?CompressionStream:DecompressionStream;
+ const Constructor=mode==="compress"?globalThis.CompressionStream:globalThis.DecompressionStream;
  if(typeof Constructor!=="function")throw new Error("Browser tidak mendukung kompresi DEFLATE untuk ZIP ini.");
  const stream=new Blob([bytes]).stream().pipeThrough(new Constructor("deflate-raw"));
  return new Uint8Array(await new Response(stream).arrayBuffer());
