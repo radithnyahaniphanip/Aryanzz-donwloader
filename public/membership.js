@@ -71,6 +71,11 @@ document.getElementById("aryRedeemSubmit")?.addEventListener("click",async()=>{
  finally{button.disabled=false;button.textContent="Klaim hadiah"}
 });
 loadPrestige();
+window.addEventListener("aryanzz:auth-change",()=>{applyLocalCosmetics();loadPrestige()});
+window.addEventListener("pageshow",()=>{applyLocalCosmetics();loadPrestige()});
+const profileObserver=new MutationObserver(()=>{applyLocalCosmetics()});
+const profileRoot=document.getElementById("profile");
+if(profileRoot)profileObserver.observe(profileRoot,{childList:true,subtree:true,attributes:true,attributeFilter:["src","class"]});
 
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 let plans=[];
