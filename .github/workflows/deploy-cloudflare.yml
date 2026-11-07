@@ -161,7 +161,7 @@ jobs:
           node --input-type=module -e 'import { BUILD_VERSION } from "./src/build-version.js"; process.stdout.write("EXPECTED_BUILD_VERSION=" + BUILD_VERSION + "\n")' >> "$GITHUB_ENV"
       - name: Verify live Cloudflare deployment
         env:
-          WORKER_URL: https://aryanzz-donwloader.radithnyahaniphanip.workers.dev
+          WORKER_URL: https://aryanzz-donwloader.aryanz.workers.dev
         run: node tests/live-release-smoke.mjs
       - name: Create automatic recovery checkpoint
         if: success()
@@ -191,35 +191,35 @@ jobs:
         continue-on-error: true
         timeout-minutes: 2
         env:
-          WORKER_URL: https://aryanzz-donwloader.radithnyahaniphanip.workers.dev
+          WORKER_URL: https://aryanzz-donwloader.aryanz.workers.dev
         run: node tests/live-tiktok-user-link.mjs
       - name: Diagnose TikTok Photo Mode public image endpoints
         if: success()
         continue-on-error: true
         timeout-minutes: 3
         env:
-          WORKER_URL: https://aryanzz-donwloader.radithnyahaniphanip.workers.dev
+          WORKER_URL: https://aryanzz-donwloader.aryanz.workers.dev
         run: node tests/live-tiktok-photo-diagnostics.mjs
       - name: Diagnose user-supplied Instagram post image extraction and download
         if: success()
         continue-on-error: true
         timeout-minutes: 2
         env:
-          WORKER_URL: https://aryanzz-donwloader.radithnyahaniphanip.workers.dev
+          WORKER_URL: https://aryanzz-donwloader.aryanz.workers.dev
         run: node tests/live-instagram-image-link.mjs
       - name: Diagnose TikWM and Instagram public embed fallbacks
         if: success()
         continue-on-error: true
         timeout-minutes: 2
         env:
-          WORKER_URL: https://aryanzz-donwloader.radithnyahaniphanip.workers.dev
+          WORKER_URL: https://aryanzz-donwloader.aryanz.workers.dev
         run: node tests/live-provider-fallbacks.mjs
       - name: Optional manual diagnostic matrix for the 20 dedicated provider choices
         if: success() && (github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && contains(github.event.head_commit.message, 'RUN FULL PLATFORM MATRIX')))
         continue-on-error: true
         timeout-minutes: 18
         env:
-          WORKER_URL: https://aryanzz-donwloader.radithnyahaniphanip.workers.dev
+          WORKER_URL: https://aryanzz-donwloader.aryanz.workers.dev
         run: node tests/live-platform-matrix.mjs
       - name: Upload 20-dedicated-provider diagnostic matrix
         if: always() && hashFiles('platform-matrix.json') != ''
