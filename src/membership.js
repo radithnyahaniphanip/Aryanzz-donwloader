@@ -113,11 +113,51 @@ async function handleCosmetics(request,env){
  return json({ok:false,error:"Endpoint kosmetik tidak ditemukan."},404);
 }
 
+async function verifyMembershipWebhook(request,env,body){
+ const secret=String(env.MEMBERSHIP_WEBHOOK_SECRET||"");
+ if(secret.length<32)return false;
+ const timestamp=String(request.headers.get("x-aryanzz-timestamp")||"");
+ const signature=String(request.headers.get("x-aryanzz-signature")||"").toLowerCase();
+ if(!/^\\d{13}$/.test(timestamp)||Math.abs(Date.now()-Number(timestamp))>5*60*1000||!/^[a-f0-9]{64}$/.test(signature))return false;
+ const canonical=[timestamp,String(body.orderId||""),String(body.amount??""),String(body.transactionId||""),String(body.status||"")].join(".");
+ const key=await crypto.subtle.importKey("raw",new TextEncoder().encode(secret),{name:"HMAC",hash:"SHA-256"},false,["sign"]);
+ const digest=new Uint8Array(await crypto.subtle.sign("HMAC",key,new TextEncoder().encode(canonical)));
+ const expected=Array.from(digest,b=>b.toString(16).padStart(2,"0")).join("");
+ let diff=0;for(let i=0;i<64;i++)diff|=expected.charCodeAt(i)^signature.charCodeAt(i);
+ return diff===0;
+}
+async function membershipWebhook(request,env){
+ if(request.method!=="POST")return json({ok:false,error:"Method tidak diizinkan."},405);
+ if(!env.AUTH_DB||typeof env.AUTH_DB.prepare!=="function")return json({ok:false,error:"Database akun belum dikonfigurasi."},503);
+ let body;try{body=await request.json()}catch{return json({ok:false,error:"Payload webhook tidak valid."},400)}
+ if(!await verifyMembershipWebhook(request,env,body))return json({ok:false,error:"Tanda tangan webhook tidak valid atau sudah kedaluwarsa."},401);
+ const orderId=String(body.orderId||"").slice(0,80),transactionId=String(body.transactionId||"").slice(0,160);
+ const amount=Number(body.amount),status=String(body.status||"").toLowerCase();
+ if(!orderId||!transactionId||!Number.isSafeInteger(amount)||amount<1||!["paid","success","settlement"].includes(status))return json({ok:false,error:"Data transaksi webhook tidak lengkap atau belum lunas."},400);
+ const order=await env.AUTH_DB.prepare("SELECT * FROM membership_orders WHERE id=?1 LIMIT 1").bind(orderId).first();
+ if(!order)return json({ok:false,error:"Pesanan tidak ditemukan."},404);
+ if(order.status==="paid"&&order.provider_transaction_id===transactionId)return json({ok:true,duplicate:true,message:"Pembayaran ini sudah diproses."});
+ if(order.status!=="pending")return json({ok:false,error:"Pesanan tidak lagi menunggu pembayaran."},409);
+ if(Number(order.amount)!==amount)return json({ok:false,error:"Nominal pembayaran tidak cocok dengan pesanan."},409);
+ if(order.payment_provider!=="qris")return json({ok:false,error:"Metode pembayaran pesanan tidak cocok."},409);
+ const plan=PLANS.find(p=>p.id===order.plan_id);if(!plan)return json({ok:false,error:"Paket pesanan tidak valid."},400);
+ const now=Date.now(),existing=await membershipFor(order.user_id,env);
+ const base=existing.status==="active"&&existing.expiresAt?Math.max(now,existing.expiresAt):now;
+ const expires=plan.durationDays===null?null:base+plan.durationDays*86400000;
+ const results=await env.AUTH_DB.batch([
+  env.AUTH_DB.prepare("UPDATE membership_orders SET status='paid',paid_at=?1,expires_at=?2,provider_transaction_id=?3,note='Pembayaran dikonfirmasi melalui webhook bertanda tangan' WHERE id=?4 AND status='pending' AND amount=?5 AND provider_transaction_id IS NULL").bind(now,expires,transactionId,orderId,amount),
+  env.AUTH_DB.prepare("INSERT INTO user_memberships (user_id,plan_id,status,started_at,expires_at,updated_at) SELECT ?1,?2,'active',?3,?4,?3 WHERE EXISTS (SELECT 1 FROM membership_orders WHERE id=?5 AND status='paid' AND paid_at=?3 AND provider_transaction_id=?6) ON CONFLICT(user_id) DO UPDATE SET plan_id=excluded.plan_id,status='active',started_at=excluded.started_at,expires_at=excluded.expires_at,updated_at=excluded.updated_at").bind(order.user_id,plan.id,now,expires,orderId,transactionId)
+ ]);
+ const changed=Number(results?.[0]?.meta?.changes||0);
+ if(changed!==1)return json({ok:false,error:"Pesanan sudah diproses atau transaksi sudah pernah digunakan."},409);
+ return json({ok:true,message:"Pembayaran terverifikasi. Membership berhasil diaktifkan.",orderId,planId:plan.id,expiresAt:expires});
+}
 async function handleMembership(request,env){
  const url=new URL(request.url),path=url.pathname;
+ if(path==="/api/membership/webhook")return membershipWebhook(request,env);
  if(path==="/api/cosmetics/me"||path==="/api/cosmetics/equip"||path==="/api/redeem/claim"||path==="/api/membership/admin/redeem-codes")return handleCosmetics(request,env);
  if(path==="/api/membership/catalog"&&request.method==="GET")return json({ok:true,pricingStatus:"proposed",paymentEnabled:!!safeQrisImage(env),plans:PLANS,free:{id:"free",name:"Free Member",price:0,summary:"Tetap tersedia tanpa pembayaran."}});
- if(path==="/api/membership/payment-config"&&request.method==="GET")return json({ok:true,enabled:!!safeQrisImage(env),provider:"QRIS",qrisImageUrl:safeQrisImage(env),verification:"manual",message:safeQrisImage(env)?"QRIS tersedia. Pembayaran diverifikasi oleh pemilik setelah dana diterima.":"QRIS belum dikonfigurasi oleh pemilik ARYANZZ."});
+ if(path==="/api/membership/payment-config"&&request.method==="GET")return json({ok:true,enabled:!!safeQrisImage(env),provider:"QRIS",qrisImageUrl:safeQrisImage(env),verification:"manual_until_gateway_connected",automaticWebhookReady:String(env.MEMBERSHIP_WEBHOOK_SECRET||"").length>=32,message:safeQrisImage(env)?"QRIS merchant tersedia. Untuk aktivasi otomatis, hubungkan penyedia pembayaran yang mengirim webhook bertanda tangan ke endpoint ARYANZZ.":"QRIS belum dikonfigurasi oleh pemilik ARYANZZ."});
  if(!env.AUTH_DB||typeof env.AUTH_DB.prepare!=="function")return json({ok:false,error:"Database akun belum dikonfigurasi."},503);
  if(path==="/api/membership/me"&&request.method==="GET"){
   const user=await currentUser(request,env);if(!user)return json({ok:false,error:"Silakan login terlebih dahulu."},401);

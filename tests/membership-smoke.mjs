@@ -62,3 +62,10 @@ assert.ok(studioUi.includes("aryanzz.cosmetics.local.v1")&&studioUi.includes("lo
 assert.ok(studioUi.includes("Mode perangkat aktif")&&studioUi.includes("applyLocalCosmetics()"),"Studio must render and apply local presets even if the account database is unavailable");
 for(const cls of ["ary-local-frame-aurora","ary-local-frame-royal","ary-local-frame-nebula","ary-local-frame-obsidian","ary-local-bg-aurora","ary-local-bg-crimson","ary-local-bg-nebula","ary-local-bg-midnight"])assert.ok(studioCss.includes(cls),"Missing cosmetic presentation style "+cls);
 assert.ok(platformBackend.includes("Promise.any(tasks)")&&platformBackend.includes("snackVideoNativePageFallback(rawUrl,requestUrl,8500)"),"SnackVideo public fallback providers must race concurrently with bounded timeouts");
+
+const membershipBackend=fs.readFileSync(new URL("../src/membership.js",import.meta.url),"utf8");
+assert.ok(membershipBackend.includes("/api/membership/webhook")&&membershipBackend.includes("crypto.subtle.sign")&&membershipBackend.includes("x-aryanzz-signature"),"Membership webhook must verify a signed server-to-server callback");
+assert.ok(membershipBackend.includes("Number(order.amount)!==amount")&&membershipBackend.includes("provider_transaction_id IS NULL"),"Webhook must match the exact order amount and prevent transaction reuse");
+assert.ok(membershipBackend.includes("env.AUTH_DB.batch")&&membershipBackend.includes("Membership berhasil diaktifkan"),"Verified webhook must atomically mark an order paid and activate membership");
+assert.ok(studioUi.includes("loadAdminOrders")&&studioUi.includes("data-review-order")&&studioUi.includes("paymentVerified:decision==="),"Owner must be able to review pending QRIS orders and explicitly confirm funds before manual approval");
+assert.ok(studioUi.includes("aryMemAdminRefresh")&&studioCss.includes("ary-mem-admin-order"),"Owner payment review queue must have a refresh control and responsive styling");

@@ -86,7 +86,7 @@ loadPrestige();
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 let plans=[];
 const panel=document.createElement("section");panel.id="aryMembershipPanel";panel.className="panel ary-membership";panel.hidden=true;
-panel.innerHTML='<div class="ary-mem-head"><div><span class="ary-mem-eyebrow">ARYANZZ V1 · MEMBER CENTER</span><h2>Membership Center</h2><p>Pilih paket, lihat manfaat, dan bayar melalui QRIS. Free Member tetap tersedia.</p></div><div class="ary-mem-current" id="aryMemCurrent">Memeriksa akun…</div></div><div class="ary-mem-grid" id="aryMemPlans"></div><section class="ary-mem-payment" id="aryMemPayment"><div><span class="ary-mem-eyebrow">PEMBAYARAN RESMI</span><h3>QRIS</h3><p id="aryMemPaymentNote">Memeriksa konfigurasi pembayaran…</p></div><div class="ary-mem-qris" id="aryMemQris" hidden></div></section><div class="ary-mem-history"><div class="ary-mem-history-head"><h3>Riwayat pesanan</h3><button type="button" id="aryMemRefresh">Muat ulang</button></div><div id="aryMemOrders">Login untuk melihat riwayat.</div></div><p class="ary-mem-note" id="aryMemNote" role="status">Harga paket merupakan rancangan. Pembayaran hanya dapat dilakukan setelah QRIS merchant resmi dikonfigurasi.</p><section class="ary-mem-admin" id="aryMemAdmin" hidden><h3>Owner · Kode redeem Legendary</h3><div class="ary-mem-admin-row"><label>Jumlah kode<input id="aryRedeemQuantity" type="number" min="1" max="100" value="10"></label><label>Kuota per kode<input id="aryRedeemMax" type="number" min="1" max="10000" value="1"></label><label>Kedaluwarsa kode (hari)<input id="aryRedeemExpiry" type="number" min="0" max="365" value="30"></label></div><button type="button" id="aryGenerateRedeemCodes">Buat kode redeem</button><textarea id="aryGeneratedRedeemCodes" rows="5" readonly placeholder="Kode yang dibuat akan muncul di sini. Simpan sekarang; kode hanya ditampilkan satu kali."></textarea></section>'
+panel.innerHTML='<div class="ary-mem-head"><div><span class="ary-mem-eyebrow">ARYANZZ V1 · MEMBER CENTER</span><h2>Membership Center</h2><p>Pilih paket, lihat manfaat, dan bayar melalui QRIS. Free Member tetap tersedia.</p></div><div class="ary-mem-current" id="aryMemCurrent">Memeriksa akun…</div></div><div class="ary-mem-grid" id="aryMemPlans"></div><section class="ary-mem-payment" id="aryMemPayment"><div><span class="ary-mem-eyebrow">PEMBAYARAN RESMI</span><h3>QRIS</h3><p id="aryMemPaymentNote">Memeriksa konfigurasi pembayaran…</p></div><div class="ary-mem-qris" id="aryMemQris" hidden></div></section><div class="ary-mem-history"><div class="ary-mem-history-head"><h3>Riwayat pesanan</h3><button type="button" id="aryMemRefresh">Muat ulang</button></div><div id="aryMemOrders">Login untuk melihat riwayat.</div></div><p class="ary-mem-note" id="aryMemNote" role="status">Harga paket merupakan rancangan. Pembayaran hanya dapat dilakukan setelah QRIS merchant resmi dikonfigurasi.</p><section class="ary-mem-admin" id="aryMemAdmin" hidden><div class="ary-mem-admin-orders"><div class="ary-mem-history-head"><h3>Owner · Verifikasi pembayaran QRIS</h3><button type="button" id="aryMemAdminRefresh">Muat ulang pesanan</button></div><p class="ary-mem-note">Cocokkan ID pesanan, nominal, dan dana masuk pada aplikasi GoPay Merchant sebelum menyetujui. Tombol persetujuan tidak menggantikan pemeriksaan transaksi.</p><div id="aryMemAdminOrders">Memuat pesanan…</div></div><h3>Owner · Kode redeem Legendary</h3><div class="ary-mem-admin-row"><label>Jumlah kode<input id="aryRedeemQuantity" type="number" min="1" max="100" value="10"></label><label>Kuota per kode<input id="aryRedeemMax" type="number" min="1" max="10000" value="1"></label><label>Kedaluwarsa kode (hari)<input id="aryRedeemExpiry" type="number" min="0" max="365" value="30"></label></div><button type="button" id="aryGenerateRedeemCodes">Buat kode redeem</button><textarea id="aryGeneratedRedeemCodes" rows="5" readonly placeholder="Kode yang dibuat akan muncul di sini. Simpan sekarang; kode hanya ditampilkan satu kali."></textarea></section>'
 root.append(panel);
 const button=document.createElement("button");button.type="button";button.dataset.nav="membership";button.innerHTML='<span class="ary-mem-nav-logo" aria-hidden="true">✦</span><span class="ary-mem-nav-label">Membership</span>';button.className="ary-mem-nav";nav.insertBefore(button,nav.children[2]||null);
 let paymentConfig={enabled:false,qrisImageUrl:""};
@@ -109,6 +109,16 @@ function renderPlans(){
  const host=document.getElementById("aryMemPlans");
  host.innerHTML=plans.map((p,i)=>'<article class="ary-mem-card '+(i===2?"ary-mem-featured":"")+'"><div class="ary-mem-card-top"><span>'+String(i+1).padStart(2,"0")+' / MEMBERSHIP</span><b>'+esc(p.name)+'</b></div><div class="ary-mem-price">'+money(p.price)+'</div><div class="ary-mem-term">'+p.term+'</div><p>'+esc(p.desc)+'</p><button type="button" data-buy="'+esc(p.id)+'" '+(paymentConfig.enabled?"":"disabled")+'>'+(paymentConfig.enabled?"Lanjut bayar QRIS":"QRIS belum tersedia")+'</button></article>').join("")
 }
+async function loadAdminOrders(){
+ const host=document.getElementById("aryMemAdminOrders");if(!host)return;
+ host.textContent="Memuat pesanan…";
+ try{
+  const r=await fetch("/api/membership/admin/orders",{credentials:"same-origin",cache:"no-store"}),d=await r.json();
+  if(!r.ok||!d.ok)throw Error(d.error||"Gagal memuat pesanan.");
+  const rows=d.orders||[];
+  host.innerHTML=rows.length?rows.map(o=>'<article class="ary-mem-admin-order"><div class="ary-mem-admin-order-meta"><b>'+esc(o.id)+'</b><small>'+esc(o.full_name||o.email||o.user_id)+' · '+esc(o.plan_id)+' · '+money(o.amount)+'</small><small>'+new Date(o.created_at).toLocaleString("id-ID")+' · '+esc(o.payment_provider)+' · '+esc(o.status)+'</small>'+(o.note?'<small>'+esc(o.note)+'</small>':'')+'</div>'+(o.status==="pending"?'<div class="ary-mem-admin-order-actions"><button type="button" data-review-order="'+esc(o.id)+'" data-decision="approve">Verifikasi & aktifkan</button><button type="button" data-review-order="'+esc(o.id)+'" data-decision="reject">Tolak</button></div>':'')+'</article>').join(""):"Belum ada pesanan.";
+ }catch(error){host.textContent=error.message||"Daftar pesanan belum tersedia."}
+}
 async function load(){
  const current=document.getElementById("aryMemCurrent"),orders=document.getElementById("aryMemOrders"),note=document.getElementById("aryMemNote");
  try{const r=await fetch("/api/membership/me",{credentials:"same-origin",cache:"no-store"});const d=await r.json();
@@ -117,17 +127,37 @@ async function load(){
  const m=d.membership;current.innerHTML='<b>'+esc(m.planName||"Free Member")+'</b><small>'+esc(m.status==="active"?"Aktif":m.status==="expired"?"Kedaluwarsa":"Free Member")+(m.expiresAt?" · berakhir "+new Date(m.expiresAt).toLocaleDateString("id-ID"):"")+'</small>';
  const role=String(d.user?.role||"").toLowerCase();
  const adminPanel=document.getElementById("aryMemAdmin");
- if(adminPanel)adminPanel.hidden=!(d.user?.id==="ARY-ZFTLQPEX92"||["owner","admin","developer"].includes(role));
+ const isAdmin=d.user?.id==="ARY-ZFTLQPEX92"||["owner","admin","developer"].includes(role);
+ if(adminPanel)adminPanel.hidden=!isAdmin;
+ if(isAdmin)loadAdminOrders();
  orders.innerHTML=(d.orders||[]).length?(d.orders||[]).map(o=>'<div class="ary-mem-order"><div><b>'+esc(o.id)+'</b><small>'+esc(o.plan_id)+' · '+money(o.amount)+' · '+new Date(o.created_at).toLocaleString("id-ID")+'</small></div><span class="ary-mem-status">'+esc(o.status)+'</span></div>').join(""):"Belum ada pesanan.";
  }catch(e){current.textContent="Status belum tersedia";orders.textContent=e.message;note.textContent=e.message}
 }
 panel.addEventListener("click",async e=>{
+ if(e.target.closest("#aryMemAdminRefresh")){loadAdminOrders();return}
+ const review=e.target.closest("[data-review-order]");
+ if(review){
+  const orderId=review.dataset.reviewOrder,decision=review.dataset.decision;
+  const promptText=decision==="approve"?"Pastikan transaksi "+orderId+" dan nominal yang benar sudah masuk di GoPay Merchant. Aktifkan Membership?":"Tolak pesanan "+orderId+"?";
+  if(!window.confirm(promptText))return;
+  review.disabled=true;
+  try{
+   const note=decision==="approve"?"Dana masuk telah dicocokkan pada GoPay Merchant.":(window.prompt("Alasan penolakan (opsional):")||"Pembayaran tidak ditemukan atau nominal tidak cocok.");
+   const response=await fetch("/api/membership/admin/review",{method:"POST",credentials:"same-origin",headers:{"content-type":"application/json"},body:JSON.stringify({orderId,decision,paymentVerified:decision==="approve",note})});
+   const result=await response.json();if(!response.ok||!result.ok)throw Error(result.error||"Verifikasi gagal.");
+   document.getElementById("aryMemNote").textContent=result.message||"Status pesanan diperbarui.";
+   await load();await loadAdminOrders();
+  }catch(error){document.getElementById("aryMemNote").textContent=error.message||"Verifikasi gagal."}
+  finally{review.disabled=false}
+  return;
+ }
  const buy=e.target.closest("[data-buy]");if(!buy)return;
  buy.disabled=true;const p=plans.find(x=>x.id===buy.dataset.buy);const note=document.getElementById("aryMemNote");
  try{if(!paymentConfig.enabled)throw Error("QRIS merchant belum dikonfigurasi. Pesanan belum dibuat.");const r=await fetch("/api/membership/orders",{method:"POST",credentials:"same-origin",headers:{"content-type":"application/json"},body:JSON.stringify({planId:p.id,paymentProvider:"qris"})});const d=await r.json();if(!r.ok||!d.ok)throw Error(d.error||"Pesanan gagal dibuat.");note.textContent="Pesanan "+d.order.id+" dibuat. Scan QRIS di atas dengan nominal tepat "+money(d.order.amount)+", lalu tunggu verifikasi pemilik.";await load()}
  catch(err){note.textContent=err.message}finally{buy.disabled=false}
 });
 document.getElementById("aryMemRefresh").addEventListener("click",load);
+document.getElementById("aryMemAdminRefresh")?.addEventListener("click",loadAdminOrders);
 document.addEventListener("click",event=>{
  const navItem=event.target.closest("[data-nav]");
  if(!navItem)return;
