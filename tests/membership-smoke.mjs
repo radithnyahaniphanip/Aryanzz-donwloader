@@ -4,6 +4,7 @@ import { handleMembership } from "../src/membership.js";
 const backend=fs.readFileSync(new URL("../src/membership.js",import.meta.url),"utf8");
 const migration=fs.readFileSync(new URL("../migrations/0004_membership.sql",import.meta.url),"utf8");
 const prestigeMigration=fs.readFileSync(new URL("../migrations/0005_prestige_redeem_devices.sql",import.meta.url),"utf8");
+const poketoMigration=fs.readFileSync(new URL("../migrations/0006_poketo_payments.sql",import.meta.url),"utf8");
 const ui=fs.readFileSync(new URL("../public/membership.js",import.meta.url),"utf8");
 const css=fs.readFileSync(new URL("../public/membership.css",import.meta.url),"utf8");
 for(const [id,price] of [["starter",80000],["plus",140000],["pro",189000],["elite",328000],["ultimate",500000],["lifetime",1800000],["founder",5900000]]){
@@ -12,6 +13,7 @@ for(const [id,price] of [["starter",80000],["plus",140000],["pro",189000],["elit
  assert.ok(ui.includes("/api/membership/catalog"),"UI must load the server-owned plan catalog");
 }
 for(const table of ["membership_orders","user_memberships"])assert.ok(migration.includes("CREATE TABLE IF NOT EXISTS "+table));
+assert.ok(poketoMigration.includes("CREATE TABLE IF NOT EXISTS poketo_webhook_events")&&poketoMigration.includes("event_id TEXT PRIMARY KEY"),"Poketo webhook event IDs must be persisted for idempotent delivery");
 assert.ok(backend.includes("credentials")===false,"Credentials are handled by same-origin browser calls");
 assert.ok(backend.includes("Verifikasi manual dinonaktifkan"),"Membership activation must be webhook-only; manual approval is disabled");
 assert.ok(migration.includes("provider_transaction_id"),"Provider transaction IDs are reserved for deduplication");
