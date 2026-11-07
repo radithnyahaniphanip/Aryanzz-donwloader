@@ -408,3 +408,9 @@ for (const [name, ok] of checks) {
   console.log("✔ " + name);
 }
 console.log("\nARYANZZ V1 modular workspace, profile and account security smoke tests passed.");
+
+assert.equal((read("../public/index.html").match(/src="\\/membership\\.js/g)||[]).length,1,"Membership script must be loaded exactly once");
+assert.ok(read("../public/workspace-navigation.js").includes('panelId==="membership"')&&!read("../public/workspace-navigation.js").includes('membershipScript.src'),"Membership must have one navigation destination and no duplicate dynamic loader");
+assert.ok(read("../public/membership.js").includes('button.dataset.nav="membership"'),"Membership navigation entry must activate the single member center");
+assert.ok(read("../public/membership.js").includes("aryCosmeticsStudio")&&read("../public/membership.js").includes("data-equip"),"Avatar and background studio must be available from Tools and support equipping");
+assert.ok(read("../public/workspace-tools.js").includes('grid.querySelectorAll(".tool").forEach'),"Dynamically added tool cards must participate in search and filters");
