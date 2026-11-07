@@ -100,7 +100,7 @@ async function handleMembership(request,env){
   const user=await currentUser(request,env);if(!user)return json({ok:false,error:"Silakan login terlebih dahulu."},401);
   const membership=await membershipFor(user.id,env);
   const orders=await env.AUTH_DB.prepare("SELECT id,plan_id,amount,status,created_at,paid_at,expires_at,note FROM membership_orders WHERE user_id=?1 ORDER BY created_at DESC LIMIT 20").bind(user.id).all();
-  return json({ok:true,membership,orders:orders.results||[]});
+  return json({ok:true,user:{id:user.id,role:user.role},membership,orders:orders.results||[]});
  }
  if(path==="/api/membership/orders"&&request.method==="POST"){
   const user=await currentUser(request,env);if(!user)return json({ok:false,error:"Silakan login terlebih dahulu."},401);
