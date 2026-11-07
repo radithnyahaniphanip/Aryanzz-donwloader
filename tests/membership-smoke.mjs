@@ -61,4 +61,4 @@ for(const id of ["local-frame-aurora","local-frame-royal","local-frame-nebula","
 assert.ok(studioUi.includes("aryanzz.cosmetics.local.v1")&&studioUi.includes("localStorage.setItem"),"Studio must save selected cosmetics locally without D1");
 assert.ok(studioUi.includes("Mode perangkat aktif")&&studioUi.includes("applyLocalCosmetics()"),"Studio must render and apply local presets even if the account database is unavailable");
 for(const cls of ["ary-local-frame-aurora","ary-local-frame-royal","ary-local-frame-nebula","ary-local-frame-obsidian","ary-local-bg-aurora","ary-local-bg-crimson","ary-local-bg-nebula","ary-local-bg-midnight"])assert.ok(studioCss.includes(cls),"Missing cosmetic presentation style "+cls);
-assert.ok(platformBackend.includes("Promise.allSettled(tasks)")&&platformBackend.includes("SnackVideo multi-provider fallback"),"SnackVideo public fallback providers must be attempted concurrently");
+assert.ok(platformBackend.includes("Promise.any(tasks)")&&platformBackend.includes("snackVideoNativePageFallback(rawUrl,requestUrl,8500)"),"SnackVideo public fallback providers must race concurrently with bounded timeouts");
