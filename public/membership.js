@@ -127,11 +127,30 @@ async function load(){
  const m=d.membership;current.innerHTML='<b>'+esc(m.planName||"Free Member")+'</b><small>'+esc(m.status==="active"?"Aktif":m.status==="expired"?"Kedaluwarsa":"Free Member")+(m.expiresAt?" · berakhir "+new Date(m.expiresAt).toLocaleDateString("id-ID"):"")+'</small>';
  const role=String(d.user?.role||"").toLowerCase();
  const adminPanel=document.getElementById("aryMemAdmin");
- if(adminPanel)adminPanel.hidden=!(d.user?.id==="ARY-ZFTLQPEX92"||["owner","admin","developer"].includes(role));
+ const isAdmin=d.user?.id==="ARY-ZFTLQPEX92"||["owner","admin","developer"].includes(role);
+ if(adminPanel)adminPanel.hidden=!isAdmin;
+ if(isAdmin)loadAdminOrders();
  orders.innerHTML=(d.orders||[]).length?(d.orders||[]).map(o=>'<div class="ary-mem-order"><div><b>'+esc(o.id)+'</b><small>'+esc(o.plan_id)+' · '+money(o.amount)+' · '+new Date(o.created_at).toLocaleString("id-ID")+'</small></div><span class="ary-mem-status">'+esc(o.status)+'</span></div>').join(""):"Belum ada pesanan.";
  }catch(e){current.textContent="Status belum tersedia";orders.textContent=e.message;note.textContent=e.message}
 }
 panel.addEventListener("click",async e=>{
+ if(e.target.closest("#aryMemAdminRefresh")){loadAdminOrders();return}
+ const review=e.target.closest("[data-review-order]");
+ if(review){
+  const orderId=review.dataset.reviewOrder,decision=review.dataset.decision;
+  const promptText=decision==="approve"?"Pastikan transaksi "+orderId+" dan nominal yang benar sudah masuk di GoPay Merchant. Aktifkan Membership?":"Tolak pesanan "+orderId+"?";
+  if(!window.confirm(promptText))return;
+  review.disabled=true;
+  try{
+   const note=decision==="approve"?"Dana masuk telah dicocokkan pada GoPay Merchant.":(window.prompt("Alasan penolakan (opsional):")||"Pembayaran tidak ditemukan atau nominal tidak cocok.");
+   const response=await fetch("/api/membership/admin/review",{method:"POST",credentials:"same-origin",headers:{"content-type":"application/json"},body:JSON.stringify({orderId,decision,paymentVerified:decision==="approve",note})});
+   const result=await response.json();if(!response.ok||!result.ok)throw Error(result.error||"Verifikasi gagal.");
+   document.getElementById("aryMemNote").textContent=result.message||"Status pesanan diperbarui.";
+   await load();await loadAdminOrders();
+  }catch(error){document.getElementById("aryMemNote").textContent=error.message||"Verifikasi gagal."}
+  finally{review.disabled=false}
+  return;
+ }
  const buy=e.target.closest("[data-buy]");if(!buy)return;
  buy.disabled=true;const p=plans.find(x=>x.id===buy.dataset.buy);const note=document.getElementById("aryMemNote");
  try{if(!paymentConfig.enabled)throw Error("QRIS merchant belum dikonfigurasi. Pesanan belum dibuat.");const r=await fetch("/api/membership/orders",{method:"POST",credentials:"same-origin",headers:{"content-type":"application/json"},body:JSON.stringify({planId:p.id,paymentProvider:"qris"})});const d=await r.json();if(!r.ok||!d.ok)throw Error(d.error||"Pesanan gagal dibuat.");note.textContent="Pesanan "+d.order.id+" dibuat. Scan QRIS di atas dengan nominal tepat "+money(d.order.amount)+", lalu tunggu verifikasi pemilik.";await load()}
