@@ -114,53 +114,81 @@ async function handleCosmetics(request,env){
  return json({ok:false,error:"Endpoint kosmetik tidak ditemukan."},404);
 }
 
-async function verifyMembershipWebhook(request,env,body){
- const secret=String(env.MEMBERSHIP_WEBHOOK_SECRET||"");
- if(secret.length<32)return false;
- const timestamp=String(request.headers.get("x-aryanzz-timestamp")||"");
- const signature=String(request.headers.get("x-aryanzz-signature")||"").toLowerCase();
- if(!/^\\d{13}$/.test(timestamp)||Math.abs(Date.now()-Number(timestamp))>5*60*1000||!/^[a-f0-9]{64}$/.test(signature))return false;
- const canonical=[timestamp,String(body.orderId||""),String(body.amount??""),String(body.transactionId||""),String(body.status||"")].join(".");
+async function verifyPoketoWebhook(request,env){
+ const secret=String(env.POKETO_WEBHOOK_SECRET||"");
+ if(!secret.startsWith("whsec_")||secret.length<20)return null;
+ const raw=new Uint8Array(await request.arrayBuffer());
+ const header=String(request.headers.get("Poketo-Signature")||"");
+ const parts=Object.fromEntries(header.split(",").map(x=>{const i=x.indexOf("=");return i<0?[x,""]:[x.slice(0,i).trim(),x.slice(i+1).trim()]}));
+ const timestamp=String(parts.t||""),signature=String(parts.v1||"");
+ if(!/^\\d{10}$/.test(timestamp)||Math.abs(Date.now()/1000-Number(timestamp))>300||!/^[a-f0-9]{64}$/i.test(signature))return null;
+ const bodyText=new TextDecoder().decode(raw);
  const key=await crypto.subtle.importKey("raw",new TextEncoder().encode(secret),{name:"HMAC",hash:"SHA-256"},false,["sign"]);
- const digest=new Uint8Array(await crypto.subtle.sign("HMAC",key,new TextEncoder().encode(canonical)));
+ const signed=new TextEncoder().encode(timestamp+"."+bodyText);
+ const digest=new Uint8Array(await crypto.subtle.sign("HMAC",key,signed));
  const expected=Array.from(digest,b=>b.toString(16).padStart(2,"0")).join("");
- let diff=0;for(let i=0;i<64;i++)diff|=expected.charCodeAt(i)^signature.charCodeAt(i);
- return diff===0;
+ let diff=0;for(let i=0;i<64;i++)diff|=expected.charCodeAt(i)^signature.toLowerCase().charCodeAt(i);
+ if(diff!==0)return null;
+ try{return JSON.parse(bodyText)}catch{return null}
 }
 async function membershipWebhook(request,env){
  if(request.method!=="POST")return json({ok:false,error:"Method tidak diizinkan."},405);
  if(!env.AUTH_DB||typeof env.AUTH_DB.prepare!=="function")return json({ok:false,error:"Database akun belum dikonfigurasi."},503);
- let body;try{body=await request.json()}catch{return json({ok:false,error:"Payload webhook tidak valid."},400)}
- if(!await verifyMembershipWebhook(request,env,body))return json({ok:false,error:"Tanda tangan webhook tidak valid atau sudah kedaluwarsa."},401);
- const orderId=String(body.orderId||"").slice(0,80),transactionId=String(body.transactionId||"").slice(0,160);
- const amount=Number(body.amount),status=String(body.status||"").toLowerCase();
- if(!orderId||!transactionId||!Number.isSafeInteger(amount)||amount<1||!["paid","success","settlement"].includes(status))return json({ok:false,error:"Data transaksi webhook tidak lengkap atau belum lunas."},400);
+ const event=await verifyPoketoWebhook(request,env);
+ if(!event)return json({ok:false,error:"Tanda tangan Poketo tidak valid atau sudah kedaluwarsa."},400);
+ const eventId=String(request.headers.get("Poketo-Event-Id")||event.id||"").slice(0,120);
+ const type=String(event.type||request.headers.get("Poketo-Event")||"");
+ if(!eventId)return json({ok:false,error:"ID event Poketo tidak tersedia."},400);
+ const existing=await env.AUTH_DB.prepare("SELECT event_id FROM poketo_webhook_events WHERE event_id=?1 LIMIT 1").bind(eventId).first().catch(()=>null);
+ if(existing)return json({ok:true,duplicate:true});
+ if(type==="ping"){
+  await env.AUTH_DB.prepare("INSERT OR IGNORE INTO poketo_webhook_events (event_id,event_type,received_at) VALUES (?1,?2,?3)").bind(eventId,type,Date.now()).run();
+  return json({ok:true});
+ }
+ const invoice=event.data||{};
+ const orderId=String(invoice.referenceId||invoice.metadata?.orderId||"").slice(0,80);
+ if(!orderId)return json({ok:false,error:"Referensi pesanan tidak ditemukan."},400);
  const order=await env.AUTH_DB.prepare("SELECT * FROM membership_orders WHERE id=?1 LIMIT 1").bind(orderId).first();
- if(!order)return json({ok:false,error:"Pesanan tidak ditemukan."},404);
- if(order.status==="paid"&&order.provider_transaction_id===transactionId)return json({ok:true,duplicate:true,message:"Pembayaran ini sudah diproses."});
- if(order.status!=="pending")return json({ok:false,error:"Pesanan tidak lagi menunggu pembayaran."},409);
- if(Number(order.created_at)<Date.now()-24*60*60*1000){await env.AUTH_DB.prepare("UPDATE membership_orders SET status='expired',note='Batas pembayaran 24 jam terlewati' WHERE id=?1 AND status='pending'").bind(orderId).run();return json({ok:false,error:"Pesanan telah kedaluwarsa. Buat pesanan baru."},410)}
- if(Number(order.amount)!==amount)return json({ok:false,error:"Nominal pembayaran tidak cocok dengan pesanan."},409);
- if(order.payment_provider!=="qris")return json({ok:false,error:"Metode pembayaran pesanan tidak cocok."},409);
- const plan=PLANS.find(p=>p.id===order.plan_id);if(!plan)return json({ok:false,error:"Paket pesanan tidak valid."},400);
- const now=Date.now(),existing=await membershipFor(order.user_id,env);
- const base=existing.status==="active"&&existing.expiresAt?Math.max(now,existing.expiresAt):now;
- const expires=plan.durationDays===null?null:base+plan.durationDays*86400000;
- const results=await env.AUTH_DB.batch([
-  env.AUTH_DB.prepare("UPDATE membership_orders SET status='paid',paid_at=?1,expires_at=?2,provider_transaction_id=?3,note='Pembayaran dikonfirmasi melalui webhook bertanda tangan' WHERE id=?4 AND status='pending' AND amount=?5 AND provider_transaction_id IS NULL").bind(now,expires,transactionId,orderId,amount),
-  env.AUTH_DB.prepare("INSERT INTO user_memberships (user_id,plan_id,status,started_at,expires_at,updated_at) SELECT ?1,?2,'active',?3,?4,?3 WHERE EXISTS (SELECT 1 FROM membership_orders WHERE id=?5 AND status='paid' AND paid_at=?3 AND provider_transaction_id=?6) ON CONFLICT(user_id) DO UPDATE SET plan_id=excluded.plan_id,status='active',started_at=excluded.started_at,expires_at=excluded.expires_at,updated_at=excluded.updated_at").bind(order.user_id,plan.id,now,expires,orderId,transactionId)
- ]);
- const changed=Number(results?.[0]?.meta?.changes||0);
- if(changed!==1)return json({ok:false,error:"Pesanan sudah diproses atau transaksi sudah pernah digunakan."},409);
- return json({ok:true,message:"Pembayaran terverifikasi. Membership berhasil diaktifkan.",orderId,planId:plan.id,expiresAt:expires});
+ if(!order)return json({ok:false,error:"Pesanan ARYANZZ tidak ditemukan."},404);
+ if(String(event.environment||"")!==String(env.POKETO_MODE==="live"?"live":"sandbox"))return json({ok:false,error:"Environment Poketo tidak cocok dengan mode ARYANZZ."},409);
+ const invoiceId=String(invoice.id||"").slice(0,160);
+ if(type==="invoice.paid"){
+  const amount=Number(invoice.amount);
+  if(invoice.status!=="paid"||!invoiceId||amount!==Number(order.amount))return json({ok:false,error:"Status, ID invoice, atau nominal Poketo tidak cocok."},409);
+  if(order.status==="paid"&&order.provider_transaction_id===invoiceId){
+   await env.AUTH_DB.prepare("INSERT OR IGNORE INTO poketo_webhook_events (event_id,event_type,received_at) VALUES (?1,?2,?3)").bind(eventId,type,Date.now()).run();
+   return json({ok:true,duplicate:true});
+  }
+  if(order.status!=="pending"||order.payment_provider!=="poketo")return json({ok:false,error:"Pesanan bukan invoice Poketo yang menunggu pembayaran."},409);
+  const plan=PLANS.find(p=>p.id===order.plan_id);if(!plan)return json({ok:false,error:"Paket pesanan tidak valid."},400);
+  const now=Date.now(),existingMembership=await membershipFor(order.user_id,env);
+  const base=existingMembership.status==="active"&&existingMembership.expiresAt?Math.max(now,existingMembership.expiresAt):now;
+  const expires=plan.durationDays===null?null:base+plan.durationDays*86400000;
+  const results=await env.AUTH_DB.batch([
+   env.AUTH_DB.prepare("UPDATE membership_orders SET status='paid',paid_at=?1,expires_at=?2,provider_transaction_id=?3,note='Pembayaran Poketo terverifikasi melalui webhook' WHERE id=?4 AND status='pending' AND amount=?5 AND payment_provider='poketo'").bind(now,expires,invoiceId,orderId,amount),
+   env.AUTH_DB.prepare("INSERT INTO user_memberships (user_id,plan_id,status,started_at,expires_at,updated_at) SELECT ?1,?2,'active',?3,?4,?3 WHERE EXISTS (SELECT 1 FROM membership_orders WHERE id=?5 AND status='paid' AND provider_transaction_id=?6) ON CONFLICT(user_id) DO UPDATE SET plan_id=excluded.plan_id,status='active',started_at=excluded.started_at,expires_at=excluded.expires_at,updated_at=excluded.updated_at").bind(order.user_id,plan.id,now,expires,orderId,invoiceId),
+   env.AUTH_DB.prepare("INSERT OR IGNORE INTO poketo_webhook_events (event_id,event_type,received_at) VALUES (?1,?2,?3)").bind(eventId,type,now)
+  ]);
+  if(Number(results?.[0]?.meta?.changes||0)!==1)return json({ok:false,error:"Pesanan sudah diproses atau transaksi sudah pernah digunakan."},409);
+  return json({ok:true,message:"Pembayaran Poketo terverifikasi. Membership aktif.",orderId});
+ }
+ if(["invoice.expired","invoice.cancelled","invoice.refunded"].includes(type)){
+  const next=type==="invoice.expired"?"expired":type==="invoice.cancelled"?"rejected":"refunded";
+  await env.AUTH_DB.batch([
+   env.AUTH_DB.prepare("UPDATE membership_orders SET status=?1,note=?2 WHERE id=?3 AND status IN ('pending','paid')").bind(next,"Status diperbarui oleh webhook Poketo: "+type,orderId),
+   env.AUTH_DB.prepare("INSERT OR IGNORE INTO poketo_webhook_events (event_id,event_type,received_at) VALUES (?1,?2,?3)").bind(eventId,type,Date.now())
+  ]);
+  return json({ok:true,message:"Status invoice diperbarui."});
+ }
+ await env.AUTH_DB.prepare("INSERT OR IGNORE INTO poketo_webhook_events (event_id,event_type,received_at) VALUES (?1,?2,?3)").bind(eventId,type,Date.now()).run();
+ return json({ok:true,ignored:true});
 }
-
 async function handleMembership(request,env){
  const url=new URL(request.url),path=url.pathname;
  if(path==="/api/membership/webhook")return membershipWebhook(request,env);
  if(path==="/api/cosmetics/me"||path==="/api/cosmetics/equip"||path==="/api/redeem/claim"||path==="/api/membership/admin/redeem-codes")return handleCosmetics(request,env);
  if(path==="/api/membership/catalog"&&request.method==="GET")return json({ok:true,pricingStatus:"proposed",paymentEnabled:!!env.AUTH_DB,qrAvailable:!!safeQrisImage(env),plans:PLANS,free:{id:"free",name:"Free Member",price:0,summary:"Tetap tersedia tanpa pembayaran."}});
- if(path==="/api/membership/payment-config"&&request.method==="GET")return json({ok:true,enabled:!!safeQrisImage(env),checkoutEnabled:!!env.AUTH_DB,provider:"QRIS",qrisImageUrl:safeQrisImage(env),verification:"manual_until_gateway_connected",automaticWebhookReady:String(env.MEMBERSHIP_WEBHOOK_SECRET||"").length>=32,message:safeQrisImage(env)?"QRIS merchant tersedia. Untuk aktivasi otomatis, hubungkan penyedia pembayaran yang mengirim webhook bertanda tangan ke endpoint ARYANZZ.":"QRIS belum dikonfigurasi oleh pemilik ARYANZZ."});
+ if(path==="/api/membership/payment-config"&&request.method==="GET")return json({ok:true,enabled:String(env.POKETO_SECRET_KEY||"").startsWith("sk_"),checkoutEnabled:!!env.AUTH_DB,provider:"Poketo",mode:env.POKETO_MODE==="live"?"live":"sandbox",automaticWebhookReady:String(env.POKETO_WEBHOOK_SECRET||"").startsWith("whsec_"),message:String(env.POKETO_SECRET_KEY||"").startsWith("sk_")?"Checkout Poketo siap digunakan. Metode pembayaran ditampilkan pada halaman checkout resmi.":"API key Poketo belum dipasang di Cloudflare Worker Secrets."});
  if(!env.AUTH_DB||typeof env.AUTH_DB.prepare!=="function")return json({ok:false,error:"Database akun belum dikonfigurasi."},503);
  if(path==="/api/membership/me"&&request.method==="GET"){
   const user=await currentUser(request,env);if(!user)return json({ok:false,error:"Silakan login terlebih dahulu."},401);
@@ -170,16 +198,38 @@ async function handleMembership(request,env){
  }
  if(path==="/api/membership/orders"&&request.method==="POST"){
   const user=await currentUser(request,env);if(!user)return json({ok:false,error:"Silakan login terlebih dahulu."},401);
+  if(!String(env.POKETO_SECRET_KEY||"").startsWith("sk_"))return json({ok:false,error:"Pembayaran Poketo belum dikonfigurasi oleh pemilik."},503);
   let body;try{body=await request.json()}catch{return json({ok:false,error:"Data pesanan tidak valid."},400)}
   const plan=PLANS.find(p=>p.id===String(body?.planId||""));if(!plan)return json({ok:false,error:"Paket Membership tidak ditemukan."},400);
-  const qrisImageUrl=safeQrisImage(env);
-  if(!qrisImageUrl||String(body?.paymentProvider||"")!=="qris")return json({ok:false,error:"Pembayaran QRIS belum dikonfigurasi. Pesanan belum dibuat."},503);
-  await env.AUTH_DB.prepare("UPDATE membership_orders SET status='expired',note='Batas pembayaran 24 jam terlewati' WHERE user_id=?1 AND status='pending' AND created_at<=?2").bind(user.id,Date.now()-24*60*60*1000).run();
+  await env.AUTH_DB.prepare("UPDATE membership_orders SET status='expired',note='Invoice melewati batas pembayaran' WHERE user_id=?1 AND status='pending' AND created_at<=?2").bind(user.id,Date.now()-24*60*60*1000).run();
   const pending=await env.AUTH_DB.prepare("SELECT id FROM membership_orders WHERE user_id=?1 AND status='pending' AND created_at>?2 LIMIT 1").bind(user.id,Date.now()-24*60*60*1000).first();
-  if(pending)return json({ok:false,error:"Kamu masih memiliki pesanan yang menunggu verifikasi.",orderId:pending.id},409);
-  const id="ARYM-"+Date.now().toString(36).toUpperCase()+"-"+crypto.randomUUID().slice(0,8).toUpperCase();
-  await env.AUTH_DB.prepare("INSERT INTO membership_orders (id,user_id,plan_id,amount,status,payment_provider,created_at) VALUES (?1,?2,?3,?4,'pending','qris',?5)").bind(id,user.id,plan.id,plan.price,Date.now()).run();
-  return json({ok:true,order:{id,planId:plan.id,planName:plan.name,amount:plan.price,status:"pending",paymentProvider:"qris"},payment:{provider:"QRIS",qrisImageUrl},message:"Pesanan dibuat. Scan QRIS dan tunggu verifikasi pembayaran oleh pemilik ARYANZZ."},201);
+  if(pending)return json({ok:false,error:"Masih ada invoice yang menunggu pembayaran.",orderId:pending.id},409);
+  const now=Date.now(),id="ARYM-"+now.toString(36).toUpperCase()+"-"+crypto.randomUUID().slice(0,8).toUpperCase();
+  await env.AUTH_DB.prepare("INSERT INTO membership_orders (id,user_id,plan_id,amount,status,payment_provider,created_at) VALUES (?1,?2,?3,?4,'pending','poketo',?5)").bind(id,user.id,plan.id,plan.price,now).run();
+  const site=new URL(request.url).origin;
+  const payload={referenceId:id,amount:plan.price,title:"ARYANZZ Membership · "+plan.name,description:"Membership "+plan.name+" selama "+(plan.durationDays===null?"permanen":plan.durationDays+" hari"),customer:{name:String(user.full_name||user.email||"Pengguna ARYANZZ").slice(0,100),email:user.email},expiresInMinutes:1440,redirectUrl:site+"/?membership=return&order="+encodeURIComponent(id),metadata:{orderId:id,userId:user.id,planId:plan.id}};
+  let response,data;
+  try{
+   response=await fetch("https://poketo.id/api/v1/invoices",{method:"POST",headers:{"authorization":"Bearer "+env.POKETO_SECRET_KEY,"content-type":"application/json","idempotency-key":id},body:JSON.stringify(payload),signal:AbortSignal.timeout(15000)});
+   data=await response.json();
+   if(!response.ok||data?.error)throw new Error(data?.error?.message||data?.error?.code||"Poketo gagal membuat invoice.");
+   const invoice=data?.data||data;
+   if(!invoice?.id||!invoice?.paymentUrl)throw new Error("Respons Poketo tidak memuat invoice ID dan paymentUrl.");
+   await env.AUTH_DB.prepare("UPDATE membership_orders SET note=?1 WHERE id=?2 AND status='pending'").bind("Poketo invoice "+String(invoice.id).slice(0,150),id).run();
+   return json({ok:true,order:{id,planId:plan.id,planName:plan.name,amount:plan.price,status:"pending",paymentProvider:"poketo"},payment:{provider:"Poketo",invoiceId:invoice.id,paymentUrl:invoice.paymentUrl,expiresAt:invoice.expiresAt||null},message:"Invoice berhasil dibuat. Lanjutkan pembayaran melalui checkout Poketo."},201);
+  }catch(error){
+   await env.AUTH_DB.prepare("UPDATE membership_orders SET status='rejected',note=?1 WHERE id=?2 AND status='pending'").bind(("Gagal membuat invoice Poketo: "+String(error?.message||error)).slice(0,300),id).run().catch(()=>{});
+   return json({ok:false,error:"Invoice Poketo gagal dibuat. "+String(error?.message||"Silakan coba lagi.")},502);
+  }
+ }
+ if(path==="/api/membership/payment-methods"&&request.method==="GET"){
+  const amount=Math.max(10000,Math.min(10000000,Math.floor(Number(url.searchParams.get("amount"))||80000)));
+  if(!String(env.POKETO_SECRET_KEY||"").startsWith("sk_"))return json({ok:false,error:"Poketo belum dikonfigurasi."},503);
+  try{
+   const r=await fetch("https://poketo.id/api/v1/payment-methods?amount="+amount,{headers:{authorization:"Bearer "+env.POKETO_SECRET_KEY},signal:AbortSignal.timeout(10000)});
+   const d=await r.json();if(!r.ok)throw new Error(d?.error?.message||"Gagal mengambil metode pembayaran.");
+   return json({ok:true,methods:d.data||d.methods||d});
+  }catch(error){return json({ok:false,error:String(error?.message||"Metode pembayaran belum tersedia.")},502)}
  }
  if(path==="/api/membership/admin/orders"&&request.method==="GET"){
   const admin=await adminUser(request,env);if(!admin)return json({ok:false,error:"Akses khusus pemilik."},403);
