@@ -18,6 +18,10 @@ assert.ok(guides.includes("Menunggu konfigurasi Cloudflare D1"), "inactive visit
 assert.ok(guides.includes("bukan alat medis"), "camera experiment limitation is explicit");
 assert.ok(guides.includes("tidak melewati CAPTCHA"), "link bypass limitation is explicit");
 assert.ok(css.includes(".ary-guide-overlay") && css.includes("@media(max-width:760px)"), "responsive guide interface styles exist");
+assert.ok(css.includes("grid-auto-flow:column") && css.includes("scroll-snap-type:x mandatory") && css.includes("overflow-y:auto"), "mobile guide uses one vertical reading flow and swipeable guide cards");
+assert.ok(css.includes("env(safe-area-inset-bottom)") && css.includes(".ary-guide-footer{flex:0 0 auto"), "mobile guide footer respects device safe area and remains outside the scroll region");
+assert.ok(guides.includes("Progres tersimpan di browser ini.") && guides.includes(">Tutup</button>"), "guide footer uses compact mobile labels");
+
 const module = manifest.featureModules.find(item => item.js?.includes("/workspace-guides.js"));
 assert.ok(module && module.css.includes("/workspace-guides.css"), "guide module is registered in workspace manifest");
 console.log("ARYANZZ workspace guides smoke test passed: 21 feature guides, navigation, progress, honest availability, responsive UI.");
