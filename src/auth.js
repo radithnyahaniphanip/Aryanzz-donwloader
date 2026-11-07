@@ -278,6 +278,8 @@ async function guestBootstrap(request,env){
     const row=await env.AUTH_DB.prepare("SELECT token_hash FROM auth_sessions WHERE token_hash=?1 AND user_id=?2 AND expires_at>?3 LIMIT 1").bind(await digest(currentToken),user.id,now).first();
     activeSession=!!row;
   }
+  const adminAccount=user.id==="ARY-ZFTLQPEX92"||["owner","admin","developer"].includes(String(user.role||"").toLowerCase());
+  if(adminAccount&&!activeSession)return reply({ok:false,code:"ADMIN_SESSION_REQUIRED",error:"Sesi administrator tidak aktif. Buka /?owner=1 untuk masuk kembali ke panel admin."},401);
   let sessionToken=currentToken;
   if(!activeSession){
     sessionToken=randomHex(32);
