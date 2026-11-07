@@ -32,6 +32,19 @@ async function loadPrestige(){
   avatar?.classList.toggle("ary-legendary-frame",!!frame);
   banner?.classList.toggle("ary-legendary-banner",!!background);
   document.body.classList.toggle("ary-legendary-background",!!background);
+  const seedOf=value=>{let n=2166136261;for(const ch of String(value||"ARYANZZ")){n^=ch.charCodeAt(0);n=Math.imul(n,16777619)}return n>>>0};
+  if(frame&&avatar){
+   const seed=seedOf(frame.id),hue=seed%360,texture=seed%10,speed=(5+(seed%70)/10).toFixed(1)+"s";
+   avatar.style.setProperty("--ary-legendary-hue",String(hue));
+   avatar.style.setProperty("--ary-legendary-speed",speed);
+   avatar.style.borderRadius=(20+seed%13)+"px";
+   avatar.dataset.legendaryTexture=String(texture);
+  }else if(avatar){avatar.style.removeProperty("--ary-legendary-hue");avatar.style.removeProperty("--ary-legendary-speed");delete avatar.dataset.legendaryTexture;avatar.style.removeProperty("border-radius")}
+  if(background){
+   const seed=seedOf(background.id);
+   document.body.style.setProperty("--ary-legendary-hue",String(seed%360));
+   document.body.dataset.legendaryTexture=String(seed%10);
+  }else{document.body.style.removeProperty("--ary-legendary-hue");delete document.body.dataset.legendaryTexture}
   const expiries=[frame?.expires_at,background?.expires_at].filter(Boolean).map(Number);
   prestigeExpiry=expiries.length?Math.min(...expiries):0;
   active.hidden=!prestigeExpiry;
