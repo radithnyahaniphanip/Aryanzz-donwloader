@@ -48,7 +48,10 @@ function missingConfig(env) {
   if (!String(env.AUTH_TURNSTILE_SITE_KEY || "").trim()) missing.push("AUTH_TURNSTILE_SITE_KEY");
   return missing;
 }
-function ready(env) { return missingConfig(env).length === 0; }
+function ready(env) {
+  return !!env.AUTH_DB&&typeof env.AUTH_DB.prepare==="function"&&String(env.AUTH_SESSION_SECRET||"").length>=32&&
+    !!String(env.TURNSTILE_SECRET_KEY||"").trim()&&!!String(env.AUTH_TURNSTILE_SITE_KEY||"").trim();
+}
 function limited(request, name, max, windowMs) {
   const key = name + "|" + String(request.headers.get("cf-connecting-ip") || "unknown").slice(0, 80);
   const now = Date.now();
@@ -232,12 +235,12 @@ async function adminModerate(request, env, action) {
   return reply({ok:true,message:"Akun diblokir permanen. Semua sesi dicabut dan perangkat tepercaya yang tercatat dimasukkan ke daftar blokir."});
 }
 
-async function createSession(row, env) {
+async function createSession(row, env, extra = {}) {
   const token = randomHex(32), now = Date.now();
   await env.AUTH_DB.prepare("INSERT INTO auth_sessions (token_hash,user_id,created_at,expires_at) VALUES (?1,?2,?3,?4)")
     .bind(await digest(token), row.id, now, now + SESSION_TTL).run();
   await env.AUTH_DB.prepare("DELETE FROM auth_sessions WHERE expires_at<=?1").bind(now).run();
-  return reply({ ok: true, user: publicUser(row) }, 200, {
+  return reply({ ok: true, user: publicUser(row), ...extra }, 200, {
     "set-cookie": COOKIE + "=" + token + "; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=" + Math.floor(SESSION_TTL / 1000)
   });
 }
@@ -264,6 +267,7 @@ async function startRegister(request, env) {
   const b = await bodyOf(request), fullName = String(b?.fullName || "").trim().replace(/\s+/g, " ").slice(0, 80);
   const email = emailOf(b?.email), password = String(b?.password || "");
   if (!b || fullName.length < 2 || !validEmail(email)) return reply({ ok: false, error: "Nama dan email harus diisi dengan benar." }, 400);
+  if(!String(env.RESEND_API_KEY||"").trim()||!String(env.AUTH_EMAIL_FROM||"").trim())return reply({ok:false,code:"EMAIL_SERVICE_NOT_CONFIGURED",error:"Pendaftaran email sementara belum tersedia. Pemilik website perlu mengaktifkan layanan email terverifikasi."},503);
   if (!validPassword(password)) return reply({ ok: false, error: "Password minimal 12 karakter, berisi huruf besar, huruf kecil, angka, dan simbol." }, 400);
   if (password !== String(b.passwordConfirm || "")) return reply({ ok: false, error: "Konfirmasi password belum sama." }, 400);
   if (limited(request, "register", 5, 600000)) return reply({ ok: false, error: "Terlalu banyak percobaan pendaftaran." }, 429);
@@ -318,7 +322,6 @@ async function login(request, env) {
     .bind(identifier, identifier).first();
   if (!user) return reply({ ok: false, code: "ACCOUNT_NOT_FOUND", error: "Akun belum ditemukan. Periksa email atau ID." }, 404);
   if (await userBan(user.id, env)) return reply({ok:false,code:"ACCOUNT_BANNED",error:"Akun ini diblokir permanen karena pelanggaran aturan ARYANZZ."},403);
-  if (await userBan(user.id, env)) return reply({ok:false,code:"ACCOUNT_BANNED",error:"Akun ini diblokir permanen karena pelanggaran aturan ARYANZZ."},403);
   const iterations = Math.max(100000, Math.min(1000000, Number(user.password_iterations) || ITERATIONS));
   if (!equal(await passwordDigest(password, user.password_salt, iterations), String(user.password_hash || ""))) {
     return reply({ ok: false, code: "INVALID_CREDENTIALS", error: "Email/ID atau password tidak cocok." }, 401);
@@ -328,7 +331,9 @@ async function login(request, env) {
   if ((primary && primary.user_id !== user.id) || (previouslyTrusted && previouslyTrusted.user_id !== user.id)) return primaryAccountNotice();
   if (!(await claimPrimaryDevice(user.id, deviceHash, env))) return primaryAccountNotice();
   await rememberTrustedDevice(user.id, deviceHash, env);
-  return createSession(user, env);
+  const lastModeration=await env.AUTH_DB.prepare("SELECT action,created_at FROM auth_moderation_events WHERE user_id=?1 ORDER BY created_at DESC LIMIT 1").bind(user.id).first();
+  const restored=lastModeration?.action==="unban"&&Date.now()-Number(lastModeration.created_at||0)<30*24*60*60*1000;
+  return createSession(user, env, restored?{restored:true,message:"Akunmu dipulihkan. Selamat datang kembali di ARYANZZ."}:{});
 }
 async function startLegacy(request, env) {
   const b = await bodyOf(request), old = b?.legacy || {};
