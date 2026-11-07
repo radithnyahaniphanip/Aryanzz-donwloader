@@ -913,13 +913,13 @@ body{background-color:var(--ary-app-bg)}
         <div><span>ACCOUNT IDENTIFIER</span><h2>ID akun</h2></div>
         <span class="ary-profile2-heading-icon">⌁</span>
       </div>
-      <p class="ary-profile2-card-copy">ID unik untuk mengenali akun ARYANZZ di perangkat ini.</p>
+      <p class="ary-profile2-card-copy">ID otomatis untuk mengenali perangkat, Membership, dan status moderasi ARYANZZ.</p>
       <div class="v25-profile-id-row ary-profile2-id-row">
         <code id="profileRandomId">ARY-••••••••</code>
         <button class="tag ary-profile2-copy" id="profileCopyId" type="button">Salin ID</button>
       </div>
-      <div class="ary-profile2-account-email"><small>EMAIL TERDAFTAR</small><b id="profileAccountEmail">Belum terhubung</b></div>
-      <div class="ary-profile2-account-note" id="profileAccountNote"><span>●</span> Akun tersimpan di browser ini</div>
+      <div class="ary-profile2-account-email"><small>STATUS AKSES</small><b id="profileAccountEmail">Akses publik</b></div>
+      <div class="ary-profile2-account-note" id="profileAccountNote"><span>●</span> Pengunjung ARYANZZ · ID otomatis</div>
       <button class="ary-profile2-logout" id="accountLogout" type="button" hidden>Keluar dari akun</button>
     </section>
   </div>
@@ -979,6 +979,7 @@ body{background-color:var(--ary-app-bg)}
           <div><b>FREE</b><span>AKSES PLATFORM</span></div>
         </div>
       </section>
+      <div class="ary-owner2-admin-entry"><a href="/?owner=1">Akses administrator · Masuk admin</a></div>
 
       <section class="ary-owner2-social-section">
         <div class="ary-owner2-section-heading"><div><h2>Kanal Resmi</h2></div><p>Temukan kanal dan ruang pengembangan resmi.</p></div>
@@ -1009,7 +1010,7 @@ body{background-color:var(--ary-app-bg)}
         <div class="v8813-security-state" id="securityCenterState">Memeriksa status keamanan...</div>
         <div class="v8813-security-metrics"><div><b id="securityBlockedOrigin">—</b><small>Origin diblokir</small></div><div><b id="securityRateLimited">—</b><small>Rate limited</small></div><div><b id="securityOversized">—</b><small>Request besar</small></div><div><b id="securityMethods">—</b><small>Metode ditolak</small></div></div>
         <div class="v8813-security-foot"><span>Counter per Worker isolate · bukan log global</span><button type="button" id="securityCenterRefresh">↻ Perbarui</button></div>
-<div class="ary-ban-tools"><h4>Moderasi akun</h4><p>Gunakan setelah pemeriksaan pelanggaran dan bukti yang memadai. Pemblokiran permanen mencabut sesi dan menolak pendaftaran ulang dari perangkat yang sudah tercatat.</p><label for="ownerBanAccountId">ID akun anggota<input id="ownerBanAccountId" class="field" maxlength="14" placeholder="ARY-XXXXXXXXXX" autocomplete="off"></label><label for="ownerBanReason">Alasan pemblokiran<textarea id="ownerBanReason" class="field" rows="2" maxlength="500" placeholder="Jelaskan pelanggaran aturan yang sudah diverifikasi"></textarea></label><div class="ary-ban-actions"><button type="button" id="ownerBanSubmit" class="ary-owner2-save">Blokir permanen</button><button type="button" id="ownerUnbanSubmit" class="ary-ban-unban">Lepas blokir akun</button></div><p id="ownerBanStatus" role="status" aria-live="polite"></p></div>
+<div class="ary-ban-tools"><h4>Moderasi ID pengguna</h4><p>Pengunjung tidak perlu mendaftar atau login. Masukkan ID otomatis pengguna untuk memblokir aksesnya; pemulihan akan membuka kembali akses pada perangkat yang tercatat.</p><label for="ownerBanAccountId">ID pengguna ARYANZZ<input id="ownerBanAccountId" class="field" maxlength="14" placeholder="ARY-XXXXXXXXXX" autocomplete="off"></label><label for="ownerBanReason">Alasan pemblokiran<textarea id="ownerBanReason" class="field" rows="2" maxlength="500" placeholder="Jelaskan pelanggaran aturan yang sudah diverifikasi"></textarea></label><div class="ary-ban-actions"><button type="button" id="ownerBanSubmit" class="ary-owner2-save">Blokir permanen</button><button type="button" id="ownerUnbanSubmit" class="ary-ban-unban">Pulihkan ID pengguna</button></div><p id="ownerBanStatus" role="status" aria-live="polite"></p></div>
 </div>
       </section>
     </main>
@@ -1215,7 +1216,7 @@ if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.ser
 <div id="aryAuthGate" class="ary-auth-gate" hidden role="dialog" aria-modal="true" aria-labelledby="aryAuthTitle">
  <div class="ary-auth-shell">
   <div class="ary-auth-brand"><span class="ary-auth-logo" aria-hidden="true"><svg width="30" height="30" viewBox="0 0 64 64" focusable="false"><defs><linearGradient id="aryanzzAuthMark" x1="0" y1="1" x2="1" y2="0"><stop stop-color="#35d9df"/><stop offset=".5" stop-color="#5795ff"/><stop offset="1" stop-color="#b078ff"/></linearGradient></defs><path d="M7 53 24 13q2-5 8-5t8 5l17 40H43L32 26 21 53z" fill="url(#aryanzzAuthMark)"/><path d="M23 39h18l-4-9H27z" fill="#fff"/><path d="m49 5 3 8 8 3-8 3-3 8-3-8-8-3 8-3z" fill="#fff"/></svg></span><div><b>ARYANZZ</b><small>RUANG KREATIF</small></div><span class="ary-auth-free">V1 · MEMBER ACCESS</span></div>
-  <div class="ary-auth-intro"><span>YOUR DIGITAL SPACE</span><h1 id="aryAuthTitle">Selamat datang kembali.</h1><p>Masuk dengan email atau ID ARYANZZ. Email terverifikasi digunakan untuk pemulihan akun.</p></div>
+  <div class="ary-auth-intro"><span>OWNER ACCESS</span><h1 id="aryAuthTitle">Akses administrator ARYANZZ</h1><p>Halaman khusus pemilik dan administrator. Pengunjung tidak perlu daftar atau login.</p></div>
   <div class="ary-auth-tabs" id="aryAuthTabs"><button type="button" data-auth-mode="register">Daftar akun</button><button type="button" class="active" data-auth-mode="login">Masuk</button></div>
   <form id="aryRegisterForm" class="ary-auth-form" hidden autocomplete="on">
    <label>Nama lengkap<input id="aryRegName" name="name" type="text" maxlength="80" autocomplete="name" placeholder="Nama lengkap kamu" required></label>
@@ -1279,4 +1280,4 @@ if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.ser
 </div>
 
 <script src="/membership.js?v=__ARYANZZ_VERSION__" defer></script><script src="/update-manager.js?v=__ARYANZZ_VERSION__" defer></script><script src="/speed-test.js?v=94.6" defer></script>
-<script src="/auth-gate.js?v=__ARYANZZ_VERSION__" defer></script><script src="/text-protection.js?v=__ARYANZZ_VERSION__" defer></script></body></html>
+<script src="/auth-gate.js?v=__ARYANZZ_VERSION__" defer></script><script src="/guest-access.js?v=__ARYANZZ_VERSION__" defer></script><script src="/text-protection.js?v=__ARYANZZ_VERSION__" defer></script></body></html>
