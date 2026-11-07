@@ -123,7 +123,7 @@ stage.register("image-lightweight",(root,core)=>{
  $("v1ltBlurBrush")?.addEventListener("input",()=>{$("v1ltBlurBrushValue").textContent=$("v1ltBlurBrush").value+" px"});
  $("v1ltBlurMode")?.addEventListener("change",renderBlur);$("v1ltBlurColor")?.addEventListener("change",renderBlur);
  blurCanvas?.addEventListener("pointerdown",event=>{if(!blurBitmap)return;blurCanvas.setPointerCapture(event.pointerId);blurDrawing={mode:$("v1ltBlurMode").value,color:$("v1ltBlurColor").value,width:Number($("v1ltBlurBrush").value),points:[blurPoint(event)]};renderBlur()});
- blurCanvas?.addEventListener("pointermove",event=>{if(!blurDrawing)return;const point=blurPoint(event),last=blurDrawing.points[blurDrawing.points.length-1];if(Math.hypot(point.x-last.x,point.y-last.y)>Math.max(2,blurDrawing.width*.22)){blurDrawing.points.push(point);renderBlur()}});
+ blurCanvas?.addEventListener("pointermove",event=>{if(!blurDrawing||blurDrawing.points.length>=300)return;const point=blurPoint(event),last=blurDrawing.points[blurDrawing.points.length-1];if(Math.hypot(point.x-last.x,point.y-last.y)>Math.max(5,blurDrawing.width*.3))blurDrawing.points.push(point)});
  function finishBlur(){if(!blurDrawing)return;blurStrokes.push(blurDrawing);blurDrawing=null;renderBlur();$("v1ltBlurUndo").disabled=!blurStrokes.length}
  blurCanvas?.addEventListener("pointerup",finishBlur);blurCanvas?.addEventListener("pointercancel",finishBlur);
  $("v1ltBlurUndo")?.addEventListener("click",()=>{blurStrokes.pop();renderBlur();$("v1ltBlurUndo").disabled=!blurStrokes.length});
