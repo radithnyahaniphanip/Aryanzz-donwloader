@@ -1,6 +1,6 @@
 # ARYANZZ V1 — Full Release
 
-Production website: https://aryanzz-donwloader.radithnyahaniphanip.workers.dev/
+Production website: https://aryanzz-donwloader.aryanz.workers.dev/
 
 **Public release identity: V1 (Full Release).** All previously developed ARYANZZ capabilities are included in this single public release line. The interface, downloader, profile, owner, library, and tools remain separated into owned modules so future updates can be made without replacing unrelated features. The monotonically increasing build identifier is internal and exists only for deployment verification, browser-cache invalidation, and automatic updates; it does not change the public V1 label.
 
@@ -442,6 +442,6 @@ Add these GitHub Actions repository secrets under Settings → Secrets and varia
 - \`TURNSTILE_SECRET_KEY\`: secret key for the Cloudflare Turnstile widget.
 - \`AUTH_TURNSTILE_SITE_KEY\`: public site key for the same widget.
 
-Set the Turnstile hostname to \`aryanzz-donwloader.radithnyahaniphanip.workers.dev\`. The deployment workflow syncs supplied values to the Worker. Email recipients can use Gmail; the sender address must belong to a domain verified with the email provider.
+Set the Turnstile hostname to \`aryanzz-donwloader.aryanz.workers.dev\`. The deployment workflow syncs supplied values to the Worker. Email recipients can use Gmail; the sender address must belong to a domain verified with the email provider.
 
 Until D1 and all five service settings are present, \`/api/auth/config\` reports \`ready: false\`. Existing local accounts remain usable on their original browser, but new online registration and email reset stay disabled rather than pretending verification succeeded. Existing V94/V95 local accounts are not deleted: on the original device, sign in with the old email/ID and password after configuration; ARYANZZ sends a migration code to that email and preserves the account ID after verification. Thereafter, users can sign in with either email or ID.
