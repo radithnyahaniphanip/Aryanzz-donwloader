@@ -97,7 +97,7 @@ document.getElementById("aryGenerateRedeemCodes")?.addEventListener("click",asyn
   const payload={quantity:Number(document.getElementById("aryRedeemQuantity").value),maxRedemptions:Number(document.getElementById("aryRedeemMax").value),expiresInDays:Number(document.getElementById("aryRedeemExpiry").value),note:"Legendary avatar frame + animated background · 3 days after claim"};
   const r=await fetch("/api/membership/admin/redeem-codes",{method:"POST",credentials:"same-origin",headers:{"content-type":"application/json"},body:JSON.stringify(payload)});
   const d=await r.json();if(!r.ok||!d.ok)throw Error(d.error||"Gagal membuat kode.");
-  output.value=(d.codes||[]).join("\\n");note.textContent="Berhasil membuat "+d.quantity+" kode. Salin dan simpan sekarang; kode lengkap hanya ditampilkan satu kali.";
+  output.value=(d.codes||[]).join("\n");note.textContent="Berhasil membuat "+d.quantity+" kode. Salin dan simpan sekarang; kode lengkap hanya ditampilkan satu kali.";
  }catch(e){note.textContent=e.message||"Gagal membuat kode."}
  finally{button.disabled=false;button.textContent="Buat kode redeem"}
 });
