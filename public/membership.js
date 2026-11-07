@@ -116,7 +116,7 @@ async function loadCatalog(){
 }
 function renderPlans(){
  const host=document.getElementById("aryMemPlans");
- host.innerHTML=plans.map((p,i)=>'<article class="ary-mem-card '+(i===2?"ary-mem-featured":"")+'"><div class="ary-mem-card-top"><span>'+String(i+1).padStart(2,"0")+' / MEMBERSHIP</span><b>'+esc(p.name)+'</b></div><div class="ary-mem-price">'+money(p.price)+'</div><div class="ary-mem-term">'+p.term+'</div><p>'+esc(p.desc)+'</p><button type="button" data-buy="'+esc(p.id)+'" '+(paymentConfig.checkoutEnabled?"":"disabled")+'>'+(paymentConfig.checkoutEnabled&&paymentConfig.enabled?"Bayar sekarang":"Pembayaran belum tersedia")+'</button></article>').join("")
+ host.innerHTML=plans.map((p,i)=>'<article class="ary-mem-card '+(i===2?"ary-mem-featured":"")+'"><div class="ary-mem-card-top"><span>'+String(i+1).padStart(2,"0")+' / MEMBERSHIP</span><b>'+esc(p.name)+'</b></div><div class="ary-mem-price">'+money(p.price)+'</div><div class="ary-mem-term">'+p.term+'</div><p>'+esc(p.desc)+'</p><button type="button" data-buy="'+esc(p.id)+'" '+(paymentConfig.checkoutEnabled&&paymentConfig.enabled?"":"disabled")+'>'+(paymentConfig.checkoutEnabled&&paymentConfig.enabled?"Bayar sekarang":"Pembayaran belum tersedia")+'</button></article>').join("")
 }
 async function loadAdminOrders(){
  const host=document.getElementById("aryMemAdminOrders");if(!host)return;
@@ -252,4 +252,10 @@ cosmeticsPanel.addEventListener("click",event=>{
 window.addEventListener("storage",event=>{if(event.key===LOCAL_COSMETICS_KEY)applyLocalCosmetics()});
 applyLocalCosmetics();
 loadCatalog();load();
+if(new URLSearchParams(location.search).get("membership")==="return"){
+ const returnedOrder=new URLSearchParams(location.search).get("order")||"";
+ button.click();
+ const note=document.getElementById("aryMemNote");
+ if(note)note.textContent="Terima kasih. ARYANZZ sedang memeriksa status invoice Poketo"+(returnedOrder?" "+returnedOrder:"")+". Membership aktif hanya setelah webhook pembayaran terverifikasi diterima.";
+}
 })();
