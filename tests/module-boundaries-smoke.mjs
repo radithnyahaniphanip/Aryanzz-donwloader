@@ -20,6 +20,6 @@ assert.ok(html.includes('src="/auth-gate.js?v=__ARYANZZ_VERSION__"'));
 assert.ok(!profileJs.includes("aryAuthGate") && !ownerJs.includes("aryAuthGate"), "Profile and Owner must not own or mutate Auth UI");
 assert.ok(!navigationJs.includes("localStorage.setItem(SESSION_KEY") && !navigationJs.includes("aryanzz.local.session"), "Navigation must not create or rewrite account sessions");
 assert.ok(!authJs.includes("const sessionUser = session && Array.isArray(users)"), "Auth must not restore bypassable browser-only login sessions");
-assert.ok(authCss.includes(".ary-auth-gate") && !/(^|[,}\s])(body|html|\.panel|input|button)\s*\{/m.test(authCss), "Auth CSS must remain scoped to Auth components");
+assert.ok(authCss.includes(".ary-auth-gate") && !/(^|[},])\s*(body|html|\.panel|input|button)\s*\{/m.test(authCss), "Auth CSS must remain scoped to Auth components");
 assert.ok(manifest.architectureGuard?.requiredChecks?.includes("module-boundaries-smoke"));
 console.log("ARYANZZ V1 module-boundary and feature-isolation checks passed.");
