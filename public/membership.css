@@ -29,7 +29,7 @@
 .ary-prestige-active[hidden]{display:none!important}
 .ary-prestige-active b{letter-spacing:1px;color:#f4d58c}
 .ary-legendary-frame{position:relative!important;isolation:isolate;border:0!important;box-shadow:0 0 0 2px #ffe9a8,0 0 0 5px #a76bff,0 0 22px #8c5cffaa,0 0 42px #34d9ef55!important;animation:aryLegendaryPulse 3.6s ease-in-out infinite}
-.ary-legendary-frame:before{content:"";position:absolute;inset:-8px;border-radius:inherit;padding:3px;background:conic-gradient(from 0deg,#fff2b4,#a36cff,#42e6ef,#fff,#e6a5ff,#fff2b4);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;animation:aryLegendarySpin 7s linear infinite;pointer-events:none;z-index:3}
+.ary-legendary-frame:before{content:"";position:absolute;inset:-8px;border-radius:inherit;padding:3px;background:conic-gradient(from 0deg,hsl(var(--ary-legendary-hue,45) 100% 82%),hsl(calc(var(--ary-legendary-hue,45) + 75) 95% 70%),hsl(calc(var(--ary-legendary-hue,45) + 165) 95% 72%),#fff,hsl(calc(var(--ary-legendary-hue,45) + 245) 95% 78%),hsl(var(--ary-legendary-hue,45) 100% 82%));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;animation:aryLegendarySpin var(--ary-legendary-speed,7s) linear infinite;pointer-events:none;z-index:3}
 .ary-legendary-frame:after{content:"✦";position:absolute;right:-8px;top:-9px;z-index:4;color:#fff1b5;text-shadow:0 0 7px #fff,0 0 15px #a56aff;font-size:17px;animation:aryLegendarySpark 2.2s ease-in-out infinite}
 .ary-legendary-banner{position:relative;overflow:hidden;box-shadow:inset 0 0 0 1px #ffe6a866,0 0 26px #a86aff44}
 .ary-legendary-banner:after{content:"";position:absolute;inset:-40%;pointer-events:none;background:linear-gradient(110deg,transparent 35%,#ffffff22 48%,#8deeff55 50%,transparent 62%);transform:translateX(-65%) rotate(12deg);animation:aryLegendarySweep 6s ease-in-out infinite}
@@ -53,3 +53,15 @@ body.ary-legendary-background:after{content:"";position:fixed;inset:0;z-index:-1
 .ary-mem-admin>button{margin-top:12px;border:0;border-radius:10px;padding:11px 15px;background:linear-gradient(110deg,#9465ff,#37c4e6);color:white;font-weight:900}
 .ary-mem-admin textarea{display:block;margin-top:12px;resize:vertical;font:12px/1.6 ui-monospace,monospace}
 @media(max-width:520px){.ary-mem-admin-row{grid-template-columns:1fr}}
+
+/* Per-account seed selects hue, shape, texture and motion cadence from a procedural cosmetic space. */
+.ary-legendary-frame[data-legendary-texture="1"]:before{background-image:repeating-conic-gradient(from 0deg,hsl(var(--ary-legendary-hue,45) 100% 82%) 0 8deg,transparent 8deg 18deg)}
+.ary-legendary-frame[data-legendary-texture="2"]:before{background-image:repeating-linear-gradient(45deg,#fff9 0 1px,transparent 1px 5px),conic-gradient(hsl(var(--ary-legendary-hue,45) 100% 82%),#fff,hsl(calc(var(--ary-legendary-hue,45) + 140) 95% 70%))}
+.ary-legendary-frame[data-legendary-texture="3"]:before{filter:drop-shadow(0 0 4px hsl(var(--ary-legendary-hue,45) 100% 75%))}
+.ary-legendary-frame[data-legendary-texture="4"]:after{content:"✧"}
+.ary-legendary-frame[data-legendary-texture="5"]:after{content:"❖";font-size:15px}
+.ary-legendary-frame[data-legendary-texture="6"]:before{border-radius:34% 66% 42% 58% / 58% 38% 62% 42%}
+.ary-legendary-frame[data-legendary-texture="7"]:after{content:"✺"}
+.ary-legendary-frame[data-legendary-texture="8"]:before{border-radius:18px}
+.ary-legendary-frame[data-legendary-texture="9"]:after{content:"♢"}
+body.ary-legendary-background{background-image:radial-gradient(ellipse at 12% 15%,hsl(var(--ary-legendary-hue,260) 72% 48% / .34),transparent 35%),radial-gradient(ellipse at 85% 18%,hsl(calc(var(--ary-legendary-hue,260) + 120) 72% 42% / .34),transparent 32%),radial-gradient(ellipse at 50% 100%,hsl(calc(var(--ary-legendary-hue,260) + 230) 72% 42% / .4),transparent 45%),linear-gradient(145deg,#070b19,#10152a 52%,#071b27)!important}
