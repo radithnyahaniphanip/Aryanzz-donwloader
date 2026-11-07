@@ -65,3 +65,5 @@ body.ary-legendary-background:after{content:"";position:fixed;inset:0;z-index:-1
 .ary-legendary-frame[data-legendary-texture="8"]:before{border-radius:18px}
 .ary-legendary-frame[data-legendary-texture="9"]:after{content:"♢"}
 body.ary-legendary-background{background-image:radial-gradient(ellipse at 12% 15%,hsl(var(--ary-legendary-hue,260) 72% 48% / .34),transparent 35%),radial-gradient(ellipse at 85% 18%,hsl(calc(var(--ary-legendary-hue,260) + 120) 72% 42% / .34),transparent 32%),radial-gradient(ellipse at 50% 100%,hsl(calc(var(--ary-legendary-hue,260) + 230) 72% 42% / .4),transparent 45%),linear-gradient(145deg,#070b19,#10152a 52%,#071b27)!important}
+
+.ary-redeem-form[hidden]{display:none!important}
