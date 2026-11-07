@@ -151,9 +151,9 @@ stage.register("image-lightweight",(root,core)=>{
  });
  $("v1ltStickerBrush")?.addEventListener("input",()=>{$("v1ltStickerBrushValue").textContent=$("v1ltStickerBrush").value+" px"});
  $("v1ltStickerOutline")?.addEventListener("input",()=>{$("v1ltStickerOutlineValue").textContent=$("v1ltStickerOutline").value+" px"});
- stickerCanvas?.addEventListener("pointerdown",event=>{if(!stickerBitmap)return;stickerCanvas.setPointerCapture(event.pointerId);stickerDrawing=true;stickerPoint=stickerCoords(event);stickerBrush(stickerPoint);stickerRender()});
- stickerCanvas?.addEventListener("pointermove",event=>{if(!stickerDrawing)return;const point=stickerCoords(event);if(!stickerPoint||Math.hypot(point.x-stickerPoint.x,point.y-stickerPoint.y)>Math.max(2,Number($("v1ltStickerBrush").value)*.18)){stickerPoint=point;stickerBrush(point);stickerRender()}});
- function endSticker(){stickerDrawing=false;stickerPoint=null;stickerRender()}
+ stickerCanvas?.addEventListener("pointerdown",event=>{if(!stickerBitmap)return;stickerCanvas.setPointerCapture(event.pointerId);stickerDrawing=true;stickerPoint=stickerCoords(event);stickerBrush(stickerPoint)});
+ stickerCanvas?.addEventListener("pointermove",event=>{if(!stickerDrawing)return;const point=stickerCoords(event);if(!stickerPoint||Math.hypot(point.x-stickerPoint.x,point.y-stickerPoint.y)>Math.max(2,Number($("v1ltStickerBrush").value)*.18)){stickerPoint=point;stickerBrush(point)}});
+ function endSticker(){stickerDrawing=false;stickerPoint=null;}
  stickerCanvas?.addEventListener("pointerup",endSticker);stickerCanvas?.addEventListener("pointercancel",endSticker);
  $("v1ltStickerReset")?.addEventListener("click",()=>{if(!stickerBitmap)return;stickerCtx.clearRect(0,0,stickerCanvas.width,stickerCanvas.height);stickerCtx.drawImage(stickerBase,0,0);set("v1ltStickerStatus","Gambar dikembalikan ke file awal.","success")});
  $("v1ltStickerExport")?.addEventListener("click",async()=>{
