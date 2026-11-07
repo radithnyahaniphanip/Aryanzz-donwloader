@@ -8,7 +8,7 @@ for (const id of ["aryRegPasswordConfirm","aryLoginIdentifier","aryAuthCaptcha",
 }
 assert.ok(client.includes("async function login") && client.includes("config.ready") && client.includes("Login online belum aktif"), "Login must require the protected server authentication service");
 assert.ok(client.includes("async function register") && client.includes("Pendaftaran sementara ditutup") && client.includes("registrationReady") && client.includes("/api/auth/register/start"), "Registration must require server authentication and verified email delivery");
-assert.ok(client.includes('registerTab.hidden = false') && client.includes('value === "register" && !config.registrationReady'), "Register tab must remain visible and open even while email delivery is not configured");
+assert.ok(client.includes("ownerMode") && client.includes("registerTab.hidden=true") && client.includes("gate.hidden = !ownerMode || !!user"), "Public visitors must bypass the auth gate while the separate owner route retains admin login only");
 assert.ok(!client.includes('value = "login"; }'), "Unavailable email delivery must not silently redirect users away from the registration form");
 assert.ok(html.includes('id="aryResetProgressFill"') && html.includes('id="aryResetPasswordStage"'), "Password reset must show device-check progress and new-password stage");
 assert.ok(client.includes("currentDeviceHash") && client.includes("deviceKeyHash"), "Password reset must match the registered browser device");
