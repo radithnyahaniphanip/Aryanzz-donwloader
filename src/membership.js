@@ -239,25 +239,7 @@ async function handleMembership(request,env){
  }
  if(path==="/api/membership/admin/review"&&request.method==="POST"){
   const admin=await adminUser(request,env);if(!admin)return json({ok:false,error:"Akses khusus pemilik."},403);
-  let body;try{body=await request.json()}catch{return json({ok:false,error:"Data tidak valid."},400)}
-  const orderId=String(body?.orderId||"").slice(0,80),decision=String(body?.decision||"");
-  if(!orderId||!["approve","reject"].includes(decision))return json({ok:false,error:"Keputusan atau pesanan tidak valid."},400);
-  const order=await env.AUTH_DB.prepare("SELECT * FROM membership_orders WHERE id=?1 AND status='pending'").bind(orderId).first();
-  if(!order)return json({ok:false,error:"Pesanan tidak ditemukan atau sudah diproses."},404);
-  if(decision==="reject"){
-   await env.AUTH_DB.prepare("UPDATE membership_orders SET status='rejected',reviewed_by=?1,note=?2 WHERE id=?3 AND status='pending'").bind(admin.id,String(body?.note||"Ditolak oleh admin").slice(0,300),orderId).run();
-   return json({ok:true,message:"Pesanan ditolak."});
-  }
-  // Manual approval is deliberately disabled until an actual incoming payment has been independently verified.
-  if(body?.paymentVerified!==true)return json({ok:false,error:"Centang konfirmasi bahwa dana sudah diterima dan cocok pada rekening penerima sebelum menyetujui."},400);
-  const plan=PLANS.find(p=>p.id===order.plan_id);if(!plan)return json({ok:false,error:"Paket pesanan tidak valid."},400);
-  const now=Date.now(),existing=await membershipFor(order.user_id,env);
-  const base=existing.status==="active"&&existing.expiresAt?Math.max(now,existing.expiresAt):now;
-  const expires=plan.durationDays===null?null:base+plan.durationDays*86400000;
-  const finalized=await env.AUTH_DB.prepare("UPDATE membership_orders SET status='paid',paid_at=?1,expires_at=?2,reviewed_by=?3,note=?4 WHERE id=?5 AND status='pending'").bind(now,expires,admin.id,String(body?.note||"Pembayaran diverifikasi manual").slice(0,300),orderId).run();
-  if(Number(finalized?.meta?.changes||0)!==1)return json({ok:false,error:"Pesanan sudah diproses oleh admin lain. Muat ulang daftar pesanan."},409);
-  await env.AUTH_DB.prepare("INSERT INTO user_memberships (user_id,plan_id,status,started_at,expires_at,updated_at) VALUES (?1,?2,'active',?3,?4,?3) ON CONFLICT(user_id) DO UPDATE SET plan_id=excluded.plan_id,status='active',started_at=excluded.started_at,expires_at=excluded.expires_at,updated_at=excluded.updated_at").bind(order.user_id,plan.id,now,expires).run();
-  return json({ok:true,message:"Pembayaran diverifikasi dan Membership diaktifkan."});
+  return json({ok:false,error:"Verifikasi manual dinonaktifkan. Membership hanya aktif dari invoice Poketo berstatus paid dengan webhook yang valid."},403);
  }
  return json({ok:false,error:"Endpoint Membership tidak ditemukan."},404);
 }
