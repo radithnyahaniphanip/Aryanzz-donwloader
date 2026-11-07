@@ -101,9 +101,9 @@
     for (const form of ["aryRegisterForm","aryLoginForm","aryResetStartForm","aryRegisterVerifyForm","aryLegacyVerifyForm","aryResetVerifyForm"]) if ($(form)) $(form).hidden = form !== id;
     const tabs = $("aryAuthTabs");
     if (tabs) tabs.hidden = ["aryResetStartForm","aryRegisterVerifyForm","aryLegacyVerifyForm","aryResetVerifyForm"].includes(id);
-    const needsServerCaptcha = config.ready && ["aryRegisterForm","aryLoginForm","aryResetStartForm"].includes(id);
+    const needsServerCaptcha = config.ready && (id === "aryLoginForm" || (config.registrationReady && ["aryRegisterForm","aryResetStartForm"].includes(id)));
     if ($("aryAuthCaptcha")) $("aryAuthCaptcha").hidden = !needsServerCaptcha;
-    document.querySelectorAll(".ary-local-captcha").forEach(node => { node.hidden = !!config.ready; });
+    document.querySelectorAll(".ary-local-captcha").forEach(node => { node.hidden = true; });
     $("aryAuthTitle").textContent = id === "aryRegisterForm" ? "Buat akun ARYANZZ." : id === "aryLoginForm" ? "Selamat datang kembali." : id === "aryResetStartForm" ? "Reset password." : "Verifikasi email.";
     const foot = $("aryAuthFoot");
     if (foot) foot.hidden = id === "aryResetStartForm" || id === "aryResetVerifyForm";
@@ -111,6 +111,7 @@
   }
   function mode(value) {
     if (value !== "reset") resetVerifiedUserId = "";
+    if (value === "register" && !config.registrationReady) { say("Pendaftaran belum tersedia. Layanan email verifikasi belum dikonfigurasi.", true); value = "login"; }
     if (value === "reset") {
       resetVerifiedUserId = ""; resetDeviceToken = ""; resetUsesLocalAccount = false;
       if ($("aryResetCheckPanel")) $("aryResetCheckPanel").hidden = true;
@@ -194,11 +195,10 @@
   async function register(event) {
     event.preventDefault();
     const fullName = $("aryRegName").value.trim(), email = normalizeEmail($("aryRegEmail").value), password = $("aryRegPassword").value, confirm = $("aryRegPasswordConfirm").value;
-    if (!config.ready) return say("Pendaftaran sementara ditutup sampai layanan keamanan akun online siap.", true);
+    if (!config.registrationReady) return say("Pendaftaran sementara ditutup sampai database, perlindungan server, dan email verifikasi siap.", true);
     if (fullName.length < 2 || fullName.length > 80) return say("Nama lengkap harus 2–80 karakter.", true);
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return say("Masukkan email yang valid.", true);
     if (!validPassword(password)) return say("Password minimal 12 karakter, gunakan huruf besar, huruf kecil, angka, dan simbol.", true);
-    if (password !== confirm) return say("Konfirmasi password belum sama.", true);
     const button = $("aryRegisterSubmit"); button.disabled = true; button.textContent = "Memproses pendaftaran…";
     try {
       const deviceHash = await currentDeviceHash();
@@ -245,8 +245,8 @@
   }
   async function login(event) {
     event.preventDefault();
-    const identifier = $("aryLoginIdentifier").value.trim(), password = $("aryLoginPassword").value, confirm = $("aryLoginPasswordConfirm").value;
-    if (!config.ready) return say("Layanan keamanan akun online belum siap. Login lokal dinonaktifkan agar pemblokiran server tidak dapat dilewati. Pemilik website perlu melengkapi konfigurasi akun.", true);
+    const identifier = $("aryLoginIdentifier").value.trim(), password = $("aryLoginPassword").value;
+    if (!config.ready) return say("Login online belum aktif. Pemilik website perlu menyelesaikan konfigurasi keamanan server.", true);
     if (!identifier || !password) return say("Masukkan email/ID dan password.", true);
     if (password !== confirm) return say("Konfirmasi password belum sama.", true);
     const button = $("aryLoginSubmit"); button.disabled = true; button.textContent = "Memeriksa…";
@@ -418,7 +418,7 @@
   async function init() {
     if (!gate) return;
     gate.hidden = true;
-    [["aryRegPassword","aryRegEye"],["aryRegPasswordConfirm","aryRegConfirmEye"],["aryLoginPassword","aryLoginEye"],["aryLoginPasswordConfirm","aryLoginConfirmEye"],["aryResetPassword","aryResetEye"],["aryResetPasswordConfirm","aryResetConfirmEye"],["aryLegacyResetPassword","aryLegacyResetEye"],["aryLegacyResetPasswordConfirm","aryLegacyResetConfirmEye"]].forEach(pair => togglePassword(pair[0], pair[1]));
+    [["aryRegPassword","aryRegEye"],["aryRegPasswordConfirm","aryRegConfirmEye"],["aryLoginPassword","aryLoginEye"],["aryResetPassword","aryResetEye"],["aryResetPasswordConfirm","aryResetConfirmEye"],["aryLegacyResetPassword","aryLegacyResetEye"],["aryLegacyResetPasswordConfirm","aryLegacyResetConfirmEye"]].forEach(pair => togglePassword(pair[0], pair[1]));
     initStrength("aryRegPassword","aryStrengthBar","aryStrengthLabel"); initStrength("aryResetPassword","aryResetStrengthBar","aryResetStrengthLabel");
     document.querySelectorAll("[data-auth-mode]").forEach(button => button.addEventListener("click", () => mode(button.dataset.authMode)));
     $("aryRegisterForm")?.addEventListener("submit", register); $("aryLoginForm")?.addEventListener("submit", login);
@@ -430,17 +430,18 @@
     $("aryLegacyMigrate")?.addEventListener("click", startLegacyMigration);
     $("aryLegacyMigrate").hidden = true;
     $("accountLogout")?.addEventListener("click", async () => { try { await post("/api/auth/logout", {}); } catch {} try { localStorage.removeItem(SESSION_KEY); } catch {} setUser(null); mode("login"); say("Kamu sudah keluar dari akun."); });
-    config = { ready:false, moderationReady:false, captchaSiteKey:"" };
+    config = { ready:false, registrationReady:false, moderationReady:false, captchaSiteKey:"", missingLogin:[], missingRegistration:[] };
     try {
       const remoteConfig = await get("/api/auth/config");
-      config = { ready: remoteConfig.ready === true, moderationReady:remoteConfig.moderationReady===true, captchaSiteKey: String(remoteConfig.captchaSiteKey || "") };
+      config = { ready: remoteConfig.loginReady === true || remoteConfig.ready === true, registrationReady: remoteConfig.registrationReady === true, moderationReady:remoteConfig.moderationReady===true, captchaSiteKey: String(remoteConfig.captchaSiteKey || ""), missingLogin:Array.isArray(remoteConfig.missingLogin)?remoteConfig.missingLogin:[], missingRegistration:Array.isArray(remoteConfig.missingRegistration)?remoteConfig.missingRegistration:[] };
     } catch(error) {
       if(error.code==="ACCOUNT_BANNED"||error.code==="DEVICE_BANNED"){showModerationBlock(error.message);return;}
     }
-    const registerTab = document.querySelector('[data-auth-mode="register"]'); if (registerTab) registerTab.hidden = false;
+    const registerTab = document.querySelector('[data-auth-mode="register"]'); if (registerTab) registerTab.hidden = !config.registrationReady;
     refreshLocalCaptcha("aryReg"); refreshLocalCaptcha("aryLogin"); refreshLocalCaptcha("aryReset");
     setUser(null);mode("login");
     if (config.ready) {
+      if ($("aryRegisterSubmit")) $("aryRegisterSubmit").disabled = !config.registrationReady;
       if ($("aryAuthFoot")) $("aryAuthFoot").textContent = "Akun tersimpan di server ARYANZZ dan dilindungi pemeriksaan moderasi perangkat.";
       loadCaptcha();
       try {
@@ -449,10 +450,12 @@
       } catch(error) {
         if(error.code==="ACCOUNT_BANNED"||error.code==="DEVICE_BANNED"){showModerationBlock(error.message);return}
       }
-      say("Layanan akun online siap. Masuk atau daftar menggunakan email atau ID ARYANZZ.");
+      say(config.registrationReady ? "Layanan akun online siap. Masuk atau daftar menggunakan email atau ID ARYANZZ." : "Login siap. Pendaftaran sementara tidak tersedia karena email verifikasi belum dikonfigurasi: " + config.missingRegistration.join(", "), !config.registrationReady);
     } else {
-      if ($("aryAuthFoot")) $("aryAuthFoot").textContent = "Mode akun lokal dinonaktifkan. Perlindungan moderasi server harus aktif sebelum akun dapat digunakan.";
-      say("Layanan akun aman belum siap. Pemilik website perlu memastikan database D1, AUTH_SESSION_SECRET, dan Cloudflare Turnstile telah dikonfigurasi.",true);
+      if ($("aryAuthFoot")) $("aryAuthFoot").textContent = "Login lokal dinonaktifkan. Akun hanya dapat digunakan setelah layanan keamanan server aktif.";
+      if ($("aryLoginSubmit")) $("aryLoginSubmit").disabled = true;
+      if ($("aryRegisterSubmit")) $("aryRegisterSubmit").disabled = true;
+      say("Layanan akun online belum siap. Konfigurasi yang belum tersedia: " + (config.missingLogin.join(", ") || "koneksi server akun") + ".",true);
     }
     if (!window.crypto?.subtle || !window.crypto?.getRandomValues) say("Browser ini tidak mendukung Web Crypto. Gunakan Chrome terbaru melalui HTTPS.", true);
   }
