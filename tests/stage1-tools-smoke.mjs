@@ -44,6 +44,14 @@ for (const [id, label] of tools) {
   assert.ok(panel.includes(label), "missing tool label " + label);
 }
 assert.equal(tools.length, 14, "Stage 1 must contain exactly 14 tools");
+const gridStart = html.indexOf('<div class="all-tools-grid v674-tool-grid" id="toolGrid">');
+const gridEnd = html.indexOf('</div>\n<p class="v674-no-tools"', gridStart);
+assert.ok(gridStart >= 0 && gridEnd > gridStart, "main tools grid has a clear closing boundary");
+const gridMarkup = html.slice(gridStart, gridEnd);
+for (const [id] of tools) {
+  assert.ok(gridMarkup.includes('data-v1lt-open="' + id + '"'), "Stage 1 launcher " + id + " belongs to the searchable/filterable tools grid");
+}
+
 assert.ok(video.includes('register("video-lightweight"') && video.includes("parseMp4") && video.includes("v1ltSheetGenerate"), "video module registers real media processing");
 assert.ok(image.includes('register("image-lightweight"') && image.includes("readJpegExif") && image.includes("renderBlur"), "image module registers EXIF, palette, blur and sticker processing");
 assert.ok(files.includes('register("file-lightweight"') && files.includes("createZip") && files.includes("subtle.digest") && files.includes("parseCsv"), "file module registers ZIP, hashing and CSV operations");
