@@ -197,7 +197,7 @@ const LOCAL_COSMETIC_CATALOG=[
 ];
 function readLocalCosmetics(){try{return JSON.parse(localStorage.getItem(LOCAL_COSMETICS_KEY)||"{}")||{}}catch{return {}}}
 function applyLocalCosmetics(){
- const selected=readLocalCosmetics(),avatar=document.getElementById("profileAvatar"),banner=document.getElementById("profileBannerPreview"),preview=document.getElementById("aryCosmeticPreviewAvatar");
+ const selected=readLocalCosmetics(),avatar=document.getElementById("profileAvatar"),banner=document.getElementById("profileBannerPreview"),preview=document.getElementById("aryCosmeticPreviewAvatar"),profile=document.getElementById("profile");
  const frame=LOCAL_COSMETIC_CATALOG.find(x=>x.cosmetic_id===selected.avatar),background=LOCAL_COSMETIC_CATALOG.find(x=>x.cosmetic_id===selected.background);
  const frameTargets=[avatar,preview].filter(Boolean);
  frameTargets.forEach(el=>{el.classList.remove("ary-local-frame-aurora","ary-local-frame-royal","ary-local-frame-nebula","ary-local-frame-obsidian");if(frame)el.classList.add("ary-local-frame-"+frame.cosmetic_id.replace("local-frame-",""));});
@@ -212,24 +212,17 @@ function cosmeticCard(item){
  const selected=readLocalCosmetics(),active=selected[item.kind]===item.cosmetic_id;
  return '<article class="ary-cosmetic-card '+(active?"is-equipped":"")+'"><div class="ary-cosmetic-art '+item.art+'"><span>✦</span></div><b>'+item.name+'</b><small>'+item.description+'</small><button type="button" data-local-equip="'+item.cosmetic_id+'" data-kind="'+item.kind+'">'+(active?"Sedang digunakan":"Terapkan di perangkat ini")+'</button></article>';
 }
-async function loadCosmeticsStudio(){
+function loadCosmeticsStudio(){
  const status=document.getElementById("aryCosmeticsStatus"),avatarHost=document.getElementById("aryAvatarCosmetics"),backgroundHost=document.getElementById("aryBackgroundCosmetics");
  if(!status||!avatarHost||!backgroundHost)return;
- const selected=readLocalCosmetics();
  avatarHost.innerHTML=LOCAL_COSMETIC_CATALOG.filter(x=>x.kind==="avatar").map(cosmeticCard).join("");
  backgroundHost.innerHTML=LOCAL_COSMETIC_CATALOG.filter(x=>x.kind==="background").map(cosmeticCard).join("");
  applyLocalCosmetics();
- status.textContent="Mode perangkat aktif: 4 avatar frame dan 4 background siap digunakan. Pilihan tersimpan di browser ini.";
- try{
-  const r=await fetch("/api/cosmetics/me",{credentials:"same-origin",cache:"no-store"}),d=await r.json();
-  if(r.ok&&d.ok){
-   const owned=(d.items||[]);
-   status.textContent+=" Sinkronisasi akun tersedia untuk "+owned.length+" item redeem.";
-   const frame=owned.find(x=>x.cosmetic_id==="legendary-avatar-frame"&&x.equipped);
-   const background=owned.find(x=>x.cosmetic_id==="legendary-aurora-background"&&x.equipped);
-   if(frame||background)document.getElementById("aryCosmeticPreviewTier").textContent="Hadiah Legendary akun aktif";
-  }else if(r.status===503){status.textContent+=" Database akun belum aktif; mode perangkat tetap bisa dipakai."}
- }catch{status.textContent+=" Mode perangkat tetap aktif tanpa koneksi database."}
+ const selected=readLocalCosmetics();
+ const frame=LOCAL_COSMETIC_CATALOG.find(x=>x.cosmetic_id===selected.avatar),background=LOCAL_COSMETIC_CATALOG.find(x=>x.cosmetic_id===selected.background);
+ const tier=document.getElementById("aryCosmeticPreviewTier");
+ if(tier)tier.textContent=(frame?.name||"Belum memilih frame")+" · "+(background?.name||"Belum memilih background")+" · aktif di profil perangkat ini";
+ status.textContent="Mode lokal aktif: pilihan langsung diterapkan ke foto profil dan sampul profil. Tersimpan di browser perangkat ini tanpa database.";
 }
 document.addEventListener("click",event=>{if(event.target.closest('[data-panel="aryCosmeticsStudio"]'))loadCosmeticsStudio()});
 document.addEventListener("click",event=>{
