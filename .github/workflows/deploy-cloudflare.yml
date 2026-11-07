@@ -98,27 +98,21 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           ARYANZZ_AUTH_DB_ID: ${{ secrets.ARYANZZ_AUTH_DB_ID }}
         run: |
-          set +e
+          set -euo pipefail
           DB_ID="$ARYANZZ_AUTH_DB_ID"
           if [ -z "$DB_ID" ]; then
-            DB_LIST="$(wrangler d1 list --json 2>/dev/null)"
-            DB_ID="$(printf '%s' "$DB_LIST" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{const x=JSON.parse(s);const a=Array.isArray(x)?x:(x.result||[]);const d=a.find(v=>v.name==="aryanzz-auth-db");process.stdout.write(String(d?.uuid||d?.database_id||d?.id||""));}catch{}})')"
+            DB_LIST="$(curl -fsS --retry 3 -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/d1/database")"
+            DB_ID="$(printf '%s' "$DB_LIST" | jq -r '.result[]? | select(.name == "aryanzz-auth-db") | .uuid' | head -n 1)"
           fi
-          if [ -z "$DB_ID" ]; then
-            CREATED="$(wrangler d1 create aryanzz-auth-db --json 2>/dev/null)"
-            DB_ID="$(printf '%s' "$CREATED" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{const x=JSON.parse(s);const d=Array.isArray(x)?x[0]:(x.result?.[0]||x.result||x);process.stdout.write(String(d?.uuid||d?.database_id||d?.id||""));}catch{}})')"
+          if [ -z "$DB_ID" ] || [ "$DB_ID" = "null" ]; then
+            echo "::error::Could not find the existing D1 database aryanzz-auth-db. Check the Cloudflare API token has Account D1 Edit permission. Refusing to deploy without AUTH_DB."
+            exit 1
           fi
-          if [ -n "$DB_ID" ]; then
-            export DB_ID
-            if ! grep -q 'binding = "AUTH_DB"' wrangler.toml; then
-              printf '\n[[d1_databases]]\nbinding = "AUTH_DB"\ndatabase_name = "aryanzz-auth-db"\ndatabase_id = "%s"\nmigrations_dir = "migrations"\n' "$DB_ID" >> wrangler.toml
-            fi
-            wrangler d1 migrations apply aryanzz-auth-db --remote
-            if [ "$?" -ne 0 ]; then echo "::error::D1 migrations failed; deployment stopped."; exit 1; fi
-            echo "ARYANZZ D1 account database is ready."
-          else
-            echo "::warning::D1 is not provisioned. Add its ID as ARYANZZ_AUTH_DB_ID or grant D1:Edit to the Cloudflare API token. Online accounts remain safely disabled until configured."
+          if ! grep -q 'binding = "AUTH_DB"' wrangler.toml; then
+            printf '\n[[d1_databases]]\nbinding = "AUTH_DB"\ndatabase_name = "aryanzz-auth-db"\ndatabase_id = "%s"\nmigrations_dir = "migrations"\n' "$DB_ID" >> wrangler.toml
           fi
+          wrangler d1 migrations apply aryanzz-auth-db --remote
+          echo "ARYANZZ D1 account database is ready and AUTH_DB is included in this deployment."
       - name: Sync ARYANZZ account email and CAPTCHA secrets when configured
         env:
           AUTH_SESSION_SECRET: ${{ secrets.AUTH_SESSION_SECRET }}
@@ -148,7 +142,7 @@ jobs:
         run: |
           npm run build:version
           set -o pipefail
-          wrangler deploy 2>&1 | tee /tmp/aryanzz-wrangler-deploy.log
+          wrangler deploy --keep-vars 2>&1 | tee /tmp/aryanzz-wrangler-deploy.log
           VERSION_ID=$(grep -oE 'Current Version ID: [0-9a-f-]+' /tmp/aryanzz-wrangler-deploy.log | tail -n 1 | awk '{print $4}')
           test -n "$VERSION_ID" || { echo "::error::Wrangler did not report the newly uploaded Worker version ID."; exit 1; }
           echo "Promoting Worker version $VERSION_ID to 100% production traffic."
