@@ -30,7 +30,7 @@ assert.equal(catalogBody.qrAvailable,true,"The supplied merchant QRIS must be av
 const poketoConfig=await handleMembership(new Request("https://aryanzz.example/api/membership/payment-config"),{POKETO_SECRET_KEY:"sk_test_demo",POKETO_WEBHOOK_SECRET:"whsec_demo_secret_for_test",POKETO_MODE:"sandbox"});
 const poketoConfigBody=await poketoConfig.json();assert.equal(poketoConfigBody.enabled,true);assert.equal(poketoConfigBody.checkoutEnabled,false);assert.equal(poketoConfigBody.provider,"Poketo");assert.equal(poketoConfigBody.automaticWebhookReady,true);
 console.log("ARYANZZ V1 Membership catalog, auth gate, migration, and fail-closed review checks passed.");
-assert.ok(backend.includes("automaticWebhookReady:String(env.POKETO_WEBHOOK_SECRET||\"\").startsWith(\"whsec_\")"),"Payment config must expose Poketo webhook readiness without exposing secrets");
+assert.ok(backend.includes("automaticWebhookReady:webhookReady") && backend.includes("missing"),"Payment config must expose safe Poketo readiness diagnostics without exposing secrets");
 assert.ok(ui.includes("checkout resmi Poketo")&&ui.includes("syncMembershipPolling"),"Checkout must use Poketo hosted checkout and refresh pending payment status");
 
 assert.ok(ui.includes("aryRedeemProfile")&&ui.includes("aryPrestigeActive")&&ui.includes("LOCAL_PRESTIGE_KEY")&&ui.includes("accountRedeemCode"),"Prestige redeem must use a device-local account-ID-bound code");
