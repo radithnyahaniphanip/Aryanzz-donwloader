@@ -6,7 +6,7 @@ let checking=false;
 function readDismissedBuild(){
  try{return String(localStorage.getItem(dismissedKey)||"")}catch{}
  try{
-  const match=document.cookie.match(/(?:^|;\\s*)aryanzz_update_dismissed=([^;]*)/);
+  const match=document.cookie.match(/(?:^|;\s*)aryanzz_update_dismissed=([^;]*)/);
   return match?decodeURIComponent(match[1]):"";
  }catch{return ""}
 }
@@ -77,7 +77,7 @@ async function checkVersion(){
   if(!response.ok)return;
   const data=await response.json();
   const latest=String(data?.buildId||"").trim();
-  if(!/^\\d+\\.\\d+\\.\\d+$/.test(latest))return;
+  if(!/^\d+\\.\d+\\.\d+$/.test(latest))return;
   if(latest===localVersion){
    cleanUpdateParameters();
    return;
