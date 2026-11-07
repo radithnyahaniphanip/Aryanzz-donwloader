@@ -115,12 +115,12 @@ jobs:
           if [ -z "$DB_ID" ] || [ "$DB_ID" = "null" ]; then
             echo "No existing aryanzz-auth-db found; creating the database."
             CREATE_OUTPUT="$(wrangler d1 create aryanzz-auth-db 2>&1)" || {
-              printf '%s\\n' "$CREATE_OUTPUT"
+              printf '%s\n' "$CREATE_OUTPUT"
               echo "::error::Could not create aryanzz-auth-db. Confirm the Cloudflare API token has Account > D1 > Edit permission."
               exit 1
             }
-            printf '%s\\n' "$CREATE_OUTPUT"
-            DB_ID="$(printf '%s\\n' "$CREATE_OUTPUT" | sed -nE 's/.*database_id[[:space:]]*=[[:space:]]*"([^"]+)".*/\\1/p' | head -n 1)"
+            printf '%s\n' "$CREATE_OUTPUT"
+            DB_ID="$(printf '%s\n' "$CREATE_OUTPUT" | sed -nE 's/.*database_id[[:space:]]*=[[:space:]]*"([^"]+)".*/\\1/p' | head -n 1)"
           fi
           if [ -z "$DB_ID" ] || [ "$DB_ID" = "null" ]; then
             echo "::error::The D1 database ID could not be resolved. Set the GitHub Actions secret ARYANZZ_AUTH_DB_ID to the database UUID and rerun."
