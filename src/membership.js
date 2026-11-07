@@ -191,14 +191,17 @@ async function handleMembershipPaymentWebhook(request,env){
  const expires=plan.durationDays===null?null:base+plan.durationDays*86400000;
  let finalized;
  try{
-  finalized=await env.AUTH_DB.prepare("UPDATE membership_orders SET status='paid',paid_at=?1,expires_at=?2,provider_transaction_id=?3,note='Pembayaran terverifikasi melalui webhook' WHERE id=?4 AND status='pending' AND amount=?5").bind(now,expires,transactionId,orderId,amount).run();
+  const results=await env.AUTH_DB.batch([
+   env.AUTH_DB.prepare("UPDATE membership_orders SET status='paid',paid_at=?1,expires_at=?2,provider_transaction_id=?3,note='Pembayaran terverifikasi melalui webhook' WHERE id=?4 AND status='pending' AND amount=?5").bind(now,expires,transactionId,orderId,amount),
+   env.AUTH_DB.prepare("INSERT INTO user_memberships (user_id,plan_id,status,started_at,expires_at,updated_at) SELECT user_id,plan_id,'active',?1,?2,?1 FROM membership_orders WHERE id=?3 AND status='paid' AND provider_transaction_id=?4 AND changes()=1 ON CONFLICT(user_id) DO UPDATE SET plan_id=excluded.plan_id,status='active',started_at=excluded.started_at,expires_at=excluded.expires_at,updated_at=excluded.updated_at").bind(now,expires,orderId,transactionId)
+  ]);
+  finalized=results?.[0];
  }catch(error){return json({ok:false,error:"ID transaksi sudah pernah digunakan atau gagal dicatat."},409)}
  if(Number(finalized?.meta?.changes||0)!==1){
   const latest=await env.AUTH_DB.prepare("SELECT status,provider_transaction_id FROM membership_orders WHERE id=?1").bind(orderId).first();
   if(latest?.status==="paid"&&latest.provider_transaction_id===transactionId)return json({ok:true,duplicate:true,status:"paid"});
   return json({ok:false,error:"Pesanan berubah saat webhook diproses. Periksa status pesanan."},409);
  }
- await env.AUTH_DB.prepare("INSERT INTO user_memberships (user_id,plan_id,status,started_at,expires_at,updated_at) VALUES (?1,?2,'active',?3,?4,?3) ON CONFLICT(user_id) DO UPDATE SET plan_id=excluded.plan_id,status='active',started_at=excluded.started_at,expires_at=excluded.expires_at,updated_at=excluded.updated_at").bind(order.user_id,plan.id,now,expires).run();
  return json({ok:true,status:"paid",membershipActivated:true,orderId,transactionId,expiresAt:expires,message:"Pembayaran terverifikasi. Membership berhasil diaktifkan."});
 }
 async function handleMembership(request,env){
