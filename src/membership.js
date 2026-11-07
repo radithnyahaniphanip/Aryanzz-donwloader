@@ -41,24 +41,30 @@ async function handleCosmetics(request,env){
  if(path==="/api/cosmetics/me"&&request.method==="GET"){
   const rows=await env.AUTH_DB.prepare("SELECT id,cosmetic_id,source,acquired_at,expires_at,equipped FROM user_cosmetics WHERE user_id=?1 AND (expires_at IS NULL OR expires_at>?2) ORDER BY acquired_at DESC").bind(user.id,now).all();
   const items=(rows.results||[]).map(x=>({...x,remainingMs:x.expires_at===null?null:Math.max(0,Number(x.expires_at)-now)}));
+  const account=await env.AUTH_DB.prepare("SELECT created_at FROM auth_users WHERE id=?1 LIMIT 1").bind(user.id).first();
+  const redeemWindowExpiresAt=Number(account?.created_at||now)+3*24*60*60*1000;
+  const redemption=await env.AUTH_DB.prepare("SELECT id,redeemed_at FROM redeem_redemptions WHERE user_id=?1 ORDER BY redeemed_at DESC LIMIT 1").bind(user.id).first();
   const active=items.filter(x=>x.equipped);
-  return json({ok:true,items,equipped:active.map(x=>x.cosmetic_id)});
+  return json({ok:true,items,equipped:active.map(x=>x.cosmetic_id),redeemed:!!redemption,redeemedAt:redemption?Number(redemption.redeemed_at):null,redeemWindowExpiresAt,redeemAvailable:!redemption&&now<redeemWindowExpiresAt});
  }
  if(path==="/api/redeem/claim"&&request.method==="POST"){
   let body;try{body=await request.json()}catch{return json({ok:false,error:"Kode redeem tidak valid."},400)}
   const code=String(body?.code||"").trim().toUpperCase().replace(/\s+/g,"");
   if(!/^[A-Z0-9-]{8,40}$/.test(code))return json({ok:false,error:"Format kode redeem tidak valid."},400);
+  const account=await env.AUTH_DB.prepare("SELECT created_at FROM auth_users WHERE id=?1 LIMIT 1").bind(user.id).first();
+  const redeemWindowExpiresAt=Number(account?.created_at||now)+3*24*60*60*1000;
+  if(now>=redeemWindowExpiresAt)return json({ok:false,code:"REDEEM_WINDOW_EXPIRED",error:"Masa klaim hadiah sudah berakhir. Kode redeem hanya tersedia selama 3 hari pertama setelah akun dibuat."},410);
+  const alreadyRedeemed=await env.AUTH_DB.prepare("SELECT id FROM redeem_redemptions WHERE user_id=?1 LIMIT 1").bind(user.id).first();
+  if(alreadyRedeemed)return json({ok:false,error:"Akun ini sudah pernah mengklaim hadiah Legendary."},409);
   const codeHash=await sha("aryanzz-redeem-v1|"+code);
   const row=await env.AUTH_DB.prepare("SELECT code_hash,reward_id,max_redemptions,redeemed_count,expires_at,active FROM redeem_codes WHERE code_hash=?1 LIMIT 1").bind(codeHash).first();
   if(!row||Number(row.active)!==1||(row.expires_at!==null&&Number(row.expires_at)<=now))return json({ok:false,error:"Kode redeem tidak ditemukan, sudah kedaluwarsa, atau dinonaktifkan."},404);
-  const prior=await env.AUTH_DB.prepare("SELECT id FROM redeem_redemptions WHERE code_hash=?1 AND user_id=?2 LIMIT 1").bind(codeHash,user.id).first();
-  if(prior)return json({ok:false,error:"Kode ini sudah pernah kamu gunakan."},409);
   const reward=String(row.reward_id||"");
   const cosmetics=reward==="legendary_launch"?["legendary-avatar-frame","legendary-aurora-background"]:null;
   if(!cosmetics)return json({ok:false,error:"Hadiah kode ini belum didukung."},400);
   const updated=await env.AUTH_DB.prepare("UPDATE redeem_codes SET redeemed_count=redeemed_count+1 WHERE code_hash=?1 AND active=1 AND redeemed_count<max_redemptions AND (expires_at IS NULL OR expires_at>?2)").bind(codeHash,now).run();
   if(Number(updated?.meta?.changes||0)!==1)return json({ok:false,error:"Kuota kode redeem sudah habis atau kode kedaluwarsa."},409);
-  const expires=now+3*24*60*60*1000;
+  const expires=null;
   const redemptionId="ARYR-"+crypto.randomUUID().replace(/-/g,"").slice(0,16).toUpperCase();
   try{
    await env.AUTH_DB.prepare("INSERT INTO redeem_redemptions (id,code_hash,user_id,redeemed_at,reward_expires_at) VALUES (?1,?2,?3,?4,?5)").bind(redemptionId,codeHash,user.id,now,expires).run();
@@ -70,7 +76,7 @@ async function handleCosmetics(request,env){
    await env.AUTH_DB.prepare("DELETE FROM redeem_redemptions WHERE code_hash=?1 AND user_id=?2").bind(codeHash,user.id).run().catch(()=>{});
    return json({ok:false,error:"Hadiah belum berhasil disimpan. Coba sekali lagi."},500);
   }
-  return json({ok:true,message:"Redeem berhasil! Border avatar Legendary dan background Legendary aktif selama 3 hari.",expiresAt:expires,cosmetics});
+  return json({ok:true,message:"Redeem berhasil! Border avatar Legendary dan background Legendary menjadi koleksi permanen.",expiresAt:null,cosmetics});
  }
  if(path==="/api/membership/admin/redeem-codes"&&request.method==="POST"){
   const admin=await adminUser(request,env);if(!admin)return json({ok:false,error:"Akses khusus pemilik."},403);
