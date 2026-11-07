@@ -75,7 +75,7 @@ window.addEventListener("aryanzz:auth-change",()=>{applyLocalCosmetics();loadPre
 window.addEventListener("pageshow",()=>{applyLocalCosmetics();loadPrestige()});
 const profileObserver=new MutationObserver(()=>{applyLocalCosmetics()});
 const profileRoot=document.getElementById("profile");
-if(profileRoot)profileObserver.observe(profileRoot,{childList:true,subtree:true,attributes:true,attributeFilter:["src","class"]});
+if(profileRoot)profileObserver.observe(profileRoot,{childList:true,subtree:true});
 
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 let plans=[];
