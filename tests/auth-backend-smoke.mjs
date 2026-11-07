@@ -65,3 +65,17 @@ const fullReadyConfig = await handleAuthRequest(new Request("https://aryanzz.exa
 const fullReadyBody = await fullReadyConfig.json();
 assert.equal(fullReadyBody.loginReady, true);
 assert.equal(fullReadyBody.registrationReady, true, "Verified email delivery must unlock registration");
+
+const aliasReadyConfig = await handleAuthRequest(new Request("https://aryanzz.example/api/auth/config"), {
+  AUTH_DB: { prepare() { return {}; } },
+  AUTH_SESSION_SECRET: "s".repeat(40),
+  CF_TURNSTILE_SECRET_KEY: "turnstile-secret-alias",
+  TURNSTILE_SITE_KEY: "turnstile-site-alias",
+  RESEND_API_KEY: "resend-secret",
+  AUTH_EMAIL_FROM: "ARYANZZ <auth@example.com>"
+});
+const aliasReadyBody = await aliasReadyConfig.json();
+assert.equal(aliasReadyBody.loginReady, true, "Supported Cloudflare Turnstile secret/site-key aliases must enable login");
+assert.equal(aliasReadyBody.registrationReady, true);
+assert.equal(aliasReadyBody.captchaSiteKey, "turnstile-site-alias", "The browser must receive the public site key from supported aliases");
+assert.ok(!aliasReadyBody.missingLogin.some(x => x.includes("TURNSTILE")), "Turnstile aliases must satisfy server readiness");
