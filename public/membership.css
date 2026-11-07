@@ -116,3 +116,13 @@ body.ary-local-bg-midnight{background-image:radial-gradient(ellipse at 15% 18%,#
 .ary-local-banner-crimson{background:linear-gradient(120deg,#320c1a,#8a2535,#6c431b)!important}
 .ary-local-banner-nebula{background:linear-gradient(120deg,#1a1749,#56327f,#154c70)!important}
 .ary-local-banner-midnight{background:linear-gradient(120deg,#091c36,#1d4169,#17234c)!important}
+
+.ary-mem-admin-orders{margin:0 0 22px;padding:16px;border:1px solid var(--border,rgba(255,255,255,.12));border-radius:16px}
+.ary-mem-admin-order{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:13px 0;border-bottom:1px solid var(--border,rgba(255,255,255,.1))}
+.ary-mem-admin-order:last-child{border-bottom:0}
+.ary-mem-admin-order-meta{display:grid;gap:5px;min-width:0}
+.ary-mem-admin-order-meta small{opacity:.76;overflow-wrap:anywhere}
+.ary-mem-admin-order-actions{display:flex;gap:8px;flex-wrap:wrap}
+.ary-mem-admin-order-actions button{min-height:38px;padding:8px 12px;border-radius:10px}
+.ary-mem-admin-order-actions button[data-decision="reject"]{opacity:.8}
+@media(max-width:640px){.ary-mem-admin-order{align-items:stretch;flex-direction:column}.ary-mem-admin-order-actions button{flex:1}}
