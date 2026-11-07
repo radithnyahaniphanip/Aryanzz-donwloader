@@ -32,6 +32,8 @@ jobs:
         run: |
           node --check src/index.js
           node --check src/auth.js
+          node --check public/guest-access.js
+          node --check tests/guest-access-smoke.mjs
           node --check src/membership.js
           node --check src/platform-catalog.js
           node --check scripts/build-version.mjs
@@ -56,6 +58,7 @@ jobs:
       - name: Run release smoke tests
         run: |
           node tests/membership-smoke.mjs
+          node tests/guest-access-smoke.mjs
           npm run test:release
       - name: Run legacy regression suite (diagnostic only)
         continue-on-error: true
