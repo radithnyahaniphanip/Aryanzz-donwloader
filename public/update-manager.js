@@ -77,7 +77,7 @@ async function checkVersion(){
   if(!response.ok)return;
   const data=await response.json();
   const latest=String(data?.buildId||"").trim();
-  if(!/^\d+\\.\d+\\.\d+$/.test(latest))return;
+  if(!/^\d+\.\d+\.\d+$/.test(latest))return;
   if(latest===localVersion){
    cleanUpdateParameters();
    return;
