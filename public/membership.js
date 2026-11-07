@@ -1,6 +1,58 @@
 (()=>{"use strict";
 const root=document.getElementById("toolsArea");const nav=document.querySelector(".nav");if(!root||!nav)return;
 const money=n=>"Rp"+Number(n).toLocaleString("id-ID");
+const profile=document.getElementById("profile");
+const accountCard=profile?.querySelector(".ary-profile2-account");
+if(accountCard&&!document.getElementById("aryRedeemProfile")){
+ const redeem=document.createElement("div");
+ redeem.id="aryRedeemProfile";
+ redeem.className="ary-redeem-profile";
+ redeem.innerHTML='<div class="ary-redeem-heading"><b>REDEEM & PRESTIGE</b><small>Masukkan kode hadiah eksklusif</small></div><div class="ary-redeem-form"><input id="aryRedeemCode" type="text" maxlength="40" autocomplete="off" placeholder="ARY-LEGEND-XXXXXXXXXXXX" aria-label="Kode redeem"><button id="aryRedeemSubmit" type="button">Klaim hadiah</button></div><p id="aryRedeemStatus" role="status" aria-live="polite">Hadiah Legendary tersedia selama 3 hari setelah kode berhasil digunakan.</p><div id="aryPrestigeActive" class="ary-prestige-active" hidden></div>';
+ const note=accountCard.querySelector("#profileAccountNote");
+ if(note)note.insertAdjacentElement("afterend",redeem);else accountCard.append(redeem);
+}
+let prestigeTimer=0,prestigeExpiry=0;
+const prestigeEsc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function prestigeClock(){
+ const el=document.getElementById("aryPrestigeActive");if(!el)return;
+ const left=Math.max(0,prestigeExpiry-Date.now());
+ if(!left){el.hidden=true;document.getElementById("profileAvatar")?.classList.remove("ary-legendary-frame");document.getElementById("profileBannerPreview")?.classList.remove("ary-legendary-banner");document.body.classList.remove("ary-legendary-background");clearInterval(prestigeTimer);prestigeTimer=0;return}
+ const hours=Math.floor(left/3600000),minutes=Math.floor(left%3600000/60000),seconds=Math.floor(left%60000/1000);
+ el.innerHTML='<b>✦ LEGENDARY DROP AKTIF</b><span>Berakhir dalam '+hours+'j '+minutes+'m '+seconds+'d</span>';
+}
+async function loadPrestige(){
+ const status=document.getElementById("aryRedeemStatus"),active=document.getElementById("aryPrestigeActive");
+ if(!active)return;
+ try{
+  const r=await fetch("/api/cosmetics/me",{credentials:"same-origin",cache:"no-store"}),d=await r.json();
+  if(!r.ok||!d.ok){if(r.status===401)status.textContent="Login ke akun ARYANZZ untuk menggunakan kode redeem.";return}
+  const frame=(d.items||[]).find(x=>x.cosmetic_id==="legendary-avatar-frame"&&x.equipped);
+  const background=(d.items||[]).find(x=>x.cosmetic_id==="legendary-aurora-background"&&x.equipped);
+  const avatar=document.getElementById("profileAvatar"),banner=document.getElementById("profileBannerPreview");
+  avatar?.classList.toggle("ary-legendary-frame",!!frame);
+  banner?.classList.toggle("ary-legendary-banner",!!background);
+  document.body.classList.toggle("ary-legendary-background",!!background);
+  const expiries=[frame?.expires_at,background?.expires_at].filter(Boolean).map(Number);
+  prestigeExpiry=expiries.length?Math.min(...expiries):0;
+  active.hidden=!prestigeExpiry;
+  clearInterval(prestigeTimer);prestigeClock();if(prestigeExpiry)prestigeTimer=setInterval(prestigeClock,1000);
+ }catch{status.textContent="Status hadiah belum dapat dimuat. Coba muat ulang profil."}
+}
+document.getElementById("aryRedeemSubmit")?.addEventListener("click",async()=>{
+ const input=document.getElementById("aryRedeemCode"),button=document.getElementById("aryRedeemSubmit"),status=document.getElementById("aryRedeemStatus");
+ const code=String(input?.value||"").trim().toUpperCase();
+ if(!code){status.textContent="Masukkan kode redeem terlebih dahulu.";return}
+ button.disabled=true;button.textContent="Memeriksa…";
+ try{
+  const r=await fetch("/api/redeem/claim",{method:"POST",credentials:"same-origin",headers:{"content-type":"application/json"},body:JSON.stringify({code})});
+  const d=await r.json();if(!r.ok||!d.ok)throw Error(d.error||"Kode redeem gagal digunakan.");
+  status.textContent=d.message||"Hadiah berhasil diaktifkan.";
+  input.value="";await loadPrestige();
+ }catch(e){status.textContent=e.message||"Kode redeem tidak berhasil."}
+ finally{button.disabled=false;button.textContent="Klaim hadiah"}
+});
+loadPrestige();
+
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 let plans=[];
 const panel=document.createElement("section");panel.id="aryMembershipPanel";panel.className="panel ary-membership";panel.hidden=true;
