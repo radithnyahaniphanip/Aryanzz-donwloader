@@ -38,19 +38,21 @@ function equal(a, b) {
   for (let i = 0; i < a.length; i++) value |= a.charCodeAt(i) ^ b.charCodeAt(i);
   return value === 0;
 }
+function turnstileSecret(env) { return String(env.TURNSTILE_SECRET_KEY || env.TURNSTILE_SECRET || env.CF_TURNSTILE_SECRET_KEY || "").trim(); }
+function turnstileSiteKey(env) { return String(env.AUTH_TURNSTILE_SITE_KEY || env.TURNSTILE_SITE_KEY || env.CF_TURNSTILE_SITE_KEY || "").trim(); }
 function missingConfig(env) {
   const missing = [];
   if (!env.AUTH_DB || typeof env.AUTH_DB.prepare !== "function") missing.push("Cloudflare D1 (AUTH_DB)");
   if (String(env.AUTH_SESSION_SECRET || "").length < 32) missing.push("AUTH_SESSION_SECRET");
   if (!String(env.RESEND_API_KEY || "").trim()) missing.push("RESEND_API_KEY");
   if (!String(env.AUTH_EMAIL_FROM || "").trim()) missing.push("AUTH_EMAIL_FROM (verified sender)");
-  if (!String(env.TURNSTILE_SECRET_KEY || "").trim()) missing.push("TURNSTILE_SECRET_KEY");
-  if (!String(env.AUTH_TURNSTILE_SITE_KEY || "").trim()) missing.push("AUTH_TURNSTILE_SITE_KEY");
+  if (!turnstileSecret(env)) missing.push("TURNSTILE_SECRET_KEY (or TURNSTILE_SECRET / CF_TURNSTILE_SECRET_KEY)");
+  if (!turnstileSiteKey(env)) missing.push("AUTH_TURNSTILE_SITE_KEY (or TURNSTILE_SITE_KEY / CF_TURNSTILE_SITE_KEY)");
   return missing;
 }
 function ready(env) {
   return !!env.AUTH_DB&&typeof env.AUTH_DB.prepare==="function"&&String(env.AUTH_SESSION_SECRET||"").length>=32&&
-    !!String(env.TURNSTILE_SECRET_KEY||"").trim()&&!!String(env.AUTH_TURNSTILE_SITE_KEY||"").trim();
+    !!turnstileSecret(env)&&!!turnstileSiteKey(env);
 }
 function limited(request, name, max, windowMs) {
   const key = name + "|" + String(request.headers.get("cf-connecting-ip") || "unknown").slice(0, 80);
@@ -68,7 +70,7 @@ async function bodyOf(request) {
 }
 async function captcha(request, token, env) {
   if (!String(token || "").trim()) return false;
-  const form = new URLSearchParams({ secret: String(env.TURNSTILE_SECRET_KEY), response: String(token) });
+  const form = new URLSearchParams({ secret: turnstileSecret(env), response: String(token) });
   const ip = request.headers.get("cf-connecting-ip");
   if (ip) form.set("remoteip", ip);
   try {
@@ -487,11 +489,11 @@ export async function handleAuthRequest(request, env) {
     const missing = missingConfig(env);
     const loginReady = ready(env);
     const registrationReady = loginReady && !!String(env.RESEND_API_KEY || "").trim() && !!String(env.AUTH_EMAIL_FROM || "").trim();
-    const missingLogin = missing.filter(item => ["Cloudflare D1 (AUTH_DB)","AUTH_SESSION_SECRET","TURNSTILE_SECRET_KEY","AUTH_TURNSTILE_SITE_KEY"].includes(item));
+    const missingLogin = missing.filter(item => ["Cloudflare D1 (AUTH_DB)","AUTH_SESSION_SECRET","TURNSTILE_SECRET_KEY (or TURNSTILE_SECRET / CF_TURNSTILE_SECRET_KEY)","AUTH_TURNSTILE_SITE_KEY (or TURNSTILE_SITE_KEY / CF_TURNSTILE_SITE_KEY)"].includes(item));
     const missingRegistration = missing.filter(item => ["RESEND_API_KEY","AUTH_EMAIL_FROM (verified sender)"].includes(item));
     const moderationReady=!!env.AUTH_DB&&typeof env.AUTH_DB.prepare==="function"&&String(env.AUTH_SESSION_SECRET||"").length>=32;
     const existing=deviceLockTokenFrom(request),lockToken=existing||randomHex(32);
-    return reply({ ok: true, ready: loginReady, loginReady, registrationReady, moderationReady, publicVersion: "V1", captchaSiteKey: String(env.AUTH_TURNSTILE_SITE_KEY || ""), missing, missingLogin, missingRegistration,
+    return reply({ ok: true, ready: loginReady, loginReady, registrationReady, moderationReady, publicVersion: "V1", captchaSiteKey: turnstileSiteKey(env), missing, missingLogin, missingRegistration,
       message: loginReady ? (registrationReady ? "Layanan akun online siap." : "Login siap; pendaftaran menunggu konfigurasi pengiriman email.") : "Layanan akun online menunggu konfigurasi: " + missingLogin.join(", ") + "." },
       200,existing?{}:{"set-cookie":DEVICE_LOCK_COOKIE+"="+lockToken+"; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=63072000"});
   }
