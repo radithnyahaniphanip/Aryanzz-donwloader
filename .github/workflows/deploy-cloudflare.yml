@@ -103,33 +103,37 @@ jobs:
           ARYANZZ_AUTH_DB_ID: ${{ secrets.ARYANZZ_AUTH_DB_ID }}
         run: |
           set -euo pipefail
+          echo "ARYANZZ_D1_READY=false" >> "$GITHUB_ENV"
           DB_ID="$ARYANZZ_AUTH_DB_ID"
           if [ -z "$DB_ID" ]; then
             if ! DB_LIST="$(curl -fsS --retry 3 -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/d1/database" 2>&1)"; then
-              echo "::error::Cloudflare accepted the deployment token, but it cannot list D1 databases. Update the CLOUDFLARE_API_TOKEN permissions to include Account > D1 > Edit, then rerun this workflow. Do not paste the token into chat."
-              echo "::error::Alternatively, create aryanzz-auth-db in Cloudflare D1 and save its Database ID as the GitHub Actions secret ARYANZZ_AUTH_DB_ID. The token still needs D1 Edit to apply migrations."
-              exit 1
+              echo "::notice::D1 is not accessible with the current Cloudflare token. Deploying the public V1 website without the account database so visitors can use ARYANZZ without login or registration. Server-synced IDs, administrator authentication, moderation and Membership checkout remain unavailable until Account > D1 > Edit is granted."
+              exit 0
             fi
             DB_ID="$(printf '%s' "$DB_LIST" | jq -r '.result[]? | select(.name == "aryanzz-auth-db") | .uuid' | head -n 1)"
           fi
           if [ -z "$DB_ID" ] || [ "$DB_ID" = "null" ]; then
-            echo "No existing aryanzz-auth-db found; creating the database."
-            CREATE_OUTPUT="$(wrangler d1 create aryanzz-auth-db 2>&1)" || {
-              printf '%s\n' "$CREATE_OUTPUT"
-              echo "::error::Could not create aryanzz-auth-db. Confirm the Cloudflare API token has Account > D1 > Edit permission."
-              exit 1
-            }
-            printf '%s\n' "$CREATE_OUTPUT"
-            DB_ID="$(printf '%s\n' "$CREATE_OUTPUT" | sed -nE 's/.*database_id[[:space:]]*=[[:space:]]*"([^"]+)".*/\\1/p' | head -n 1)"
+            echo "No existing aryanzz-auth-db found; attempting to create it."
+            if ! CREATE_OUTPUT="$(wrangler d1 create aryanzz-auth-db 2>&1)"; then
+              echo "::notice::Could not create the optional account database with the current token. Continuing with public V1 access; D1-dependent account and Membership services remain pending."
+              exit 0
+            fi
+            DB_ID="$(printf '%s\\n' "$CREATE_OUTPUT" | sed -nE 's/.*database_id[[:space:]]*=[[:space:]]*"([^"]+)".*/\\1/p' | head -n 1)"
           fi
           if [ -z "$DB_ID" ] || [ "$DB_ID" = "null" ]; then
-            echo "::error::The D1 database ID could not be resolved. Set the GitHub Actions secret ARYANZZ_AUTH_DB_ID to the database UUID and rerun."
-            exit 1
+            echo "::notice::The D1 database ID is not available. Continuing with public V1 access; configure ARYANZZ_AUTH_DB_ID and Account > D1 > Edit to enable server account services."
+            exit 0
           fi
+          cp wrangler.toml /tmp/aryanzz-wrangler-before-d1.toml
           if ! grep -q 'binding = "AUTH_DB"' wrangler.toml; then
             printf '\n[[d1_databases]]\nbinding = "AUTH_DB"\ndatabase_name = "aryanzz-auth-db"\ndatabase_id = "%s"\nmigrations_dir = "migrations"\n' "$DB_ID" >> wrangler.toml
           fi
-          wrangler d1 migrations apply aryanzz-auth-db --remote
+          if ! wrangler d1 migrations apply aryanzz-auth-db --remote; then
+            cp /tmp/aryanzz-wrangler-before-d1.toml wrangler.toml
+            echo "::notice::D1 migrations could not be applied with the current token. Continuing with public V1 access only; server account and Membership services remain pending."
+            exit 0
+          fi
+          echo "ARYANZZ_D1_READY=true" >> "$GITHUB_ENV"
           echo "ARYANZZ D1 account database is ready and AUTH_DB is included in this deployment."
       - name: Sync ARYANZZ account email and CAPTCHA secrets when configured
         env:
@@ -175,7 +179,13 @@ jobs:
         env:
           WORKER_URL: https://aryanzz-donwloader.aryanz.workers.dev
         run: node tests/live-release-smoke.mjs
+      - name: Verify public access has no login or registration overlay
+        env:
+          WORKER_URL: https://aryanzz-donwloader.aryanz.workers.dev
+          EXPECTED_BUILD_VERSION: ${{ env.EXPECTED_BUILD_VERSION }}
+        run: node tests/live-public-access-smoke.mjs
       - name: Verify production D1, Turnstile and Poketo bindings
+        if: success() && env.ARYANZZ_D1_READY == 'true'
         env:
           WORKER_URL: https://aryanzz-donwloader.aryanz.workers.dev
         run: node tests/live-runtime-config-smoke.mjs
