@@ -3,6 +3,14 @@
   const $ = id => document.getElementById(id);
   const gate = $("aryAuthGate"), message = $("aryAuthMessage");
   const ownerMode = new URLSearchParams(location.search).get("owner") === "1";
+  // Public visitors never see the authentication overlay. The same page is
+  // retained for the explicit administrator route (?owner=1) only.
+  if (!ownerMode && gate) {
+    gate.hidden = true;
+    gate.setAttribute("aria-hidden", "true");
+    gate.style.setProperty("display", "none", "important");
+  }
+  document.documentElement.classList.toggle("ary-owner-mode", ownerMode);
   const USERS_KEY = "aryanzz.local.accounts.v94", SESSION_KEY = "aryanzz.local.session.v94", DEVICE_KEY = "aryanzz.device.key.v1";
   let config = { ready: false, moderationReady:false, captchaSiteKey: "" }, widgetId = null, captchaToken = "", pendingEmail = "", pendingLegacy = null, pendingResetToken = new URLSearchParams(location.search).get("resetToken") || "", resetVerifiedUserId = "", resetDeviceToken = "", resetUsesLocalAccount = false;
 
