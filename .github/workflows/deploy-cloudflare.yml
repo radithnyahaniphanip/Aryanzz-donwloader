@@ -34,6 +34,7 @@ jobs:
           node --check src/auth.js
           node --check public/guest-access.js
           node --check tests/guest-access-smoke.mjs
+          node --check tests/live-public-access-smoke.mjs
           node --check src/membership.js
           node --check src/platform-catalog.js
           node --check scripts/build-version.mjs
