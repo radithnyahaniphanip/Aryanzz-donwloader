@@ -19,7 +19,16 @@
       id.classList.toggle("ary-developer-id", isAdmin);
       id.setAttribute("aria-label", "ID pengguna ARYANZZ");
     }
-    if (copy) copy.dataset.accountId = user.id;
+    if (copy) {
+      copy.dataset.accountId = user.id;
+      if (!copy.dataset.guestCopyBound) {
+        copy.dataset.guestCopyBound = "1";
+        copy.addEventListener("click", async () => {
+          try { await navigator.clipboard.writeText(String(window.aryanzzAuthUser?.id || user.id)); showNotice("ID ARYANZZ berhasil disalin."); }
+          catch { showNotice("Browser tidak mengizinkan penyalinan otomatis. Tekan lama ID untuk menyalinnya.", true); }
+        });
+      }
+    }
     if (logout) logout.hidden = true;
     if ($("profileIdDescription")) $("profileIdDescription").textContent = "ID otomatis untuk mengenali perangkat dan status Membership ARYANZZ.";
     if ($("profileAccountEmail")) $("profileAccountEmail").textContent = user.guest || localOnly ? "Tidak diperlukan" : (user.email || "Tidak diperlukan");
