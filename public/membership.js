@@ -11,8 +11,15 @@ if(accountCard&&!document.getElementById("aryRedeemProfile")){
  const note=accountCard.querySelector("#profileAccountNote");
  if(note)note.insertAdjacentElement("afterend",redeem);else accountCard.append(redeem);
 }
-let prestigeTimer=0,prestigeExpiry=0;
+let prestigeTimer=0,prestigeExpiry=0,redeemWindowTimer=0,redeemWindowExpiry=0;
 const prestigeEsc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function updateRedeemWindow(){
+ const form=document.querySelector("#aryRedeemProfile .ary-redeem-form"),status=document.getElementById("aryRedeemStatus");
+ const left=Math.max(0,redeemWindowExpiry-Date.now());
+ if(!left){if(form)form.hidden=true;if(status&&status.textContent.includes("Klaim satu kali"))status.textContent="Masa klaim 3 hari pertama sudah berakhir. Kolom redeem telah ditutup.";clearInterval(redeemWindowTimer);redeemWindowTimer=0;return}
+ const days=Math.floor(left/86400000),hours=Math.floor(left%86400000/3600000),minutes=Math.floor(left%3600000/60000),seconds=Math.floor(left%60000/1000);
+ if(status&&status.textContent.includes("Klaim satu kali"))status.textContent="Sisa waktu klaim: "+days+" hari "+hours+"j "+minutes+"m "+seconds+"d. Setelah habis, kolom redeem hilang otomatis.";
+}
 function prestigeClock(){
  const el=document.getElementById("aryPrestigeActive");if(!el)return;
  const left=Math.max(0,prestigeExpiry-Date.now());
@@ -28,6 +35,13 @@ async function loadPrestige(){
   if(!r.ok||!d.ok){if(r.status===401)status.textContent="Login ke akun ARYANZZ untuk menggunakan kode redeem.";return}
   const frame=(d.items||[]).find(x=>x.cosmetic_id==="legendary-avatar-frame"&&x.equipped);
   const background=(d.items||[]).find(x=>x.cosmetic_id==="legendary-aurora-background"&&x.equipped);
+  const redeemForm=document.querySelector("#aryRedeemProfile .ary-redeem-form");
+  if(redeemForm)redeemForm.hidden=!d.redeemAvailable;
+  if(d.redeemed)status.textContent="Kode sudah digunakan. Border avatar dan background Legendary tersimpan permanen di koleksi akun ini.";
+  else if(d.redeemAvailable)status.textContent="Klaim satu kali dalam 3 hari pertama setelah akun dibuat. Setelah batas waktu, kolom redeem akan hilang otomatis.";
+  else status.textContent="Masa klaim 3 hari pertama sudah berakhir. Kolom redeem telah ditutup.";
+  redeemWindowExpiry=Number(d.redeemWindowExpiresAt||0);
+  clearInterval(redeemWindowTimer);updateRedeemWindow();if(d.redeemAvailable)redeemWindowTimer=setInterval(updateRedeemWindow,1000);
   const avatar=document.getElementById("profileAvatar"),banner=document.getElementById("profileBannerPreview");
   avatar?.classList.toggle("ary-legendary-frame",!!frame);
   banner?.classList.toggle("ary-legendary-banner",!!background);
@@ -45,10 +59,11 @@ async function loadPrestige(){
    document.body.style.setProperty("--ary-legendary-hue",String(seed%360));
    document.body.dataset.legendaryTexture=String(seed%10);
   }else{document.body.style.removeProperty("--ary-legendary-hue");delete document.body.dataset.legendaryTexture}
-  const expiries=[frame?.expires_at,background?.expires_at].filter(Boolean).map(Number);
-  prestigeExpiry=expiries.length?Math.min(...expiries):0;
-  active.hidden=!prestigeExpiry;
-  clearInterval(prestigeTimer);prestigeClock();if(prestigeExpiry)prestigeTimer=setInterval(prestigeClock,1000);
+  const hasPermanentPrestige=!!(frame||background);
+  prestigeExpiry=0;
+  active.hidden=!hasPermanentPrestige;
+  clearInterval(prestigeTimer);
+  if(hasPermanentPrestige)active.innerHTML="<b>✦ LEGENDARY COLLECTION</b><span>Dimiliki permanen · khusus akun ini</span>";
  }catch{status.textContent="Status hadiah belum dapat dimuat. Coba muat ulang profil."}
 }
 document.getElementById("aryRedeemSubmit")?.addEventListener("click",async()=>{
