@@ -46,3 +46,5 @@ assert.ok(ui.includes("Avatar & Background Studio")&&ui.includes("aryCosmeticsSt
 assert.ok(ui.includes("Lanjut bayar QRIS")&&ui.includes("QRIS belum tersedia"),"Membership checkout must not create orders before official QRIS is configured");
 
 assert.ok(ui.includes('data-panel="aryCosmeticsStudio"')&&ui.includes("loadCosmeticsStudio()"),"Opening Avatar & Background Studio must load the account inventory");
+
+assert.ok(ui.includes('navItem.dataset.nav==="membership"){load();loadCatalog()}')&&ui.includes('navItem.dataset.nav==="profile")loadPrestige()'),"Membership and redeem status must refresh when their navigation tabs open after login");
