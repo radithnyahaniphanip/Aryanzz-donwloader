@@ -189,7 +189,13 @@ async function handleMembership(request,env){
  if(path==="/api/membership/webhook")return membershipWebhook(request,env);
  if(path==="/api/cosmetics/me"||path==="/api/cosmetics/equip"||path==="/api/redeem/claim"||path==="/api/membership/admin/redeem-codes")return handleCosmetics(request,env);
  if(path==="/api/membership/catalog"&&request.method==="GET")return json({ok:true,pricingStatus:"proposed",paymentEnabled:!!env.AUTH_DB,qrAvailable:!!safeQrisImage(env),plans:PLANS,free:{id:"free",name:"Free Member",price:0,summary:"Tetap tersedia tanpa pembayaran."}});
- if(path==="/api/membership/payment-config"&&request.method==="GET")return json({ok:true,enabled:String(env.POKETO_SECRET_KEY||"").startsWith("sk_"),checkoutEnabled:!!env.AUTH_DB,provider:"Poketo",mode:env.POKETO_MODE==="live"?"live":"sandbox",automaticWebhookReady:String(env.POKETO_WEBHOOK_SECRET||"").startsWith("whsec_"),message:String(env.POKETO_SECRET_KEY||"").startsWith("sk_")?"Checkout Poketo siap digunakan. Metode pembayaran ditampilkan pada halaman checkout resmi.":"API key Poketo belum dipasang di Cloudflare Worker Secrets."});
+ if(path==="/api/membership/payment-config"&&request.method==="GET"){
+  const dbReady=!!env.AUTH_DB&&typeof env.AUTH_DB.prepare==="function";
+  const apiKeyReady=/^sk_(test|live)_/.test(String(env.POKETO_SECRET_KEY||""));
+  const webhookReady=/^whsec_/.test(String(env.POKETO_WEBHOOK_SECRET||""));
+  const missing=[];if(!dbReady)missing.push("AUTH_DB · database D1 ARYANZZ");if(!apiKeyReady)missing.push("POKETO_SECRET_KEY · API key sandbox/live");if(!webhookReady)missing.push("POKETO_WEBHOOK_SECRET · signing secret webhook");
+  return json({ok:true,enabled:apiKeyReady,checkoutEnabled:dbReady,dbReady,apiKeyReady,automaticWebhookReady:webhookReady,webhookReady,provider:"Poketo",mode:env.POKETO_MODE==="live"?"live":"sandbox",webhookUrl:new URL("/api/membership/webhook",url.origin).toString(),missing,message:missing.length?"Pembayaran belum siap: "+missing.join("; "):"Checkout Poketo dan aktivasi otomatis siap. Metode pembayaran ditampilkan pada checkout resmi."});
+ }
  if(!env.AUTH_DB||typeof env.AUTH_DB.prepare!=="function")return json({ok:false,error:"Database akun belum dikonfigurasi."},503);
  if(path==="/api/membership/me"&&request.method==="GET"){
   const user=await currentUser(request,env);if(!user)return json({ok:false,error:"Silakan login terlebih dahulu."},401);
@@ -199,7 +205,8 @@ async function handleMembership(request,env){
  }
  if(path==="/api/membership/orders"&&request.method==="POST"){
   const user=await currentUser(request,env);if(!user)return json({ok:false,error:"Silakan login terlebih dahulu."},401);
-  if(!String(env.POKETO_SECRET_KEY||"").startsWith("sk_"))return json({ok:false,error:"Pembayaran Poketo belum dikonfigurasi oleh pemilik."},503);
+  if(!/^sk_(test|live)_/.test(String(env.POKETO_SECRET_KEY||"")))return json({ok:false,error:"POKETO_SECRET_KEY belum terpasang pada Worker ARYANZZ."},503);
+  if(!/^whsec_/.test(String(env.POKETO_WEBHOOK_SECRET||"")))return json({ok:false,error:"POKETO_WEBHOOK_SECRET belum terpasang. Pembayaran ditahan agar tidak ada transaksi tanpa aktivasi Membership otomatis."},503);
   let body;try{body=await request.json()}catch{return json({ok:false,error:"Data pesanan tidak valid."},400)}
   const plan=PLANS.find(p=>p.id===String(body?.planId||""));if(!plan)return json({ok:false,error:"Paket Membership tidak ditemukan."},400);
   await env.AUTH_DB.prepare("UPDATE membership_orders SET status='expired',note='Invoice melewati batas pembayaran' WHERE user_id=?1 AND status='pending' AND created_at<=?2").bind(user.id,Date.now()-24*60*60*1000).run();
