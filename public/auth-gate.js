@@ -434,7 +434,9 @@
     try {
       const remoteConfig = await get("/api/auth/config");
       config = { ready: remoteConfig.ready === true, moderationReady:remoteConfig.moderationReady===true, captchaSiteKey: String(remoteConfig.captchaSiteKey || "") };
-    } catch {}
+    } catch(error) {
+      if(error.code==="ACCOUNT_BANNED"||error.code==="DEVICE_BANNED"){showModerationBlock(error.message);return;}
+    }
     const registerTab = document.querySelector('[data-auth-mode="register"]'); if (registerTab) registerTab.hidden = false;
     refreshLocalCaptcha("aryReg"); refreshLocalCaptcha("aryLogin"); refreshLocalCaptcha("aryReset");
     setUser(null);mode("login");
