@@ -1,7 +1,7 @@
 import { writeFileSync } from "node:fs";
 import { PLATFORM_CATALOG } from "../src/platform-catalog.js";
 
-const base=(process.env.WORKER_URL||"https://aryanzz-donwloader.radithnyahaniphanip.workers.dev").replace(/\/$/,"");
+const base=(process.env.WORKER_URL||"https://aryanzz-donwloader.aryanz.workers.dev").replace(/\/$/,"");
 const dedicated=PLATFORM_CATALOG.filter(platform=>platform.providerKey!=="aio");
 const imagePlatforms=dedicated.filter(platform=>!platform.aliasOf&&platform.mediaModes?.includes("image"));
 const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
