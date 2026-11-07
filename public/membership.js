@@ -45,6 +45,8 @@ async function loadPrestige(){
   const avatar=document.getElementById("profileAvatar"),banner=document.getElementById("profileBannerPreview");
   avatar?.classList.toggle("ary-legendary-frame",!!frame);
   banner?.classList.toggle("ary-legendary-banner",!!background);
+  const previewAvatar=document.getElementById("aryCosmeticPreviewAvatar");previewAvatar?.classList.toggle("ary-legendary-frame",!!frame);
+  if(banner){if(background)banner.style.backgroundImage="radial-gradient(ellipse at 15% 85%,#a76cff88,transparent 50%),radial-gradient(ellipse at 80% 15%,#3ad9e888,transparent 45%),linear-gradient(135deg,#091326,#182c54)";else banner.style.removeProperty("background-image")}
   document.body.classList.toggle("ary-legendary-background",!!background);
   const seedOf=value=>{let n=2166136261;for(const ch of String(value||"ARYANZZ")){n^=ch.charCodeAt(0);n=Math.imul(n,16777619)}return n>>>0};
   if(frame&&avatar){
@@ -86,7 +88,7 @@ let plans=[];
 const panel=document.createElement("section");panel.id="aryMembershipPanel";panel.className="panel ary-membership";panel.hidden=true;
 panel.innerHTML='<div class="ary-mem-head"><div><span class="ary-mem-eyebrow">ARYANZZ V1 · MEMBER CENTER</span><h2>Membership Center</h2><p>Pilih paket, lihat manfaat, dan bayar melalui QRIS. Free Member tetap tersedia.</p></div><div class="ary-mem-current" id="aryMemCurrent">Memeriksa akun…</div></div><div class="ary-mem-grid" id="aryMemPlans"></div><section class="ary-mem-payment" id="aryMemPayment"><div><span class="ary-mem-eyebrow">PEMBAYARAN RESMI</span><h3>QRIS</h3><p id="aryMemPaymentNote">Memeriksa konfigurasi pembayaran…</p></div><div class="ary-mem-qris" id="aryMemQris" hidden></div></section><div class="ary-mem-history"><div class="ary-mem-history-head"><h3>Riwayat pesanan</h3><button type="button" id="aryMemRefresh">Muat ulang</button></div><div id="aryMemOrders">Login untuk melihat riwayat.</div></div><p class="ary-mem-note" id="aryMemNote" role="status">Harga paket merupakan rancangan. Pembayaran hanya dapat dilakukan setelah QRIS merchant resmi dikonfigurasi.</p><section class="ary-mem-admin" id="aryMemAdmin" hidden><h3>Owner · Kode redeem Legendary</h3><div class="ary-mem-admin-row"><label>Jumlah kode<input id="aryRedeemQuantity" type="number" min="1" max="100" value="10"></label><label>Kuota per kode<input id="aryRedeemMax" type="number" min="1" max="10000" value="1"></label><label>Kedaluwarsa kode (hari)<input id="aryRedeemExpiry" type="number" min="0" max="365" value="30"></label></div><button type="button" id="aryGenerateRedeemCodes">Buat kode redeem</button><textarea id="aryGeneratedRedeemCodes" rows="5" readonly placeholder="Kode yang dibuat akan muncul di sini. Simpan sekarang; kode hanya ditampilkan satu kali."></textarea></section>'
 root.append(panel);
-const button=document.createElement("button");button.type="button";button.dataset.nav="membership";button.textContent="Membership";button.className="ary-mem-nav";nav.append(button);
+const button=document.createElement("button");button.type="button";button.dataset.nav="membership";button.textContent="Membership";button.className="ary-mem-nav";nav.insertBefore(button,nav.children[2]||null);
 let paymentConfig={enabled:false,qrisImageUrl:""};
 async function loadCatalog(){
  const note=document.getElementById("aryMemNote"),paymentNote=document.getElementById("aryMemPaymentNote"),qris=document.getElementById("aryMemQris");
