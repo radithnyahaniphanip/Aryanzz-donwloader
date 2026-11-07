@@ -293,7 +293,8 @@ async function login(request, env) {
     return reply({ ok: false, code: "INVALID_CREDENTIALS", error: "Email/ID atau password tidak cocok." }, 401);
   }
   const primary = await primaryDeviceOwner(deviceHash, env);
-  if (primary && primary.user_id !== user.id) return primaryAccountNotice();
+  const previouslyTrusted = await trustedDeviceOwner(deviceHash, env);
+  if ((primary && primary.user_id !== user.id) || (previouslyTrusted && previouslyTrusted.user_id !== user.id)) return primaryAccountNotice();
   if (!(await claimPrimaryDevice(user.id, deviceHash, env))) return primaryAccountNotice();
   await rememberTrustedDevice(user.id, deviceHash, env);
   return createSession(user, env);
