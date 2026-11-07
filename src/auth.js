@@ -247,6 +247,7 @@ async function adminModerate(request, env, action) {
 }
 
 async function guestBootstrap(request,env){
+  if(limited(request,"guest-bootstrap",60,60000))return reply({ok:false,code:"GUEST_RATE_LIMITED",error:"Terlalu banyak permintaan ID baru dari jaringan ini. Tunggu sebentar lalu muat ulang."},429);
   if(!env.AUTH_DB||typeof env.AUTH_DB.prepare!=="function"||String(env.AUTH_SESSION_SECRET||"").length<32)
     return reply({ok:false,code:"GUEST_ACCESS_NOT_READY",error:"Akses publik sedang menyiapkan database keamanan. Coba muat ulang beberapa saat lagi."},503);
   const existingLock=deviceLockTokenFrom(request),lockToken=existingLock||randomHex(32),lockHash=await digest(lockToken.toLowerCase()),now=Date.now();
