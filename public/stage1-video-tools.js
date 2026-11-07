@@ -108,7 +108,6 @@ stage.register("video-lightweight",(root,core)=>{
   try{if(file.size>core.MAX_TOTAL)throw new Error("Video melebihi batas 250 MB untuk pemrosesan frame.");
    await loadVideo(frameVideo,file);$("v1ltFrameTime").max=String(Math.max(0,frameVideo.duration));$("v1ltFrameTime").value="0";frameCapture.disabled=false;setStatus("v1ltFrameStatus","Video siap · "+frameVideo.videoWidth+" × "+frameVideo.videoHeight+" · "+frameVideo.duration.toFixed(2)+" detik.","success")
   }catch(error){setStatus("v1ltFrameStatus",error.message,"error")}
-  finally{frameCapture.disabled=!Number.isFinite(frameVideo.duration)}
  });
  frameCapture?.addEventListener("click",async()=>{
   frameCapture.disabled=true;
