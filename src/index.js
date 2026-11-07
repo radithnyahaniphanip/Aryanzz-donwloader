@@ -1,6 +1,6 @@
 const BUILD_VERSION = "__ARYANZZ_VERSION__";
 import { PLATFORM_CATALOG, PLATFORM_DOMAINS, PLATFORM_CATALOG_BY_ID, platformForHost } from "./platform-catalog.js";
-import { handleAuthRequest } from "./auth.js";
+import { handleAuthRequest, moderationGate } from "./auth.js";
 import { handleMembership } from "./membership.js";
 const MEDIA_EXT = new Set(["mp4","webm","mov","m4v","mkv","avi","mpeg","mpg","m2ts","mts","ts","3gp","ogv","asf","wmv","mp3","m4a","aac","wav","ogg","oga","flac","opus","wma","aiff","aif","mka"]);
 const MAX_BYTES = 100 * 1024 * 1024;
@@ -3183,6 +3183,8 @@ const SFL_BYPASS_BUCKETS=new Map();
 
 const workerHandler = {async fetch(request,env){
   const url=new URL(request.url);
+  const moderationResponse=await moderationGate(request,env);
+  if(moderationResponse)return moderationResponse;
   // Serve crawler files explicitly so Google receives deterministic XML/plain-text MIME types.
   if(url.pathname==="/sitemap.xml"&&request.method==="GET"){
     const lastmod=new Date().toISOString().slice(0,10);
