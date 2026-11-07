@@ -126,3 +126,19 @@ body.ary-local-bg-midnight{background-image:radial-gradient(ellipse at 15% 18%,#
 .ary-mem-admin-order-actions button{min-height:38px;padding:8px 12px;border-radius:10px}
 .ary-mem-admin-order-actions button[data-decision="reject"]{opacity:.8}
 @media(max-width:640px){.ary-mem-admin-order{align-items:stretch;flex-direction:column}.ary-mem-admin-order-actions button{flex:1}}
+
+
+/* Poketo hosted checkout · ARYANZZ V1 */
+.ary-mem-payment{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-top:18px;padding:18px;border:1px solid #294c70;border-radius:17px;background:linear-gradient(135deg,#101f35,#0b1525)}
+.ary-mem-payment h3{margin:6px 0;font-size:19px}
+.ary-mem-payment p{margin:5px 0;color:#a9bad2;font-size:12px;line-height:1.6}
+.ary-mem-methods{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}
+.ary-mem-method-chip{display:inline-flex;align-items:center;border:1px solid #365574;border-radius:999px;padding:6px 10px;background:#142a43;color:#dcecff;font-size:11px;font-weight:700}
+.ary-mem-secure-mark{display:flex;flex-direction:column;gap:5px;max-width:210px;flex:0 0 210px;padding:13px;border:1px solid #315078;border-radius:13px;background:#102039;color:#a9c5e5;font-size:12px}
+.ary-mem-secure-mark b{color:#e6f3ff;font-size:13px}
+.ary-mem-secure-mark small{font-size:10px;line-height:1.5}
+.ary-mem-admin-order-actions{display:none!important}
+.ary-mem-card{min-width:0;overflow:hidden}
+.ary-mem-card button{width:100%;min-height:43px;cursor:pointer}
+.ary-mem-card button:disabled{cursor:not-allowed;filter:grayscale(.5)}
+@media(max-width:520px){.ary-mem-payment{display:block}.ary-mem-secure-mark{max-width:none;margin-top:13px}.ary-mem-methods{gap:6px}.ary-mem-method-chip{font-size:10px}}
