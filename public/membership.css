@@ -13,3 +13,32 @@
 .ary-output-zoom,.ary-output-zoom-reset{min-width:34px;height:34px;padding:0 8px;border:1px solid #3b5879;border-radius:9px;background:#12243a;color:#e5f2ff;font-weight:800}
 .ary-output-zoom-reset{font-size:10px}
 @media(max-width:420px){.ary-output-name-wrap{grid-template-columns:minmax(0,1fr);gap:7px}.ary-output-name-zoom{justify-content:flex-end}.ary-output-zoom,.ary-output-zoom-reset{min-width:38px;height:36px}}
+
+
+/* ARYANZZ Prestige cosmetic effects: lightweight procedural layers, not giant media downloads. */
+.ary-redeem-profile{margin-top:16px;padding:14px;border:1px solid #3d5b7c;border-radius:15px;background:linear-gradient(145deg,#152b45,#101a2d 70%);box-shadow:inset 0 1px #ffffff12}
+.ary-redeem-heading{display:flex;flex-direction:column;gap:4px;margin-bottom:10px}
+.ary-redeem-heading b{font-size:10px;letter-spacing:1.7px;color:#e4c5ff}
+.ary-redeem-heading small{font-size:11px;color:#9fb3ce}
+.ary-redeem-form{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
+.ary-redeem-form input{min-width:0;width:100%;border:1px solid #405c7d;border-radius:10px;padding:11px;background:#091526;color:#f2f7ff;letter-spacing:1px;text-transform:uppercase}
+.ary-redeem-form button{border:0;border-radius:10px;padding:10px 13px;background:linear-gradient(115deg,#9b63ff,#39bde9);color:white;font-weight:900;font-size:11px}
+.ary-redeem-form button:disabled{opacity:.55}
+#aryRedeemStatus{font-size:10px;color:#a9bbd3;line-height:1.6;margin:9px 0 0}
+.ary-prestige-active{margin-top:11px;padding:10px 12px;border:1px solid #b78bff88;border-radius:11px;background:linear-gradient(110deg,#3a245eaa,#183c58aa);color:#f3e8ff;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:10px}
+.ary-prestige-active[hidden]{display:none!important}
+.ary-prestige-active b{letter-spacing:1px;color:#f4d58c}
+.ary-legendary-frame{position:relative!important;isolation:isolate;border:0!important;box-shadow:0 0 0 2px #ffe9a8,0 0 0 5px #a76bff,0 0 22px #8c5cffaa,0 0 42px #34d9ef55!important;animation:aryLegendaryPulse 3.6s ease-in-out infinite}
+.ary-legendary-frame:before{content:"";position:absolute;inset:-8px;border-radius:inherit;padding:3px;background:conic-gradient(from 0deg,#fff2b4,#a36cff,#42e6ef,#fff,#e6a5ff,#fff2b4);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;animation:aryLegendarySpin 7s linear infinite;pointer-events:none;z-index:3}
+.ary-legendary-frame:after{content:"✦";position:absolute;right:-8px;top:-9px;z-index:4;color:#fff1b5;text-shadow:0 0 7px #fff,0 0 15px #a56aff;font-size:17px;animation:aryLegendarySpark 2.2s ease-in-out infinite}
+.ary-legendary-banner{position:relative;overflow:hidden;box-shadow:inset 0 0 0 1px #ffe6a866,0 0 26px #a86aff44}
+.ary-legendary-banner:after{content:"";position:absolute;inset:-40%;pointer-events:none;background:linear-gradient(110deg,transparent 35%,#ffffff22 48%,#8deeff55 50%,transparent 62%);transform:translateX(-65%) rotate(12deg);animation:aryLegendarySweep 6s ease-in-out infinite}
+body.ary-legendary-background{background-image:radial-gradient(ellipse at 12% 15%,#4a2d7d55,transparent 35%),radial-gradient(ellipse at 85% 18%,#176d7a55,transparent 32%),radial-gradient(ellipse at 50% 100%,#45307166,transparent 45%),linear-gradient(145deg,#070b19,#10152a 52%,#071b27)!important;background-attachment:fixed!important}
+body.ary-legendary-background:after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.28;background-image:radial-gradient(1px 1px at 12% 24%,#fff 50%,transparent 100%),radial-gradient(2px 2px at 75% 32%,#b5f5ff 50%,transparent 100%),radial-gradient(1px 1px at 44% 78%,#ffe6ae 50%,transparent 100%),radial-gradient(1px 1px at 89% 84%,#fff 50%,transparent 100%);background-size:190px 170px,260px 220px,230px 240px,310px 280px;animation:aryLegendaryStars 18s linear infinite}
+@keyframes aryLegendarySpin{to{transform:rotate(360deg)}}
+@keyframes aryLegendaryPulse{0%,100%{filter:drop-shadow(0 0 4px #c19aff66)}50%{filter:drop-shadow(0 0 12px #52e5edaa)}}
+@keyframes aryLegendarySpark{0%,100%{transform:scale(.8) rotate(0);opacity:.65}50%{transform:scale(1.25) rotate(35deg);opacity:1}}
+@keyframes aryLegendarySweep{0%,20%{transform:translateX(-70%) rotate(12deg)}70%,100%{transform:translateX(70%) rotate(12deg)}}
+@keyframes aryLegendaryStars{to{background-position:190px 170px,-260px 220px,230px -240px,-310px 280px}}
+@media(prefers-reduced-motion:reduce){.ary-legendary-frame,.ary-legendary-frame:before,.ary-legendary-frame:after,.ary-legendary-banner:after,body.ary-legendary-background:after{animation:none!important}}
+@media(max-width:460px){.ary-redeem-form{grid-template-columns:1fr}.ary-redeem-form button{min-height:42px}}
