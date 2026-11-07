@@ -35,7 +35,7 @@ async function membershipFor(userId,env){
 async function handleMembership(request,env){
  const url=new URL(request.url),path=url.pathname;
  if(!env.AUTH_DB||typeof env.AUTH_DB.prepare!=="function")return json({ok:false,error:"Database akun belum dikonfigurasi."},503);
- if(path==="/api/membership/catalog"&&request.method==="GET")return json({ok:true,plans:PLANS,free:{id:"free",name:"Free Member",price:0,summary:"Tetap tersedia tanpa pembayaran."}});
+ if(path==="/api/membership/catalog"&&request.method==="GET")return json({ok:true,pricingStatus:"proposed",paymentEnabled:false,plans:PLANS,free:{id:"free",name:"Free Member",price:0,summary:"Tetap tersedia tanpa pembayaran."}});
  if(path==="/api/membership/me"&&request.method==="GET"){
   const user=await currentUser(request,env);if(!user)return json({ok:false,error:"Silakan login terlebih dahulu."},401);
   const membership=await membershipFor(user.id,env);
@@ -74,7 +74,8 @@ async function handleMembership(request,env){
   const now=Date.now(),existing=await membershipFor(order.user_id,env);
   const base=existing.status==="active"&&existing.expiresAt?Math.max(now,existing.expiresAt):now;
   const expires=plan.durationDays===null?null:base+plan.durationDays*86400000;
-  await env.AUTH_DB.prepare("UPDATE membership_orders SET status='paid',paid_at=?1,expires_at=?2,reviewed_by=?3,note=?4 WHERE id=?5 AND status='pending'").bind(now,expires,admin.id,String(body?.note||"Pembayaran diverifikasi manual").slice(0,300),orderId).run();
+  const finalized=await env.AUTH_DB.prepare("UPDATE membership_orders SET status='paid',paid_at=?1,expires_at=?2,reviewed_by=?3,note=?4 WHERE id=?5 AND status='pending'").bind(now,expires,admin.id,String(body?.note||"Pembayaran diverifikasi manual").slice(0,300),orderId).run();
+  if(Number(finalized?.meta?.changes||0)!==1)return json({ok:false,error:"Pesanan sudah diproses oleh admin lain. Muat ulang daftar pesanan."},409);
   await env.AUTH_DB.prepare("INSERT INTO user_memberships (user_id,plan_id,status,started_at,expires_at,updated_at) VALUES (?1,?2,'active',?3,?4,?3) ON CONFLICT(user_id) DO UPDATE SET plan_id=excluded.plan_id,status='active',started_at=excluded.started_at,expires_at=excluded.expires_at,updated_at=excluded.updated_at").bind(order.user_id,plan.id,now,expires).run();
   return json({ok:true,message:"Pembayaran diverifikasi dan Membership diaktifkan."});
  }
