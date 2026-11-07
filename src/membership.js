@@ -46,7 +46,7 @@ async function handleCosmetics(request,env){
  }
  if(path==="/api/redeem/claim"&&request.method==="POST"){
   let body;try{body=await request.json()}catch{return json({ok:false,error:"Kode redeem tidak valid."},400)}
-  const code=String(body?.code||"").trim().toUpperCase().replace(/\\s+/g,"");
+  const code=String(body?.code||"").trim().toUpperCase().replace(/\s+/g,"");
   if(!/^[A-Z0-9-]{8,40}$/.test(code))return json({ok:false,error:"Format kode redeem tidak valid."},400);
   const codeHash=await sha("aryanzz-redeem-v1|"+code);
   const row=await env.AUTH_DB.prepare("SELECT code_hash,reward_id,max_redemptions,redeemed_count,expires_at,active FROM redeem_codes WHERE code_hash=?1 LIMIT 1").bind(codeHash).first();
