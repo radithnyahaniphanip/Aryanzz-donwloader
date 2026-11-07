@@ -65,3 +65,57 @@
 @media(max-width:760px){.ary-guide-overlay{padding:0}.ary-guide-dialog{width:100%;height:100dvh;min-height:0;border:0;border-radius:0}.ary-guide-header{padding:17px 16px 12px}.ary-guide-header p{font-size:10px}.ary-guide-progress{padding:10px 16px}.ary-guide-body{grid-template-columns:1fr;grid-template-rows:minmax(175px,.68fr) minmax(0,1.32fr)}.ary-guide-sidebar{padding:12px 14px 9px;border-right:0;border-bottom:1px solid rgba(150,180,225,.12)}.ary-guide-filters{margin:8px 0}.ary-guide-list{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.ary-guide-item{padding:8px}.ary-guide-item-top{display:block}.ary-guide-category{display:block;margin-top:3px}.ary-guide-item-desc{display:none}.ary-guide-item-state{margin-top:5px}.ary-guide-detail{padding:16px 15px 20px}.ary-guide-footer{padding:9px 15px}}
 @media(max-width:390px){.ary-guide-filters{gap:4px}.ary-guide-filters button{padding:5px 7px;font-size:8px}.ary-guide-list{grid-template-columns:repeat(2,minmax(0,1fr))}.ary-guide-item-top b{font-size:10px}}
 @media(prefers-reduced-motion:reduce){.ary-guide-progress-track i{transition:none}}
+
+/* Mobile Knowledge Center layout: one vertical reading flow, swipeable guide cards,
+   and a footer that stays outside the scrollable content. */
+@media(max-width:760px){
+ .ary-guide-dialog{display:flex;flex-direction:column;width:100%;height:100vh;height:100dvh;max-height:100dvh}
+ .ary-guide-header{flex:0 0 auto;padding:14px 16px 11px;gap:12px}
+ .ary-guide-header h2{margin:5px 0 4px;font-size:23px;line-height:1.12}
+ .ary-guide-header p{max-width:310px;font-size:10.5px;line-height:1.4}
+ .ary-guide-progress{flex:0 0 auto;padding:9px 16px 10px}
+ .ary-guide-progress-track{height:5px;margin-top:7px}
+ .ary-guide-body{display:flex;flex:1 1 auto;flex-direction:column;min-height:0;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+ .ary-guide-sidebar{display:flex;flex:0 0 auto;min-height:0;padding:12px 14px 9px;border-right:0;border-bottom:1px solid rgba(150,180,225,.12)}
+ .ary-guide-search-label{margin-bottom:6px;font-size:9px}
+ .ary-guide-sidebar input{min-height:43px;font-size:12px}
+ .ary-guide-filters{display:flex;flex-wrap:nowrap;max-width:100%;gap:7px;margin:9px 0 8px;padding:2px 1px 5px;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+ .ary-guide-filters::-webkit-scrollbar{display:none}
+ .ary-guide-filters button{flex:0 0 auto;min-height:32px;padding:7px 10px;font-size:9px;white-space:nowrap}
+ .ary-guide-list{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(165px,calc(50% - 4px));grid-template-columns:none;align-content:stretch;gap:8px;min-height:0;padding:2px 2px 8px;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;scrollbar-width:thin;-webkit-overflow-scrolling:touch}
+ .ary-guide-item{display:flex;flex-direction:column;justify-content:flex-start;gap:4px;min-width:0;min-height:100px;padding:10px 11px;scroll-snap-align:start}
+ .ary-guide-item-top{display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start;gap:4px}
+ .ary-guide-item-top b{font-size:11px;line-height:1.3}
+ .ary-guide-category{display:block;white-space:nowrap}
+ .ary-guide-item-desc{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;margin-top:0;font-size:9px;line-height:1.4}
+ .ary-guide-item-state{margin-top:auto;font-size:8px}
+ .ary-guide-detail{flex:0 0 auto;min-height:0;padding:16px 16px calc(26px + env(safe-area-inset-bottom));overflow:visible}
+ .ary-guide-detail-head h3{margin:12px 0 6px;font-size:22px}
+ .ary-guide-benefit{font-size:12px;line-height:1.6}
+ .ary-guide-section{margin-top:17px}
+ .ary-guide-steps{gap:8px}
+ .ary-guide-steps li{padding:9px 11px 9px 39px;font-size:11px;line-height:1.5}
+ .ary-guide-steps li::before{top:9px}
+ .ary-guide-info,.ary-guide-note{padding:11px 12px}
+ .ary-guide-footer{flex:0 0 auto;min-height:48px;gap:12px;padding:7px 14px calc(7px + env(safe-area-inset-bottom))}
+ .ary-guide-footer>span{font-size:9px;line-height:1.4}
+ .ary-guide-close-link{min-height:36px;padding:7px 9px;font-size:10px;white-space:nowrap}
+}
+@media(max-width:390px){
+ .ary-guide-header{padding:13px 14px 10px}
+ .ary-guide-header h2{font-size:21px}
+ .ary-guide-header p{max-width:265px;font-size:10px}
+ .ary-guide-progress{padding:9px 14px 10px}
+ .ary-guide-sidebar{padding:11px 12px 8px}
+ .ary-guide-list{grid-auto-columns:minmax(154px,calc(50% - 4px))}
+ .ary-guide-item{min-height:96px;padding:9px}
+ .ary-guide-detail{padding-right:14px;padding-left:14px}
+ .ary-guide-footer{padding-right:12px;padding-left:12px}
+}
+@media(max-width:760px) and (max-height:620px){
+ .ary-guide-header{padding-top:9px;padding-bottom:8px}
+ .ary-guide-header h2{margin:4px 0;font-size:20px}
+ .ary-guide-progress{padding-top:7px;padding-bottom:8px}
+ .ary-guide-sidebar{padding-top:8px}
+ .ary-guide-item{min-height:86px}
+}
