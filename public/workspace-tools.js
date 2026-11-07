@@ -7,11 +7,10 @@ const empty=root?.querySelector("#toolEmpty");
 if(!root||!input||!grid||!filters)return;
 root.dataset.workspace="tools";
 let category="all";
-const cards=[...grid.querySelectorAll(".tool")];
 function apply(){
  let visible=0;
  const query=input.value.toLowerCase().trim();
- cards.forEach(card=>{
+ grid.querySelectorAll(".tool").forEach(card=>{
   const show=(category==="all"||card.dataset.category===category)&&card.textContent.toLowerCase().includes(query);
   card.hidden=!show;
   if(show)visible++;

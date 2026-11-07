@@ -20,6 +20,7 @@ function resetPanelScroll(){
 function showPanel(id){
  let panelId=String(id||"");
  if(panelId==="home")panelId="";
+ if(panelId==="membership")panelId="aryMembershipPanel";
  if(panelId){
   const candidate=document.getElementById(panelId);
   if(!candidate||candidate.parentElement!==toolsArea||!candidate.classList.contains("panel"))panelId="allTools";
@@ -42,7 +43,7 @@ function showPanel(id){
   panel.setAttribute("aria-hidden",String(!active));
   panel.classList.remove("v677-enter","v677-reveal","v25-reveal");
  });
- const navKey=isHome?"home":panelId==="history"?"history":panelId==="owner"?"owner":panelId==="profile"?"profile":"allTools";
+ const navKey=isHome?"home":panelId==="history"?"history":panelId==="owner"?"owner":panelId==="profile"?"profile":panelId==="aryMembershipPanel"?"membership":"allTools";
  nav.querySelectorAll("[data-nav]").forEach(button=>{
   const active=button.dataset.nav===navKey;
   button.classList.toggle("active",active);
@@ -62,7 +63,7 @@ document.addEventListener("click",event=>{
  if(panelButton)showPanel(panelButton.dataset.panel);
 });
 showPanel("home");
-const membershipScript=document.createElement("script");membershipScript.src="/membership.js?v=1";membershipScript.defer=true;document.head.appendChild(membershipScript);
+
 const clearInputScript=document.createElement("script");clearInputScript.src="/clear-inputs.js?v=1";clearInputScript.defer=true;document.head.appendChild(clearInputScript);
-const membershipStyle=document.createElement("link");membershipStyle.rel="stylesheet";membershipStyle.href="/membership.css?v=1";document.head.appendChild(membershipStyle);
+
 })();
