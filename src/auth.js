@@ -44,8 +44,6 @@ function missingConfig(env) {
   const missing = [];
   if (!env.AUTH_DB || typeof env.AUTH_DB.prepare !== "function") missing.push("Cloudflare D1 (AUTH_DB)");
   if (String(env.AUTH_SESSION_SECRET || "").length < 32) missing.push("AUTH_SESSION_SECRET");
-  if (!String(env.RESEND_API_KEY || "").trim()) missing.push("RESEND_API_KEY");
-  if (!String(env.AUTH_EMAIL_FROM || "").trim()) missing.push("AUTH_EMAIL_FROM (verified sender)");
   if (!turnstileSecret(env)) missing.push("TURNSTILE_SECRET_KEY (or TURNSTILE_SECRET / CF_TURNSTILE_SECRET_KEY)");
   if (!turnstileSiteKey(env)) missing.push("AUTH_TURNSTILE_SITE_KEY (or TURNSTILE_SITE_KEY / CF_TURNSTILE_SITE_KEY)");
   return missing;
@@ -540,13 +538,13 @@ export async function handleAuthRequest(request, env) {
   if (path === "/api/auth/config" && request.method === "GET") {
     const missing = missingConfig(env);
     const loginReady = ready(env);
-    const registrationReady = loginReady && !!String(env.RESEND_API_KEY || "").trim() && !!String(env.AUTH_EMAIL_FROM || "").trim();
+    const registrationReady = false;
     const missingLogin = missing.filter(item => ["Cloudflare D1 (AUTH_DB)","AUTH_SESSION_SECRET","TURNSTILE_SECRET_KEY (or TURNSTILE_SECRET / CF_TURNSTILE_SECRET_KEY)","AUTH_TURNSTILE_SITE_KEY (or TURNSTILE_SITE_KEY / CF_TURNSTILE_SITE_KEY)"].includes(item));
-    const missingRegistration = missing.filter(item => ["RESEND_API_KEY","AUTH_EMAIL_FROM (verified sender)"].includes(item));
+    const missingRegistration = [];
     const moderationReady=!!env.AUTH_DB&&typeof env.AUTH_DB.prepare==="function"&&String(env.AUTH_SESSION_SECRET||"").length>=32;
     const existing=deviceLockTokenFrom(request),lockToken=existing||randomHex(32);
-    return reply({ ok: true, ready: loginReady, loginReady, registrationReady, moderationReady, publicVersion: "V1", captchaSiteKey: turnstileSiteKey(env), missing, missingLogin, missingRegistration,
-      message: loginReady ? (registrationReady ? "Layanan akun online siap." : "Login siap; pendaftaran menunggu konfigurasi pengiriman email.") : "Layanan akun online menunggu konfigurasi: " + missingLogin.join(", ") + "." },
+    return reply({ ok: true, ready: loginReady, loginReady, registrationReady, registrationEnabled:false, publicAccess:true, moderationReady, publicVersion: "V1", captchaSiteKey: turnstileSiteKey(env), missing, missingLogin, missingRegistration,
+      message: loginReady ? "Akses publik siap. Pengunjung tidak perlu login atau mendaftar; autentikasi hanya digunakan untuk administrator." : "Akses publik menunggu konfigurasi keamanan server: " + missingLogin.join(", ") + "." },
       200,existing?{}:{"set-cookie":DEVICE_LOCK_COOKIE+"="+lockToken+"; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=63072000"});
   }
   if (path === "/api/auth/logout" && request.method === "POST") return logout(request, env);
