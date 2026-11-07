@@ -33,7 +33,7 @@
     if (logout) logout.hidden = true;
     if ($("profileIdDescription")) $("profileIdDescription").textContent = "ID otomatis untuk mengenali perangkat dan status Membership ARYANZZ.";
     if ($("profileAccountEmail")) $("profileAccountEmail").textContent = user.guest || localOnly ? "Tidak diperlukan" : (user.email || "Tidak diperlukan");
-    if ($("profileAccountNote")) $("profileAccountNote").textContent = "● " + (localOnly ? "ID sementara · server belum tersambung" : "Akses publik · ID otomatis tersimpan di server");
+    if ($("profileAccountNote")) $("profileAccountNote").textContent = "● " + (localOnly ? "ID otomatis tersimpan di perangkat ini" : "Akses publik · ID otomatis tersimpan di server");
     if ($("profileSummary")) $("profileSummary").textContent = user.fullName || "Pengunjung ARYANZZ";
     if ($("profileName") && !String($("profileName").value || "").trim()) $("profileName").value = user.fullName || "Pengunjung ARYANZZ";
     for (const id of ["ownerLinkEditor", "securityCenter", "ownerEditProfile"]) if ($(id)) $(id).hidden = !isAdmin;
@@ -49,13 +49,14 @@
       node.id = "aryGuestAccessNotice";
       node.setAttribute("role", "status");
       node.setAttribute("aria-live", "polite");
-      node.style.cssText = "position:fixed;z-index:99999;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));transform:translateX(-50%);width:min(92vw,460px);padding:14px 17px;border:1px solid #45627f;border-radius:14px;background:#0c1929;color:#edf5ff;box-shadow:0 18px 55px #0009;font:600 14px/1.5 system-ui,sans-serif";
+      node.style.cssText = "position:fixed;z-index:99999;left:50%;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(-50%);width:max-content;max-width:min(88vw,340px);padding:9px 12px;border:1px solid #45627f;border-radius:11px;background:#101d31;color:#edf5ff;box-shadow:0 8px 24px #0006;font:500 12px/1.4 system-ui,sans-serif;text-align:center;pointer-events:none";
       document.body.append(node);
     }
-    node.style.borderColor = error ? "#e66b83" : "#39c7ad";
+    node.style.borderColor = error ? "#bd6579" : "#39a99b";
     node.textContent = message;
     node.hidden = false;
-    if (!error) setTimeout(() => { if (node.isConnected) node.hidden = true; }, 6500);
+    clearTimeout(node._aryNoticeTimer);
+    node._aryNoticeTimer = setTimeout(() => { if (node.isConnected) node.hidden = true; }, error ? 2800 : 2200);
   }
   function showBlocked(id, message) {
     const gate = $("aryAuthGate");
@@ -69,15 +70,16 @@
     card.append(mark, title, detail, help); gate.append(card); gate.hidden = false;
     document.body.classList.remove("ary-authenticated");
   }
-  function localFallback(message = "Website dapat digunakan tanpa login. ID sementara ini belum tersinkron dengan server moderasi.", error = true) {
+  function localFallback(_message = "", _error = false) {
     let id = "";
     try { id = localStorage.getItem(LOCAL_ID_KEY) || ""; } catch {}
     if (!/^ARY-[A-Z0-9]{10}$/i.test(id)) {
       id = randomId();
       try { localStorage.setItem(LOCAL_ID_KEY, id); } catch {}
     }
+    // Keep public access silent when the optional server-side identity store
+    // is unavailable. The profile still displays the automatically assigned ID.
     setIdentity({ id, fullName: "Pengunjung ARYANZZ", role: "guest", guest: true }, true);
-    showNotice(message, error);
     return { ok: false, localOnly: true, user: window.aryanzzAuthUser };
   }
   async function bootstrap() {
