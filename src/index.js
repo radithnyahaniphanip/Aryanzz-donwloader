@@ -1281,7 +1281,7 @@ async function imageFile(request){
       if([301,302,303,307,308].includes(upstream.status)){
         const location=upstream.headers.get("location");await upstream.body?.cancel().catch(()=>{});
         if(!location) return json({error:"Alamat gambar mengalihkan tanpa tujuan."},502);
-        const next=safePublicMediaUrl(new URL(location,current.href).href);
+        const redirectTarget=new URL(location,current.href);if(redirectTarget.protocol==="http:")redirectTarget.protocol="https:";const next=safePublicMediaUrl(redirectTarget.href);
         if(!next)return json({error:"Pengalihan gambar menuju alamat yang tidak aman."},400);
         current=next;continue;
       }
@@ -2311,7 +2311,7 @@ async function socialImageFile(request){
       },redirect:"manual",cache:"no-store"},22000);
       if([301,302,303,307,308].includes(upstream.status)){
         const location=upstream.headers.get("location");if(!location)throw new Error("CDN gambar mengirim pengalihan tanpa alamat tujuan.");
-        const next=safePublicMediaUrl(new URL(location,current.href).href);
+        const redirectTarget=new URL(location,current.href);if(redirectTarget.protocol==="http:")redirectTarget.protocol="https:";const next=safePublicMediaUrl(redirectTarget.href);
         if(!next)throw new Error("Pengalihan CDN gambar menuju alamat yang tidak aman.");
         current=next;continue;
       }
