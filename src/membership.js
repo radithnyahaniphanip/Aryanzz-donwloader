@@ -10,6 +10,11 @@ const PLANS=[
 {id:"founder",name:"Founder Signature",price:5900000,durationDays:null,badge:"Founder",summary:"Paket pendukung pendiri dengan identitas khusus."}
 ];
 const json=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:{"content-type":"application/json; charset=utf-8","cache-control":"no-store"}});
+function safeQrisImage(env){
+ const raw=String(env.MEMBERSHIP_QRIS_IMAGE_URL||"").trim();
+ if(!raw)return "";
+ try{const u=new URL(raw);if(u.protocol!=="https:"||u.username||u.password||u.hostname==="localhost"||u.hostname.endsWith(".local"))return "";return u.href}catch{return ""}
+}
 const sha=async value=>Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256",new TextEncoder().encode(value))),b=>b.toString(16).padStart(2,"0")).join("");
 function sessionToken(request){const c=request.headers.get("cookie")||"";const p=c.split(";").map(x=>x.trim()).find(x=>x.startsWith(COOKIE+"="));return p?p.slice(COOKIE.length+1):"";}
 async function currentUser(request,env){
@@ -38,6 +43,17 @@ async function handleCosmetics(request,env){
  const user=await currentUser(request,env);
  if(!user)return json({ok:false,error:"Silakan login terlebih dahulu."},401);
  const now=Date.now();
+ if(path==="/api/cosmetics/equip"&&request.method==="POST"){
+  let body;try{body=await request.json()}catch{return json({ok:false,error:"Pilihan kosmetik tidak valid."},400)}
+  const cosmeticId=String(body?.cosmeticId||"");
+  const kind=cosmeticId==="legendary-avatar-frame"?"avatar":cosmeticId==="legendary-aurora-background"?"background":"";
+  if(!kind)return json({ok:false,error:"Kosmetik tidak dikenal."},400);
+  const owned=await env.AUTH_DB.prepare("SELECT id FROM user_cosmetics WHERE user_id=?1 AND cosmetic_id=?2 AND (expires_at IS NULL OR expires_at>?3) LIMIT 1").bind(user.id,cosmeticId,now).first();
+  if(!owned)return json({ok:false,error:"Kosmetik ini belum menjadi koleksi akunmu."},404);
+  await env.AUTH_DB.prepare("UPDATE user_cosmetics SET equipped=0 WHERE user_id=?1 AND cosmetic_id=?2").bind(user.id,cosmeticId).run();
+  await env.AUTH_DB.prepare("UPDATE user_cosmetics SET equipped=1 WHERE user_id=?1 AND cosmetic_id=?2 AND (expires_at IS NULL OR expires_at>?3)").bind(user.id,cosmeticId,now).run();
+  return json({ok:true,message:"Tampilan berhasil diterapkan.",cosmeticId});
+ }
  if(path==="/api/cosmetics/me"&&request.method==="GET"){
   const rows=await env.AUTH_DB.prepare("SELECT id,cosmetic_id,source,acquired_at,expires_at,equipped FROM user_cosmetics WHERE user_id=?1 AND (expires_at IS NULL OR expires_at>?2) ORDER BY acquired_at DESC").bind(user.id,now).all();
   const items=(rows.results||[]).map(x=>({...x,remainingMs:x.expires_at===null?null:Math.max(0,Number(x.expires_at)-now)}));
@@ -99,9 +115,10 @@ async function handleCosmetics(request,env){
 
 async function handleMembership(request,env){
  const url=new URL(request.url),path=url.pathname;
- if(path==="/api/cosmetics/me"||path==="/api/redeem/claim"||path==="/api/membership/admin/redeem-codes")return handleCosmetics(request,env);
+ if(path==="/api/cosmetics/me"||path==="/api/cosmetics/equip"||path==="/api/redeem/claim"||path==="/api/membership/admin/redeem-codes")return handleCosmetics(request,env);
+ if(path==="/api/membership/catalog"&&request.method==="GET")return json({ok:true,pricingStatus:"proposed",paymentEnabled:!!safeQrisImage(env),plans:PLANS,free:{id:"free",name:"Free Member",price:0,summary:"Tetap tersedia tanpa pembayaran."}});
+ if(path==="/api/membership/payment-config"&&request.method==="GET")return json({ok:true,enabled:!!safeQrisImage(env),provider:"QRIS",qrisImageUrl:safeQrisImage(env),verification:"manual",message:safeQrisImage(env)?"QRIS tersedia. Pembayaran diverifikasi oleh pemilik setelah dana diterima.":"QRIS belum dikonfigurasi oleh pemilik ARYANZZ."});
  if(!env.AUTH_DB||typeof env.AUTH_DB.prepare!=="function")return json({ok:false,error:"Database akun belum dikonfigurasi."},503);
- if(path==="/api/membership/catalog"&&request.method==="GET")return json({ok:true,pricingStatus:"proposed",paymentEnabled:false,plans:PLANS,free:{id:"free",name:"Free Member",price:0,summary:"Tetap tersedia tanpa pembayaran."}});
  if(path==="/api/membership/me"&&request.method==="GET"){
   const user=await currentUser(request,env);if(!user)return json({ok:false,error:"Silakan login terlebih dahulu."},401);
   const membership=await membershipFor(user.id,env);
@@ -112,11 +129,13 @@ async function handleMembership(request,env){
   const user=await currentUser(request,env);if(!user)return json({ok:false,error:"Silakan login terlebih dahulu."},401);
   let body;try{body=await request.json()}catch{return json({ok:false,error:"Data pesanan tidak valid."},400)}
   const plan=PLANS.find(p=>p.id===String(body?.planId||""));if(!plan)return json({ok:false,error:"Paket Membership tidak ditemukan."},400);
+  const qrisImageUrl=safeQrisImage(env);
+  if(!qrisImageUrl||String(body?.paymentProvider||"")!=="qris")return json({ok:false,error:"Pembayaran QRIS belum dikonfigurasi. Pesanan belum dibuat."},503);
   const pending=await env.AUTH_DB.prepare("SELECT id FROM membership_orders WHERE user_id=?1 AND status='pending' AND created_at>?2 LIMIT 1").bind(user.id,Date.now()-24*60*60*1000).first();
   if(pending)return json({ok:false,error:"Kamu masih memiliki pesanan yang menunggu verifikasi.",orderId:pending.id},409);
   const id="ARYM-"+Date.now().toString(36).toUpperCase()+"-"+crypto.randomUUID().slice(0,8).toUpperCase();
-  await env.AUTH_DB.prepare("INSERT INTO membership_orders (id,user_id,plan_id,amount,status,payment_provider,created_at) VALUES (?1,?2,?3,?4,'pending','manual',?5)").bind(id,user.id,plan.id,plan.price,Date.now()).run();
-  return json({ok:true,order:{id,planId:plan.id,planName:plan.name,amount:plan.price,status:"pending"},message:"Pesanan dibuat. Pembayaran belum tersedia sampai metode penerima dan verifikasi resmi dikonfigurasi."},201);
+  await env.AUTH_DB.prepare("INSERT INTO membership_orders (id,user_id,plan_id,amount,status,payment_provider,created_at) VALUES (?1,?2,?3,?4,'pending','qris',?5)").bind(id,user.id,plan.id,plan.price,Date.now()).run();
+  return json({ok:true,order:{id,planId:plan.id,planName:plan.name,amount:plan.price,status:"pending",paymentProvider:"qris"},payment:{provider:"QRIS",qrisImageUrl},message:"Pesanan dibuat. Scan QRIS dan tunggu verifikasi pembayaran oleh pemilik ARYANZZ."},201);
  }
  if(path==="/api/membership/admin/orders"&&request.method==="GET"){
   const admin=await adminUser(request,env);if(!admin)return json({ok:false,error:"Akses khusus pemilik."},403);
