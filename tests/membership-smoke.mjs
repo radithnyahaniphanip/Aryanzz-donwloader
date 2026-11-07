@@ -21,4 +21,6 @@ assert.equal(unauth.status,401);
 const catalog=await handleMembership(new Request("https://aryanzz.example/api/membership/catalog"),{AUTH_DB:{prepare(){}}});
 assert.equal(catalog.status,200);
 const catalogBody=await catalog.json();assert.equal(catalogBody.plans.length,7);assert.equal(catalogBody.free.id,"free");
+assert.equal(catalogBody.pricingStatus,"proposed");
+assert.equal(catalogBody.paymentEnabled,false);
 console.log("ARYANZZ V1 Membership catalog, auth gate, migration, and fail-closed review checks passed.");
