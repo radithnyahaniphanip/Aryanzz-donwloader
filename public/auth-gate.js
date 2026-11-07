@@ -432,9 +432,6 @@
     $("aryLegacyMigrate").hidden = true;
     $("accountLogout")?.addEventListener("click", async () => { try { await post("/api/auth/logout", {}); } catch {} try { localStorage.removeItem(SESSION_KEY); } catch {} setUser(null); mode("login"); say("Kamu sudah keluar dari akun."); });
     if(!ownerMode){setUser(null);return;}
-    const registerTab=document.querySelector('[data-auth-mode="register"]');
-    if(registerTab)registerTab.hidden=true;
-    const authTabs=$("aryAuthTabs");if(authTabs)authTabs.hidden=true;
     if($("aryAuthTitle"))$("aryAuthTitle").textContent="Akses administrator ARYANZZ";
     if($("aryAuthFoot"))$("aryAuthFoot").textContent="Halaman khusus pemilik dan administrator. Pengunjung tidak perlu login atau mendaftar.";
     config = { ready:false, registrationReady:false, moderationReady:false, captchaSiteKey:"", missingLogin:[], missingRegistration:[] };
