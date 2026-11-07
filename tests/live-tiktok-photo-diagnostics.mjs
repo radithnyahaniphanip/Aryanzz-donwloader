@@ -1,4 +1,4 @@
-const workerBase=(process.env.WORKER_URL||"https://aryanzz-donwloader.radithnyahaniphanip.workers.dev").replace(/\/$/,"");
+const workerBase=(process.env.WORKER_URL||"https://aryanzz-donwloader.aryanz.workers.dev").replace(/\/$/,"");
 const shortUrl="https://vt.tiktok.com/ZSpY4TkPP/";
 const infoResponse=await fetch(workerBase+"/api/platform/info",{method:"POST",headers:{"content-type":"application/json",accept:"application/json"},body:JSON.stringify({url:shortUrl,expectedPlatform:"tiktok"}),cache:"no-store",signal:AbortSignal.timeout(30000)});
 const resolvedInfo=await infoResponse.json().catch(()=>({}));
