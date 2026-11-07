@@ -159,7 +159,7 @@ async function handleMembership(request,env){
  const url=new URL(request.url),path=url.pathname;
  if(path==="/api/membership/webhook")return membershipWebhook(request,env);
  if(path==="/api/cosmetics/me"||path==="/api/cosmetics/equip"||path==="/api/redeem/claim"||path==="/api/membership/admin/redeem-codes")return handleCosmetics(request,env);
- if(path==="/api/membership/catalog"&&request.method==="GET")return json({ok:true,pricingStatus:"proposed",paymentEnabled:!!safeQrisImage(env),plans:PLANS,free:{id:"free",name:"Free Member",price:0,summary:"Tetap tersedia tanpa pembayaran."}});
+ if(path==="/api/membership/catalog"&&request.method==="GET")return json({ok:true,pricingStatus:"proposed",paymentEnabled:!!env.AUTH_DB,qrAvailable:!!safeQrisImage(env),plans:PLANS,free:{id:"free",name:"Free Member",price:0,summary:"Tetap tersedia tanpa pembayaran."}});
  if(path==="/api/membership/payment-config"&&request.method==="GET")return json({ok:true,enabled:!!safeQrisImage(env),checkoutEnabled:!!env.AUTH_DB,provider:"QRIS",qrisImageUrl:safeQrisImage(env),verification:"manual_until_gateway_connected",automaticWebhookReady:String(env.MEMBERSHIP_WEBHOOK_SECRET||"").length>=32,message:safeQrisImage(env)?"QRIS merchant tersedia. Untuk aktivasi otomatis, hubungkan penyedia pembayaran yang mengirim webhook bertanda tangan ke endpoint ARYANZZ.":"QRIS belum dikonfigurasi oleh pemilik ARYANZZ."});
  if(!env.AUTH_DB||typeof env.AUTH_DB.prepare!=="function")return json({ok:false,error:"Database akun belum dikonfigurasi."},503);
  if(path==="/api/membership/me"&&request.method==="GET"){
