@@ -8,6 +8,8 @@ for (const id of ["aryRegPasswordConfirm","aryLoginIdentifier","aryAuthCaptcha",
 }
 assert.ok(client.includes("async function login") && client.includes("config.ready") && client.includes("Login online belum aktif"), "Login must require the protected server authentication service");
 assert.ok(client.includes("async function register") && client.includes("Pendaftaran sementara ditutup") && client.includes("registrationReady") && client.includes("/api/auth/register/start"), "Registration must require server authentication and verified email delivery");
+assert.ok(client.includes('registerTab.hidden = false') && client.includes('value === "register" && !config.registrationReady'), "Register tab must remain visible and open even while email delivery is not configured");
+assert.ok(!client.includes('value = "login"; }'), "Unavailable email delivery must not silently redirect users away from the registration form");
 assert.ok(html.includes('id="aryResetProgressFill"') && html.includes('id="aryResetPasswordStage"'), "Password reset must show device-check progress and new-password stage");
 assert.ok(client.includes("currentDeviceHash") && client.includes("deviceKeyHash"), "Password reset must match the registered browser device");
 assert.ok(client.includes("/api/auth/legacy/start"), "Legacy accounts need a verified migration path");
