@@ -98,7 +98,7 @@ async function loadCatalog(){
   if(!catalogResponse.ok||!data.ok||!Array.isArray(data.plans))throw Error(data.error||"Katalog Membership belum tersedia.");
   paymentConfig={enabled:!!payment.enabled,checkoutEnabled:!!payment.checkoutEnabled,qrisImageUrl:String(payment.qrisImageUrl||"")};
   plans=data.plans.map(p=>({...p,term:p.durationDays===null?"Permanen":p.durationDays+" hari",desc:p.summary||""}));
-  if(paymentNote)paymentNote.textContent=!paymentConfig.checkoutEnabled?"QRIS GoPay Merchant tersedia, tetapi pembuatan pesanan menunggu database akun ARYANZZ aktif.":(payment.automaticWebhookReady?"QRIS tersedia. Aktivasi otomatis menunggu callback payment gateway terverifikasi.":"QRIS statis tersedia dan tidak mengirim notifikasi otomatis. Pemilik harus memeriksa dana masuk dan memverifikasi pesanan; aktivasi otomatis menunggu payment gateway resmi.");
+  if(paymentNote)paymentNote.textContent=!paymentConfig.checkoutEnabled?"QRIS GoPay Merchant tersedia, tetapi pembuatan pesanan menunggu database akun ARYANZZ aktif.":(payment.automaticWebhookReady?"QRIS tersedia. Aktivasi otomatis menunggu callback payment gateway terverifikasi.":"QRIS statis tidak mengirim notifikasi otomatis. QRIS tersedia. Pemilik harus memeriksa dana masuk dan memverifikasi pesanan; aktivasi otomatis menunggu payment gateway resmi.");
   if(qris&&paymentConfig.enabled)qris.innerHTML='<img src="'+esc(paymentConfig.qrisImageUrl)+'" alt="QRIS merchant ARYANZZ"><small>QRIS resmi · pastikan nama merchant benar sebelum membayar.</small>';
   if(qris)qris.hidden=!paymentConfig.enabled;
   if(note)note.textContent="Masukkan nominal tepat sesuai pesanan. QRIS statis GoPay Merchant tidak dapat mendeteksi pembayaran sendiri; aktivasi otomatis memerlukan API/payment notification resmi.";
