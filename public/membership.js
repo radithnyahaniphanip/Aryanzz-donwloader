@@ -128,6 +128,13 @@ panel.addEventListener("click",async e=>{
  catch(err){note.textContent=err.message}finally{buy.disabled=false}
 });
 document.getElementById("aryMemRefresh").addEventListener("click",load);
+document.addEventListener("click",event=>{
+ const navItem=event.target.closest("[data-nav]");
+ if(!navItem)return;
+ if(navItem.dataset.nav==="membership"){load();loadCatalog()}
+ if(navItem.dataset.nav==="profile")loadPrestige();
+});
+
 document.getElementById("aryGenerateRedeemCodes")?.addEventListener("click",async()=>{
  const button=document.getElementById("aryGenerateRedeemCodes"),output=document.getElementById("aryGeneratedRedeemCodes"),note=document.getElementById("aryMemNote");
  button.disabled=true;button.textContent="Membuat kode…";
