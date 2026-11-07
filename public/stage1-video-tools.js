@@ -104,12 +104,14 @@ stage.register("video-lightweight",(root,core)=>{
  let frameBlob=null,frameName="aryanzz-frame.png";
  frameFile?.addEventListener("change",async()=>{
   const file=frameFile.files?.[0];if(!file)return;
-  frameCapture.disabled=true;frameBlob=null;$("v1ltFrameDownload").disabled=true;
+  frameCapture.disabled=true;frameBlob=null;$("v1ltFrameDownload").disabled=true;frameCanvas.hidden=true;
   try{if(file.size>core.MAX_TOTAL)throw new Error("Video melebihi batas 250 MB untuk pemrosesan frame.");
    await loadVideo(frameVideo,file);$("v1ltFrameTime").max=String(Math.max(0,frameVideo.duration));$("v1ltFrameTime").value="0";frameCapture.disabled=false;setStatus("v1ltFrameStatus","Video siap · "+frameVideo.videoWidth+" × "+frameVideo.videoHeight+" · "+frameVideo.duration.toFixed(2)+" detik.","success")
   }catch(error){setStatus("v1ltFrameStatus",error.message,"error")}
+  finally{frameCapture.disabled=!Number.isFinite(frameVideo.duration)}
  });
  frameCapture?.addEventListener("click",async()=>{
+  frameCapture.disabled=true;
   try{
    const time=Number($("v1ltFrameTime").value);if(!Number.isFinite(time)||time<0||time>frameVideo.duration)throw new Error("Posisi waktu berada di luar durasi video.");
    await seek(frameVideo,time);
@@ -125,7 +127,7 @@ stage.register("video-lightweight",(root,core)=>{
  let sheetBlob=null;
  sheetFile?.addEventListener("change",async()=>{
   const file=sheetFile.files?.[0];if(!file)return;
-  sheetRun.disabled=true;sheetBlob=null;$("v1ltSheetDownload").disabled=true;
+  sheetRun.disabled=true;sheetBlob=null;$("v1ltSheetDownload").disabled=true;sheetCanvas.hidden=true;$("v1ltSheetProgress").style.width="0";
   try{if(file.size>core.MAX_TOTAL)throw new Error("Video melebihi batas 250 MB.");
    await loadVideo(sheetVideo,file);sheetRun.disabled=false;setStatus("v1ltSheetStatus","Video siap · "+sheetVideo.duration.toFixed(1)+" detik.","success")
   }catch(error){setStatus("v1ltSheetStatus",error.message,"error")}
