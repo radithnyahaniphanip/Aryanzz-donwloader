@@ -142,3 +142,20 @@ body.ary-local-bg-midnight{background-image:radial-gradient(ellipse at 15% 18%,#
 .ary-mem-card button{width:100%;min-height:43px;cursor:pointer}
 .ary-mem-card button:disabled{cursor:not-allowed;filter:grayscale(.5)}
 @media(max-width:520px){.ary-mem-payment{display:block}.ary-mem-secure-mark{max-width:none;margin-top:13px}.ary-mem-methods{gap:6px}.ary-mem-method-chip{font-size:10px}}
+
+
+/* ARYANZZ V1 · Local Prestige & profile personalization refresh */
+#profile.ary-local-profile-bg-aurora .ary-profile2-hero,#profile.ary-local-profile-bg-aurora .ary-profile2-cover,.ary-local-banner-aurora{background:radial-gradient(ellipse at 15% 20%,#39e8db99,transparent 34%),radial-gradient(ellipse at 82% 76%,#b46cff88,transparent 38%),linear-gradient(125deg,#071a31,#17264f 52%,#103c48)!important}
+#profile.ary-local-profile-bg-crimson .ary-profile2-hero,#profile.ary-local-profile-bg-crimson .ary-profile2-cover,.ary-local-banner-crimson{background:radial-gradient(ellipse at 18% 18%,#ff6a6a88,transparent 34%),radial-gradient(ellipse at 82% 75%,#ffbd5688,transparent 38%),linear-gradient(125deg,#260916,#671b32 54%,#291326)!important}
+#profile.ary-local-profile-bg-nebula .ary-profile2-hero,#profile.ary-local-profile-bg-nebula .ary-profile2-cover,.ary-local-banner-nebula{background:radial-gradient(ellipse at 20% 22%,#a96aff99,transparent 35%),radial-gradient(ellipse at 80% 78%,#28c9ff88,transparent 38%),linear-gradient(125deg,#090d2c,#32215d 55%,#092e49)!important}
+#profile.ary-local-profile-bg-midnight .ary-profile2-hero,#profile.ary-local-profile-bg-midnight .ary-profile2-cover,.ary-local-banner-midnight{background:radial-gradient(ellipse at 20% 22%,#59b9ff88,transparent 35%),radial-gradient(ellipse at 82% 76%,#6678ff88,transparent 38%),linear-gradient(125deg,#061426,#12365a 55%,#101c3c)!important}
+#profile.ary-local-profile-bg-aurora .ary-profile2-cover,#profile.ary-local-profile-bg-crimson .ary-profile2-cover,#profile.ary-local-profile-bg-nebula .ary-profile2-cover,#profile.ary-local-profile-bg-midnight .ary-profile2-cover{background-size:180% 180%!important;animation:aryProfileBgFlow 12s ease-in-out infinite alternate}
+@keyframes aryProfileBgFlow{0%{background-position:0% 40%}100%{background-position:100% 60%}}
+#profile .ary-profile2-avatar.ary-local-frame-aurora,#aryCosmeticsStudio .ary-cosmetics-avatar.ary-local-frame-aurora{border:5px solid #9c78ff!important;outline:3px solid #55dce8!important;box-shadow:0 0 0 6px #f3d68c,0 0 25px #55dce8!important}
+#profile .ary-profile2-avatar.ary-local-frame-royal,#aryCosmeticsStudio .ary-cosmetics-avatar.ary-local-frame-royal{border:5px double #f3c76b!important;outline:3px solid #8e2639!important;box-shadow:0 0 0 6px #27101a,0 0 22px #d74d54!important}
+#profile .ary-profile2-avatar.ary-local-frame-nebula,#aryCosmeticsStudio .ary-cosmetics-avatar.ary-local-frame-nebula{border:5px solid #bb83ff!important;outline:3px dashed #54d7ff!important;box-shadow:0 0 0 6px #251449,0 0 25px #9b62ff!important}
+#profile .ary-profile2-avatar.ary-local-frame-obsidian,#aryCosmeticsStudio .ary-cosmetics-avatar.ary-local-frame-obsidian{border:5px ridge #a9bbd1!important;outline:3px solid #34465d!important;box-shadow:0 0 0 6px #111923,0 0 22px #9eb5c9!important}
+.ary-redeem-owner-id{display:grid;gap:7px;margin:12px 0;color:var(--text,#fff);font-size:13px}
+.ary-redeem-owner-id input{width:100%;min-height:44px;padding:10px 12px;border:1px solid var(--border,rgba(255,255,255,.18));border-radius:12px;background:var(--surface-2,#101827);color:var(--text,#fff)}
+.ary-mem-admin #aryGeneratedRedeemCodes{width:100%;margin-top:10px;min-height:76px}
+@media(prefers-reduced-motion:reduce){#profile .ary-profile2-cover{animation:none!important}}
