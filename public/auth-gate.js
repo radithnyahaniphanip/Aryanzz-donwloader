@@ -84,6 +84,7 @@
     document.body.classList.toggle("ary-authenticated", !!user);
     if ($("profileName") && user?.fullName && ["","Pengguna ARYANZZ","Anggota ARYANZZ"].includes($("profileName").value.trim())) $("profileName").value = user.fullName;
     if ($("profileSummary")) $("profileSummary").textContent = String(user?.fullName || "Anggota ARYANZZ");
+    window.dispatchEvent(new CustomEvent("aryanzz:auth-change",{detail:{userId:String(user?.id||""),authenticated:!!user,localOnly:!!localOnly}}));
   }
   function showStep(id) {
     for (const form of ["aryRegisterForm","aryLoginForm","aryResetStartForm","aryRegisterVerifyForm","aryLegacyVerifyForm","aryResetVerifyForm"]) if ($(form)) $(form).hidden = form !== id;
