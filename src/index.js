@@ -382,24 +382,14 @@ async function snackVideoFallbackMediaInfo(rawUrl,requestUrl){
       return data;
     })
   ];
-  const results=await Promise.allSettled(tasks);
-  const successes=results.filter(x=>x.status==="fulfilled").map(x=>x.value);
-  if(successes.length){
-    const best=successes.sort((a,b)=>(b.formats?.length||0)-(a.formats?.length||0))[0];
-    if(successes.length>1){
-      const seen=new Set(),formats=[];
-      for(const item of successes.flatMap(x=>x.formats||[])){
-        const key=String(item.downloadUrl||item.url||"")+"|"+String(item.mode||"");
-        if(!key||seen.has(key))continue;seen.add(key);formats.push(item);
-      }
-      best.formats=formats.slice(0,12);
-      best.providerName="SnackVideo multi-provider fallback";
-    }
-    best.fallbackUsed=true;
-    return json(best);
+  try{
+    const fastest=await Promise.any(tasks);
+    fastest.fallbackUsed=true;
+    return json(fastest);
+  }catch(error){
+    const errors=(error?.errors||[]).map(item=>String(item?.message||item).slice(0,150));
+    throw new Error(errors.join(" | ")||"Semua jalur publik SnackVideo gagal.");
   }
-  const errors=results.map(x=>String(x.reason?.message||x.reason||"provider gagal").slice(0,150));
-  throw new Error(errors.join(" | "));
 }
 
 function extractSocialVideoDuration(html){
