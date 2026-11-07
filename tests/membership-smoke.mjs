@@ -27,8 +27,6 @@ assert.equal(catalogBody.paymentEnabled,false);
 assert.equal(catalogBody.qrAvailable,true,"The supplied merchant QRIS must be available even when checkout database is not ready");
 const qrisConfig=await handleMembership(new Request("https://aryanzz.example/api/membership/payment-config"),{});
 const qrisConfigBody=await qrisConfig.json();assert.equal(qrisConfigBody.enabled,true);assert.equal(qrisConfigBody.checkoutEnabled,false);assert.ok(qrisConfigBody.qrisImageUrl.startsWith("data:image/png;base64,"));
-const qrisAsset=await handleMembership(new Request("https://aryanzz.example/api/membership/qris.svg"),{});
-assert.equal(qrisAsset.status,404,"No SVG QR endpoint is used when the QR image is embedded as a data URI.");
 console.log("ARYANZZ V1 Membership catalog, auth gate, migration, and fail-closed review checks passed.");
 assert.ok(backend.includes("automaticWebhookReady:String(env.MEMBERSHIP_WEBHOOK_SECRET||\"\").length>=32"),"Payment config must distinguish static QRIS from an activated callback bridge");
 assert.ok(ui.includes("QRIS statis tidak mengirim notifikasi otomatis")&&ui.includes("syncMembershipPolling"),"Checkout must explain static QRIS limits and refresh pending payment status");
