@@ -154,29 +154,59 @@ root.append(cosmeticsPanel);
 if(toolGrid&&!toolGrid.querySelector('[data-panel="aryCosmeticsStudio"]')){
  const card=document.createElement("button");card.type="button";card.className="tool";card.dataset.panel="aryCosmeticsStudio";card.dataset.category="personal";card.innerHTML='<div class="ico">✧</div><b>Avatar & Background Studio</b><small>Pasang, ganti, dan kelola kosmetik profil eksklusif.</small><span class="v674-tool-category">PERSONALIZATION</span>';toolGrid.insertBefore(card,toolGrid.firstChild);
 }
-function cosmeticCard(item,kind){
- const active=!!item.equipped,label=kind==="avatar"?"Legendary Avatar Frame":"Legendary Aurora Background";
- return '<article class="ary-cosmetic-card '+(active?"is-equipped":"")+'"><div class="ary-cosmetic-art '+(kind==="avatar"?"frame-art":"background-art")+'"><span>✦</span></div><b>'+label+'</b><small>'+(active?"Sedang digunakan":"Koleksi permanen")+'</small><button type="button" data-equip="'+item.cosmetic_id+'">'+(active?"Sedang dipakai":"Gunakan")+'</button></article>';
+const LOCAL_COSMETICS_KEY="aryanzz.cosmetics.local.v1";
+const LOCAL_COSMETIC_CATALOG=[
+ {cosmetic_id:"local-frame-aurora",kind:"avatar",name:"Aurora Prism",description:"Bingkai prisma berlapis dengan kilau aurora.",art:"frame-art local-art-aurora"},
+ {cosmetic_id:"local-frame-royal",kind:"avatar",name:"Royal Ember",description:"Tekstur mahkota dan bara merah keemasan.",art:"frame-art local-art-royal"},
+ {cosmetic_id:"local-frame-nebula",kind:"avatar",name:"Nebula Core",description:"Efek kosmik ungu-biru dengan orbit bercahaya.",art:"frame-art local-art-nebula"},
+ {cosmetic_id:"local-frame-obsidian",kind:"avatar",name:"Obsidian Luxe",description:"Lapisan obsidian gelap dengan aksen metalik.",art:"frame-art local-art-obsidian"},
+ {cosmetic_id:"local-bg-aurora",kind:"background",name:"Aurora Sanctuary",description:"Latar aurora bergerak dengan gradasi cyan dan violet.",art:"background-art local-art-aurora"},
+ {cosmetic_id:"local-bg-crimson",kind:"background",name:"Crimson Dynasty",description:"Latar merah gelap dengan semburat emas.",art:"background-art local-art-crimson"},
+ {cosmetic_id:"local-bg-nebula",kind:"background",name:"Nebula Drift",description:"Latar galaksi dengan cahaya nebula berlapis.",art:"background-art local-art-nebula"},
+ {cosmetic_id:"local-bg-midnight",kind:"background",name:"Midnight Sapphire",description:"Latar safir malam dengan partikel cahaya.",art:"background-art local-art-midnight"}
+];
+function readLocalCosmetics(){try{return JSON.parse(localStorage.getItem(LOCAL_COSMETICS_KEY)||"{}")||{}}catch{return {}}}
+function applyLocalCosmetics(){
+ const selected=readLocalCosmetics(),avatar=document.getElementById("profileAvatar"),banner=document.getElementById("profileBannerPreview"),preview=document.getElementById("aryCosmeticPreviewAvatar");
+ const frame=LOCAL_COSMETIC_CATALOG.find(x=>x.cosmetic_id===selected.avatar),background=LOCAL_COSMETIC_CATALOG.find(x=>x.cosmetic_id===selected.background);
+ const frameTargets=[avatar,preview].filter(Boolean);
+ frameTargets.forEach(el=>{el.classList.remove("ary-local-frame-aurora","ary-local-frame-royal","ary-local-frame-nebula","ary-local-frame-obsidian");if(frame)el.classList.add("ary-local-frame-"+frame.cosmetic_id.replace("local-frame-",""));});
+ document.body.classList.remove("ary-local-bg-aurora","ary-local-bg-crimson","ary-local-bg-nebula","ary-local-bg-midnight");
+ if(background)document.body.classList.add("ary-local-bg-"+background.cosmetic_id.replace("local-bg-",""));
+ if(banner){banner.classList.remove("ary-local-banner-aurora","ary-local-banner-crimson","ary-local-banner-nebula","ary-local-banner-midnight");if(background)banner.classList.add("ary-local-banner-"+background.cosmetic_id.replace("local-bg-",""));}
+ const tier=document.getElementById("aryCosmeticPreviewTier");if(tier)tier.textContent=(frame?.name||"Tanpa frame")+" · "+(background?.name||"Tanpa background")+" · tersimpan di perangkat ini";
+}
+function cosmeticCard(item){
+ const selected=readLocalCosmetics(),active=selected[item.kind]===item.cosmetic_id;
+ return '<article class="ary-cosmetic-card '+(active?"is-equipped":"")+'"><div class="ary-cosmetic-art '+item.art+'"><span>✦</span></div><b>'+item.name+'</b><small>'+item.description+'</small><button type="button" data-local-equip="'+item.cosmetic_id+'" data-kind="'+item.kind+'">'+(active?"Sedang digunakan":"Terapkan di perangkat ini")+'</button></article>';
 }
 async function loadCosmeticsStudio(){
  const status=document.getElementById("aryCosmeticsStatus"),avatarHost=document.getElementById("aryAvatarCosmetics"),backgroundHost=document.getElementById("aryBackgroundCosmetics");
+ if(!status||!avatarHost||!backgroundHost)return;
+ const selected=readLocalCosmetics();
+ avatarHost.innerHTML=LOCAL_COSMETIC_CATALOG.filter(x=>x.kind==="avatar").map(cosmeticCard).join("");
+ backgroundHost.innerHTML=LOCAL_COSMETIC_CATALOG.filter(x=>x.kind==="background").map(cosmeticCard).join("");
+ applyLocalCosmetics();
+ status.textContent="Mode perangkat aktif: 4 avatar frame dan 4 background siap digunakan. Pilihan tersimpan di browser ini.";
  try{
   const r=await fetch("/api/cosmetics/me",{credentials:"same-origin",cache:"no-store"}),d=await r.json();
-  if(!r.ok||!d.ok){avatarHost.innerHTML="";backgroundHost.innerHTML="";status.textContent=r.status===401?"Login untuk melihat dan mengatur koleksi kosmetik.":(d.error||"Koleksi belum tersedia.");return}
-  const items=d.items||[],avatar=items.filter(x=>x.cosmetic_id==="legendary-avatar-frame"),background=items.filter(x=>x.cosmetic_id==="legendary-aurora-background");
-  avatarHost.innerHTML=avatar.length?avatar.map(x=>cosmeticCard(x,"avatar")).join(""):'<div class="ary-cosmetic-empty">Belum memiliki avatar frame. Klaim kode Legendary dari Profil → ID Akun.</div>';
-  backgroundHost.innerHTML=background.length?background.map(x=>cosmeticCard(x,"background")).join(""):'<div class="ary-cosmetic-empty">Belum memiliki background. Klaim kode Legendary dari Profil → ID Akun.</div>';
-  status.textContent="Koleksi dimuat: "+avatar.length+" avatar frame · "+background.length+" background.";
-  document.getElementById("aryCosmeticPreviewTier").textContent=items.some(x=>x.equipped)?"Koleksi eksklusif akun ini":"Belum ada kosmetik aktif";
-  loadPrestige();
- }catch(e){status.textContent="Gagal memuat koleksi: "+e.message}
+  if(r.ok&&d.ok){
+   const owned=(d.items||[]);
+   status.textContent+=" Sinkronisasi akun tersedia untuk "+owned.length+" item redeem.";
+   const frame=owned.find(x=>x.cosmetic_id==="legendary-avatar-frame"&&x.equipped);
+   const background=owned.find(x=>x.cosmetic_id==="legendary-aurora-background"&&x.equipped);
+   if(frame||background)document.getElementById("aryCosmeticPreviewTier").textContent="Hadiah Legendary akun aktif";
+  }else if(r.status===503){status.textContent+=" Database akun belum aktif; mode perangkat tetap bisa dipakai."}
+ }catch{status.textContent+=" Mode perangkat tetap aktif tanpa koneksi database."}
 }
 document.addEventListener("click",event=>{if(event.target.closest('[data-panel="aryCosmeticsStudio"]'))loadCosmeticsStudio()});
-cosmeticsPanel.addEventListener("click",async event=>{
- const button=event.target.closest("[data-equip]");if(!button)return;button.disabled=true;
- try{const r=await fetch("/api/cosmetics/equip",{method:"POST",credentials:"same-origin",headers:{"content-type":"application/json"},body:JSON.stringify({cosmeticId:button.dataset.equip})});const d=await r.json();if(!r.ok||!d.ok)throw Error(d.error||"Kosmetik tidak dapat diterapkan.");document.getElementById("aryCosmeticsStatus").textContent=d.message;await loadCosmeticsStudio()}
- catch(e){document.getElementById("aryCosmeticsStatus").textContent=e.message}finally{button.disabled=false}
+cosmeticsPanel.addEventListener("click",event=>{
+ const button=event.target.closest("[data-local-equip]");if(!button)return;
+ const item=LOCAL_COSMETIC_CATALOG.find(x=>x.cosmetic_id===button.dataset.localEquip);if(!item)return;
+ const selected=readLocalCosmetics();selected[item.kind]=item.cosmetic_id;
+ try{localStorage.setItem(LOCAL_COSMETICS_KEY,JSON.stringify(selected));applyLocalCosmetics();loadCosmeticsStudio()}
+ catch{document.getElementById("aryCosmeticsStatus").textContent="Penyimpanan browser penuh atau dinonaktifkan. Kosmetik tidak dapat disimpan."}
 });
-
+window.addEventListener("storage",event=>{if(event.key===LOCAL_COSMETICS_KEY)applyLocalCosmetics()});
 loadCatalog();load();
 })();
