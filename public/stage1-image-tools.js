@@ -103,7 +103,7 @@ stage.register("image-lightweight",(root,core)=>{
      const low=document.createElement("canvas");low.width=8;low.height=8;const lowCtx=low.getContext("2d");
      lowCtx.drawImage(blurSource,point.x-radius,point.y-radius,radius*2,radius*2,0,0,8,8);
      ctx.imageSmoothingEnabled=false;ctx.drawImage(low,point.x-radius,point.y-radius,radius*2,radius*2);ctx.imageSmoothingEnabled=true;
-    }else{ctx.filter="blur("+Math.max(7,radius*.55)+"px)";ctx.drawImage(blurSource,0,0);ctx.filter="none"}
+    }else{const left=Math.max(0,point.x-radius*2),top=Math.max(0,point.y-radius*2),right=Math.min(w,point.x+radius*2),bottom=Math.min(h,point.y+radius*2);ctx.filter="blur("+Math.max(7,radius*.55)+"px)";ctx.drawImage(blurSource,left,top,right-left,bottom-top,left,top,right-left,bottom-top);ctx.filter="none"}
     ctx.restore();
    }
   }
@@ -115,7 +115,7 @@ stage.register("image-lightweight",(root,core)=>{
  $("v1ltBlurFile")?.addEventListener("change",async()=>{
   const file=$("v1ltBlurFile").files?.[0];if(!file)return;
   try{
-   blurBitmap=await core.imageBitmap(file);blurScale=Math.min(1,1600/Math.max(blurBitmap.width,blurBitmap.height));blurCanvas.width=Math.round(blurBitmap.width*blurScale);blurCanvas.height=Math.round(blurBitmap.height*blurScale);
+   blurBitmap?.close?.();blurBitmap=await core.imageBitmap(file);blurScale=Math.min(1,1600/Math.max(blurBitmap.width,blurBitmap.height));blurCanvas.width=Math.round(blurBitmap.width*blurScale);blurCanvas.height=Math.round(blurBitmap.height*blurScale);
    blurSource.width=blurCanvas.width;blurSource.height=blurCanvas.height;blurSource.getContext("2d").drawImage(blurBitmap,0,0,blurCanvas.width,blurCanvas.height);
    blurStrokes=[];blurDrawing=null;blurCanvas.hidden=false;["v1ltBlurUndo","v1ltBlurReset","v1ltBlurExport"].forEach(id=>$(id).disabled=false);renderBlur();set("v1ltBlurStatus","Gambar siap. Usapkan kuas pada bagian sensitif; gunakan Undo jika perlu.","success");
   }catch(error){set("v1ltBlurStatus",error.message,"error")}
@@ -143,7 +143,7 @@ stage.register("image-lightweight",(root,core)=>{
  $("v1ltStickerFile")?.addEventListener("change",async()=>{
   const file=$("v1ltStickerFile").files?.[0];if(!file)return;
   try{
-   stickerBitmap=await core.imageBitmap(file);stickerScale=Math.min(1,1600/Math.max(stickerBitmap.width,stickerBitmap.height));
+   stickerBitmap?.close?.();stickerBitmap=await core.imageBitmap(file);stickerScale=Math.min(1,1600/Math.max(stickerBitmap.width,stickerBitmap.height));
    stickerCanvas.width=Math.round(stickerBitmap.width*stickerScale);stickerCanvas.height=Math.round(stickerBitmap.height*stickerScale);
    stickerBase.width=stickerCanvas.width;stickerBase.height=stickerCanvas.height;stickerBase.getContext("2d").drawImage(stickerBitmap,0,0,stickerCanvas.width,stickerCanvas.height);
    stickerCanvas.hidden=false;stickerRender();$("v1ltStickerReset").disabled=false;$("v1ltStickerExport").disabled=false;set("v1ltStickerStatus","Gambar siap. Hapus latar dengan kuas, atau langsung tambahkan outline.","success");
