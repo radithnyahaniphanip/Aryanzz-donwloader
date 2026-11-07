@@ -304,9 +304,9 @@ async function platformMediaInfo(request){
   if(normalizedExpected!==key)return json({ok:false,error:"GAGAL — tautan "+key+" ditolak karena endpoint ini khusus untuk "+normalizedExpected+"."},400);
   return freePublicMediaInfo(parsed.href,request.url);
 }
-async function snackVideoNativePageFallback(rawUrl,requestUrl){
+async function snackVideoNativePageFallback(rawUrl,requestUrl,timeoutMs=8500){
   const response=await fetch(rawUrl,{
-    redirect:"follow",cache:"no-store",signal:AbortSignal.timeout(14000),
+    redirect:"follow",cache:"no-store",signal:AbortSignal.timeout(timeoutMs),
     headers:{
       "user-agent":"Mozilla/5.0 (Linux; Android 13; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36",
       "accept":"text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
@@ -353,32 +353,52 @@ async function snackVideoNativePageFallback(rawUrl,requestUrl){
   return json(normalized);
 }
 async function snackVideoFallbackMediaInfo(rawUrl,requestUrl){
-  const errors=[];
-  try{
-    const endpoint=new URL("https://backend1.tioo.eu.org/api/downloader/snackvideo");
-    endpoint.searchParams.set("url",rawUrl);
-    const response=await fetch(endpoint.href,{headers:{accept:"application/json"},signal:AbortSignal.timeout(9000),cache:"no-store"});
-    const data=await response.json().catch(()=>null);
-    if(!response.ok||!data||data.status===false||data.success===false)throw new Error("Provider alternatif Tioo HTTP "+response.status+".");
-    const root=data.result&&typeof data.result==="object"?data.result:data.data&&typeof data.data==="object"?data.data:data;
-    const links=Array.isArray(root.links)?root.links:Array.isArray(root.downloads)?root.downloads:[];
-    const candidates=[root.videoUrl,root.video_url,root.download_url,root.downloadUrl,root.result?.videoUrl,root.result?.video_url,root.result?.download_url,...links.map(item=>typeof item==="string"?item:item?.url||item?.videoUrl||item?.download_url)].filter(value=>typeof value==="string"&&value.trim());
-    const videoUrl=candidates.find(value=>safePublicMediaUrl(value));
-    if(!videoUrl)throw new Error("Provider Tioo tidak memberikan URL video publik.");
-    const title=String(root.title||root.caption||root.description||"Video SnackVideo").slice(0,300);
-    const thumbnail=String(root.thumbnail||root.cover||"");
-    const duration=Number(root.duration||0)||null;
-    const quality=String(root.quality||root.resolution||"MP4");
-    const media=[{type:"video",kind:"video",label:quality+" MP4",url:videoUrl,height:Number(String(quality).match(/(144|240|360|480|540|576|720|900|960|1080|1440|2160)/)?.[1]||0)||undefined}];
-    const normalized=freeProviderMediaInfo({normalized:{title,thumbnail,duration,media}},rawUrl,requestUrl);
-    if(!normalized)throw new Error("Stream Tioo tidak lolos validasi media.");
-    normalized.providerName="Tioo SnackVideo fallback";
-    normalized.provider="Free public fallback";
-    normalized.fallbackUsed=true;
-    return json(normalized);
-  }catch(error){errors.push(String(error?.message||error).slice(0,140));}
-  try{return await snackVideoNativePageFallback(rawUrl,requestUrl)}
-  catch(error){errors.push("Native page: "+String(error?.message||error).slice(0,180));}
+  const tasks=[
+    (async()=>{
+      const endpoint=new URL("https://backend1.tioo.eu.org/api/downloader/snackvideo");
+      endpoint.searchParams.set("url",rawUrl);
+      const response=await fetch(endpoint.href,{headers:{accept:"application/json"},signal:AbortSignal.timeout(6500),cache:"no-store"});
+      const data=await response.json().catch(()=>null);
+      if(!response.ok||!data||data.status===false||data.success===false)throw new Error("Provider alternatif Tioo HTTP "+response.status+".");
+      const root=data.result&&typeof data.result==="object"?data.result:data.data&&typeof data.data==="object"?data.data:data;
+      const links=Array.isArray(root.links)?root.links:Array.isArray(root.downloads)?root.downloads:[];
+      const candidates=[root.videoUrl,root.video_url,root.download_url,root.downloadUrl,root.result?.videoUrl,root.result?.video_url,root.result?.download_url,...links.map(item=>typeof item==="string"?item:item?.url||item?.videoUrl||item?.download_url)].filter(value=>typeof value==="string"&&value.trim());
+      const videoUrl=candidates.find(value=>safePublicMediaUrl(value));
+      if(!videoUrl)throw new Error("Provider Tioo tidak memberikan URL video publik.");
+      const title=String(root.title||root.caption||root.description||"Video SnackVideo").slice(0,300);
+      const thumbnail=String(root.thumbnail||root.cover||"");
+      const duration=Number(root.duration||0)||null;
+      const quality=String(root.quality||root.resolution||"MP4");
+      const media=[{type:"video",kind:"video",label:quality+" MP4",url:videoUrl,height:Number(String(quality).match(/(144|240|360|480|540|576|720|900|960|1080|1440|2160)/)?.[1]||0)||undefined}];
+      const normalized=freeProviderMediaInfo({normalized:{title,thumbnail,duration,media}},rawUrl,requestUrl);
+      if(!normalized)throw new Error("Stream Tioo tidak lolos validasi media.");
+      normalized.providerName="Tioo SnackVideo fallback";
+      normalized.provider="Free public fallback";
+      normalized.fallbackUsed=true;
+      return normalized;
+    })(),
+    snackVideoNativePageFallback(rawUrl,requestUrl,8500).then(response=>response.json()).then(data=>{
+      if(!data?.ok||!Array.isArray(data.formats)||!data.formats.length)throw new Error(data?.error||"Native page tidak menemukan MP4.");
+      return data;
+    })
+  ];
+  const results=await Promise.allSettled(tasks);
+  const successes=results.filter(x=>x.status==="fulfilled").map(x=>x.value);
+  if(successes.length){
+    const best=successes.sort((a,b)=>(b.formats?.length||0)-(a.formats?.length||0))[0];
+    if(successes.length>1){
+      const seen=new Set(),formats=[];
+      for(const item of successes.flatMap(x=>x.formats||[])){
+        const key=String(item.downloadUrl||item.url||"")+"|"+String(item.mode||"");
+        if(!key||seen.has(key))continue;seen.add(key);formats.push(item);
+      }
+      best.formats=formats.slice(0,12);
+      best.providerName="SnackVideo multi-provider fallback";
+    }
+    best.fallbackUsed=true;
+    return json(best);
+  }
+  const errors=results.map(x=>String(x.reason?.message||x.reason||"provider gagal").slice(0,150));
   throw new Error(errors.join(" | "));
 }
 
