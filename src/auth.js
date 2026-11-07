@@ -149,6 +149,30 @@ async function isDeviceBanned(deviceHash, env) {
   const hash = await digest(String(env.AUTH_SESSION_SECRET) + "|trusted-device|" + String(deviceHash).toLowerCase());
   return !!(await env.AUTH_DB.prepare("SELECT device_hash FROM auth_banned_devices WHERE device_hash=?1 LIMIT 1").bind(hash).first());
 }
+
+async function primaryDeviceOwner(deviceHash, env) {
+  if (!validDeviceHash(deviceHash)) return null;
+  const hash = await digest(String(env.AUTH_SESSION_SECRET) + "|primary-device|" + String(deviceHash).toLowerCase());
+  return await env.AUTH_DB.prepare("SELECT user_id FROM auth_device_accounts WHERE device_hash=?1 LIMIT 1").bind(hash).first();
+}
+async function trustedDeviceOwner(deviceHash, env) {
+  if (!validDeviceHash(deviceHash)) return null;
+  const hash = await digest(String(env.AUTH_SESSION_SECRET) + "|trusted-device|" + String(deviceHash).toLowerCase());
+  return await env.AUTH_DB.prepare("SELECT user_id FROM auth_trusted_devices WHERE device_hash=?1 ORDER BY last_seen_at DESC LIMIT 1").bind(hash).first();
+}
+async function claimPrimaryDevice(userId, deviceHash, env) {
+  if (!validDeviceHash(deviceHash)) return false;
+  const hash = await digest(String(env.AUTH_SESSION_SECRET) + "|primary-device|" + String(deviceHash).toLowerCase());
+  const now = Date.now();
+  try {
+    await env.AUTH_DB.prepare("INSERT INTO auth_device_accounts (device_hash,user_id,first_seen_at,last_seen_at) VALUES (?1,?2,?3,?3) ON CONFLICT(device_hash) DO UPDATE SET last_seen_at=excluded.last_seen_at WHERE auth_device_accounts.user_id=excluded.user_id").bind(hash,userId,now).run();
+  } catch { return false; }
+  const row = await env.AUTH_DB.prepare("SELECT user_id FROM auth_device_accounts WHERE device_hash=?1 LIMIT 1").bind(hash).first();
+  return !!row && row.user_id === userId;
+}
+function primaryAccountNotice() {
+  return reply({ok:false,code:"PRIMARY_DEVICE_ACCOUNT",error:"Dilarang membuat akun baru di perangkat ini. Gunakan akun utama ARYANZZ yang sudah terhubung di perangkat ini."},409);
+}
 async function userBan(userId, env) {
   return await env.AUTH_DB.prepare("SELECT reason,created_at FROM auth_user_bans WHERE user_id=?1 LIMIT 1").bind(userId).first();
 }
@@ -213,6 +237,11 @@ async function startRegister(request, env) {
   if (password !== String(b.passwordConfirm || "")) return reply({ ok: false, error: "Konfirmasi password belum sama." }, 400);
   if (limited(request, "register", 5, 600000)) return reply({ ok: false, error: "Terlalu banyak percobaan pendaftaran." }, 429);
   if (!(await captcha(request, b.captchaToken, env))) return reply({ ok: false, error: "Verifikasi CAPTCHA belum berhasil." }, 400);
+  const deviceHash = String(b.deviceHash || "");
+  if (!validDeviceHash(deviceHash)) return reply({ok:false,error:"Identitas browser tidak valid. Muat ulang halaman dan coba lagi."},400);
+  const primary = await primaryDeviceOwner(deviceHash, env);
+  const previouslyTrusted = await trustedDeviceOwner(deviceHash, env);
+  if (primary || previouslyTrusted) return primaryAccountNotice();
   const exists = await env.AUTH_DB.prepare("SELECT id FROM auth_users WHERE email=?1 COLLATE NOCASE LIMIT 1").bind(email).first();
   if (exists) return reply({ ok: false, code: "EMAIL_EXISTS", error: "Email sudah terdaftar. Silakan masuk atau reset password." }, 409);
   const salt = randomHex(16), passwordHash = await passwordDigest(password, salt);
@@ -226,6 +255,7 @@ async function verifyRegister(request, env) {
   const b = await bodyOf(request), email = emailOf(b?.email), code = String(b?.code || "").trim(), deviceHash = String(b?.deviceHash || "");
   if (!validEmail(email) || !/^\d{6}$/.test(code) || !validDeviceHash(deviceHash)) return reply({ ok: false, error: "Email, kode, atau identitas perangkat tidak valid." }, 400);
   if (await isDeviceBanned(deviceHash, env)) return reply({ok:false,code:"DEVICE_BANNED",error:"Pendaftaran ditolak. Perangkat ini terkait dengan akun yang diblokir permanen."},403);
+  if (await primaryDeviceOwner(deviceHash, env) || await trustedDeviceOwner(deviceHash, env)) return primaryAccountNotice();
   if (limited(request, "register-verify", 12, 600000)) return reply({ ok: false, error: "Terlalu banyak percobaan kode." }, 429);
   const checked = await verifyCode(email, "register", code, env);
   if (checked.error) return reply({ ok: false, error: checked.error }, 400);
@@ -239,12 +269,17 @@ async function verifyRegister(request, env) {
   } catch { return reply({ ok: false, error: "Email sudah terdaftar. Silakan masuk." }, 409); }
   await env.AUTH_DB.prepare("DELETE FROM auth_verifications WHERE email=?1 AND purpose=?2").bind(email, "register").run();
   const user = await env.AUTH_DB.prepare("SELECT id,email,full_name,role,created_at FROM auth_users WHERE id=?1").bind(id).first();
+  if (!(await claimPrimaryDevice(id, deviceHash, env))) {
+    await env.AUTH_DB.prepare("DELETE FROM auth_users WHERE id=?1").bind(id).run();
+    return primaryAccountNotice();
+  }
   await rememberTrustedDevice(id, deviceHash, env);
   return createSession(user, env);
 }
 async function login(request, env) {
   const b = await bodyOf(request), identifier = String(b?.identifier || "").trim().slice(0, 254), password = String(b?.password || ""), deviceHash = String(b?.deviceHash || "");
   if (!identifier || !password || password.length > 128) return reply({ ok: false, error: "Masukkan email/ID dan password." }, 400);
+  if (!validDeviceHash(deviceHash)) return reply({ok:false,error:"Identitas browser tidak valid. Muat ulang halaman dan coba lagi."},400);
   if (await isDeviceBanned(deviceHash, env)) return reply({ok:false,code:"DEVICE_BANNED",error:"Akses ditolak. Perangkat ini terkait dengan akun yang diblokir permanen."},403);
   if (limited(request, "login", 10, 600000)) return reply({ ok: false, error: "Terlalu banyak percobaan masuk. Tunggu beberapa menit." }, 429);
   if (!(await captcha(request, b.captchaToken, env))) return reply({ ok: false, error: "Verifikasi CAPTCHA belum berhasil." }, 400);
@@ -257,7 +292,11 @@ async function login(request, env) {
   if (!equal(await passwordDigest(password, user.password_salt, iterations), String(user.password_hash || ""))) {
     return reply({ ok: false, code: "INVALID_CREDENTIALS", error: "Email/ID atau password tidak cocok." }, 401);
   }
-  if (validDeviceHash(deviceHash)) await rememberTrustedDevice(user.id, deviceHash, env);
+  const primary = await primaryDeviceOwner(deviceHash, env);
+  const previouslyTrusted = await trustedDeviceOwner(deviceHash, env);
+  if ((primary && primary.user_id !== user.id) || (previouslyTrusted && previouslyTrusted.user_id !== user.id)) return primaryAccountNotice();
+  if (!(await claimPrimaryDevice(user.id, deviceHash, env))) return primaryAccountNotice();
+  await rememberTrustedDevice(user.id, deviceHash, env);
   return createSession(user, env);
 }
 async function startLegacy(request, env) {

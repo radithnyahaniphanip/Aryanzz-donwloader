@@ -3,6 +3,7 @@ import fs from "node:fs";
 import { handleMembership } from "../src/membership.js";
 const backend=fs.readFileSync(new URL("../src/membership.js",import.meta.url),"utf8");
 const migration=fs.readFileSync(new URL("../migrations/0004_membership.sql",import.meta.url),"utf8");
+const prestigeMigration=fs.readFileSync(new URL("../migrations/0005_prestige_redeem_devices.sql",import.meta.url),"utf8");
 const ui=fs.readFileSync(new URL("../public/membership.js",import.meta.url),"utf8");
 const css=fs.readFileSync(new URL("../public/membership.css",import.meta.url),"utf8");
 for(const [id,price] of [["starter",80000],["plus",140000],["pro",189000],["elite",328000],["ultimate",500000],["lifetime",1800000],["founder",5900000]]){
@@ -24,3 +25,16 @@ const catalogBody=await catalog.json();assert.equal(catalogBody.plans.length,7);
 assert.equal(catalogBody.pricingStatus,"proposed");
 assert.equal(catalogBody.paymentEnabled,false);
 console.log("ARYANZZ V1 Membership catalog, auth gate, migration, and fail-closed review checks passed.");
+
+assert.ok(backend.includes("/api/redeem/claim"),"Redeem claim endpoint must be implemented");
+assert.ok(backend.includes("3*24*60*60*1000")&&backend.includes("redeemWindowExpiresAt"),"Redeem window must close three days after account creation");
+assert.ok(backend.includes("const expires=null"),"Claimed Legendary cosmetics must remain permanent after the three-day redemption window");
+assert.ok(backend.includes("legendary-avatar-frame")&&backend.includes("legendary-aurora-background"),"Redeem grants both avatar frame and animated profile background");
+assert.ok(backend.includes("/api/membership/admin/redeem-codes"),"Owner must be able to generate redeem codes");
+assert.ok(backend.includes("redeemed_count<max_redemptions"),"Code quota is enforced by conditional database update");
+assert.ok(ui.includes("aryRedeemProfile")&&ui.includes("aryPrestigeActive")&&ui.includes("/api/cosmetics/me")&&ui.includes("updateRedeemWindow")&&ui.includes("d.redeemAvailable"),"Profile account card must expose redeem UI and a three-day new-account countdown");
+assert.ok(css.includes(".ary-legendary-frame")&&css.includes(".ary-legendary-background")&&css.includes("prefers-reduced-motion"),"Prestige cosmetics must be animated and respect reduced motion");
+
+for(const table of ["auth_device_accounts","redeem_codes","redeem_redemptions","user_cosmetics"])assert.ok(prestigeMigration.includes("CREATE TABLE IF NOT EXISTS "+table),"Missing prestige migration table "+table);
+const redeemUnauth=await handleMembership(new Request("https://aryanzz.example/api/redeem/claim",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({code:"ARY-LEGEND-TESTCODE"})}),{AUTH_DB:{prepare(){throw new Error("should not query without a session")}},AUTH_SESSION_SECRET:"x".repeat(40)});
+assert.equal(redeemUnauth.status,401);

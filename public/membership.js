@@ -1,10 +1,90 @@
 (()=>{"use strict";
 const root=document.getElementById("toolsArea");const nav=document.querySelector(".nav");if(!root||!nav)return;
 const money=n=>"Rp"+Number(n).toLocaleString("id-ID");
+const profile=document.getElementById("profile");
+const accountCard=profile?.querySelector(".ary-profile2-account");
+if(accountCard&&!document.getElementById("aryRedeemProfile")){
+ const redeem=document.createElement("div");
+ redeem.id="aryRedeemProfile";
+ redeem.className="ary-redeem-profile";
+ redeem.innerHTML='<div class="ary-redeem-heading"><b>REDEEM & PRESTIGE</b><small>Masukkan kode hadiah eksklusif</small></div><div class="ary-redeem-form"><input id="aryRedeemCode" type="text" maxlength="40" autocomplete="off" placeholder="ARY-LEGEND-XXXXXXXXXXXX" aria-label="Kode redeem"><button id="aryRedeemSubmit" type="button">Klaim hadiah</button></div><p id="aryRedeemStatus" role="status" aria-live="polite">Klaim hadiah hanya tersedia selama 3 hari pertama setelah akun dibuat.</p><div id="aryPrestigeActive" class="ary-prestige-active" hidden></div>';
+ const note=accountCard.querySelector("#profileAccountNote");
+ if(note)note.insertAdjacentElement("afterend",redeem);else accountCard.append(redeem);
+}
+let prestigeTimer=0,prestigeExpiry=0,redeemWindowTimer=0,redeemWindowExpiry=0;
+const prestigeEsc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function updateRedeemWindow(){
+ const form=document.querySelector("#aryRedeemProfile .ary-redeem-form"),status=document.getElementById("aryRedeemStatus");
+ const left=Math.max(0,redeemWindowExpiry-Date.now());
+ if(!left){if(form)form.hidden=true;if(status&&status.textContent.includes("Klaim satu kali"))status.textContent="Masa klaim 3 hari pertama sudah berakhir. Kolom redeem telah ditutup.";clearInterval(redeemWindowTimer);redeemWindowTimer=0;return}
+ const days=Math.floor(left/86400000),hours=Math.floor(left%86400000/3600000),minutes=Math.floor(left%3600000/60000),seconds=Math.floor(left%60000/1000);
+ if(status&&status.textContent.includes("Klaim satu kali"))status.textContent="Sisa waktu klaim: "+days+" hari "+hours+"j "+minutes+"m "+seconds+"d. Setelah habis, kolom redeem hilang otomatis.";
+}
+function prestigeClock(){
+ const el=document.getElementById("aryPrestigeActive");if(!el)return;
+ const left=Math.max(0,prestigeExpiry-Date.now());
+ if(!left){el.hidden=true;document.getElementById("profileAvatar")?.classList.remove("ary-legendary-frame");document.getElementById("profileBannerPreview")?.classList.remove("ary-legendary-banner");document.body.classList.remove("ary-legendary-background");clearInterval(prestigeTimer);prestigeTimer=0;return}
+ const hours=Math.floor(left/3600000),minutes=Math.floor(left%3600000/60000),seconds=Math.floor(left%60000/1000);
+ el.innerHTML='<b>✦ LEGENDARY DROP AKTIF</b><span>Berakhir dalam '+hours+'j '+minutes+'m '+seconds+'d</span>';
+}
+async function loadPrestige(){
+ const status=document.getElementById("aryRedeemStatus"),active=document.getElementById("aryPrestigeActive");
+ if(!active)return;
+ try{
+  const r=await fetch("/api/cosmetics/me",{credentials:"same-origin",cache:"no-store"}),d=await r.json();
+  if(!r.ok||!d.ok){if(r.status===401)status.textContent="Login ke akun ARYANZZ untuk menggunakan kode redeem.";return}
+  const frame=(d.items||[]).find(x=>x.cosmetic_id==="legendary-avatar-frame"&&x.equipped);
+  const background=(d.items||[]).find(x=>x.cosmetic_id==="legendary-aurora-background"&&x.equipped);
+  const redeemForm=document.querySelector("#aryRedeemProfile .ary-redeem-form");
+  if(redeemForm)redeemForm.hidden=!d.redeemAvailable;
+  if(d.redeemed)status.textContent="Kode sudah digunakan. Border avatar dan background Legendary tersimpan permanen di koleksi akun ini.";
+  else if(d.redeemAvailable)status.textContent="Klaim satu kali dalam 3 hari pertama setelah akun dibuat. Setelah batas waktu, kolom redeem akan hilang otomatis.";
+  else status.textContent="Masa klaim 3 hari pertama sudah berakhir. Kolom redeem telah ditutup.";
+  redeemWindowExpiry=Number(d.redeemWindowExpiresAt||0);
+  clearInterval(redeemWindowTimer);updateRedeemWindow();if(d.redeemAvailable)redeemWindowTimer=setInterval(updateRedeemWindow,1000);
+  const avatar=document.getElementById("profileAvatar"),banner=document.getElementById("profileBannerPreview");
+  avatar?.classList.toggle("ary-legendary-frame",!!frame);
+  banner?.classList.toggle("ary-legendary-banner",!!background);
+  document.body.classList.toggle("ary-legendary-background",!!background);
+  const seedOf=value=>{let n=2166136261;for(const ch of String(value||"ARYANZZ")){n^=ch.charCodeAt(0);n=Math.imul(n,16777619)}return n>>>0};
+  if(frame&&avatar){
+   const seed=seedOf(frame.id),hue=seed%360,texture=seed%10,speed=(5+(seed%70)/10).toFixed(1)+"s";
+   avatar.style.setProperty("--ary-legendary-hue",String(hue));
+   avatar.style.setProperty("--ary-legendary-speed",speed);
+   avatar.style.borderRadius=(20+seed%13)+"px";
+   avatar.dataset.legendaryTexture=String(texture);
+  }else if(avatar){avatar.style.removeProperty("--ary-legendary-hue");avatar.style.removeProperty("--ary-legendary-speed");delete avatar.dataset.legendaryTexture;avatar.style.removeProperty("border-radius")}
+  if(background){
+   const seed=seedOf(background.id);
+   document.body.style.setProperty("--ary-legendary-hue",String(seed%360));
+   document.body.dataset.legendaryTexture=String(seed%10);
+  }else{document.body.style.removeProperty("--ary-legendary-hue");delete document.body.dataset.legendaryTexture}
+  const hasPermanentPrestige=!!(frame||background);
+  prestigeExpiry=0;
+  active.hidden=!hasPermanentPrestige;
+  clearInterval(prestigeTimer);
+  if(hasPermanentPrestige)active.innerHTML="<b>✦ LEGENDARY COLLECTION</b><span>Dimiliki permanen · khusus akun ini</span>";
+ }catch{status.textContent="Status hadiah belum dapat dimuat. Coba muat ulang profil."}
+}
+document.getElementById("aryRedeemSubmit")?.addEventListener("click",async()=>{
+ const input=document.getElementById("aryRedeemCode"),button=document.getElementById("aryRedeemSubmit"),status=document.getElementById("aryRedeemStatus");
+ const code=String(input?.value||"").trim().toUpperCase();
+ if(!code){status.textContent="Masukkan kode redeem terlebih dahulu.";return}
+ button.disabled=true;button.textContent="Memeriksa…";
+ try{
+  const r=await fetch("/api/redeem/claim",{method:"POST",credentials:"same-origin",headers:{"content-type":"application/json"},body:JSON.stringify({code})});
+  const d=await r.json();if(!r.ok||!d.ok)throw Error(d.error||"Kode redeem gagal digunakan.");
+  status.textContent=d.message||"Hadiah berhasil diaktifkan.";
+  input.value="";await loadPrestige();
+ }catch(e){status.textContent=e.message||"Kode redeem tidak berhasil."}
+ finally{button.disabled=false;button.textContent="Klaim hadiah"}
+});
+loadPrestige();
+
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 let plans=[];
 const panel=document.createElement("section");panel.id="aryMembershipPanel";panel.className="panel ary-membership";panel.hidden=true;
-panel.innerHTML='<div class="ary-mem-head"><div><span class="ary-mem-eyebrow">ARYANZZ V1 · MEMBER CENTER</span><h2>Membership Center</h2><p>Pilih paket untuk mendukung pengembangan ARYANZZ. Free Member tetap tersedia.</p></div><div class="ary-mem-current" id="aryMemCurrent">Memeriksa akun…</div></div><div class="ary-mem-grid" id="aryMemPlans"></div><div class="ary-mem-history"><div class="ary-mem-history-head"><h3>Riwayat pesanan</h3><button type="button" id="aryMemRefresh">Muat ulang</button></div><div id="aryMemOrders">Login untuk melihat riwayat.</div></div><p class="ary-mem-note" id="aryMemNote" role="status">Pembayaran belum diaktifkan. Pesanan hanya dibuat sebagai draft sampai metode pembayaran dan penerima dana dikonfigurasi.</p>';
+panel.innerHTML='<div class="ary-mem-head"><div><span class="ary-mem-eyebrow">ARYANZZ V1 · MEMBER CENTER</span><h2>Membership Center</h2><p>Pilih paket untuk mendukung pengembangan ARYANZZ. Free Member tetap tersedia.</p></div><div class="ary-mem-current" id="aryMemCurrent">Memeriksa akun…</div></div><div class="ary-mem-grid" id="aryMemPlans"></div><div class="ary-mem-history"><div class="ary-mem-history-head"><h3>Riwayat pesanan</h3><button type="button" id="aryMemRefresh">Muat ulang</button></div><div id="aryMemOrders">Login untuk melihat riwayat.</div></div><p class="ary-mem-note" id="aryMemNote" role="status">Pembayaran belum diaktifkan. Pesanan hanya dibuat sebagai draft sampai metode pembayaran dan penerima dana dikonfigurasi.</p><section class="ary-mem-admin" id="aryMemAdmin" hidden><h3>Owner · Kode redeem Legendary</h3><div class="ary-mem-admin-row"><label>Jumlah kode<input id="aryRedeemQuantity" type="number" min="1" max="100" value="10"></label><label>Kuota per kode<input id="aryRedeemMax" type="number" min="1" max="10000" value="1"></label><label>Kedaluwarsa kode (hari)<input id="aryRedeemExpiry" type="number" min="0" max="365" value="30"></label></div><button type="button" id="aryGenerateRedeemCodes">Buat kode redeem</button><textarea id="aryGeneratedRedeemCodes" rows="5" readonly placeholder="Kode yang dibuat akan muncul di sini. Simpan sekarang; kode hanya ditampilkan satu kali."></textarea></section>';
 root.append(panel);
 const button=document.createElement("button");button.type="button";button.dataset.panel=panel.id;button.textContent="Membership";button.className="ary-mem-nav";nav.append(button);
 async function loadCatalog(){
@@ -25,6 +105,9 @@ async function load(){
  if(r.status===401){current.textContent="Free Member · Login diperlukan";orders.textContent="Masuk ke akun ARYANZZ untuk melihat Membership dan pesanan.";return}
  if(!r.ok||!d.ok)throw Error(d.error||"Gagal memuat Membership.");
  const m=d.membership;current.innerHTML='<b>'+esc(m.planName||"Free Member")+'</b><small>'+esc(m.status==="active"?"Aktif":m.status==="expired"?"Kedaluwarsa":"Free Member")+(m.expiresAt?" · berakhir "+new Date(m.expiresAt).toLocaleDateString("id-ID"):"")+'</small>';
+ const role=String(d.user?.role||"").toLowerCase();
+ const adminPanel=document.getElementById("aryMemAdmin");
+ if(adminPanel)adminPanel.hidden=!(d.user?.id==="ARY-ZFTLQPEX92"||["owner","admin","developer"].includes(role));
  orders.innerHTML=(d.orders||[]).length?(d.orders||[]).map(o=>'<div class="ary-mem-order"><div><b>'+esc(o.id)+'</b><small>'+esc(o.plan_id)+' · '+money(o.amount)+' · '+new Date(o.created_at).toLocaleString("id-ID")+'</small></div><span class="ary-mem-status">'+esc(o.status)+'</span></div>').join(""):"Belum ada pesanan.";
  }catch(e){current.textContent="Status belum tersedia";orders.textContent=e.message;note.textContent=e.message}
 }
@@ -35,5 +118,16 @@ panel.addEventListener("click",async e=>{
  catch(err){note.textContent=err.message}finally{buy.disabled=false}
 });
 document.getElementById("aryMemRefresh").addEventListener("click",load);
+document.getElementById("aryGenerateRedeemCodes")?.addEventListener("click",async()=>{
+ const button=document.getElementById("aryGenerateRedeemCodes"),output=document.getElementById("aryGeneratedRedeemCodes"),note=document.getElementById("aryMemNote");
+ button.disabled=true;button.textContent="Membuat kode…";
+ try{
+  const payload={quantity:Number(document.getElementById("aryRedeemQuantity").value),maxRedemptions:Number(document.getElementById("aryRedeemMax").value),expiresInDays:Number(document.getElementById("aryRedeemExpiry").value),note:"Legendary avatar frame + animated background · 3 days after claim"};
+  const r=await fetch("/api/membership/admin/redeem-codes",{method:"POST",credentials:"same-origin",headers:{"content-type":"application/json"},body:JSON.stringify(payload)});
+  const d=await r.json();if(!r.ok||!d.ok)throw Error(d.error||"Gagal membuat kode.");
+  output.value=(d.codes||[]).join("\n");note.textContent="Berhasil membuat "+d.quantity+" kode. Salin dan simpan sekarang; kode lengkap hanya ditampilkan satu kali.";
+ }catch(e){note.textContent=e.message||"Gagal membuat kode."}
+ finally{button.disabled=false;button.textContent="Buat kode redeem"}
+});
 loadCatalog();load();
 })();

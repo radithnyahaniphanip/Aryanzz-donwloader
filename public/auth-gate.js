@@ -188,11 +188,12 @@
     if (password !== confirm) return say("Konfirmasi password belum sama.", true);
     const button = $("aryRegisterSubmit"); button.disabled = true; button.textContent = "Memproses pendaftaran…";
     try {
+      const deviceHash = await currentDeviceHash();
       if (config.ready) {
         const captchaToken = takeCaptcha(); if (!captchaToken) return;
         const result = await post("/api/auth/register/start", {
           fullName, email, password, passwordConfirm: confirm,
-          redeemCode: $("aryRegRedeem").value.trim(), captchaToken
+          captchaToken, deviceHash
         });
         pendingEmail = email; $("aryRegisterVerifyEmail").textContent = email;
         showStep("aryRegisterVerifyForm");
@@ -203,8 +204,9 @@
       const users = readUsers();
       if (!Array.isArray(users)) return say("Penyimpanan browser tidak dapat dibaca. Periksa izin penyimpanan.", true);
       if (users.some(u => storedEmail(u) === email)) return say("Email tersebut sudah terdaftar pada browser ini.", true);
+      if (users.some(u => u.deviceKeyHash === deviceHash)) return say("Dilarang! Pakai akun utama kamu yang sudah terhubung di perangkat ini.", true);
       const salt = hex(crypto.getRandomValues(new Uint8Array(16)));
-      const [hash, deviceKeyHash] = await Promise.all([passwordHash(password, salt, 250000), currentDeviceHash()]);
+      const [hash, deviceKeyHash] = await Promise.all([passwordHash(password, salt, 250000), Promise.resolve(deviceHash)]);
       const user = {
         id:"ARY-" + Array.from(crypto.getRandomValues(new Uint8Array(5)), b => b.toString(16).padStart(2,"0")).join("").toUpperCase(),
         fullName, email, salt, passwordHash:hash, iterations:250000, deviceKeyHash,

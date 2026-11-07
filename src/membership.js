@@ -32,15 +32,81 @@ async function membershipFor(userId,env){
  const plan=PLANS.find(p=>p.id===row.plan_id);
  return {tier:row.plan_id,planName:plan?.name||row.plan_id,status:"active",startedAt:Number(row.started_at),expiresAt:row.expires_at===null?null:Number(row.expires_at)};
 }
+async function handleCosmetics(request,env){
+ const url=new URL(request.url),path=url.pathname;
+ if(!env.AUTH_DB||typeof env.AUTH_DB.prepare!=="function")return json({ok:false,error:"Database akun belum dikonfigurasi."},503);
+ const user=await currentUser(request,env);
+ if(!user)return json({ok:false,error:"Silakan login terlebih dahulu."},401);
+ const now=Date.now();
+ if(path==="/api/cosmetics/me"&&request.method==="GET"){
+  const rows=await env.AUTH_DB.prepare("SELECT id,cosmetic_id,source,acquired_at,expires_at,equipped FROM user_cosmetics WHERE user_id=?1 AND (expires_at IS NULL OR expires_at>?2) ORDER BY acquired_at DESC").bind(user.id,now).all();
+  const items=(rows.results||[]).map(x=>({...x,remainingMs:x.expires_at===null?null:Math.max(0,Number(x.expires_at)-now)}));
+  const account=await env.AUTH_DB.prepare("SELECT created_at FROM auth_users WHERE id=?1 LIMIT 1").bind(user.id).first();
+  const redeemWindowExpiresAt=Number(account?.created_at||now)+3*24*60*60*1000;
+  const redemption=await env.AUTH_DB.prepare("SELECT id,redeemed_at FROM redeem_redemptions WHERE user_id=?1 ORDER BY redeemed_at DESC LIMIT 1").bind(user.id).first();
+  const active=items.filter(x=>x.equipped);
+  return json({ok:true,items,equipped:active.map(x=>x.cosmetic_id),redeemed:!!redemption,redeemedAt:redemption?Number(redemption.redeemed_at):null,redeemWindowExpiresAt,redeemAvailable:!redemption&&now<redeemWindowExpiresAt});
+ }
+ if(path==="/api/redeem/claim"&&request.method==="POST"){
+  let body;try{body=await request.json()}catch{return json({ok:false,error:"Kode redeem tidak valid."},400)}
+  const code=String(body?.code||"").trim().toUpperCase().replace(/\s+/g,"");
+  if(!/^[A-Z0-9-]{8,40}$/.test(code))return json({ok:false,error:"Format kode redeem tidak valid."},400);
+  const account=await env.AUTH_DB.prepare("SELECT created_at FROM auth_users WHERE id=?1 LIMIT 1").bind(user.id).first();
+  const redeemWindowExpiresAt=Number(account?.created_at||now)+3*24*60*60*1000;
+  if(now>=redeemWindowExpiresAt)return json({ok:false,code:"REDEEM_WINDOW_EXPIRED",error:"Masa klaim hadiah sudah berakhir. Kode redeem hanya tersedia selama 3 hari pertama setelah akun dibuat."},410);
+  const alreadyRedeemed=await env.AUTH_DB.prepare("SELECT id FROM redeem_redemptions WHERE user_id=?1 LIMIT 1").bind(user.id).first();
+  if(alreadyRedeemed)return json({ok:false,error:"Akun ini sudah pernah mengklaim hadiah Legendary."},409);
+  const codeHash=await sha("aryanzz-redeem-v1|"+code);
+  const row=await env.AUTH_DB.prepare("SELECT code_hash,reward_id,max_redemptions,redeemed_count,expires_at,active FROM redeem_codes WHERE code_hash=?1 LIMIT 1").bind(codeHash).first();
+  if(!row||Number(row.active)!==1||(row.expires_at!==null&&Number(row.expires_at)<=now))return json({ok:false,error:"Kode redeem tidak ditemukan, sudah kedaluwarsa, atau dinonaktifkan."},404);
+  const reward=String(row.reward_id||"");
+  const cosmetics=reward==="legendary_launch"?["legendary-avatar-frame","legendary-aurora-background"]:null;
+  if(!cosmetics)return json({ok:false,error:"Hadiah kode ini belum didukung."},400);
+  const updated=await env.AUTH_DB.prepare("UPDATE redeem_codes SET redeemed_count=redeemed_count+1 WHERE code_hash=?1 AND active=1 AND redeemed_count<max_redemptions AND (expires_at IS NULL OR expires_at>?2)").bind(codeHash,now).run();
+  if(Number(updated?.meta?.changes||0)!==1)return json({ok:false,error:"Kuota kode redeem sudah habis atau kode kedaluwarsa."},409);
+  const expires=null;
+  const redemptionId="ARYR-"+crypto.randomUUID().replace(/-/g,"").slice(0,16).toUpperCase();
+  try{
+   await env.AUTH_DB.prepare("INSERT INTO redeem_redemptions (id,code_hash,user_id,redeemed_at,reward_expires_at) VALUES (?1,?2,?3,?4,?5)").bind(redemptionId,codeHash,user.id,now,expires).run();
+   for(const cosmeticId of cosmetics){
+    await env.AUTH_DB.prepare("INSERT INTO user_cosmetics (id,user_id,cosmetic_id,source,acquired_at,expires_at,equipped) VALUES (?1,?2,?3,'redeem',?4,?5,1)").bind("ARYC-"+crypto.randomUUID().replace(/-/g,"").slice(0,16).toUpperCase(),user.id,cosmeticId,now,expires).run();
+   }
+  }catch(error){
+   await env.AUTH_DB.prepare("UPDATE redeem_codes SET redeemed_count=MAX(0,redeemed_count-1) WHERE code_hash=?1").bind(codeHash).run().catch(()=>{});
+   await env.AUTH_DB.prepare("DELETE FROM redeem_redemptions WHERE code_hash=?1 AND user_id=?2").bind(codeHash,user.id).run().catch(()=>{});
+   return json({ok:false,error:"Hadiah belum berhasil disimpan. Coba sekali lagi."},500);
+  }
+  return json({ok:true,message:"Redeem berhasil! Border avatar Legendary dan background Legendary menjadi koleksi permanen.",expiresAt:null,cosmetics});
+ }
+ if(path==="/api/membership/admin/redeem-codes"&&request.method==="POST"){
+  const admin=await adminUser(request,env);if(!admin)return json({ok:false,error:"Akses khusus pemilik."},403);
+  let body;try{body=await request.json()}catch{return json({ok:false,error:"Konfigurasi kode tidak valid."},400)}
+  const quantity=Math.max(1,Math.min(100,Math.floor(Number(body?.quantity)||1)));
+  const maxRedemptions=Math.max(1,Math.min(10000,Math.floor(Number(body?.maxRedemptions)||1)));
+  const expiresInDays=Math.max(0,Math.min(365,Math.floor(Number(body?.expiresInDays)||0)));
+  const note=String(body?.note||"").trim().slice(0,160);
+  const codes=[];
+  for(let i=0;i<quantity;i++){
+   const raw="ARY-LEGEND-"+Array.from(crypto.getRandomValues(new Uint8Array(6)),b=>b.toString(16).padStart(2,"0")).join("").toUpperCase();
+   const hash=await sha("aryanzz-redeem-v1|"+raw);
+   await env.AUTH_DB.prepare("INSERT INTO redeem_codes (code_hash,reward_id,max_redemptions,redeemed_count,expires_at,created_at,created_by,active,note) VALUES (?1,'legendary_launch',?2,0,?3,?4,?5,1,?6)").bind(hash,maxRedemptions,expiresInDays?now+expiresInDays*86400000:null,now,admin.id,note).run();
+   codes.push(raw);
+  }
+  return json({ok:true,codes,quantity,maxRedemptions,expiresInDays,reward:"legendary_launch",message:"Simpan kode sekarang. Kode lengkap hanya ditampilkan satu kali."},201);
+ }
+ return json({ok:false,error:"Endpoint kosmetik tidak ditemukan."},404);
+}
+
 async function handleMembership(request,env){
  const url=new URL(request.url),path=url.pathname;
+ if(path==="/api/cosmetics/me"||path==="/api/redeem/claim"||path==="/api/membership/admin/redeem-codes")return handleCosmetics(request,env);
  if(!env.AUTH_DB||typeof env.AUTH_DB.prepare!=="function")return json({ok:false,error:"Database akun belum dikonfigurasi."},503);
  if(path==="/api/membership/catalog"&&request.method==="GET")return json({ok:true,pricingStatus:"proposed",paymentEnabled:false,plans:PLANS,free:{id:"free",name:"Free Member",price:0,summary:"Tetap tersedia tanpa pembayaran."}});
  if(path==="/api/membership/me"&&request.method==="GET"){
   const user=await currentUser(request,env);if(!user)return json({ok:false,error:"Silakan login terlebih dahulu."},401);
   const membership=await membershipFor(user.id,env);
   const orders=await env.AUTH_DB.prepare("SELECT id,plan_id,amount,status,created_at,paid_at,expires_at,note FROM membership_orders WHERE user_id=?1 ORDER BY created_at DESC LIMIT 20").bind(user.id).all();
-  return json({ok:true,membership,orders:orders.results||[]});
+  return json({ok:true,user:{id:user.id,role:user.role},membership,orders:orders.results||[]});
  }
  if(path==="/api/membership/orders"&&request.method==="POST"){
   const user=await currentUser(request,env);if(!user)return json({ok:false,error:"Silakan login terlebih dahulu."},401);
