@@ -484,6 +484,10 @@ async function freePublicMediaInfo(rawUrl,requestUrl){
   const canonicalUrl=await resolveSocialShortLink(rawUrl,key,key==="tiktok"?8000:11000);
   const isTikTokPhotoRoute=key==="tiktok"&&(()=>{try{return /\/photo\//i.test(new URL(canonicalUrl).pathname)}catch{return false}})();
   const providerUrls=key==="tiktok"?(isTikTokPhotoRoute?[canonicalUrl]:tikTokUrlCandidates(rawUrl,canonicalUrl)):[canonicalUrl];
+  if(key==="snackvideo"){
+    try{return await snackVideoFallbackMediaInfo(canonicalUrl,requestUrl)}
+    catch(error){return json({error:"SnackVideo belum dapat diproses melalui dua jalur publik yang diuji paralel: "+String(error?.message||error).slice(0,300)+". Pastikan tautan share video dapat dibuka tanpa login.",provider:"Concurrent public fallback cascade",fallbackTried:true},502)}
+  }
   let primaryError="";
   try{
     let response=null,data={},attempts=key==="instagram"?2:1;
