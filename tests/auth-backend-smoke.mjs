@@ -39,10 +39,13 @@ assert.ok(backend.includes("Dilarang membuat akun baru di perangkat ini"),"Dupli
 
 assert.ok(backend.includes("moderationGate") && backend.includes("DEVICE_BANNED"),"Banned device must be rejected by the Worker before serving routes");
 assert.ok(backend.includes("auth_moderation_events") && backend.includes("restored:true"),"Ban and restoration actions must be audited and restored login must be announced");
-assert.ok(backend.includes("auth_device_lock_accounts") && backend.includes("rememberDeviceLock"),"The server-issued device lock must be linked to authenticated accounts so account bans also block the same browser installation");
+assert.ok(backend.includes("auth_device_lock_accounts") && backend.includes("rememberDeviceLock"),"The server-issued device lock must be linked to anonymous guest IDs so account bans also block the same browser installation");
 assert.ok(fs.readFileSync(new URL("../migrations/0008_device_lock_accounts.sql", import.meta.url), "utf8").includes("lock_hash TEXT PRIMARY KEY"),"Device lock ownership must be stored as a unique server-side hash");
 assert.ok(backend.includes("aryanzz_device_lock") && backend.includes("HttpOnly; Secure; SameSite=Lax"),"Device lock identity must be issued in a secure HttpOnly cookie");
 assert.ok(backend.includes("MODERATION_NOT_CONFIGURED"),"Moderation endpoints must fail closed when D1 or session secret is missing");
+assert.ok(backend.includes("async function guestBootstrap") && backend.includes("/api/auth/guest/bootstrap"),"Public visitors must receive a server-issued anonymous ARYANZZ ID without registration");
+assert.ok(backend.includes("REGISTRATION_DISABLED") && backend.includes("PUBLIC_LOGIN_DISABLED"),"Public registration and member login must be disabled while admin login remains restricted");
+assert.ok(backend.includes("ID kamu telah di-banned") && backend.includes("Akunmu telah dipulihkan"),"Ban and restore messages must match the public-access moderation flow");
 
 const loginReadyConfig = await handleAuthRequest(new Request("https://aryanzz.example/api/auth/config"), {
   AUTH_DB: { prepare() { return {}; } },
@@ -53,7 +56,9 @@ const loginReadyConfig = await handleAuthRequest(new Request("https://aryanzz.ex
 const loginReadyBody = await loginReadyConfig.json();
 assert.equal(loginReadyBody.loginReady, true, "A configured server must allow login even if email delivery is not configured");
 assert.equal(loginReadyBody.registrationReady, false, "Registration must remain disabled without a verified email sender");
-assert.ok(loginReadyBody.missingRegistration.includes("RESEND_API_KEY") && loginReadyBody.missingRegistration.includes("AUTH_EMAIL_FROM (verified sender)"), "Registration config diagnostics must name missing email settings");
+assert.equal(loginReadyBody.registrationEnabled, false, "Public registration must be disabled by design");
+assert.equal(loginReadyBody.publicAccess, true, "The site must expose public guest access without user login");
+assert.deepEqual(loginReadyBody.missingRegistration, [], "Public access must not require Resend email configuration");
 const fullReadyConfig = await handleAuthRequest(new Request("https://aryanzz.example/api/auth/config"), {
   AUTH_DB: { prepare() { return {}; } },
   AUTH_SESSION_SECRET: "s".repeat(40),
@@ -64,7 +69,7 @@ const fullReadyConfig = await handleAuthRequest(new Request("https://aryanzz.exa
 });
 const fullReadyBody = await fullReadyConfig.json();
 assert.equal(fullReadyBody.loginReady, true);
-assert.equal(fullReadyBody.registrationReady, true, "Verified email delivery must unlock registration");
+assert.equal(fullReadyBody.registrationReady, false, "Adding Resend must not re-enable public registration");
 
 const aliasReadyConfig = await handleAuthRequest(new Request("https://aryanzz.example/api/auth/config"), {
   AUTH_DB: { prepare() { return {}; } },
@@ -76,6 +81,6 @@ const aliasReadyConfig = await handleAuthRequest(new Request("https://aryanzz.ex
 });
 const aliasReadyBody = await aliasReadyConfig.json();
 assert.equal(aliasReadyBody.loginReady, true, "Supported Cloudflare Turnstile secret/site-key aliases must enable login");
-assert.equal(aliasReadyBody.registrationReady, true);
+assert.equal(aliasReadyBody.registrationReady, false);
 assert.equal(aliasReadyBody.captchaSiteKey, "turnstile-site-alias", "The browser must receive the public site key from supported aliases");
 assert.ok(!aliasReadyBody.missingLogin.some(x => x.includes("TURNSTILE")), "Turnstile aliases must satisfy server readiness");
