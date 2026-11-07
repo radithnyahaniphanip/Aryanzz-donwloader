@@ -18,6 +18,8 @@ assert.ok(auth.includes("Akunmu telah dipulihkan. Silakan buka kembali website A
 assert.ok(gate.includes('get("owner") === "1"') && gate.includes("if(!ownerMode){setUser(null);return;}"), "Only the explicit owner route may display the admin login");
 assert.ok(guest.includes("/api/auth/guest/bootstrap") && guest.includes("aryanzz.public.guest.id.v1"), "The public client must bootstrap a server ID and use a local fallback only when the server is unavailable");
 assert.ok(guest.includes("Akunmu telah dipulihkan") && guest.includes("082110767071"), "The guest client must display restoration notice and WhatsApp support");
+assert.ok(guest.includes('document.addEventListener("DOMContentLoaded", start, { once: true })'), "Guest identity bootstrap must wait until the earlier auth-gate initialization has completed");
+assert.ok(guest.includes("guestCopyBound") && guest.includes("navigator.clipboard.writeText"), "The automatically generated ID must be copyable from Profile");
 assert.ok(html.includes("guest-access.js") && html.includes("Akses administrator · Masuk admin"), "The guest client and separate owner entry must be present");
 assert.ok(owner.includes("/api/auth/admin/") && owner.includes("ownerBanAccountId"), "Owner moderation UI must keep ban and restore controls");
 assert.ok(membership.includes('String(user.role||"").toLowerCase()==="guest"') && membership.includes("customerEmail"), "Guest Membership checkout must accept a contact email without account login");
