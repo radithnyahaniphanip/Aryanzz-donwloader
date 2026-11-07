@@ -125,8 +125,9 @@ jobs:
           TURNSTILE_SECRET_KEY: ${{ secrets.TURNSTILE_SECRET_KEY }}
           AUTH_TURNSTILE_SITE_KEY: ${{ secrets.AUTH_TURNSTILE_SITE_KEY }}
           MEMBERSHIP_QRIS_IMAGE_URL: ${{ secrets.MEMBERSHIP_QRIS_IMAGE_URL }}
+          MEMBERSHIP_WEBHOOK_SECRET: ${{ secrets.MEMBERSHIP_WEBHOOK_SECRET }}
         run: |
-          for name in AUTH_SESSION_SECRET RESEND_API_KEY AUTH_EMAIL_FROM TURNSTILE_SECRET_KEY AUTH_TURNSTILE_SITE_KEY MEMBERSHIP_QRIS_IMAGE_URL; do
+          for name in AUTH_SESSION_SECRET RESEND_API_KEY AUTH_EMAIL_FROM TURNSTILE_SECRET_KEY AUTH_TURNSTILE_SITE_KEY MEMBERSHIP_QRIS_IMAGE_URL MEMBERSHIP_WEBHOOK_SECRET; do
             value="$(printenv "$name" || true)"
             if [ -n "$value" ]; then
               printf '%s' "$value" | wrangler secret put "$name"

@@ -25,6 +25,8 @@ const catalogBody=await catalog.json();assert.equal(catalogBody.plans.length,7);
 assert.equal(catalogBody.pricingStatus,"proposed");
 assert.equal(catalogBody.paymentEnabled,false);
 console.log("ARYANZZ V1 Membership catalog, auth gate, migration, and fail-closed review checks passed.");
+assert.ok(backend.includes("automaticWebhookReady:String(env.MEMBERSHIP_WEBHOOK_SECRET||\"\").length>=32"),"Payment config must distinguish static QRIS from an activated callback bridge");
+assert.ok(ui.includes("QRIS statis tidak mengirim notifikasi otomatis")&&ui.includes("syncMembershipPolling"),"Checkout must explain static QRIS limits and refresh pending payment status");
 
 assert.ok(backend.includes("/api/redeem/claim"),"Redeem claim endpoint must be implemented");
 assert.ok(backend.includes("3*24*60*60*1000")&&backend.includes("redeemWindowExpiresAt"),"Redeem window must close three days after account creation");
@@ -64,8 +66,8 @@ for(const cls of ["ary-local-frame-aurora","ary-local-frame-royal","ary-local-fr
 assert.ok(platformBackend.includes("Promise.any(tasks)")&&platformBackend.includes("snackVideoNativePageFallback(rawUrl,requestUrl,8500)"),"SnackVideo public fallback providers must race concurrently with bounded timeouts");
 
 const membershipBackend=fs.readFileSync(new URL("../src/membership.js",import.meta.url),"utf8");
-assert.ok(membershipBackend.includes("/api/membership/webhook")&&membershipBackend.includes("crypto.subtle.sign")&&membershipBackend.includes("x-aryanzz-signature"),"Membership webhook must verify a signed server-to-server callback");
-assert.ok(membershipBackend.includes("Number(order.amount)!==amount")&&membershipBackend.includes("provider_transaction_id IS NULL"),"Webhook must match the exact order amount and prevent transaction reuse");
-assert.ok(membershipBackend.includes("env.AUTH_DB.batch")&&membershipBackend.includes("Membership berhasil diaktifkan"),"Verified webhook must atomically mark an order paid and activate membership");
+assert.ok(membershipBackend.includes("/api/membership/webhook")&&membershipBackend.includes("MEMBERSHIP_WEBHOOK_SECRET")&&membershipBackend.includes("crypto.subtle.sign")&&membershipBackend.includes("x-aryanzz-signature"),"Membership webhook must authenticate trusted server-to-server callbacks");
+assert.ok(membershipBackend.includes("Number(order.amount)!==amount")&&membershipBackend.includes("provider_transaction_id")&&membershipBackend.includes("transactionId"),"Webhook must match the exact order amount and persist a unique provider transaction ID");
+assert.ok(membershipBackend.includes("env.AUTH_DB.batch")&&membershipBackend.includes("provider_transaction_id IS NULL")&&membershipBackend.includes("Membership berhasil diaktifkan"),"Verified webhook must atomically mark an order paid and activate membership once");
 assert.ok(studioUi.includes("loadAdminOrders")&&studioUi.includes("data-review-order")&&studioUi.includes("paymentVerified:decision==="),"Owner must be able to review pending QRIS orders and explicitly confirm funds before manual approval");
 assert.ok(studioUi.includes("aryMemAdminRefresh")&&studioCss.includes("ary-mem-admin-order"),"Owner payment review queue must have a refresh control and responsive styling");

@@ -138,6 +138,7 @@ async function membershipWebhook(request,env){
  if(!order)return json({ok:false,error:"Pesanan tidak ditemukan."},404);
  if(order.status==="paid"&&order.provider_transaction_id===transactionId)return json({ok:true,duplicate:true,message:"Pembayaran ini sudah diproses."});
  if(order.status!=="pending")return json({ok:false,error:"Pesanan tidak lagi menunggu pembayaran."},409);
+ if(Number(order.created_at)<Date.now()-24*60*60*1000){await env.AUTH_DB.prepare("UPDATE membership_orders SET status='expired',note='Batas pembayaran 24 jam terlewati' WHERE id=?1 AND status='pending'").bind(orderId).run();return json({ok:false,error:"Pesanan telah kedaluwarsa. Buat pesanan baru."},410)}
  if(Number(order.amount)!==amount)return json({ok:false,error:"Nominal pembayaran tidak cocok dengan pesanan."},409);
  if(order.payment_provider!=="qris")return json({ok:false,error:"Metode pembayaran pesanan tidak cocok."},409);
  const plan=PLANS.find(p=>p.id===order.plan_id);if(!plan)return json({ok:false,error:"Paket pesanan tidak valid."},400);
@@ -152,6 +153,7 @@ async function membershipWebhook(request,env){
  if(changed!==1)return json({ok:false,error:"Pesanan sudah diproses atau transaksi sudah pernah digunakan."},409);
  return json({ok:true,message:"Pembayaran terverifikasi. Membership berhasil diaktifkan.",orderId,planId:plan.id,expiresAt:expires});
 }
+
 async function handleMembership(request,env){
  const url=new URL(request.url),path=url.pathname;
  if(path==="/api/membership/webhook")return membershipWebhook(request,env);
@@ -171,6 +173,7 @@ async function handleMembership(request,env){
   const plan=PLANS.find(p=>p.id===String(body?.planId||""));if(!plan)return json({ok:false,error:"Paket Membership tidak ditemukan."},400);
   const qrisImageUrl=safeQrisImage(env);
   if(!qrisImageUrl||String(body?.paymentProvider||"")!=="qris")return json({ok:false,error:"Pembayaran QRIS belum dikonfigurasi. Pesanan belum dibuat."},503);
+  await env.AUTH_DB.prepare("UPDATE membership_orders SET status='expired',note='Batas pembayaran 24 jam terlewati' WHERE user_id=?1 AND status='pending' AND created_at<=?2").bind(user.id,Date.now()-24*60*60*1000).run();
   const pending=await env.AUTH_DB.prepare("SELECT id FROM membership_orders WHERE user_id=?1 AND status='pending' AND created_at>?2 LIMIT 1").bind(user.id,Date.now()-24*60*60*1000).first();
   if(pending)return json({ok:false,error:"Kamu masih memiliki pesanan yang menunggu verifikasi.",orderId:pending.id},409);
   const id="ARYM-"+Date.now().toString(36).toUpperCase()+"-"+crypto.randomUUID().slice(0,8).toUpperCase();
