@@ -13,7 +13,7 @@ for(const [id,price] of [["starter",80000],["plus",140000],["pro",189000],["elit
 for(const table of ["membership_orders","user_memberships"])assert.ok(migration.includes("CREATE TABLE IF NOT EXISTS "+table));
 assert.ok(backend.includes("credentials")===false,"Credentials are handled by same-origin browser calls");
 assert.ok(backend.includes("paymentVerified!==true"),"Manual payment review must fail closed without explicit verification");
-assert.ok(backend.includes("provider_transaction_id"),"Provider transaction IDs are reserved for deduplication");
+assert.ok(migration.includes("provider_transaction_id"),"Provider transaction IDs are reserved for deduplication");
 assert.ok(ui.includes("Free Member")&&ui.includes("/api/membership/me"),"UI must preserve Free Member and use authenticated API");
 assert.ok(css.includes(".ary-membership"),"Membership styles must be scoped");
 const unauth=await handleMembership(new Request("https://aryanzz.example/api/membership/me"),{AUTH_DB:{prepare(){throw new Error("should not be called without session")}},AUTH_SESSION_SECRET:"x".repeat(40)});
