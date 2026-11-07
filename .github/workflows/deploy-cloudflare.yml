@@ -105,11 +105,25 @@ jobs:
           set -euo pipefail
           DB_ID="$ARYANZZ_AUTH_DB_ID"
           if [ -z "$DB_ID" ]; then
-            DB_LIST="$(curl -fsS --retry 3 -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/d1/database")"
+            if ! DB_LIST="$(curl -fsS --retry 3 -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/d1/database" 2>&1)"; then
+              echo "::error::Cloudflare accepted the deployment token, but it cannot list D1 databases. Update the CLOUDFLARE_API_TOKEN permissions to include Account > D1 > Edit, then rerun this workflow. Do not paste the token into chat."
+              echo "::error::Alternatively, create aryanzz-auth-db in Cloudflare D1 and save its Database ID as the GitHub Actions secret ARYANZZ_AUTH_DB_ID. The token still needs D1 Edit to apply migrations."
+              exit 1
+            fi
             DB_ID="$(printf '%s' "$DB_LIST" | jq -r '.result[]? | select(.name == "aryanzz-auth-db") | .uuid' | head -n 1)"
           fi
           if [ -z "$DB_ID" ] || [ "$DB_ID" = "null" ]; then
-            echo "::error::Could not find the existing D1 database aryanzz-auth-db. Check the Cloudflare API token has Account D1 Edit permission. Refusing to deploy without AUTH_DB."
+            echo "No existing aryanzz-auth-db found; creating the database."
+            CREATE_OUTPUT="$(wrangler d1 create aryanzz-auth-db 2>&1)" || {
+              printf '%s\\n' "$CREATE_OUTPUT"
+              echo "::error::Could not create aryanzz-auth-db. Confirm the Cloudflare API token has Account > D1 > Edit permission."
+              exit 1
+            }
+            printf '%s\\n' "$CREATE_OUTPUT"
+            DB_ID="$(printf '%s\\n' "$CREATE_OUTPUT" | sed -nE 's/.*database_id[[:space:]]*=[[:space:]]*"([^"]+)".*/\\1/p' | head -n 1)"
+          fi
+          if [ -z "$DB_ID" ] || [ "$DB_ID" = "null" ]; then
+            echo "::error::The D1 database ID could not be resolved. Set the GitHub Actions secret ARYANZZ_AUTH_DB_ID to the database UUID and rerun."
             exit 1
           fi
           if ! grep -q 'binding = "AUTH_DB"' wrangler.toml; then
