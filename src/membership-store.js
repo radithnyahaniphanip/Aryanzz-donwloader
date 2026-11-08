@@ -42,8 +42,9 @@ export class MembershipStore{
   if(path==="/api/membership/payment-config"&&method==="GET"){
    const apiKeyReady=/^sk_(test|live)_/.test(String(this.env.POKETO_SECRET_KEY||""));
    const webhookReady=/^whsec_/.test(String(this.env.POKETO_WEBHOOK_SECRET||""));
-   const missing=[];if(!apiKeyReady)missing.push("API key pembayaran belum dipasang");if(!webhookReady)missing.push("Rahasia webhook belum dipasang");
-   return json({ok:true,enabled:apiKeyReady,checkoutEnabled:true,storageReady:true,dbReady:false,apiKeyReady,automaticWebhookReady:webhookReady,webhookReady,provider:"Poketo",mode:String(this.env.POKETO_MODE||"sandbox"),missing,webhookUrl:new URL("/api/membership/webhook",url.origin).toString()});
+   const missing=[];if(!apiKeyReady)missing.push("API key Poketo belum dipasang di Cloudflare Worker");if(!webhookReady)missing.push("Rahasia webhook Poketo belum dipasang di Cloudflare Worker");
+   const mode=String(this.env.POKETO_MODE|| (String(this.env.POKETO_SECRET_KEY||"").startsWith("sk_live_")?"live":"sandbox")).toLowerCase();
+   return json({ok:true,enabled:apiKeyReady&&webhookReady,checkoutEnabled:apiKeyReady&&webhookReady,storageReady:true,dbReady:false,apiKeyReady,automaticWebhookReady:webhookReady,webhookReady,provider:"Poketo",mode,missing,webhookUrl:new URL("/api/membership/webhook",url.origin).toString()});
   }
   if(path==="/api/membership/me"&&method==="GET"){
    const session=await this.session(request,true);
@@ -60,7 +61,7 @@ export class MembershipStore{
    const plan=PLANS.find(p=>p.id===String(body?.planId||""));if(!plan)return json({ok:false,error:"Paket Membership tidak ditemukan."},400);
    const name=String(body.customerName||"").trim().replace(/\s+/g," ").slice(0,100);
    const email=String(body.customerEmail||"").trim().toLowerCase();
-   if(!name||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return json({ok:false,error:"Isi nama pembayar dan email aktif untuk menerima bukti pembayaran."},400);
+   if(email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return json({ok:false,error:"Format email tidak valid."},400);
    const old=await this.ctx.storage.get("orders:"+session.id)||[];
    const pending=old.find(x=>x.status==="pending"&&Date.now()-x.createdAt<86400000);
    if(pending)return json({ok:false,error:"Masih ada pembayaran yang menunggu. Selesaikan atau tunggu kedaluwarsa.",orderId:pending.id},409);
@@ -69,7 +70,7 @@ export class MembershipStore{
    await this.ctx.storage.put("order:"+id,order);
    await this.ctx.storage.put("orders:"+session.id,[order,...old].slice(0,50));
    const site=url.origin;
-   const payload={referenceId:id,amount:plan.price,title:"ARYANZZ Membership · "+plan.name,description:"Membership "+plan.name,customer:{name,email},expiresInMinutes:1440,redirectUrl:site+"/?membership=return&order="+encodeURIComponent(id),metadata:{orderId:id,sessionId:session.id,planId:plan.id}};
+   const payload={referenceId:id,amount:plan.price,title:"ARYANZZ Membership · "+plan.name,description:"Membership "+plan.name,...(name||email?{customer:{...(name?{name}:{}),...(email?{email}:{})}}:{}),expiresInMinutes:1440,redirectUrl:site+"/?membership=return&order="+encodeURIComponent(id),metadata:{orderId:id,sessionId:session.id,planId:plan.id}};
    try{
     const response=await fetch("https://poketo.id/api/v1/invoices",{method:"POST",headers:{authorization:"Bearer "+this.env.POKETO_SECRET_KEY,"content-type":"application/json","idempotency-key":id},body:JSON.stringify(payload),signal:AbortSignal.timeout(15000)});
     const data=await response.json();if(!response.ok||data?.error)throw new Error(data?.error?.message||data?.error?.code||"Gateway menolak pembuatan invoice.");
@@ -103,7 +104,7 @@ export class MembershipStore{
   const invoice=event.data||{},orderId=String(invoice.referenceId||invoice.metadata?.orderId||"");
   const order=await this.ctx.storage.get("order:"+orderId);
   if(!order)return json({ok:false,error:"Pesanan tidak ditemukan."},404);
-  const mode=String(this.env.POKETO_MODE||"sandbox");
+  const mode=String(this.env.POKETO_MODE|| (String(this.env.POKETO_SECRET_KEY||"").startsWith("sk_live_")?"live":"sandbox")).toLowerCase();
   if(String(event.environment||"")!==mode)return json({ok:false,error:"Mode pembayaran tidak cocok."},409);
   if(event.type==="invoice.paid"){
    if(invoice.status!=="paid"||!invoice.id||Number(invoice.amount)!==order.amount)return json({ok:false,error:"Status atau nominal pembayaran tidak cocok."},409);
@@ -111,22 +112,23 @@ export class MembershipStore{
    if(order.status!=="pending"||order.invoiceId&&order.invoiceId!==invoice.id)return json({ok:false,error:"Pesanan tidak lagi menunggu pembayaran."},409);
    const plan=PLANS.find(p=>p.id===order.planId);if(!plan)return json({ok:false,error:"Paket tidak valid."},400);
    const now=Date.now(),previous=await this.ctx.storage.get("membership:"+order.userId);
+   const lifetimeAlreadyActive=previous?.status==="active"&&previous.expiresAt===null&&previous.tier&&previous.tier!=="free";
    const base=previous?.status==="active"&&previous.expiresAt?Math.max(now,previous.expiresAt):now;
-   const expires=plan.durationDays===null?null:base+plan.durationDays*86400000;
+   const expires=lifetimeAlreadyActive?null:(plan.durationDays===null?null:base+plan.durationDays*86400000);
    order.status="paid";order.paidAt=now;order.invoiceId=invoice.id;
    await this.ctx.storage.put("order:"+orderId,order);
    const orders=await this.ctx.storage.get("orders:"+order.userId)||[];
    await this.ctx.storage.put("orders:"+order.userId,orders.map(x=>x.id===orderId?order:x));
-   await this.ctx.storage.put("membership:"+order.userId,{tier:plan.id,planName:plan.name,status:"active",startedAt:now,expiresAt:expires});
+   await this.ctx.storage.put("membership:"+order.userId,{tier:lifetimeAlreadyActive?"lifetime":plan.id,planName:lifetimeAlreadyActive?"Lifetime":plan.name,status:"active",startedAt:now,expiresAt:expires,sourceOrderId:orderId});
    await this.ctx.storage.put("event:"+eventId,{receivedAt:now});
    return json({ok:true,message:"Pembayaran terverifikasi. Membership aktif.",orderId});
   }
   if(event.type==="invoice.expired"||event.type==="invoice.cancelled"||event.type==="invoice.refunded"){
-   order.status=event.type==="invoice.expired"?"expired":"rejected";order.note=event.type;
+   order.status=event.type==="invoice.expired"?"expired":event.type==="invoice.refunded"?"refunded":"cancelled";order.note=event.type;
    await this.ctx.storage.put("order:"+orderId,order);
    const orders=await this.ctx.storage.get("orders:"+order.userId)||[];
    await this.ctx.storage.put("orders:"+order.userId,orders.map(x=>x.id===orderId?order:x));
-   if(event.type==="invoice.refunded"){const membership=await this.ctx.storage.get("membership:"+order.userId);if(membership?.startedAt===order.paidAt){membership.status="revoked";await this.ctx.storage.put("membership:"+order.userId,membership)}}
+   if(event.type==="invoice.refunded"){const membership=await this.ctx.storage.get("membership:"+order.userId);if(membership?.sourceOrderId===orderId){membership.status="revoked";membership.revokedAt=Date.now();await this.ctx.storage.put("membership:"+order.userId,membership)}}
   }
   await this.ctx.storage.put("event:"+eventId,{receivedAt:Date.now()});
   return json({ok:true});
