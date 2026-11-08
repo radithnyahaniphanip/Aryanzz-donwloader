@@ -48,7 +48,11 @@ export class MembershipStore{
   }
   if(path==="/api/membership/me"&&method==="GET"){
    const session=await this.session(request,true);
-   const membership=await this.ctx.storage.get("membership:"+session.id)||{tier:"free",status:"free",startedAt:null,expiresAt:null};
+   let membership=await this.ctx.storage.get("membership:"+session.id)||{tier:"free",status:"free",startedAt:null,expiresAt:null};
+   if(membership.status==="active"&&membership.expiresAt&&Number(membership.expiresAt)<=Date.now()){
+    membership={...membership,status:"expired",expiredAt:Date.now()};
+    await this.ctx.storage.put("membership:"+session.id,membership);
+   }
    const orders=await this.ctx.storage.get("orders:"+session.id)||[];
    return json({ok:true,user:{id:"GUEST-"+session.id.slice(0,12),role:"guest"},membership,orders:orders.slice(0,20).map(o=>({id:o.id,plan_id:o.planId,amount:o.amount,status:o.status,created_at:o.createdAt,paid_at:o.paidAt||null,expires_at:o.expiresAt||null,note:o.note||""}))},200,session.cookie?{"set-cookie":session.cookie}:{});
   }
