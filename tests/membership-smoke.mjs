@@ -92,6 +92,10 @@ assert.ok(backend.includes("/api/membership/payment-config"),"Membership exposes
 assert.ok(backend.includes("POKETO_SECRET_KEY")&&backend.includes("https://poketo.id/api/v1/invoices"),"Membership must create invoices using the Poketo API");
 assert.ok(ui.includes("Avatar & Background Studio")&&ui.includes("aryCosmeticsStudio"),"Avatar and background management must be available in Tools");
 assert.ok(ui.includes("Bayar sekarang")&&ui.includes("paymentUrl")&&ui.includes("openPaymentCheckout"),"Membership checkout must open the payment window after the user selects a plan");
+assert.ok(!ui.includes("aryMemCustomerName")&&!ui.includes("aryMemCustomerEmail"),"Guest checkout must not require customer form fields, login or registration");
+assert.ok(ui.includes("Poketo.checkout.open")&&ui.includes("https://poketo.id/js/checkout.js"),"Embedded checkout must use the official Poketo SDK");
+assert.ok(ui.includes("Pilih metode yang tersedia pada checkout resmi"),"Checkout must use payment methods enabled by the merchant in Poketo");
+
 
 assert.ok(ui.includes('data-panel="aryCosmeticsStudio"')&&ui.includes("loadCosmeticsStudio()"),"Opening Avatar & Background Studio must load the account inventory");
 
