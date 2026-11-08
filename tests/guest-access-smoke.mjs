@@ -25,5 +25,5 @@ assert.ok(guest.includes("guestCopyBound") && guest.includes("navigator.clipboar
 assert.ok(html.includes("guest-access.js") && html.includes("Akses administrator · Masuk admin"), "The guest client and separate owner entry must be present");
 assert.ok(owner.includes("/api/auth/admin/") && owner.includes("ownerBanAccountId"), "Owner moderation UI must keep ban and restore controls");
 assert.ok(membership.includes('String(user.role||"").toLowerCase()==="guest"') && membership.includes("customerEmail"), "Guest Membership checkout must accept a contact email without account login");
-assert.ok(membershipUi.includes("aryMemCustomerEmail") && membershipUi.includes("await window.aryanzzGuestReady"), "Membership UI must wait for the guest ID and request payment contact details only at checkout");
+assert.ok(membershipUi.includes("await window.aryanzzGuestReady") && !membershipUi.includes("aryMemCustomerEmail") && !membershipUi.includes("aryMemCustomerName"), "Membership UI must wait for the guest ID and allow checkout without contact details or account registration");
 console.log("ARYANZZ V1 anonymous public access, guest IDs, admin moderation and guest Membership checks passed.");
