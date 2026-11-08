@@ -175,3 +175,5 @@ body.ary-local-bg-midnight{background-image:radial-gradient(ellipse at 15% 18%,#
 .ary-mem-customer-fields input{width:100%;min-width:0;padding:12px;border:1px solid var(--line,#26364d);border-radius:11px;background:var(--surface,#091321);color:var(--text,#edf4ff);font:inherit}
 .ary-mem-customer-fields small{grid-column:1/-1;color:var(--muted,#91a2bc);font-size:11px;line-height:1.5}
 @media(max-width:560px){.ary-mem-customer-fields{grid-template-columns:1fr}}
+/* Keep payment choices out of the Membership page until the user starts checkout. */
+.ary-mem-payment[hidden]{display:none!important}
