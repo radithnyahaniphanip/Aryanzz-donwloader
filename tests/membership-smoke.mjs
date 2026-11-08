@@ -31,7 +31,7 @@ const poketoConfig=await handleMembership(new Request("https://aryanzz.example/a
 const poketoConfigBody=await poketoConfig.json();assert.equal(poketoConfigBody.enabled,true);assert.equal(poketoConfigBody.checkoutEnabled,false);assert.equal(poketoConfigBody.provider,"Poketo");assert.equal(poketoConfigBody.automaticWebhookReady,true);
 console.log("ARYANZZ V1 Membership catalog, auth gate, migration, and fail-closed review checks passed.");
 assert.ok(backend.includes("automaticWebhookReady:webhookReady") && backend.includes("missing"),"Payment config must expose safe Poketo readiness diagnostics without exposing secrets");
-assert.ok(ui.includes("checkout resmi Poketo")&&ui.includes("syncMembershipPolling"),"Checkout must use Poketo hosted checkout and refresh pending payment status");
+assert.ok(ui.includes("Poketo.checkout.open")&&ui.includes("syncMembershipPolling"),"Checkout must open the embedded payment window and refresh pending payment status");
 
 assert.ok(ui.includes("aryRedeemProfile")&&ui.includes("aryPrestigeActive")&&ui.includes("LOCAL_PRESTIGE_KEY")&&ui.includes("accountRedeemCode"),"Prestige redeem must use a device-local account-ID-bound code");
 assert.ok(ui.includes("activeAccountId()")&&ui.includes("writeLocalPrestige")&&ui.includes("record.accountId===accountId"),"Redeem must match the active ARYANZZ account ID and save its entitlement locally without a backend request");
@@ -42,7 +42,7 @@ assert.ok(backend.includes("/api/cosmetics/equip"),"Users can equip only cosmeti
 assert.ok(backend.includes("/api/membership/payment-config"),"Membership exposes official QRIS configuration state");
 assert.ok(backend.includes("POKETO_SECRET_KEY")&&backend.includes("https://poketo.id/api/v1/invoices"),"Membership must create invoices using the Poketo API");
 assert.ok(ui.includes("Avatar & Background Studio")&&ui.includes("aryCosmeticsStudio"),"Avatar and background management must be available in Tools");
-assert.ok(ui.includes("Bayar sekarang")&&ui.includes("paymentUrl")&&ui.includes("window.location.assign"),"Membership checkout must redirect to Poketo hosted payment URL");
+assert.ok(ui.includes("Bayar sekarang")&&ui.includes("paymentUrl")&&ui.includes("openPaymentCheckout"),"Membership checkout must open the payment window after the user selects a plan");
 
 assert.ok(ui.includes('data-panel="aryCosmeticsStudio"')&&ui.includes("loadCosmeticsStudio()"),"Opening Avatar & Background Studio must load the account inventory");
 
