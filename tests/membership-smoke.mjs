@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { handleMembership } from "../src/membership.js";
+import { MembershipStore } from "../src/membership-store.js";
 const backend=fs.readFileSync(new URL("../src/membership.js",import.meta.url),"utf8");
 const migration=fs.readFileSync(new URL("../migrations/0004_membership.sql",import.meta.url),"utf8");
 const prestigeMigration=fs.readFileSync(new URL("../migrations/0005_prestige_redeem_devices.sql",import.meta.url),"utf8");
@@ -29,6 +30,20 @@ assert.equal(catalogBody.paymentEnabled,true,"Checkout is enabled when D1 is bou
 assert.equal(catalogBody.qrAvailable,true,"The supplied merchant QRIS must be available even when checkout database is not ready");
 const poketoConfig=await handleMembership(new Request("https://aryanzz.example/api/membership/payment-config"),{POKETO_SECRET_KEY:"sk_test_demo",POKETO_WEBHOOK_SECRET:"whsec_demo_secret_for_test",POKETO_MODE:"sandbox"});
 const poketoConfigBody=await poketoConfig.json();assert.equal(poketoConfigBody.enabled,true);assert.equal(poketoConfigBody.checkoutEnabled,false);assert.equal(poketoConfigBody.provider,"Poketo");assert.equal(poketoConfigBody.automaticWebhookReady,true);
+
+const durableData=new Map();
+const durableCtx={storage:{async get(k){return durableData.get(k)},async put(k,v){durableData.set(k,v)}}};
+const durable=new MembershipStore(durableCtx,{POKETO_SECRET_KEY:"sk_test_demo",POKETO_WEBHOOK_SECRET:"whsec_demo_secret_for_test",POKETO_MODE:"sandbox"});
+const durableMe=await durable.fetch(new Request("https://aryanzz.example/api/membership/me"));
+assert.equal(durableMe.status,200,"Membership must create a guest session without D1");
+assert.match(durableMe.headers.get("set-cookie")||"",/^aryanzz_member=/,"Guest Membership session must be persisted in a secure cookie");
+const guestBody=await durableMe.json();assert.equal(guestBody.user.role,"guest");assert.equal(guestBody.membership.status,"free");
+const cookie=durableMe.headers.get("set-cookie").split(";")[0];
+const durableMeAgain=await durable.fetch(new Request("https://aryanzz.example/api/membership/me",{headers:{cookie}}));
+const durableAgainBody=await durableMeAgain.json();assert.equal(durableAgainBody.user.id,guestBody.user.id,"Guest Membership identity must persist across visits");
+const durableConfig=await durable.fetch(new Request("https://aryanzz.example/api/membership/payment-config"));
+const durableConfigBody=await durableConfig.json();assert.equal(durableConfigBody.checkoutEnabled,true);assert.equal(durableConfigBody.dbReady,false);assert.equal(durableConfigBody.automaticWebhookReady,true);
+
 console.log("ARYANZZ V1 Membership catalog, auth gate, migration, and fail-closed review checks passed.");
 assert.ok(backend.includes("automaticWebhookReady:webhookReady") && backend.includes("missing"),"Payment config must expose safe Poketo readiness diagnostics without exposing secrets");
 assert.ok(ui.includes("Poketo.checkout.open")&&ui.includes("syncMembershipPolling"),"Checkout must open the embedded payment window and refresh pending payment status");
