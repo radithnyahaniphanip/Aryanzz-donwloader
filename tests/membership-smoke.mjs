@@ -34,6 +34,10 @@ const poketoConfigBody=await poketoConfig.json();assert.equal(poketoConfigBody.e
 const durableData=new Map();
 const durableCtx={storage:{async get(k){return durableData.get(k)},async put(k,v){durableData.set(k,v)}}};
 const durable=new MembershipStore(durableCtx,{POKETO_SECRET_KEY:"sk_test_demo",POKETO_WEBHOOK_SECRET:"whsec_demo_secret_for_test",POKETO_MODE:"sandbox"});
+
+const missingConfig=await new MembershipStore(durableCtx,{}).fetch(new Request("https://aryanzz.example/api/membership/payment-config"));
+const missingConfigBody=await missingConfig.json();assert.equal(missingConfigBody.checkoutEnabled,false,"Checkout must not claim ready without both gateway secrets");
+assert.equal(missingConfigBody.storageReady,true,"Durable storage remains ready without D1");
 const durableMe=await durable.fetch(new Request("https://aryanzz.example/api/membership/me"));
 assert.equal(durableMe.status,200,"Membership must create a guest session without D1");
 assert.match(durableMe.headers.get("set-cookie")||"",/^aryanzz_member=/,"Guest Membership session must be persisted in a secure cookie");
@@ -43,6 +47,36 @@ const durableMeAgain=await durable.fetch(new Request("https://aryanzz.example/ap
 const durableAgainBody=await durableMeAgain.json();assert.equal(durableAgainBody.user.id,guestBody.user.id,"Guest Membership identity must persist across visits");
 const durableConfig=await durable.fetch(new Request("https://aryanzz.example/api/membership/payment-config"));
 const durableConfigBody=await durableConfig.json();assert.equal(durableConfigBody.checkoutEnabled,true);assert.equal(durableConfigBody.dbReady,false);assert.equal(durableConfigBody.automaticWebhookReady,true);
+
+
+const originalFetch=globalThis.fetch;
+globalThis.fetch=async(url,options={})=>{
+ if(String(url)==="https://poketo.id/api/v1/invoices"){
+  const payload=JSON.parse(options.body);
+  assert.equal(payload.amount,80000);
+  assert.equal(payload.customer,undefined,"Guest checkout must not require account or email details");
+  return new Response(JSON.stringify({data:{id:"INV-SANDBOX-1",referenceId:payload.referenceId,amount:payload.amount,status:"pending",paymentUrl:"https://pay.poketo.id/inv/sandbox-test",expiresAt:new Date(Date.now()+3600000).toISOString()}}),{status:201,headers:{"content-type":"application/json"}});
+ }
+ throw new Error("Unexpected mocked fetch: "+url);
+};
+try{
+ const orderResponse=await durable.fetch(new Request("https://aryanzz.example/api/membership/orders",{method:"POST",headers:{cookie, "content-type":"application/json"},body:JSON.stringify({planId:"starter"})}));
+ assert.equal(orderResponse.status,201,"Guest can create an invoice without D1, login, name or email");
+ const orderBody=await orderResponse.json();assert.equal(orderBody.ok,true);assert.equal(orderBody.payment.paymentUrl,"https://pay.poketo.id/inv/sandbox-test");
+ const event={id:"evt-sandbox-1",object:"event",type:"invoice.paid",environment:"sandbox",data:{object:"invoice",id:"INV-SANDBOX-1",referenceId:orderBody.order.id,status:"paid",amount:80000}};
+ const raw=JSON.stringify(event),timestamp=String(Math.floor(Date.now()/1000));
+ const hmacKey=await crypto.subtle.importKey("raw",new TextEncoder().encode("whsec_demo_secret_for_test"),{name:"HMAC",hash:"SHA-256"},false,["sign"]);
+ const digest=new Uint8Array(await crypto.subtle.sign("HMAC",hmacKey,new TextEncoder().encode(timestamp+"."+raw)));
+ const signature=Array.from(digest,b=>b.toString(16).padStart(2,"0")).join("");
+ const webhook=()=>new Request("https://aryanzz.example/api/membership/webhook",{method:"POST",headers:{"Poketo-Signature":"t="+timestamp+",v1="+signature,"content-type":"application/json"},body:raw});
+ const paidResponse=await durable.fetch(webhook());assert.equal(paidResponse.status,200,"Valid Poketo sandbox webhook must be accepted");
+ const paidBody=await paidResponse.json();assert.equal(paidBody.ok,true);
+ const afterPaid=await durable.fetch(new Request("https://aryanzz.example/api/membership/me",{headers:{cookie}}));
+ const afterPaidBody=await afterPaid.json();assert.equal(afterPaidBody.membership.status,"active","Membership must activate only after verified payment webhook");
+ assert.equal(afterPaidBody.membership.tier,"starter");
+ assert.equal(afterPaidBody.orders[0].status,"paid","Order history must update to paid");
+ const duplicate=await durable.fetch(webhook());const duplicateBody=await duplicate.json();assert.equal(duplicateBody.duplicate,true,"Webhook event retries must be idempotent");
+}finally{globalThis.fetch=originalFetch}
 
 console.log("ARYANZZ V1 Membership catalog, auth gate, migration, and fail-closed review checks passed.");
 assert.ok(backend.includes("automaticWebhookReady:webhookReady") && backend.includes("missing"),"Payment config must expose safe Poketo readiness diagnostics without exposing secrets");
