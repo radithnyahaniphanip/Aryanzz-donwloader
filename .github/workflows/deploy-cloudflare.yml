@@ -190,6 +190,7 @@ jobs:
         if: success()
         env:
           WORKER_URL: https://aryanzz-donwloader.aryanz.workers.dev
+          POKETO_SECRET_KEY: ${{ secrets.POKETO_SECRET_KEY || secrets.POKETO_API_KEY }}
         run: node tests/live-membership-store-smoke.mjs
       - name: Verify production D1, Turnstile and Poketo bindings
         if: success() && env.ARYANZZ_D1_READY == 'true'
