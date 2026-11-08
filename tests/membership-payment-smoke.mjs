@@ -37,6 +37,11 @@ assert.deepEqual(sandboxBody.missing, []);
 assert.ok(!/data-buy=[^>]*disabled/.test(frontend), "Membership checkout buttons must remain clickable so users can see readiness errors");
 assert.ok(frontend.includes("Bayar sekarang"), "Every membership plan must expose a Bayar sekarang action");
 assert.ok(frontend.includes("paymentConfig.missing.join"), "Checkout UI must explain exact missing configuration");
+assert.ok(frontend.includes('id="aryMemPayment" hidden'), "Payment choices must stay hidden until a user starts checkout");
+assert.ok(!frontend.includes("Poketo Payment"), "Provider branding must not appear as a permanent Membership panel");
+assert.ok(frontend.includes("Poketo.checkout.open"), "Payment must open in the embedded checkout window");
+assert.ok(frontend.includes("onPaid:"), "Successful checkout callback must refresh membership status");
+
 assert.ok(source.includes("POKETO_WEBHOOK_SECRET belum terpasang"), "Invoice creation must fail closed if webhook signature verification is unavailable");
 assert.ok(source.includes("poketoMode(env)"), "Webhook environment must match the API key mode");
 console.log("ARYANZZ Membership payment readiness and checkout tests passed.");
