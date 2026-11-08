@@ -109,7 +109,7 @@ jobs:
           DB_ID="$ARYANZZ_AUTH_DB_ID"
           if [ -z "$DB_ID" ]; then
             if ! DB_LIST="$(curl -fsS --retry 3 -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/d1/database" 2>&1)"; then
-              echo "::notice::D1 is not accessible with the current Cloudflare token. Deploying the public V1 website without the account database so visitors can use ARYANZZ without login or registration. Server-synced IDs, administrator authentication, moderation and Membership checkout remain unavailable until Account > D1 > Edit is granted."
+              echo "::notice::D1 is not accessible with the current Cloudflare token. Deploying the public V1 website without the account database so visitors can use ARYANZZ without login or registration. Server-synced IDs, administrator authentication and D1-backed moderation remain unavailable until Account > D1 > Edit is granted. Membership checkout uses its separate Durable Object storage and does not require D1."
               exit 0
             fi
             DB_ID="$(printf '%s' "$DB_LIST" | jq -r '.result[]? | select(.name == "aryanzz-auth-db") | .uuid' | head -n 1)"
@@ -132,7 +132,7 @@ jobs:
           fi
           if ! wrangler d1 migrations apply aryanzz-auth-db --remote; then
             cp /tmp/aryanzz-wrangler-before-d1.toml wrangler.toml
-            echo "::notice::D1 migrations could not be applied with the current token. Continuing with public V1 access only; server account and Membership services remain pending."
+            echo "::notice::D1 migrations could not be applied with the current token. Continuing with public V1 access only; D1-backed login, account sync and cosmetics remain pending; Membership checkout uses Durable Object storage."
             exit 0
           fi
           echo "ARYANZZ_D1_READY=true" >> "$GITHUB_ENV"
@@ -186,6 +186,11 @@ jobs:
           WORKER_URL: https://aryanzz-donwloader.aryanz.workers.dev
           EXPECTED_BUILD_VERSION: ${{ env.EXPECTED_BUILD_VERSION }}
         run: node tests/live-public-access-smoke.mjs
+      - name: Verify D1-independent Membership storage and payment readiness
+        if: success()
+        env:
+          WORKER_URL: https://aryanzz-donwloader.aryanz.workers.dev
+        run: node tests/live-membership-store-smoke.mjs
       - name: Verify production D1, Turnstile and Poketo bindings
         if: success() && env.ARYANZZ_D1_READY == 'true'
         env:
