@@ -219,6 +219,7 @@ body{background-color:var(--ary-app-bg)}
 <link rel="stylesheet" href="/workspace-navigation.css?v=__ARYANZZ_VERSION__">
 <link rel="stylesheet" href="/workspace-guides.css?v=__ARYANZZ_VERSION__">
 <link rel="stylesheet" href="/stage1-tools.css?v=__ARYANZZ_VERSION__">
+<link rel="stylesheet" href="/emote-studio.css?v=__ARYANZZ_VERSION__">
 <link rel="stylesheet" href="/auth-profile-v1.css?v=2">
 <link rel="stylesheet" href="/auth-reset-v1.css?v=2">
 <link rel="stylesheet" href="/text-protection.css?v=__ARYANZZ_VERSION__">
@@ -297,6 +298,7 @@ body{background-color:var(--ary-app-bg)}
 <button class="tool" data-panel="audioStudio" data-category="media"><div class="ico">♫</div><b>MP4 ke MP3 Converter</b><small>Ubah video MP4 menjadi audio MP3 langsung di perangkat.</small><span class="v674-tool-category">MEDIA</span></button>
 <button class="tool" data-panel="history" data-category="media"><div class="ico">◷</div><b>Library</b><small>Riwayat unduhan dan daftar favorit.</small><span class="v674-tool-category">MEDIA</span></button>
 <button class="tool" data-panel="waQuoteTools" data-category="creative"><div class="ico">☏</div><b>WA Quote Generator</b><small>Buat mockup chat WhatsApp Android dan iPhone, ekspor PNG.</small><span class="v674-tool-category">CREATIVE</span></button>
+<button class="tool" data-panel="emoteStudio" data-category="creative"><div class="ico">✧</div><b>Emote Studio</b><small>Buat stiker chibi dari AI atau foto, edit manual, ekspor PNG, WebP, GIF, dan video MP4.</small><span class="v674-tool-category">CREATIVE · AI + LOCAL</span></button>
 <button class="tool" data-panel="imageTools" data-category="creative"><div class="ico">▧</div><b>Image Studio</b><small>Unduh, edit, atur rasio, resolusi, dan ekspor gambar.</small><span class="v674-tool-category">CREATIVE</span></button>
 <button class="tool" data-panel="pdfTools" data-category="creative"><div class="ico">▤</div><b>PDF & Text Tools</b><small>Alat dokumen dan pengolah teks.</small><span class="v674-tool-category">CREATIVE</span></button>
 <button class="tool" data-panel="qrTools" data-category="utility"><div class="ico">▦</div><b>QR Generator</b><small>Buat dan unduh kode QR.</small><span class="v674-tool-category">UTILITY</span></button>
@@ -323,6 +325,7 @@ body{background-color:var(--ary-app-bg)}
 </div>
 <p class="v674-no-tools" id="toolEmpty" hidden>Tools tidak ditemukan. Coba kata kunci lain.</p></div>
 <div class="panel card v1lt-panel" id="v1LightTools"><div class="v1lt-view"><span class="v1lt-kicker">ARYANZZ V1</span><h3>Menyiapkan Tools Studio…</h3><p>Modul alat sedang dimuat.</p></div></div>
+<div class="panel card emote-panel" id="emoteStudio" hidden><div class="v1lt-view"><span class="v1lt-kicker">ARYANZZ V1 · CREATIVE LAB</span><h3>Menyiapkan Emote Studio…</h3><p>Modul kreatif sedang dimuat.</p></div></div>
 <div class="panel card v93-bypass-panel" id="linkBypass">
   <div class="v93-bypass-hero"><span class="section-kicker">ARYANZZ · LINK TOOLS</span><div class="v93-bypass-mark">↗</div><h2>Lewati link SFL, langsung ke tujuan.</h2><p>Tempel tautan sf1.gl atau sfl.gl. ARYANZZ akan memeriksa pengalihan yang tersedia dan menampilkan alamat tujuan jika dapat ditemukan.</p></div>
   <form id="sflBypassForm" class="v93-bypass-form">
@@ -1041,6 +1044,7 @@ body{background-color:var(--ary-app-bg)}
 <script src="/wa-quote-generator.js?v=__ARYANZZ_VERSION__"></script>
 <script src="/workspace-navigation.js?v=__ARYANZZ_VERSION__"></script>
 <script src="/workspace-guides.js?v=__ARYANZZ_VERSION__"></script>
+<script src="/emote-studio.js?v=__ARYANZZ_VERSION__"></script>
 <script>
 
 const $=id=>document.getElementById(id);$('year').textContent=new Date().getFullYear();

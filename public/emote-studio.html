@@ -1,0 +1,184 @@
+<div class="emote-shell" id="emoteApp">
+  <header class="emote-hero">
+    <div>
+      <span class="emote-kicker">ARYANZZ V1 · CREATIVE LAB</span>
+      <h2>Emote Studio</h2>
+      <p>Buat karakter chibi, stiker reaksi, GIF bergerak, dan video dengan overlay stiker. Mulai dari AI atau edit sendiri.</p>
+      <div class="emote-hero-pills"><span>✦ AI Creator</span><span>✎ Manual Editor</span><span>GIF + MP4</span><span>Local Library</span></div>
+    </div>
+    <div class="emote-hero-mark" aria-hidden="true">✧</div>
+  </header>
+
+  <nav class="emote-tabs" aria-label="Emote Studio">
+    <button type="button" class="active" data-emote-tab="create" aria-selected="true">✦ Buat</button>
+    <button type="button" data-emote-tab="editor" aria-selected="false">✎ Editor</button>
+    <button type="button" data-emote-tab="motion" aria-selected="false">▶ GIF & Video</button>
+    <button type="button" data-emote-tab="library" aria-selected="false">▤ Pustaka</button>
+  </nav>
+
+  <section class="emote-view" data-emote-view="create">
+    <div class="emote-section-head">
+      <div><span class="emote-kicker">01 · CREATE</span><h3>AI Character Creator</h3><p>Buat karakter dari deskripsi atau ubah foto menjadi ilustrasi stiker.</p></div>
+      <span class="emote-status-pill" id="emoteAiAvailability">Memeriksa AI…</span>
+    </div>
+    <div class="emote-create-grid">
+      <div class="emote-card">
+        <label class="emote-label" for="emoteCreateMode">METODE PEMBUATAN</label>
+        <select id="emoteCreateMode" class="emote-field">
+          <option value="prompt">AI dari deskripsi</option>
+          <option value="photo">AI dari foto / referensi</option>
+        </select>
+        <label class="emote-label" for="emotePrompt">DESKRIPSI KARAKTER</label>
+        <textarea id="emotePrompt" class="emote-field emote-prompt" maxlength="900" placeholder="Contoh: karakter chibi perempuan berhijab warna lavender, ekspresi tertawa lepas, memegang payung kecil, gaya stiker lucu dengan outline putih tebal…"></textarea>
+        <div class="emote-field-meta"><span>Jelaskan pakaian, pose, ekspresi, warna, dan aksesori.</span><span id="emotePromptCount">0/900</span></div>
+        <div id="emotePhotoWrap" hidden>
+          <label class="emote-label" for="emoteReferenceFile">FOTO REFERENSI (PNG / JPG / WEBP)</label>
+          <input id="emoteReferenceFile" class="emote-file" type="file" accept="image/png,image/jpeg,image/webp">
+          <small class="emote-help">Foto hanya dikirim ke layanan AI ketika kamu menekan tombol Generate. Edit manual tetap diproses di perangkat.</small>
+        </div>
+        <div class="emote-control-row">
+          <label class="emote-label" for="emoteStyle">GAYA ILUSTRASI</label>
+          <select id="emoteStyle" class="emote-field">
+            <option value="cute chibi anime sticker">Cute Chibi</option>
+            <option value="soft pastel kawaii sticker">Pastel Kawaii</option>
+            <option value="clean manga line art sticker">Manga Line Art</option>
+            <option value="3D clay toy character sticker">3D Clay Toy</option>
+            <option value="flat vector mascot sticker">Vector Mascot</option>
+            <option value="expressive hand-drawn meme sticker">Meme Doodle</option>
+          </select>
+        </div>
+        <div class="emote-cost-note">AI menggunakan API berbayar milik pemilik website. Penggunaan hanya berjalan setelah tombol ditekan dan API key dipasang di Cloudflare Worker.</div>
+        <button type="button" class="emote-primary" id="emoteGenerateBtn" disabled>✦ Generate Karakter</button>
+        <p class="emote-status" id="emoteAiStatus" role="status" aria-live="polite">Memeriksa kesiapan layanan AI…</p>
+      </div>
+      <div class="emote-card emote-result-card">
+        <div class="emote-preview-head"><div><b>Hasil karakter</b><small>Pratinjau PNG transparan</small></div><span class="emote-preview-dot"></span></div>
+        <div class="emote-checker emote-ai-preview" id="emoteAiPreview">
+          <div class="emote-empty-art"><span>✧</span><b>Karakter akan muncul di sini</b><small>Gunakan AI Creator atau unggah gambar ke Editor.</small></div>
+          <img id="emoteAiImage" alt="Hasil karakter ARYANZZ" hidden>
+        </div>
+        <div class="emote-result-actions" id="emoteAiActions" hidden>
+          <button type="button" class="emote-secondary" id="emoteUseAiImage">Edit karakter</button>
+          <a class="emote-download" id="emoteAiDownload" download="aryanzz-emote.png">↓ Unduh PNG</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="emote-view" data-emote-view="editor" hidden>
+    <div class="emote-section-head">
+      <div><span class="emote-kicker">02 · EDITOR</span><h3>Sticker Canvas</h3><p>Gambar, hapus bagian latar secara manual, tambahkan teks, emoji, dan outline.</p></div>
+      <span class="emote-status-pill">LOKAL · PRIVAT</span>
+    </div>
+    <div class="emote-editor-grid">
+      <div class="emote-card emote-canvas-card">
+        <div class="emote-canvas-toolbar">
+          <label class="emote-upload-button" for="emoteEditorFile">＋ Tambah gambar</label>
+          <input id="emoteEditorFile" type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden>
+          <button type="button" class="emote-icon-button" id="emoteUndoBtn" title="Urungkan">↶</button>
+          <button type="button" class="emote-icon-button" id="emoteClearBtn" title="Hapus semua edit">⌫</button>
+        </div>
+        <div class="emote-checker emote-stage">
+          <canvas id="emoteCanvas" width="768" height="768" aria-label="Kanvas editor stiker"></canvas>
+          <div class="emote-canvas-empty" id="emoteCanvasEmpty"><span>✧</span><b>Mulai dari gambar atau kanvas kosong</b><small>Unggah foto, hasil AI, atau mulai menggambar.</small></div>
+        </div>
+        <p class="emote-status" id="emoteEditorStatus" role="status" aria-live="polite">Kanvas siap. Pilih gambar atau alat gambar.</p>
+      </div>
+      <aside class="emote-card emote-controls">
+        <div class="emote-control-group">
+          <b>Alat gambar</b>
+          <div class="emote-tool-buttons">
+            <button type="button" class="active" data-emote-tool="move">↖ Pilih</button>
+            <button type="button" data-emote-tool="draw">✎ Kuas</button>
+            <button type="button" data-emote-tool="erase">◌ Penghapus</button>
+          </div>
+          <label class="emote-label" for="emoteBrushSize">UKURAN KUAS / PENGHAPUS</label>
+          <input id="emoteBrushSize" type="range" min="4" max="100" value="24">
+          <div class="emote-range-meta"><span>Kecil</span><b id="emoteBrushValue">24 px</b><span>Besar</span></div>
+          <label class="emote-label" for="emoteBrushColor">WARNA KUAS</label>
+          <input id="emoteBrushColor" type="color" value="#ffffff" class="emote-color">
+        </div>
+        <div class="emote-control-group">
+          <b>Teks & emoji</b>
+          <input id="emoteTextInput" class="emote-field" maxlength="60" placeholder="Tulis teks stiker…">
+          <div class="emote-control-row">
+            <input id="emoteTextColor" type="color" value="#ffffff" class="emote-color" aria-label="Warna teks">
+            <select id="emoteTextSize" class="emote-field" aria-label="Ukuran teks"><option value="34">Kecil</option><option value="52" selected>Sedang</option><option value="76">Besar</option><option value="104">Ekstra besar</option></select>
+          </div>
+          <button type="button" class="emote-secondary emote-full" id="emoteAddText">＋ Tambahkan teks</button>
+          <div class="emote-control-row">
+            <select id="emoteEmoji" class="emote-field" aria-label="Pilih emoji"><option>😹</option><option>😭</option><option>🥹</option><option>😎</option><option>🤨</option><option>😡</option><option>❤️</option><option>✨</option><option>👍</option><option>🙏</option><option>🫶</option><option>🤡</option><option>😴</option><option>🥳</option></select>
+            <button type="button" class="emote-secondary" id="emoteAddEmoji">＋ Emoji</button>
+          </div>
+          <small class="emote-help">Pilih objek di kanvas lalu geser untuk memindahkan posisinya.</small>
+        </div>
+        <div class="emote-control-group">
+          <b>Outline stiker</b>
+          <label class="emote-check"><input id="emoteOutlineEnabled" type="checkbox" checked> Outline putih</label>
+          <input id="emoteOutlineSize" type="range" min="0" max="24" value="8">
+          <div class="emote-range-meta"><span>Tipis</span><b id="emoteOutlineValue">8 px</b><span>Tebal</span></div>
+        </div>
+        <div class="emote-control-group">
+          <b>Ekspor gambar</b>
+          <div class="emote-export-grid">
+            <button type="button" class="emote-primary" id="emoteExportPng">PNG</button>
+            <button type="button" class="emote-secondary" id="emoteExportWebp">WEBP</button>
+          </div>
+          <button type="button" class="emote-secondary emote-full" id="emoteSaveSticker">▤ Simpan ke pustaka</button>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <section class="emote-view" data-emote-view="motion" hidden>
+    <div class="emote-section-head">
+      <div><span class="emote-kicker">03 · MOTION</span><h3>GIF & Video Sticker</h3><p>Gerakkan karakter menjadi GIF atau tempelkan stiker ke video milikmu.</p></div>
+      <span class="emote-status-pill">BROWSER LOCAL</span>
+    </div>
+    <div class="emote-motion-grid">
+      <div class="emote-card">
+        <b>Animated Sticker GIF</b>
+        <p class="emote-help">Gunakan gambar yang sudah ada di Editor. Animasi dibuat lokal menggunakan FFmpeg WebAssembly.</p>
+        <label class="emote-label" for="emoteMotionPreset">GERAKAN</label>
+        <select id="emoteMotionPreset" class="emote-field"><option value="bounce">Bounce · memantul</option><option value="float">Float · melayang</option><option value="pulse">Pulse · membesar mengecil</option><option value="shake">Shake · bergoyang</option><option value="spin">Spin · berputar</option></select>
+        <label class="emote-label" for="emoteGifDuration">DURASI LOOP</label>
+        <select id="emoteGifDuration" class="emote-field"><option value="1.5">1,5 detik</option><option value="2" selected>2 detik</option><option value="3">3 detik</option></select>
+        <button type="button" class="emote-primary" id="emoteExportGif">▶ Buat GIF bergerak</button>
+        <div class="emote-progress" id="emoteMotionProgress" hidden><span id="emoteMotionProgressFill"></span></div>
+        <p class="emote-status" id="emoteMotionStatus" role="status" aria-live="polite">Siapkan stiker di Editor sebelum membuat GIF.</p>
+        <div class="emote-checker emote-gif-preview"><img id="emoteGifPreview" alt="Pratinjau GIF animasi" hidden><div id="emoteGifEmpty" class="emote-empty-art"><span>▶</span><b>GIF belum dibuat</b><small>Hasil animasi akan muncul di sini.</small></div></div>
+        <a class="emote-download" id="emoteGifDownload" download="aryanzz-emote.gif" hidden>↓ Unduh GIF</a>
+      </div>
+      <div class="emote-card">
+        <b>Video Sticker Overlay</b>
+        <p class="emote-help">Tambahkan stiker ke video, atur ukuran dan posisi, lalu ekspor MP4. Video diproses di browser perangkat.</p>
+        <label class="emote-upload-button emote-full" for="emoteVideoFile">＋ Pilih video</label>
+        <input id="emoteVideoFile" type="file" accept="video/mp4,video/webm,video/quicktime" hidden>
+        <div class="emote-video-stage" id="emoteVideoStage">
+          <video id="emoteVideoPreview" controls playsinline muted preload="metadata"></video>
+          <canvas id="emoteVideoCanvas" width="640" height="360"></canvas>
+          <div class="emote-video-empty" id="emoteVideoEmpty">Pilih video untuk memulai.</div>
+        </div>
+        <label class="emote-label" for="emoteVideoScale">UKURAN STIKER</label>
+        <input id="emoteVideoScale" type="range" min="8" max="55" value="22">
+        <div class="emote-range-meta"><span>Kecil</span><b id="emoteVideoScaleValue">22%</b><span>Besar</span></div>
+        <div class="emote-control-row">
+          <label class="emote-label" for="emoteVideoX">POSISI X</label><input id="emoteVideoX" type="range" min="0" max="100" value="76">
+          <label class="emote-label" for="emoteVideoY">POSISI Y</label><input id="emoteVideoY" type="range" min="0" max="100" value="76">
+        </div>
+        <button type="button" class="emote-primary" id="emoteExportMp4" disabled>▶ Ekspor video MP4</button>
+        <p class="emote-status" id="emoteVideoStatus" role="status" aria-live="polite">Pilih video dan pastikan stiker sudah siap di Editor.</p>
+        <a class="emote-download" id="emoteVideoDownload" download="aryanzz-emote-video.mp4" hidden>↓ Unduh MP4</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="emote-view" data-emote-view="library" hidden>
+    <div class="emote-section-head">
+      <div><span class="emote-kicker">04 · LIBRARY</span><h3>Pustaka Stiker</h3><p>Hasil yang kamu simpan berada di penyimpanan browser perangkat ini.</p></div>
+      <button type="button" class="emote-secondary" id="emoteRefreshLibrary">↻ Muat ulang</button>
+    </div>
+    <div class="emote-library-grid" id="emoteLibraryGrid"><div class="emote-empty-art"><span>▤</span><b>Belum ada stiker tersimpan</b><small>Simpan hasil dari Editor untuk mengisinya.</small></div></div>
+    <p class="emote-help">Pustaka ini tersimpan lokal di browser yang sama. Bersihkan data situs dapat menghapus file yang tersimpan.</p>
+  </section>
+</div>

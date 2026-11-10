@@ -262,6 +262,16 @@
         "/stage1-dev-tools.js"
       ],
       "purpose": "Stage 1 modular lightweight tools: video metadata/frame/contact sheet, image EXIF/palette/privacy/stickers, ZIP/rename/duplicate/split/CSV, JWT and regex. Browser-local processing."
+    },
+    {
+      "root": "#emoteStudio",
+      "css": [
+        "/emote-studio.css"
+      ],
+      "js": [
+        "/emote-studio.js"
+      ],
+      "purpose": "AI-assisted chibi/sticker creation through a protected optional image API; local canvas drawing, erasing, text, emoji, outline, PNG/WebP export, IndexedDB library, FFmpeg GIF animation, and video sticker overlay with MP4 export."
     }
   ],
   "release": {

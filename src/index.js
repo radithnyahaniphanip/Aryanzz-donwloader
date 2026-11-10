@@ -3361,6 +3361,66 @@ async function bypassSflLink(request){
 const SFL_BYPASS_BUCKETS=new Map();
 
 
+function emoteModelForEnv(env){
+  const configured=String(env?.ARYANZZ_EMOTE_MODEL||"gpt-image-2.5-sunburst").trim();
+  return /^gpt-image-2\.(?:5|6)-(?:sunburst|flare)$/.test(configured)?configured:"gpt-image-2.5-sunburst";
+}
+async function emoteGenerate(request,env){
+  const apiKey=String(env?.OPENAI_API_KEY||"").trim();
+  if(!apiKey)return json({ok:false,error:"Layanan AI Emote Studio belum dikonfigurasi. Pemilik website perlu memasang Secret OPENAI_API_KEY pada Cloudflare Worker."},503);
+  let form;
+  try{form=await request.formData()}catch{return json({ok:false,error:"Data permintaan AI tidak valid."},400)}
+  const mode=String(form.get("mode")||"generate");
+  const prompt=String(form.get("prompt")||"").trim();
+  const outputFormat=String(form.get("output_format")||"png").toLowerCase();
+  const image=form.get("image");
+  if(!["generate","edit"].includes(mode))return json({ok:false,error:"Mode pembuatan tidak dikenal."},400);
+  if(prompt.length<8||prompt.length>1800)return json({ok:false,error:"Deskripsi karakter harus berisi 8–1.800 karakter."},400);
+  if(outputFormat!=="png")return json({ok:false,error:"Format keluaran AI saat ini dibatasi ke PNG transparan."},400);
+  if(mode==="edit"&&(!(image instanceof File)||!image.size))return json({ok:false,error:"Foto referensi untuk mode edit belum dipilih."},400);
+  if(image instanceof File){
+    if(image.size>8*1024*1024)return json({ok:false,error:"Foto referensi maksimal 8 MB."},413);
+    if(!["image/png","image/jpeg","image/webp"].includes(String(image.type||"").toLowerCase()))return json({ok:false,error:"Gunakan foto PNG, JPG, atau WEBP."},415);
+  }
+  const model=emoteModelForEnv(env),quality="medium",endpoint=mode==="edit"?"https://api.openai.com/v1/images/edits":"https://api.openai.com/v1/images/generations";
+  let body;
+  if(mode==="edit"){
+    const upstream=new FormData();
+    upstream.set("model",model);upstream.set("prompt",prompt);upstream.set("size","1024x1024");
+    upstream.set("quality",quality);upstream.set("background","transparent");upstream.set("output_format","png");
+    upstream.append("image[]",image,String(image.name||"emote-reference.png").replace(/[\\/:*?"<>|\u0000-\u001f]/g,"_").slice(0,100));
+    body=upstream;
+  }else{
+    body=JSON.stringify({model,prompt,size:"1024x1024",quality,background:"transparent",output_format:"png",n:1});
+  }
+  try{
+    const response=await fetch(endpoint,{
+      method:"POST",
+      headers:{"authorization":"Bearer "+apiKey,...(mode==="generate"?{"content-type":"application/json"}:{})},
+      body,signal:AbortSignal.timeout(145000)
+    });
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok){
+      const code=String(data?.error?.code||data?.error?.type||"");
+      const raw=String(data?.error?.message||data?.message||"").slice(0,260);
+      if(response.status===401||response.status===403)return json({ok:false,error:"API key AI ditolak. Periksa Secret OPENAI_API_KEY pada Cloudflare Worker."},503);
+      if(response.status===429)return json({ok:false,error:"Batas permintaan atau saldo API AI sedang tidak mencukupi. Periksa penggunaan dan billing penyedia AI."},429);
+      if(response.status>=500)return json({ok:false,error:"Layanan AI sedang mengalami gangguan. Coba lagi beberapa saat."},502);
+      return json({ok:false,error:raw||"Layanan AI menolak permintaan gambar.",providerCode:code},422);
+    }
+    const imageBase64=data?.data?.[0]?.b64_json;
+    if(typeof imageBase64!=="string"||imageBase64.length<100)return json({ok:false,error:"Layanan AI tidak mengembalikan gambar yang valid."},502);
+    return json({
+      ok:true,model,mimeType:"image/png",imageBase64,
+      requestId:response.headers.get("x-request-id")||null,
+      usage:data?.usage||null
+    });
+  }catch(error){
+    const message=String(error?.message||error);
+    return json({ok:false,error:/timeout|abort/i.test(message)?"Proses AI melewati batas waktu. Coba lagi dengan deskripsi lebih sederhana.":"Tidak dapat menghubungi layanan AI. Periksa koneksi Worker dan coba lagi."},502);
+  }
+}
+
 const workerHandler = {async fetch(request,env){
   const url=new URL(request.url);
   const moderationResponse=await moderationGate(request,env);
@@ -3396,6 +3456,8 @@ const workerHandler = {async fetch(request,env){
     return json({ok:true,received:body.byteLength});
   }
   if(url.pathname==="/api/link-bypass"&&request.method==="GET")return bypassSflLink(request);
+  if(url.pathname==="/api/emote/status"&&request.method==="GET")return json({ok:true,configured:!!env.OPENAI_API_KEY,model:emoteModelForEnv(env),features:["text-to-sticker","photo-to-sticker","transparent-png"]});
+  if(url.pathname==="/api/emote/generate"&&request.method==="POST")return emoteGenerate(request,env);
   if(url.pathname==="/api/music/scan-video"&&request.method==="POST")return recognizeMusicVideo(request,env);
   if(url.pathname==="/api/music/status"&&request.method==="GET")return musicStatus(env);
   if(url.pathname==="/api/search"&&request.method==="POST")return searchYouTube(request,env);
@@ -3439,6 +3501,7 @@ const workerHandler = {async fetch(request,env){
 const SECURITY_BUCKETS=new Map();
 const SECURITY_EVENTS={blockedOrigin:0,rateLimited:0,oversizedRequest:0,blockedMethod:0};
 const SECURITY_LIMITS=[
+  {match:/^\/api\/emote\/generate$/,limit:4},
   {match:/^\/api\/(?:social\/search|social\/image-search|image\/search|search)$/,limit:30},
   {match:/^\/api\/(?:social-file|image\/file|social-image-file|direct-file)$/,limit:90},
   {match:/^\/api\//,limit:90}

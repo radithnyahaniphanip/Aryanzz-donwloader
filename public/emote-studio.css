@@ -1,0 +1,102 @@
+/* ARYANZZ V1 · Emote Studio isolated styles */
+#emoteStudio{min-width:0;overflow:hidden}
+#emoteStudio .emote-shell{--emote-line:rgba(135,167,220,.2);--emote-muted:#9fb0ca;color:#eff5ff;min-width:0}
+#emoteStudio .emote-hero{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:clamp(18px,3vw,28px);border:1px solid var(--emote-line);border-radius:22px;background:radial-gradient(480px 230px at 95% 0,rgba(115,94,255,.2),transparent 72%),linear-gradient(140deg,#182744,#0b1729);margin-bottom:16px}
+#emoteStudio .emote-kicker{display:block;color:#80d7dc;font-size:10px;font-weight:900;letter-spacing:1.5px}
+#emoteStudio .emote-hero h2{margin:7px 0;font-size:clamp(26px,4vw,36px);letter-spacing:-.8px}
+#emoteStudio .emote-hero p,#emoteStudio .emote-section-head p{margin:0;color:var(--emote-muted);font-size:13px;line-height:1.65;max-width:680px}
+#emoteStudio .emote-hero-mark{width:64px;height:64px;flex:0 0 64px;display:grid;place-items:center;border-radius:21px;background:linear-gradient(140deg,#8165ff,#428ef4 62%,#25c9c6);font-size:30px;box-shadow:0 12px 30px #326fe844}
+#emoteStudio .emote-hero-pills{display:flex;flex-wrap:wrap;gap:7px;margin-top:15px}
+#emoteStudio .emote-hero-pills span,#emoteStudio .emote-status-pill{border:1px solid rgba(139,177,226,.22);border-radius:99px;padding:6px 9px;background:#0b1628;color:#c0d4f1;font-size:10px;font-weight:800}
+#emoteStudio .emote-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;padding:6px;border:1px solid var(--emote-line);border-radius:15px;background:#0a1423;margin-bottom:17px}
+#emoteStudio .emote-tabs button{min-width:0;padding:11px 7px;border:1px solid transparent;border-radius:11px;background:transparent;color:#a9bad3;font-size:12px;font-weight:800}
+#emoteStudio .emote-tabs button.active{border-color:#526eb0;background:linear-gradient(115deg,#5149a8,#276f9e);color:#fff;box-shadow:0 7px 18px #315bb433}
+#emoteStudio .emote-view[hidden]{display:none!important}
+#emoteStudio .emote-section-head{display:flex;justify-content:space-between;align-items:end;gap:12px;margin:6px 2px 14px}
+#emoteStudio .emote-section-head h3{margin:5px 0;font-size:21px;letter-spacing:-.4px}
+#emoteStudio .emote-section-head p{font-size:12px}
+#emoteStudio .emote-status-pill{white-space:nowrap}
+#emoteStudio .emote-create-grid,#emoteStudio .emote-editor-grid,#emoteStudio .emote-motion-grid{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr);gap:13px;align-items:start}
+#emoteStudio .emote-card{min-width:0;padding:17px;border:1px solid var(--emote-line);border-radius:18px;background:linear-gradient(145deg,#14243a,#0b1524);box-shadow:0 12px 30px #0002}
+#emoteStudio .emote-card>b{display:block;font-size:15px;margin-bottom:7px}
+#emoteStudio .emote-label{display:block;margin:13px 0 7px;color:#c3d3ea;font-size:10px;font-weight:900;letter-spacing:1px}
+#emoteStudio .emote-field{width:100%;min-width:0;padding:11px 12px;border:1px solid #304765;border-radius:11px;background:#081322;color:#f4f7ff;font:inherit;font-size:13px;outline:none}
+#emoteStudio .emote-field:focus{border-color:#659bff;box-shadow:0 0 0 3px #4e88ff20}
+#emoteStudio .emote-prompt{min-height:118px;resize:vertical;line-height:1.6}
+#emoteStudio .emote-field-meta{display:flex;justify-content:space-between;gap:8px;color:#8fa4c0;font-size:10px;margin-top:6px}
+#emoteStudio .emote-help{display:block;color:#94a8c4;font-size:11px;line-height:1.55;margin:8px 0}
+#emoteStudio .emote-file{display:block;width:100%;padding:10px;border:1px dashed #426080;border-radius:11px;background:#0a1728;color:#c8d8ee;font-size:12px}
+#emoteStudio .emote-cost-note{margin:14px 0;padding:10px 11px;border:1px solid #6e5830;border-radius:10px;background:#211b12;color:#e3c98e;font-size:11px;line-height:1.55}
+#emoteStudio .emote-primary,#emoteStudio .emote-secondary,#emoteStudio .emote-upload-button,#emoteStudio .emote-download{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:40px;padding:10px 13px;border:1px solid #36547c;border-radius:11px;background:#172b48;color:#eaf3ff;font-size:12px;font-weight:850;text-decoration:none;cursor:pointer}
+#emoteStudio .emote-primary{border:0;background:linear-gradient(115deg,#6859e7,#337ee8 62%,#1aafbd);box-shadow:0 8px 20px #376cce33;color:#fff}
+#emoteStudio .emote-primary:disabled,#emoteStudio .emote-secondary:disabled{opacity:.48;cursor:not-allowed}
+#emoteStudio .emote-full{width:100%}
+#emoteStudio .emote-status{min-height:20px;margin:10px 0 0;color:#9fb4d0;font-size:11px;line-height:1.55;overflow-wrap:anywhere}
+#emoteStudio .emote-status[data-state="error"]{color:#ffb4a8}
+#emoteStudio .emote-status[data-state="success"]{color:#7fe0b8}
+#emoteStudio .emote-preview-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+#emoteStudio .emote-preview-head b{display:block;font-size:14px}
+#emoteStudio .emote-preview-head small{display:block;color:#92a7c4;font-size:10px}
+#emoteStudio .emote-preview-dot{width:9px;height:9px;border-radius:50%;background:#50d8aa;box-shadow:0 0 14px #50d8aa88}
+#emoteStudio .emote-checker{background-color:#e7ebf3;background-image:linear-gradient(45deg,#cdd4df 25%,transparent 25%),linear-gradient(-45deg,#cdd4df 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#cdd4df 75%),linear-gradient(-45deg,transparent 75%,#cdd4df 75%);background-size:22px 22px;background-position:0 0,0 11px,11px -11px,-11px 0;overflow:hidden}
+#emoteStudio .emote-ai-preview{min-height:330px;display:grid;place-items:center;border-radius:14px}
+#emoteStudio .emote-ai-preview img{display:block;width:100%;max-height:490px;object-fit:contain}
+#emoteStudio .emote-empty-art{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;min-height:210px;padding:20px;text-align:center;color:#52627b}
+#emoteStudio .emote-empty-art>span{display:grid;place-items:center;width:54px;height:54px;border-radius:18px;background:#d9e1ef;color:#6c65d8;font-size:25px}
+#emoteStudio .emote-empty-art b{font-size:13px}
+#emoteStudio .emote-empty-art small{font-size:11px;line-height:1.5}
+#emoteStudio .emote-result-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+#emoteStudio .emote-canvas-card{padding:13px}
+#emoteStudio .emote-canvas-toolbar{display:flex;gap:8px;align-items:center;margin-bottom:11px}
+#emoteStudio .emote-upload-button{background:#10233b}
+#emoteStudio .emote-icon-button{width:40px;height:40px;border:1px solid #304765;border-radius:11px;background:#0b1829;color:#d9e7fa;font-size:19px}
+#emoteStudio .emote-stage{position:relative;display:grid;place-items:center;min-height:280px;border:1px solid #d2d8e2;border-radius:13px;touch-action:none}
+#emoteStudio #emoteCanvas{display:block;width:min(100%,620px);height:auto;aspect-ratio:1;touch-action:none;cursor:crosshair}
+#emoteStudio .emote-canvas-empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;text-align:center;color:#52627b;pointer-events:none;padding:18px}
+#emoteStudio .emote-canvas-empty[hidden]{display:none}
+#emoteStudio .emote-canvas-empty span{font-size:32px;color:#7567d9}
+#emoteStudio .emote-canvas-empty b{font-size:13px}
+#emoteStudio .emote-canvas-empty small{font-size:11px}
+#emoteStudio .emote-controls{display:flex;flex-direction:column;gap:13px}
+#emoteStudio .emote-control-group{padding-bottom:13px;border-bottom:1px solid rgba(130,162,209,.15)}
+#emoteStudio .emote-control-group:last-child{padding-bottom:0;border:0}
+#emoteStudio .emote-control-group>b{display:block;font-size:13px;margin-bottom:7px}
+#emoteStudio .emote-tool-buttons{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+#emoteStudio .emote-tool-buttons button{min-width:0;padding:9px 5px;border:1px solid #304765;border-radius:9px;background:#0b1829;color:#afc1da;font-size:10px;font-weight:800}
+#emoteStudio .emote-tool-buttons button.active{border-color:#6c82df;background:#252b56;color:#fff}
+#emoteStudio input[type="range"]{width:100%;accent-color:#6d91ff}
+#emoteStudio .emote-range-meta{display:flex;justify-content:space-between;gap:6px;color:#8198b8;font-size:9px}
+#emoteStudio .emote-range-meta b{color:#d7e4f6;font-size:10px}
+#emoteStudio .emote-color{width:100%;height:38px;padding:3px;border:1px solid #304765;border-radius:9px;background:#091524}
+#emoteStudio .emote-control-row{display:flex;align-items:center;gap:8px}
+#emoteStudio .emote-control-row>*{flex:1;min-width:0}
+#emoteStudio .emote-check{display:flex;align-items:center;gap:8px;color:#b9c9df;font-size:12px}
+#emoteStudio .emote-export-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:9px 0}
+#emoteStudio .emote-progress{height:7px;margin-top:12px;border-radius:99px;background:#24344b;overflow:hidden}
+#emoteStudio .emote-progress span{display:block;width:0;height:100%;background:linear-gradient(90deg,#7564ed,#35d6db);transition:width .2s}
+#emoteStudio .emote-gif-preview{display:grid;place-items:center;min-height:180px;margin-top:12px;border-radius:12px}
+#emoteStudio .emote-gif-preview img{max-width:100%;max-height:300px;object-fit:contain}
+#emoteStudio .emote-video-stage{position:relative;display:grid;place-items:center;min-height:190px;margin-top:12px;border:1px solid #2b405d;border-radius:12px;background:#050a12;overflow:hidden}
+#emoteStudio #emoteVideoPreview{display:block;width:100%;max-height:360px;background:#050a12;object-fit:contain}
+#emoteStudio #emoteVideoCanvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+#emoteStudio .emote-video-empty{position:absolute;inset:0;display:grid;place-items:center;color:#8fa5c3;font-size:12px;pointer-events:none}
+#emoteStudio .emote-library-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+#emoteStudio .emote-library-item{min-width:0;padding:10px;border:1px solid var(--emote-line);border-radius:14px;background:#0c192a}
+#emoteStudio .emote-library-item img{display:block;width:100%;aspect-ratio:1;object-fit:contain;border-radius:9px;background-color:#e7ebf3;background-image:linear-gradient(45deg,#cdd4df 25%,transparent 25%),linear-gradient(-45deg,#cdd4df 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#cdd4df 75%),linear-gradient(-45deg,transparent 75%,#cdd4df 75%);background-size:18px 18px;background-position:0 0,0 9px,9px -9px,-9px 0}
+#emoteStudio .emote-library-item b{display:block;margin:8px 0 5px;font-size:11px;overflow-wrap:anywhere}
+#emoteStudio .emote-library-actions{display:flex;gap:6px}
+#emoteStudio .emote-library-actions button{flex:1;min-width:0;padding:7px 5px;border:1px solid #344c6e;border-radius:8px;background:#142943;color:#d7e7ff;font-size:10px}
+#emoteStudio .emote-download{margin-top:10px;background:#123a36;border-color:#246c5c;color:#a8f0d5}
+@media(max-width:760px){
+ #emoteStudio .emote-create-grid,#emoteStudio .emote-editor-grid,#emoteStudio .emote-motion-grid{grid-template-columns:minmax(0,1fr)}
+ #emoteStudio .emote-controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+ #emoteStudio .emote-control-group{min-width:0}
+ #emoteStudio .emote-library-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ #emoteStudio .emote-ai-preview{min-height:260px}
+}
+@media(max-width:430px){
+ #emoteStudio .emote-tabs button{font-size:10px;padding:10px 3px}
+ #emoteStudio .emote-controls{grid-template-columns:minmax(0,1fr)}
+ #emoteStudio .emote-hero-mark{width:48px;height:48px;flex-basis:48px}
+ #emoteStudio .emote-section-head{align-items:flex-start;flex-direction:column}
+}
