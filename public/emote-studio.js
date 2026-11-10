@@ -255,14 +255,15 @@ async function loadFfmpeg(statusId){
     const mod=await import(moduleUrl);if(typeof mod.FFmpeg!=="function")throw new Error("Kelas FFmpeg tidak ditemukan.");
     const workerUrl=new URL("/ffmpeg-worker-bootstrap.js?v=92.2",location.origin).href;
     for(const base of CDN_CORES){
-     instance=new mod.FFmpeg();
+     instance=new mod.FFmpeg();let timer=null;
      try{
       await Promise.race([
        instance.load({classWorkerURL:workerUrl,coreURL:base+"/ffmpeg-core.js",wasmURL:base+"/ffmpeg-core.wasm"}),
-       new Promise((_,reject)=>setTimeout(()=>reject(new Error("Mesin ekspor belum siap setelah 75 detik.")),75000))
+       new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error("Mesin ekspor belum siap setelah 75 detik.")),75000)})
       ]);
       if(instance.loaded){state.ffmpeg=instance;return instance}
      }catch(error){lastError=error;try{instance.terminate()}catch{}instance=null}
+     finally{clearTimeout(timer)}
     }
    }catch(error){lastError=error;if(instance)try{instance.terminate()}catch{}}
   }
@@ -319,7 +320,9 @@ function drawVideoOverlay(){
   const x=(w-stickerW)*(Number($("emoteVideoX")?.value||76)/100),y=(h-stickerH)*(Number($("emoteVideoY")?.value||76)/100);
   videoCtx.drawImage(canvas,x,y,stickerW,stickerH);
  }
- if(video.readyState>=2&&state.videoFile)state.videoRaf=requestAnimationFrame(drawVideoOverlay);
+ if(video.readyState>=2&&state.videoFile&&!video.paused&&!state.videoRaf){
+  state.videoRaf=requestAnimationFrame(()=>{state.videoRaf=0;drawVideoOverlay()});
+ }
 }
 function stopVideoLoop(){if(state.videoRaf)cancelAnimationFrame(state.videoRaf);state.videoRaf=0}
 $("emoteVideoScale")?.addEventListener("input",()=>{$("emoteVideoScaleValue").textContent=$("emoteVideoScale").value+"%";drawVideoOverlay()});
@@ -337,7 +340,7 @@ video?.addEventListener("loadedmetadata",()=>{
  const scale=Math.min(1,1280/video.videoWidth);videoCanvas.width=Math.max(1,Math.round(video.videoWidth*scale));videoCanvas.height=Math.max(1,Math.round(video.videoHeight*scale));
  $("emoteExportMp4").disabled=false;say("emoteVideoStatus","Video siap · "+video.videoWidth+" × "+video.videoHeight+" · "+video.duration.toFixed(1)+" detik. Atur posisi stiker lalu ekspor.","success");drawVideoOverlay();
 });
-video?.addEventListener("play",drawVideoOverlay);video?.addEventListener("pause",()=>{drawVideoOverlay()});
+video?.addEventListener("play",drawVideoOverlay);video?.addEventListener("pause",()=>{stopVideoLoop();drawVideoOverlay()});
 async function exportVideoMp4(){
  const button=$("emoteExportMp4");if(button.disabled||!state.videoFile)return;
  if(!state.image&&!state.strokes.length&&!state.objects.length){say("emoteVideoStatus","Buat stiker di Editor terlebih dahulu.","error");return}
