@@ -261,9 +261,11 @@
         "/stage1-video-tools.js",
         "/stage1-image-tools.js",
         "/stage1-file-tools.js",
-        "/stage1-dev-tools.js"
+        "/stage1-dev-tools.js",
+        "/stage1-scam-evidence.js"
       ],
-      "purpose": "Stage 1 modular lightweight tools: video metadata/frame/contact sheet, image EXIF/palette/privacy/stickers, ZIP/rename/duplicate/split/CSV, JWT and regex. Browser-local processing."
+      "purpose": "Modular lightweight tools including Scam Evidence Analyzer: local OCR-assisted screenshot/chat review, phone and account extraction, URL risk heuristics, file metadata and EXIF GPS evidence, coordinate mapping, timeline, IndexedDB-local case storage and report export. Online checks open official portals manually; evidence is never uploaded automatically.",
+      "css": ["/stage1-tools.css", "/stage1-scam-evidence.css"]
     },
     {
       "root": "#emoteStudio",
