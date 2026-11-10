@@ -56,7 +56,7 @@ assert.equal(canonical(guide), ORIGIN + "/panduan", "Guide canonical must use th
 assert.match(title(guide), /Panduan ARYANZZ Downloader/i);
 const guideDescriptionValue = meta(guide, "description");
 assert.ok(guideDescriptionValue.length >= 120 && guideDescriptionValue.length <= 170);
-assert.equal((guide.match(/<h1\\b/gi) ?? []).length, 1);
+assert.equal((guide.match(/<h1\b/gi) ?? []).length, 1);
 const guideSchemas = jsonLd(guide).flatMap(schema => schema["@graph"] ?? [schema]);
 assert.ok(guideSchemas.some(schema => schema["@type"] === "BreadcrumbList"));
 const faq = guideSchemas.find(schema => schema["@type"] === "FAQPage");
@@ -80,7 +80,7 @@ for (const page of landingPages) {
   const description = meta(page.html, "description");
   assert.ok(description.length >= 120 && description.length <= 170, page.path + " needs a unique useful description");
   assert.ok(meta(page.html, "robots").includes("index,follow"));
-  assert.equal((page.html.match(/<h1\\b/gi) ?? []).length, 1, page.path + " must have one primary heading");
+  assert.equal((page.html.match(/<h1\b/gi) ?? []).length, 1, page.path + " must have one primary heading");
   assert.ok(page.html.includes(page.phrase), page.path + " must use its primary search phrase naturally");
   assert.ok(page.html.includes('href="/#home"'), page.path + " must link to the working downloader");
   assert.ok(page.html.includes('href="/panduan"'), page.path + " must link to the general guide");
@@ -94,7 +94,7 @@ for (const page of landingPages) {
 }
 
 const expectedUrls = [ORIGIN + "/", ORIGIN + "/panduan", ORIGIN + "/download-video", ORIGIN + "/download-mp3", ORIGIN + "/download-gambar"];
-const sitemapUrls = [...sitemap.matchAll(/<loc>([^<]+)<\\/loc>/g)].map(match => match[1]);
+const sitemapUrls = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map(match => match[1]);
 assert.deepEqual(sitemapUrls, expectedUrls, "Static sitemap must list every public SEO page");
 for (const url of expectedUrls) assert.ok(sitemapTxt.includes(url), "Text sitemap must include " + url);
 assert.ok(robots.includes("Disallow: /api/"));
