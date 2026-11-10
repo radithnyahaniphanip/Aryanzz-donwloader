@@ -1817,23 +1817,60 @@ function canonicalFacebookPostUrl(rawUrl){
   u.hash="";
   return u.href;
 }
+function facebookMobilePageUrl(rawUrl){
+  const parsed=safePublicMediaUrl(rawUrl);
+  if(!parsed||platformIdForUrl(parsed.href)!=="facebook")return rawUrl;
+  if(parsed.hostname==="www.facebook.com"||parsed.hostname==="facebook.com")parsed.hostname="m.facebook.com";
+  return parsed.href;
+}
 async function fetchFacebookPublicReader(rawUrl,timeoutMs=9000){
   const parsed=safePublicMediaUrl(rawUrl);
   if(!parsed||platformIdForUrl(parsed.href)!=="facebook")throw new Error("Tautan Facebook publik tidak valid.");
-  const readerUrl="https://r.jina.ai/http://"+parsed.hostname+parsed.pathname+parsed.search;
-  const response=await fetch(readerUrl,{
-    headers:{accept:"text/plain","user-agent":"Mozilla/5.0 (compatible; ARYANZZ Public Link Resolver/1.0)"},
-    signal:AbortSignal.timeout(timeoutMs),cache:"no-store"
-  });
-  if(!response.ok)throw new Error("Facebook public reader HTTP "+response.status+".");
-  const body=(await response.text()).slice(0,1500000);
-  const finalMatch=body.match(/^Final URL:\s*(https?:\/\/[^\s]+)/mi);
-  const finalUrl=finalMatch?decodeFacebookReaderValue(finalMatch[1]):null;
-  const hasPostContent=/Markdown Content:\s*[\s\S]*?(?:##\s*\[|Shared with Public|All reactions:|comments?)/i.test(body);
-  const loginRedirect=!!finalUrl&&/\/login(?:\.php)?(?:[/?#]|$)/i.test(finalUrl);
-  const loginPage=loginRedirect||(/Log into Facebook|Email or mobile number/i.test(body)&&!hasPostContent);
-  if(loginPage&&!hasPostContent)throw new Error("facebook_login_required");
-  return {body,finalUrl,hasPostContent};
+  const mobileUrl=facebookMobilePageUrl(parsed.href);
+  const candidates=[mobileUrl,canonicalFacebookPostUrl(parsed.href)].filter((value,index,array)=>array.indexOf(value)===index);
+  const errors=[];
+  for(const candidate of candidates){
+    try{
+      const page=await fetchSocialPostHtml(candidate,timeoutMs);
+      const finalSafe=safePublicMediaUrl(page.url||candidate);
+      const finalUrl=finalSafe?.href||candidate;
+      const html=String(page.html||"").slice(0,5000000);
+      const titleMatch=html.match(/<meta\b[^>]*property=["']og:title["'][^>]*content=["']([^"']{1,300})["']/i)||html.match(/<title[^>]*>([^<]{1,300})<\/title>/i);
+      const title=String(titleMatch?.[1]||"Facebook media").replace(/&amp;/gi,"&").replace(/\s+/g," ").trim().slice(0,300);
+      const images=extractSocialImageCandidates(html,finalUrl,"facebook");
+      const media=extractGenericPublicMediaCandidates(html,finalUrl).filter(item=>item.mode==="video"||item.type==="video");
+      const loginRedirect=/\/login(?:\.php)?(?:[/?#]|$)/i.test(new URL(finalUrl).pathname);
+      const hasPostContent=!!(images.length||media.length||/<meta\b[^>]*(?:og:title|og:video|og:image)/i.test(html)||/Shared with Public|All reactions:|comments?/i.test(html));
+      const loginPage=loginRedirect||(/Log into Facebook|Email or mobile number|Log in to Facebook/i.test(html)&&!hasPostContent);
+      if(loginPage&&!hasPostContent)throw new Error("facebook_login_required");
+      return {body:html,html,finalUrl,hasPostContent,images,media,title,source:"Facebook mobile public page"};
+    }catch(error){
+      const message=String(error?.message||error);
+      if(message==="facebook_login_required")throw error;
+      errors.push(message.slice(0,120));
+    }
+  }
+  // Last resort: a text reader can sometimes expose public posts when Facebook's
+  // own mobile page is temporarily unavailable to the Worker.
+  try{
+    const readerUrl="https://r.jina.ai/http://"+parsed.hostname+parsed.pathname+parsed.search;
+    const response=await fetch(readerUrl,{
+      headers:{accept:"text/plain","user-agent":"Mozilla/5.0 (compatible; ARYANZZ Public Link Resolver/1.0)"},
+      signal:AbortSignal.timeout(timeoutMs),cache:"no-store"
+    });
+    if(!response.ok)throw new Error("Facebook public reader HTTP "+response.status+".");
+    const body=(await response.text()).slice(0,1500000);
+    const finalMatch=body.match(/^Final URL:\s*(https?:\/\/[^\s]+)/mi);
+    const finalUrl=finalMatch?decodeFacebookReaderValue(finalMatch[1]):null;
+    const hasPostContent=/Markdown Content:\s*[\s\S]*?(?:##\s*\[|Shared with Public|All reactions:|comments?)/i.test(body);
+    const loginRedirect=!!finalUrl&&/\/login(?:\.php)?(?:[/?#]|$)/i.test(finalUrl);
+    if((loginRedirect||(/Log into Facebook|Email or mobile number/i.test(body)&&!hasPostContent))&&!hasPostContent)throw new Error("facebook_login_required");
+    return {body,finalUrl,hasPostContent,images:[],media:[],title:(body.match(/^Title:\s*(.{1,300}?)(?:\s*\|\s*Facebook)?$/mi)||[])[1]||"Facebook media",source:"Facebook text reader"};
+  }catch(error){
+    if(String(error?.message||error)==="facebook_login_required")throw error;
+    errors.push(String(error?.message||error).slice(0,120));
+  }
+  throw new Error(errors.join(" | ")||"Facebook public page unavailable.");
 }
 async function resolveFacebookShareLink(rawUrl,timeoutMs=10000){
   const parsed=safePublicMediaUrl(rawUrl);
