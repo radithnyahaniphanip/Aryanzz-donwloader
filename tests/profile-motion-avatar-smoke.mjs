@@ -22,6 +22,7 @@ const checks = [
   ["Static avatar replacement and photo removal clear the animated GIF state", profileJs.includes("d.avatarAnimated=false") && profileJs.includes("removeMotionAvatar()")],
   ["Profile identity no longer overlaps the cover and member badge stays below it", profileCss.includes("margin-top:0!important") && profileCss.includes(".ary-profile2-member-label{order:3;margin-top:7px}")],
   ["Tools Center uses the unified neutral background and readable single-column mobile cards", toolsCss.includes("#toolsArea #allTools") && toolsCss.includes("--ary-tools-bg:#0d1726") && toolsCss.includes("background:var(--ary-tools-bg)!important") && toolsCss.includes("#toolsArea #allTools .v674-tool-grid{grid-template-columns:1fr;gap:8px}")],
+  ["Legacy decorative Tools gradients are no longer required by any internal tool panel", toolsCss.includes("--ary-tools-bg:#0d1726") && toolsCss.includes("background:var(--ary-tools-bg)!important") && !toolsCss.includes("radial-gradient(520px 260px")],
   ["The service worker uses the stable V1 release channel", sw.includes('const RELEASE_CHANNEL="V1"')],
   ["Package metadata and workspace manifest identify the single public V1 release", packageJson.release === "V1" && workspace.release?.publicVersion === "V1" && workspace.release?.status === "full-release"],
   ["Release JSON keeps a stable public release label beside the internal build identifier", build.includes('const publicRelease = String(packageJson.release || "V1")') && build.includes("release: publicRelease") && build.includes("version, commit, builtAt")]
