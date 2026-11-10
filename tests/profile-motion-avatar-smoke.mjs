@@ -15,7 +15,7 @@ const sw = read("public/sw.js");
 const build = read("scripts/build-version.mjs");
 
 const checks = [
-  ["Public app title and application name stay on V1", html.includes('<title>ARYANZZ V1 — Downloader &amp; Studio</title>') && html.includes('name="application-name" content="ARYANZZ V1"')],
+  ["Public app title keeps the V1 release label and identifies the downloader", /<title>ARYANZZ Downloader V1/.test(html) && html.includes('name="application-name" content="ARYANZZ V1"')],
   ["Public release channel is V1 while the private cache version remains dynamic", html.includes('name="aryanzz-public-version" content="V1"') && html.includes('name="aryanzz-version" content="V1"') && html.includes('name="aryanzz-build-id" content="__ARYANZZ_VERSION__"')],
   ["Profile cover actions are moved into the profile heading", profileJs.includes("function moveCoverActions()") && profileJs.includes("moveCoverActions();installAutoSaveObserver()")],
   ["Animated GIF profile photos are stored as original blobs in IndexedDB", profileJs.includes('MOTION_AVATAR_DB="aryanzz-profile-motion-v1"') && profileJs.includes('file.type||"").toLowerCase()==="image/gif"') && profileJs.includes("saveMotionAvatar(file)") && profileJs.includes("URL.createObjectURL(blob)")],

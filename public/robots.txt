@@ -1,4 +1,5 @@
 User-agent: *
 Allow: /
+Disallow: /api/
 
 Sitemap: https://aryanzz-donwloader.aryanz.workers.dev/sitemap.xml
