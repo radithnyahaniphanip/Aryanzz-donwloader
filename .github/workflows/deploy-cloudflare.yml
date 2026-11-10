@@ -38,6 +38,7 @@ jobs:
           node --check src/platform-catalog.js
           node --check scripts/build-version.mjs
           node --input-type=module -e 'import fs from "node:fs"; const html=fs.readFileSync("public/index.html","utf8"); const refs=[...html.matchAll(/<script[^>]*src="([^"]+\.js[^"]*)"/g)].map(m=>m[1]).filter(ref=>ref.startsWith("/")); const paths=[...new Set(refs.map(ref=>"public/"+new URL(ref,"https://aryanzz.local").pathname.slice(1)))]; for(const path of paths){if(!fs.existsSync(path))throw new Error("Missing script asset: "+path); console.log("Checking "+path); const {spawnSync}=await import("node:child_process"); const result=spawnSync(process.execPath,["--check",path],{stdio:"inherit"}); if(result.status!==0)process.exit(result.status||1);} console.log("All "+paths.length+" loaded JavaScript assets passed syntax checks.");'
+          node --check tests/facebook-offline-smoke.mjs
           node --check tests/release-smoke.mjs
           node --check tests/profile-motion-avatar-smoke.mjs
           node --check tests/auth-gate-smoke.mjs
