@@ -19,10 +19,10 @@ const [authResponse,guestResponse]=await Promise.all([
 assert.equal(authResponse.status,200,"Current auth-gate.js asset must be available");
 assert.equal(guestResponse.status,200,"Current guest-access.js asset must be available");
 const [auth,guest]=await Promise.all([authResponse.text(),guestResponse.text()]);
-assert.ok(auth.includes('get("owner") === "1"'),"Administrator authentication must require the explicit ?owner=1 route");
+assert.ok(auth.includes("const ownerMode = false;"),"Retired Administrator authentication must remain disabled");
 assert.ok(auth.includes("if (!ownerMode && gate)")&&auth.includes('gate.style.setProperty("display", "none", "important")'),"Public route must immediately hide the login/register overlay");
 assert.ok(auth.includes('if(!ownerMode){setUser(null);return;}'),"Public visitors must bypass the administrator login initialization");
 assert.ok(guest.includes("/api/auth/guest/bootstrap")&&guest.includes("localFallback()"),"Public visitors must receive an automatic guest ID, with a local fallback if D1 is unavailable");
 assert.ok(guest.includes('document.dispatchEvent(new CustomEvent("aryanzz:guest-ready"'),"Guest identity must announce readiness to the profile and app");
 
-console.log("ARYANZZ public-access smoke test passed: no login/register overlay on the public route; administrator login remains on ?owner=1; automatic guest identity is loaded.");
+console.log("ARYANZZ public-access smoke test passed: no login/register overlay or Administrator route; automatic guest identity is loaded.");
