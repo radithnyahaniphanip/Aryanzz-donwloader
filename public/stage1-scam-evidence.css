@@ -1,0 +1,60 @@
+#v1LightTools .scam-modebar{display:flex;align-items:end;justify-content:space-between;gap:12px;padding:14px;border:1px solid rgba(137,167,207,.18);border-radius:16px;background:linear-gradient(135deg,rgba(27,49,78,.82),rgba(13,26,45,.94));margin:14px 0}
+#v1LightTools .scam-modebar label{display:grid;gap:7px;flex:1;min-width:0;color:#dce8fa;font-size:12px;font-weight:750}
+#v1LightTools .scam-modebar select,#v1LightTools .scam-section input,#v1LightTools .scam-section textarea{width:100%;min-width:0;border:1px solid rgba(142,170,210,.24);border-radius:12px;background:#0b1728;color:#eef5ff;padding:12px;font:inherit;outline:none}
+#v1LightTools .scam-modebar select:focus,#v1LightTools .scam-section input:focus,#v1LightTools .scam-section textarea:focus{border-color:#79aaf4;box-shadow:0 0 0 3px rgba(86,145,225,.15)}
+#v1LightTools .scam-local-note,#v1LightTools .scam-kicker{font-size:10px;font-weight:850;letter-spacing:.12em;color:#8db8f4}
+#v1LightTools .scam-section{margin:12px 0;padding:15px;border:1px solid rgba(135,163,201,.18);border-radius:17px;background:linear-gradient(145deg,rgba(18,34,57,.96),rgba(11,23,40,.96));color:#e9f1ff}
+#v1LightTools details.scam-section>summary{display:block;cursor:pointer;list-style:none}
+#v1LightTools details.scam-section>summary::-webkit-details-marker{display:none}
+#v1LightTools details.scam-section>summary:after{content:"＋";float:right;color:#8fb7ed;font-weight:800}
+#v1LightTools details.scam-section[open]>summary:after{content:"−"}
+#v1LightTools .scam-section-title{display:flex;align-items:flex-start;gap:12px;margin-bottom:12px}
+#v1LightTools .scam-section-title>span:first-child{display:grid;place-items:center;flex:0 0 30px;width:30px;height:30px;border-radius:10px;background:rgba(105,155,225,.16);color:#a9cbff;font-size:11px;font-weight:850}
+#v1LightTools .scam-section-title h4,#v1LightTools .scam-online-panel h4{margin:0;color:#f0f6ff;font-size:15px}
+#v1LightTools .scam-section-title p,#v1LightTools .scam-online-panel p{margin:4px 0 0;color:#aabbd2;font-size:12px;line-height:1.55}
+#v1LightTools .scam-file-summary,#v1LightTools .scam-hint,#v1LightTools .scam-safety-note{color:#aabbd2;font-size:11px;line-height:1.6;overflow-wrap:anywhere}
+#v1LightTools .scam-hint{padding:10px 12px;border-left:2px solid #5478a8;background:rgba(82,119,169,.09);border-radius:0 9px 9px 0}
+#v1LightTools .scam-count{align-self:center;color:#9db2ce;font-size:11px}
+#v1LightTools .scam-risk-panel{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;margin:14px 0;padding:17px;border:1px solid rgba(120,157,208,.26);border-radius:17px;background:linear-gradient(140deg,#162c49,#0d1b30)}
+#v1LightTools .scam-risk-score{font-size:34px;font-weight:900;line-height:1.2;color:#f4f8ff;margin:5px 0}
+#v1LightTools #scamRiskLevel{display:inline-flex;padding:5px 9px;border-radius:999px;background:rgba(143,164,190,.15);color:#c7d6e9;font-size:11px}
+#v1LightTools #scamRiskLevel[data-level="review"]{background:rgba(231,171,71,.15);color:#f4cb83}
+#v1LightTools #scamRiskLevel[data-level="high"]{background:rgba(235,105,105,.15);color:#ffb0b0}
+#v1LightTools .scam-risk-track{height:8px;border-radius:99px;background:#263b56;overflow:hidden}
+#v1LightTools .scam-risk-track i{display:block;width:0;height:100%;border-radius:inherit;background:linear-gradient(90deg,#55b9a3,#e6bd68,#e77878);transition:width .25s ease}
+#v1LightTools .scam-risk-panel>p{margin:0;color:#aebed3;font-size:11px;line-height:1.5}
+#v1LightTools .scam-reasons{margin:8px 0 0;padding-left:19px;color:#b7c6d9;font-size:12px;line-height:1.65;overflow-wrap:anywhere}
+#v1LightTools .scam-results{display:grid;gap:9px;margin-top:12px}
+#v1LightTools .scam-empty{margin:0;padding:13px;border:1px dashed rgba(139,165,202,.24);border-radius:12px;color:#91a4bf;font-size:12px;line-height:1.55}
+#v1LightTools .scam-result-card,#v1LightTools .scam-saved-row{display:grid;gap:8px;padding:13px;border:1px solid rgba(135,163,201,.18);border-radius:13px;background:rgba(7,18,32,.48);min-width:0}
+#v1LightTools .scam-result-card strong,#v1LightTools .scam-saved-row strong{color:#f0f6ff;font-size:13px;overflow-wrap:anywhere}
+#v1LightTools .scam-result-card small,#v1LightTools .scam-saved-row small{color:#9eafc6;font-size:11px;line-height:1.55;overflow-wrap:anywhere}
+#v1LightTools .scam-result-card code{display:block;padding:8px;border-radius:8px;background:#091423;color:#d7e7ff;font-size:11px;white-space:normal;overflow-wrap:anywhere}
+#v1LightTools .scam-risk{display:inline-flex;width:max-content;padding:4px 8px;border-radius:99px;font-size:10px;font-weight:800}
+#v1LightTools .scam-risk-high{background:rgba(230,90,90,.15);color:#ffaaaa}
+#v1LightTools .scam-risk-review{background:rgba(226,174,75,.14);color:#f4d08d}
+#v1LightTools .scam-risk-no-obvious-indicator{background:rgba(94,168,140,.13);color:#a8ddc9}
+#v1LightTools .scam-risk-unknown{background:rgba(140,154,174,.14);color:#c0c9d6}
+#v1LightTools .scam-inline-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+#v1LightTools .scam-link,#v1LightTools .scam-small-button{display:inline-flex;align-items:center;justify-content:center;min-height:34px;padding:7px 10px;border:1px solid rgba(125,160,207,.28);border-radius:9px;background:rgba(52,83,125,.2);color:#bcd7ff;text-decoration:none;font-size:11px;font-weight:750}
+#v1LightTools .scam-small-button{cursor:pointer}
+#v1LightTools .scam-small-button.scam-danger{color:#ffb5b5;border-color:rgba(231,114,114,.25)}
+#v1LightTools .scam-timeline-item{padding:11px 12px;border-left:2px solid #6b91c2;background:rgba(7,18,32,.45);border-radius:0 10px 10px 0}
+#v1LightTools .scam-timeline-item time{color:#a9caff;font-size:11px;font-weight:800}
+#v1LightTools .scam-timeline-item p{margin:5px 0 0;color:#c3d0e1;font-size:12px;line-height:1.55;overflow-wrap:anywhere}
+#v1LightTools .scam-online-panel{margin:12px 0;padding:15px;border:1px solid rgba(105,165,225,.28);border-radius:15px;background:rgba(24,54,87,.55)}
+#v1LightTools .scam-safety-note{margin:14px 0;padding:13px;border:1px solid rgba(221,176,100,.28);border-radius:13px;background:rgba(111,77,27,.15);color:#e5d4b4}
+#v1LightTools .scam-safety-note strong{color:#ffe0a6}
+#v1LightTools .scam-saved-row{grid-template-columns:minmax(0,1fr) auto;align-items:center}
+#v1LightTools .scam-saved-row>div:first-child{display:grid;gap:4px;min-width:0}
+#v1LightTools #scamOnlinePanel[hidden]{display:none}
+@media(max-width:620px){
+ #v1LightTools .scam-modebar{align-items:stretch;flex-direction:column}
+ #v1LightTools .scam-local-note{font-size:9px}
+ #v1LightTools .scam-section{padding:12px;border-radius:14px}
+ #v1LightTools .scam-saved-row{grid-template-columns:1fr}
+ #v1LightTools .scam-saved-row .scam-inline-actions{width:100%}
+ #v1LightTools .scam-saved-row .scam-small-button{flex:1}
+ #v1LightTools .scam-count{width:100%;padding:3px 0}
+}
+@media(prefers-reduced-motion:reduce){#v1LightTools .scam-risk-track i{transition:none}}
