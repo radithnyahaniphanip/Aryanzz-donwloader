@@ -20,7 +20,6 @@ function resetPanelScroll(){
 function showPanel(id){
  let panelId=String(id||"");
  if(panelId==="home")panelId="";
- if(panelId==="membership")panelId="aryMembershipPanel";
  if(panelId){
   const candidate=document.getElementById(panelId);
   if(!candidate||candidate.parentElement!==toolsArea||!candidate.classList.contains("panel"))panelId="allTools";
@@ -43,7 +42,7 @@ function showPanel(id){
   panel.setAttribute("aria-hidden",String(!active));
   panel.classList.remove("v677-enter","v677-reveal","v25-reveal");
  });
- const navKey=isHome?"home":panelId==="history"?"history":panelId==="owner"?"owner":panelId==="profile"?"profile":panelId==="aryMembershipPanel"?"membership":"allTools";
+ const navKey=isHome?"home":panelId==="history"?"history":panelId==="owner"?"owner":panelId==="profile"?"profile" :"allTools";
  nav.querySelectorAll("[data-nav]").forEach(button=>{
   const active=button.dataset.nav===navKey;
   button.classList.toggle("active",active);
