@@ -18,7 +18,7 @@ assert.match(worker, /story_fbid/);
 assert.match(worker, /groups.*permalink.*posts/);
 assert.match(worker, /async function facebookPublicReaderMediaInfo/);
 assert.match(worker, /if\(key==="facebook"\)\s*\{\s*try\s*\{\s*const response=await facebookPublicReaderMediaInfo/);
-assert.match(worker, /errorType:login\?"login_required":"public_reader_unavailable"/);
+assert.match(worker, /errorType:login\?"login_required":accessLimited\?"public_access_limited":"public_reader_unavailable"/);
 assert.match(worker, /public_access_limited/);
 assert.match(worker, /Facebook sedang membatasi pembacaan otomatis dari server ARYANZZ/);
 
