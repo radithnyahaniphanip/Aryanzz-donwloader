@@ -54,6 +54,11 @@ for (const [id] of tools) {
 
 assert.ok(video.includes('register("video-lightweight"') && video.includes("parseMp4") && video.includes("v1ltSheetGenerate"), "video module registers real media processing");
 assert.ok(image.includes('register("image-lightweight"') && image.includes("readJpegExif") && image.includes("renderBlur"), "image module registers EXIF, palette, blur and sticker processing");
+assert.ok(image.includes("function applyBlurDab") && image.includes("function addBlurSegment"), "Privacy Blur applies cached brush dabs along smooth pointer segments");
+assert.ok(image.includes("requestAnimationFrame(flushBlurPoint)") && image.includes("setPointerCapture"), "Privacy Blur batches pointer movement and captures touch drags");
+assert.ok(image.includes('addEventListener("lostpointercapture",finishBlur)'), "Privacy Blur finalizes safely when pointer capture is lost");
+assert.ok(!image.includes('const low=document.createElement("canvas");low.width=8'), "Privacy Blur does not allocate a new pixel canvas for every brush point");
+assert.ok(css.includes("overscroll-behavior:contain") && css.includes("-webkit-touch-callout:none"), "Privacy Blur prevents page gestures and text selection during brush use");
 assert.ok(files.includes('register("file-lightweight"') && files.includes("createZip") && files.includes("subtle.digest") && files.includes("parseCsv"), "file module registers ZIP, hashing and CSV operations");
 assert.ok(developer.includes('register("developer-lightweight"') && developer.includes("decodePart") && developer.includes("new Worker"), "developer module registers JWT and isolated regex processing");
 assert.ok(css.includes("#v1LightTools") && css.includes("@media(max-width:760px)"), "styles are scoped and responsive");
