@@ -10,13 +10,14 @@ function normalizePhone(value){
  if(digits.startsWith("00"))digits="+"+digits.slice(2);
  if(digits.startsWith("+"))digits=digits.slice(1);
  else if(digits.startsWith("0"))digits="62"+digits.slice(1);
- if(!/^\d{8,15}$/.test(digits))return "";
+ if(!/^\d{9,15}$/.test(digits))return "";
  return "+"+digits;
 }
 function extractPhones(text){
  const matches=String(text||"").match(/(?:\+\s?\d[\d\s().-]{7,}\d|\b0\d[\d\s().-]{7,}\d\b|\b62\d[\d\s().-]{7,}\d\b)/g)||[];
  return unique(matches.map(normalizePhone).filter(Boolean));
 }
+function phoneInfo(value){const number=normalizePhone(value);const country=number.startsWith("+62")?"Indonesia":number.startsWith("+60")?"Malaysia":number.startsWith("+65")?"Singapura":number.startsWith("+63")?"Filipina":number.startsWith("+1")?"Amerika Serikat/Kanada":number.startsWith("+44")?"Britania Raya":number.startsWith("+61")?"Australia":number.startsWith("+81")?"Jepang":number.startsWith("+82")?"Korea Selatan":number.startsWith("+86")?"Tiongkok":number.startsWith("+91")?"India":"Kode negara tidak dikenali";return {number,country,note:"Kode negara bukan lokasi fisik atau identitas pemilik."};}
 function maskIdentifier(value){
  const raw=String(value||"");if(raw.length<=4)return raw;
  return raw.slice(0,Math.min(3,raw.length-4))+"•".repeat(Math.min(6,raw.length-4))+raw.slice(-4);
@@ -74,7 +75,7 @@ function parseTimeline(text){
 }
 function validCoords(lat,lng){
  const a=Number(lat),b=Number(lng);
- return Number.isFinite(a)&&Number.isFinite(b)&&a>=-90&&a<=90&&b>=-180&&b<=180&&Math.abs(a)+Math.abs(b)>0;
+ return Number.isFinite(a)&&Number.isFinite(b)&&a>=-90&&a<=90&&b>=-180&&b<=180;
 }
 function extractCoordinates(text){
  const source=String(text||""),out=[],seen=new Set();
@@ -121,7 +122,7 @@ async function readExif(file){
  const u16=o=>view.getUint16(o,little),u32=o=>view.getUint32(o,little);
  if(u16(tiff+2)!==42)return {};
  const readAscii=(entry,count)=>{const type=u16(entry+2),n=count??u32(entry+4),base=n<=4?entry+8:tiff+u32(entry+8);if(type!==2||base<0||base+n>bytes.length)return "";return new TextDecoder().decode(bytes.slice(base,base+n)).replace(/\0+$/,"").trim()};
- const readRationals=(entry,count)=>{const type=u16(entry+2),n=count??u32(entry+4),base=n<=1?entry+8:tiff+u32(entry+8),values=[];if(type!==5||n>4||base<0||base+n*8>bytes.length)return values;for(let i=0;i<n;i++){const numerator=u32(base+i*8),denominator=u32(base+i*8+4);values.push(denominator?numerator/denominator:0)}return values};
+ const readRationals=(entry,count)=>{const type=u16(entry+2),n=count??u32(entry+4),base=tiff+u32(entry+8),values=[];if(type!==5||n>4||base<0||base+n*8>bytes.length)return values;for(let i=0;i<n;i++){const numerator=u32(base+i*8),denominator=u32(base+i*8+4);values.push(denominator?numerator/denominator:0)}return values};
  const readIfd=at=>{if(at<tiff||at+2>bytes.length)return [];const count=u16(at),entries=[];if(count>512||at+2+count*12>bytes.length)return entries;for(let i=0;i<count;i++){const pos=at+2+i*12;entries.push({tag:u16(pos),entry:pos,count:u32(pos+4)})}return entries};
  const ifd0=readIfd(tiff+u32(tiff+4)),meta={make:"",model:"",software:"",dateTime:"",gps:null};
  for(const item of ifd0){
@@ -141,7 +142,7 @@ async function readExif(file){
  }
  return meta;
 }
-const core={normalizePhone,extractPhones,maskIdentifier,extractAccounts,extractUrls,inspectUrl,analyzeScamText,parseTimeline,extractCoordinates,validCoords,mapsLinks,readExif,escapeHtml,OFFICIAL};
+const core={normalizePhone,phoneInfo,extractPhones,maskIdentifier,extractAccounts,extractUrls,inspectUrl,analyzeScamText,parseTimeline,extractCoordinates,validCoords,mapsLinks,readExif,escapeHtml,OFFICIAL};
 if(typeof window!=="undefined")window.ARYANZZScamEvidenceCore=core;
 const stage1=typeof window!=="undefined"?window.ARYANZZStage1:null;
 if(!stage1||typeof stage1.register!=="function")return;
@@ -158,7 +159,7 @@ function init(root,api){
  }
  function makeLink(label,url){const a=node("a","scam-link",label);a.href=url;a.target="_blank";a.rel="noopener noreferrer";return a}
  function renderPhones(){
-  renderList("scamPhones",state.phones,phone=>{const card=node("article","scam-result-card"),title=node("strong","",api.safeName(phone)),sub=node("small","","Format internasional; tidak menunjukkan lokasi atau identitas pemilik."),actions=node("div","scam-inline-actions");actions.append(makeLink("Periksa laporan resmi",OFFICIAL.phone));card.append(title,sub,actions);return card},"Nomor telepon belum ditemukan dalam teks.");
+  renderList("scamPhones",state.phones,phone=>{const card=node("article","scam-result-card"),title=node("strong","",api.safeName(phone)),sub=node("small","",core.phoneInfo(phone).country+" · Kode negara bukan lokasi fisik atau identitas pemilik."),actions=node("div","scam-inline-actions");actions.append(makeLink("Periksa laporan resmi",OFFICIAL.phone));card.append(title,sub,actions);return card},"Nomor telepon belum ditemukan dalam teks.");
  }
  function renderAccounts(){
   renderList("scamAccounts",state.accounts,account=>{const card=node("article","scam-result-card"),title=node("strong","",account.label+" · "+account.masked),sub=node("small","","Pemeriksaan status dilakukan melalui portal resmi; ARYANZZ tidak mengakses database rekening pribadi."),actions=node("div","scam-inline-actions");actions.append(makeLink("CekRekening.id",OFFICIAL.account),makeLink("Laporkan ke IASC",OFFICIAL.iasc));card.append(title,sub,actions);return card},"Nomor rekening/e-wallet belum ditemukan. Tambahkan label rekening di percakapan agar lebih mudah dikenali.");
@@ -176,8 +177,8 @@ function init(root,api){
   renderList("scamMetadata",state.metadata,item=>{const card=node("article","scam-result-card"),title=node("strong","",item.name),lines=node("ul","scam-reasons");[["Jenis",item.type||"Tidak diketahui"],["Ukuran",api.formatBytes(item.size||0)],["Dimensi",item.dimensions||"—"],["Kamera EXIF",item.camera||"Tidak tersedia"],["Perangkat lunak EXIF",item.software||"Tidak tersedia"],["Waktu EXIF",item.dateTime||"Tidak tersedia"],["GPS",item.gps?"Tersedia":"Tidak tersedia"]].forEach(pair=>lines.append(node("li","",pair[0]+": "+pair[1])));card.append(title,lines);return card},"Metadata file akan muncul setelah file diperiksa.");
  }
  function renderRisk(){
-  const result=state.analysis;if(!result)return;
-  const score=$("scamRiskScore"),level=$("scamRiskLevel"),bar=$("scamRiskBar");
+  const result=state.analysis,score=$("scamRiskScore"),level=$("scamRiskLevel"),bar=$("scamRiskBar");
+  if(!result){if(score)score.textContent="—/100";if(level){level.textContent="Belum dianalisis";level.dataset.level="low"}if(bar)bar.style.width="0%";renderList("scamIndicators",[],()=>null,"Belum ada hasil analisis.");if($("scamRiskDisclaimer"))$("scamRiskDisclaimer").textContent="Skor akan dihitung dari pola kata yang ditemukan. Ini bukan keputusan bahwa seseorang melakukan penipuan.";return}
   if(score)score.textContent=result.score+"/100";
   if(level){level.textContent=result.level==="high"?"Indikasi kuat":result.level==="review"?"Perlu ditinjau":"Indikasi rendah";level.dataset.level=result.level}
   if(bar)bar.style.width=result.score+"%";
@@ -251,8 +252,8 @@ function init(root,api){
  }
  function openOnlineSources(){
   if(selectedMode()!=="online"){status("Pilih mode Online untuk membuka sumber resmi.","info");return}
-  [OFFICIAL.iasc,OFFICIAL.account,OFFICIAL.phone].forEach(url=>window.open(url,"_blank","noopener,noreferrer"));
-  status("Portal resmi dibuka. Pemeriksaan dilakukan manual; ARYANZZ tidak mengirim bukti atau data pribadi.","info");
+  window.open(OFFICIAL.iasc,"_blank","noopener,noreferrer");
+  status("Portal IASC dibuka. Portal rekening dan nomor tersedia di tombol masing-masing; ARYANZZ tidak mengirim bukti atau data pribadi.","info");
  }
  function selectedMode(){return $("scamMode")?.value||"local"}
  function createRecord(){
@@ -289,7 +290,7 @@ function init(root,api){
   }catch(error){status(error.message||"Gagal menghapus kasus.","error")}
  }
  function downloadBlob(blob,name){
-  const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=name;a.rel="noopener";a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);
+  const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=name;a.rel="noopener";a.style.display="none";document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
  }
  function exportJson(){
   if(!state.analysis)analyze();const record=createRecord();downloadBlob(new Blob([JSON.stringify(record,null,2)],{type:"application/json"}),"aryanzz-scam-evidence.json");
@@ -297,7 +298,7 @@ function init(root,api){
  function printReport(){
   if(!state.analysis)analyze();const record=createRecord();
   const html="<!doctype html><html lang='id'><meta charset='utf-8'><title>ARYANZZ Scam Evidence Report</title><style>body{font:14px Arial,sans-serif;color:#172033;max-width:900px;margin:32px auto;padding:0 20px}h1,h2{color:#142747}table{width:100%;border-collapse:collapse;margin:12px 0}td,th{padding:8px;border:1px solid #ccd5e2;text-align:left;vertical-align:top}small,.muted{color:#53627a}.warning{padding:12px;background:#fff5df;border:1px solid #e7c87e;border-radius:8px}@media print{button{display:none}}</style><h1>ARYANZZ Scam Evidence Report</h1><p class='muted'>Dibuat "+core.escapeHtml(new Date().toLocaleString("id-ID"))+" · Analisis lokal · Bukan penetapan kesalahan</p><h2>Ringkasan</h2><p>Skor indikator: <b>"+record.analysis.score+"/100</b> · Tingkat: "+core.escapeHtml(record.analysis.level)+"</p><div class='warning'>Skor berbasis pola teks dan tidak membuktikan identitas atau kesalahan seseorang. Nomor telepon tidak digunakan untuk memperoleh GPS atau alamat pribadi.</div><h2>Indikator</h2><ul>"+record.analysis.indicators.map(item=>"<li>"+core.escapeHtml(item.label)+"</li>").join("")+"</ul><h2>Nomor telepon</h2><ul>"+record.phones.map(item=>"<li>"+core.escapeHtml(core.maskIdentifier(item))+"</li>").join("")+"</ul><h2>Rekening / e-wallet</h2><ul>"+record.accounts.map(item=>"<li>"+core.escapeHtml(item.label)+" · "+core.escapeHtml(item.masked)+"</li>").join("")+"</ul><h2>Tautan</h2><ul>"+record.urls.map(item=>"<li>"+core.escapeHtml(item.url)+"</li>").join("")+"</ul><h2>Kronologi</h2><table><tr><th>Waktu</th><th>Konteks</th></tr>"+record.timeline.map(item=>"<tr><td>"+core.escapeHtml(new Date(item.date).toLocaleString("id-ID"))+"</td><td>"+core.escapeHtml(item.context)+"</td></tr>").join("")+"</table><h2>Lokasi dalam bukti</h2><ul>"+record.locations.map(item=>"<li>"+core.escapeHtml(item.source)+" · "+item.lat.toFixed(6)+", "+item.lng.toFixed(6)+" (belum terverifikasi)</li>").join("")+"</ul><h2>Integritas file</h2><ul>"+record.hashes.map(item=>"<li>"+core.escapeHtml(item.name)+" · SHA-256: "+item.sha256+"</li>").join("")+"</ul><h2>Teks bukti</h2><pre style='white-space:pre-wrap'>"+core.escapeHtml(record.text)+"</pre><p class='muted'>Verifikasi lanjutan dilakukan melalui kanal resmi yang berwenang.</p><script>window.onload=()=>window.print()</script></html>";
-  const url=URL.createObjectURL(new Blob([html],{type:"text/html"})),popup=window.open(url,"_blank","noopener");
+  const url=URL.createObjectURL(new Blob([html],{type:"text/html"})),popup=window.open(url,"_blank");if(popup)popup.opener=null;
   if(!popup){downloadBlob(new Blob([html],{type:"text/html"}),"aryanzz-scam-evidence-report.html");status("Popup diblokir. Laporan HTML diunduh; buka lalu pilih Cetak / Simpan sebagai PDF.","warning")}else status("Laporan dibuka. Pilih Simpan sebagai PDF pada dialog cetak browser.","success");
   setTimeout(()=>URL.revokeObjectURL(url),60000);
  }
