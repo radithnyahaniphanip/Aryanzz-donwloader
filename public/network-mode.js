@@ -191,20 +191,21 @@ function mediaCacheKey(rawUrl){
 }
 async function saveMedia(rawUrl,meta={}){
   const url=new URL(rawUrl,location.href),key=mediaCacheKey(url.href);
-  if(!key)throw new Error("Hanya stream media ARYANZZ yang dapat disimpan untuk offline.");
+  if(!key)throw new Error("Hanya stream media yang diproses ARYANZZ yang dapat disimpan untuk offline.");
   if(!navigator.onLine||selectedMode==="offline")throw new Error("Aktifkan Mode Online dan koneksi internet untuk menyimpan file baru.");
   const existing=await dbGet("media",key).catch(()=>null);
   if(existing)return {saved:true,size:existing.size||existing.blob?.size||0,alreadySaved:true};
-  const probe=await nativeFetch(url.href,{headers:{Range:"bytes=0-0"},cache:"no-store",credentials:"same-origin"});
-  if(!probe.ok&&probe.status!==206)throw new Error("Pemeriksaan ukuran file gagal (HTTP "+probe.status+").");
-  const range=String(probe.headers.get("content-range")||"").match(/\/(\d+)$/);
-  const estimated=Number(range?.[1]||probe.headers.get("content-length")||0);
-  await probe.body?.cancel().catch(()=>{});
-  if(estimated>MAX_OFFLINE_BYTES)throw new Error("File terlalu besar untuk cache offline HP (maksimal 100 MB). Unduh file secara online seperti biasa.");
+  const probeUrl=new URL(url.href);probeUrl.searchParams.set("probe","1");
+  const probe=await nativeFetch(probeUrl.href,{headers:{accept:"application/json"},cache:"no-store",credentials:"same-origin"});
+  const check=await probe.json().catch(()=>({}));
+  if(!probe.ok||check.valid!==true)throw new Error(check.error||"File tidak lolos validasi ARYANZZ (HTTP "+probe.status+").");
+  const expected=Number(check.bytes)||0,mime=String(check.mimeType||"").split(";")[0].toLowerCase();
+  if(!mime.startsWith("video/")&&!mime.startsWith("audio/"))throw new Error("Sumber tidak mengirim file video/audio yang valid.");
+  if(expected>MAX_OFFLINE_BYTES)throw new Error("File terlalu besar untuk cache offline HP (maksimal 100 MB). Unduh file secara online seperti biasa.");
   const response=await nativeFetch(url.href,{cache:"no-store",credentials:"same-origin"});
   if(!response.ok)throw new Error("File tidak dapat diambil untuk cache offline (HTTP "+response.status+").");
-  const mime=String(response.headers.get("content-type")||"").split(";")[0].toLowerCase();
-  if(!mime.startsWith("video/")&&!mime.startsWith("audio/"))throw new Error("Sumber tidak mengirim file video/audio yang valid.");
+  const responseMime=String(response.headers.get("content-type")||"").split(";")[0].toLowerCase();
+  if(responseMime!==mime)throw new Error("Tipe file berubah saat diambil; file tidak disimpan.");
   const reader=response.body?.getReader(),chunks=[];let size=0;
   if(reader){
     try{
@@ -222,11 +223,12 @@ async function saveMedia(rawUrl,meta={}){
   }
   const blob=new Blob(chunks,{type:mime});
   if(!blob.size)throw new Error("File kosong; tidak disimpan.");
+  if(expected&&blob.size!==expected)throw new Error("Unduhan cache tidak lengkap ("+blob.size+" dari "+expected+" byte). Coba simpan lagi saat jaringan stabil.");
   try{
     const estimate=await navigator.storage?.estimate?.();
-    if(estimate?.quota&&estimate?.usage&&estimate.usage+blob.size>estimate.quota*.9)throw new Error("Penyimpanan perangkat hampir penuh. Hapus cache offline lain terlebih dahulu.");
+    if(estimate?.quota&&Number.isFinite(estimate.usage)&&estimate.usage+blob.size>estimate.quota*.9)throw new Error("Penyimpanan perangkat hampir penuh. Hapus cache offline lain terlebih dahulu.");
   }catch(error){if(error?.message?.includes("hampir penuh"))throw error;}
-  await dbPut("media",{key,blob,mimeType:mime,size:blob.size,title:String(meta.title||"Media tersimpan").slice(0,300),sourceUrl:String(meta.sourceUrl||url.searchParams.get("source")||""),savedAt:Date.now()});
+  await dbPut("media",{key,blob,mimeType:mime,size:blob.size,extension:String(check.extension||url.searchParams.get("ext")||"mp4"),verified:true,title:String(meta.title||"Media tersimpan").slice(0,300),sourceUrl:String(meta.sourceUrl||url.searchParams.get("source")||url.searchParams.get("url")||""),savedAt:Date.now()});
   return {saved:true,size:blob.size,alreadySaved:false};
 }
 window.ARYANZZOfflineMedia={saveMedia,mediaCacheKey,setMode,getMode:()=>selectedMode};
