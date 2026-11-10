@@ -1919,7 +1919,18 @@ async function facebookPublicReaderMediaInfo(rawUrl,requestUrl,timeoutMs=9000){
   catch(error){
     const detail=String(error?.message||error);
     const login=detail==="facebook_login_required";
-    return json({ok:false,error:login?"Facebook meminta login untuk membaca postingan ini. ARYANZZ hanya memproses postingan yang memang dapat diakses publik tanpa login.":"Facebook belum dapat dibaca melalui jalur metadata publik: "+detail.slice(0,180),errorType:login?"login_required":"public_reader_unavailable",providerName:"Facebook mobile/public reader fallback",provider:"Facebook public page",fallbackTried:true},login?403:502);
+    const accessLimited=/HTTP\s*(?:400|403|406|429)|rate.?limit|temporarily blocked/i.test(detail);
+    const message=login
+      ?"Facebook meminta login untuk membaca postingan ini. ARYANZZ hanya memproses postingan yang memang dapat diakses publik tanpa login."
+      :accessLimited
+        ?"Facebook sedang membatasi pembacaan otomatis dari server ARYANZZ. Pastikan postingan benar-benar publik dan dapat dibuka tanpa login. Jika Facebook tidak menyediakan stream video publik, file MP4 tidak dapat diambil."
+        :"Facebook belum dapat dibaca melalui jalur metadata publik. Pastikan tautan benar dan coba lagi saat layanan Facebook stabil.";
+    return json({
+      ok:false,error:message,
+      errorType:login?"login_required":accessLimited?"public_access_limited":"public_reader_unavailable",
+      providerName:"Facebook mobile/public reader fallback",provider:"Facebook public page",
+      fallbackTried:true,diagnostics:{detail:detail.slice(0,180)}
+    },login?403:502);
   }
   const body=String(page.body||"");
   const titleMatch=body.match(/^Title:\s*(.{1,300}?)(?:\s*\|\s*Facebook)?$/mi);
