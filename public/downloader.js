@@ -1906,6 +1906,41 @@ function socialNetworkPlan(selected=0){
       fav.type = "button";
       fav.addEventListener("click", () => favorite(url.href, info.title || url.href, fav));
       actions.append(start, cancel, fav);
+      let offlineSave=null;
+      if(hasProviderDownloadFormats&&!isYouTube&&!directMedia){
+        offlineSave=make("button","tag","Simpan offline");offlineSave.type="button";
+        const refreshOfflineSave=()=>{
+          const offline=window.ARYANZZ_NETWORK_MODE==="offline";
+          offlineSave.disabled=offline||!navigator.onLine;
+          offlineSave.title=offline?"Aktifkan Mode Online untuk menyimpan file baru.":!navigator.onLine?"Koneksi internet diperlukan untuk menyimpan file offline.":"Simpan file media terverifikasi ke perangkat agar dapat diputar dan diunduh tanpa internet.";
+        };
+        offlineSave.addEventListener("click",async()=>{
+          if(!window.ARYANZZOfflineMedia?.saveMedia){progressMeta.textContent="Modul penyimpanan offline belum siap. Muat ulang halaman.";return;}
+          const selectedMode=mode.value==="audio"?"audio":"video";
+          let candidates=(info.formats||[]).filter(item=>item?.mode===selectedMode&&item?.downloadUrl&&!item.videoOnly);
+          if(selectedMode==="video")candidates=candidates.filter(item=>["mp4","m4v","webm"].includes(String(item.ext||"").toLowerCase()));
+          else candidates=candidates.filter(item=>["mp3","m4a","aac","opus","ogg","wav","flac"].includes(String(item.ext||"").toLowerCase()));
+          if(selectedMode==="audio"&&audioFormat.value)candidates.sort((a,b)=>(a.ext===audioFormat.value?-1:0)-(b.ext===audioFormat.value?-1:0));
+          if(selectedMode==="video"&&Number(quality.value)>0)candidates.sort((a,b)=>Math.abs((Number(a.height)||0)-Number(quality.value))-Math.abs((Number(b.height)||0)-Number(quality.value)));
+          const candidate=candidates[0];
+          if(!candidate){progressMeta.textContent="Provider tidak menyediakan format yang dapat disimpan offline.";return;}
+          offlineSave.disabled=true;offlineSave.textContent="Menyimpan…";
+          try{
+            const result=await window.ARYANZZOfflineMedia.saveMedia(candidate.downloadUrl,{title:info.title||"Media ARYANZZ",sourceUrl:url.href});
+            offlineSave.textContent=result.alreadySaved?"Sudah tersimpan ✓":"Tersimpan offline ✓";
+            progressMeta.textContent=(result.alreadySaved?"File ini sudah ada":"File berhasil disimpan di perangkat")+" · "+formatDownloadSize(result.size)+". Kini dapat diputar dan diunduh saat offline.";
+          }catch(error){
+            offlineSave.textContent="Simpan offline";
+            progressMeta.textContent=String(error?.message||error).slice(0,260);
+            refreshOfflineSave();
+          }
+        });
+        window.addEventListener("aryanzz:network-mode-change",refreshOfflineSave);
+        window.addEventListener("online",refreshOfflineSave);
+        window.addEventListener("offline",refreshOfflineSave);
+        refreshOfflineSave();
+        actions.append(offlineSave);
+      }
       const engineStatus=make("small","youtube-engine-status","");engineStatus.hidden=true;
       box.append(progress, progressText, progressMeta, engineStatus, actions);
       cancel.addEventListener("click",()=>{
