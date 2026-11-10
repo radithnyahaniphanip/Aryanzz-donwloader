@@ -314,7 +314,8 @@ $("emoteExportGif")?.addEventListener("click",exportGif);
 function drawVideoOverlay(){
  if(!videoCanvas||!videoCtx)return;
  const w=videoCanvas.width,h=videoCanvas.height;videoCtx.clearRect(0,0,w,h);
- if(canvas&&video.readyState>=2&&state.videoFile){
+ if(video.readyState>=2&&state.videoFile)videoCtx.drawImage(video,0,0,w,h);
+ if(canvas&&state.videoFile){
   const ratio=canvas.width/canvas.height,scale=Number($("emoteVideoScale")?.value||22)/100;
   const stickerW=Math.min(w*.7,w*scale),stickerH=stickerW/ratio;
   const x=(w-stickerW)*(Number($("emoteVideoX")?.value||76)/100),y=(h-stickerH)*(Number($("emoteVideoY")?.value||76)/100);
@@ -340,7 +341,7 @@ video?.addEventListener("loadedmetadata",()=>{
  const scale=Math.min(1,1280/video.videoWidth);videoCanvas.width=Math.max(1,Math.round(video.videoWidth*scale));videoCanvas.height=Math.max(1,Math.round(video.videoHeight*scale));
  $("emoteExportMp4").disabled=false;say("emoteVideoStatus","Video siap · "+video.videoWidth+" × "+video.videoHeight+" · "+video.duration.toFixed(1)+" detik. Atur posisi stiker lalu ekspor.","success");drawVideoOverlay();
 });
-video?.addEventListener("play",drawVideoOverlay);video?.addEventListener("pause",()=>{stopVideoLoop();drawVideoOverlay()});
+video?.addEventListener("loadeddata",drawVideoOverlay);video?.addEventListener("play",drawVideoOverlay);video?.addEventListener("pause",()=>{stopVideoLoop();drawVideoOverlay()});
 async function exportVideoMp4(){
  const button=$("emoteExportMp4");if(button.disabled||!state.videoFile)return;
  if(!state.image&&!state.strokes.length&&!state.objects.length){say("emoteVideoStatus","Buat stiker di Editor terlebih dahulu.","error");return}
