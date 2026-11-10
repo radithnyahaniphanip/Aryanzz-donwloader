@@ -30,6 +30,7 @@
 #v1LightTools .scam-result-card strong,#v1LightTools .scam-saved-row strong{color:#f0f6ff;font-size:13px;overflow-wrap:anywhere}
 #v1LightTools .scam-result-card small,#v1LightTools .scam-saved-row small{color:#9eafc6;font-size:11px;line-height:1.55;overflow-wrap:anywhere}
 #v1LightTools .scam-result-card code{display:block;padding:8px;border-radius:8px;background:#091423;color:#d7e7ff;font-size:11px;white-space:normal;overflow-wrap:anywhere}
+#v1LightTools .scam-map-frame{display:block;width:100%;height:235px;border:1px solid rgba(135,163,201,.22);border-radius:12px;background:#091423}
 #v1LightTools .scam-risk{display:inline-flex;width:max-content;padding:4px 8px;border-radius:99px;font-size:10px;font-weight:800}
 #v1LightTools .scam-risk-high{background:rgba(230,90,90,.15);color:#ffaaaa}
 #v1LightTools .scam-risk-review{background:rgba(226,174,75,.14);color:#f4d08d}
