@@ -418,4 +418,5 @@ console.log("\nARYANZZ V1 modular workspace, profile and account security smoke 
 assert.equal(read("../public/index.html").includes('src="/membership.js'),false,"Membership script must not be loaded");
 assert.equal(read("../public/workspace-navigation.js").includes('membership"'),false,"Membership must not have a navigation destination");
 assert.equal(read("../public/index.html").includes('Akses administrator · Masuk admin'),false,"Administrator entry must be removed from Owner page");
-assert.ok(read("../public/workspace-tools.js").includes('grid.querySelectorAll(".tool").forEach'),"Dynamically added tool cards must participate in search and filters");
+const toolsWorkspaceJs=read("../public/workspace-tools.js");
+assert.ok(toolsWorkspaceJs.includes('grid.querySelectorAll(".tool")') && toolsWorkspaceJs.includes("const gridObserver=new MutationObserver(apply)") && toolsWorkspaceJs.includes("gridObserver.observe(grid,{childList:true})"),"Dynamically added tool cards must participate in search and filters");
