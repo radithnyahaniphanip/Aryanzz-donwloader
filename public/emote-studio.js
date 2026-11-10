@@ -1,6 +1,7 @@
 (()=>{"use strict";
 const root=document.getElementById("emoteStudio");
 if(!root)return;
+function initialize(){
 const $=id=>root.querySelector("#"+id);
 const qa=(selector,scope=root)=>[...scope.querySelectorAll(selector)];
 const state={image:null,imageName:"",strokes:[],objects:[],tool:"move",selected:-1,gesture:null,aiBlob:null,aiUrl:"",libraryDb:null,ffmpeg:null,ffmpegPromise:null,videoUrl:"",videoFile:null,videoRaf:0,gifUrl:"",videoResultUrl:"",busy:false};
@@ -391,13 +392,17 @@ async function exportVideoMp4(){
  }
 }
 $("emoteExportMp4")?.addEventListener("click",exportVideoMp4);
+
+}
 async function boot(){
- if(markupReady)return;markupReady=true;
  try{
-  const response=await fetch("/emote-studio.html",{cache:"no-cache"});if(!response.ok)throw new Error("Panel Emote Studio tidak dapat dimuat (HTTP "+response.status+").");
-  const markup=await response.text();if(!markup.includes('id="emoteApp"'))throw new Error("Struktur Emote Studio tidak valid.");
+  const response=await fetch("/emote-studio.html",{cache:"no-cache"});
+  if(!response.ok)throw new Error("Panel Emote Studio tidak dapat dimuat (HTTP "+response.status+").");
+  const markup=await response.text();
+  if(!markup.includes('id="emoteApp"'))throw new Error("Struktur Emote Studio tidak valid.");
   root.innerHTML=markup;
-  const script=document.createElement("script");script.src="/emote-studio.js?v=__ARYANZZ_VERSION__";script.dataset.emoteLoader="true";
+  initialize();
  }catch(error){root.textContent="Emote Studio gagal dimuat: "+(error.message||"kesalahan tidak diketahui")}
 }
+boot();
 })();
