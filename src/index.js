@@ -3368,15 +3368,17 @@ const workerHandler = {async fetch(request,env){
   // Serve crawler files explicitly so Google receives deterministic XML/plain-text MIME types.
   if(url.pathname==="/sitemap.xml"&&request.method==="GET"){
     const lastmod=new Date().toISOString().slice(0,10);
-    const xml='<?xml version="1.0" encoding="UTF-8"?>\\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\\n  <url>\\n    <loc>https://aryanzz-donwloader.aryanz.workers.dev/</loc>\\n    <lastmod>'+lastmod+'</lastmod>\\n  </url>\\n</urlset>\\n';
+    const sitemapPaths=["/","/panduan","/download-video","/download-mp3","/download-gambar"];
+    const xml='<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'+sitemapPaths.map(path=>'  <url>\n    <loc>https://aryanzz-donwloader.aryanz.workers.dev'+path+'</loc>\n    <lastmod>'+lastmod+'</lastmod>\n  </url>').join('\n')+'\n</urlset>\n';
     return new Response(xml,{status:200,headers:{"content-type":"application/xml; charset=utf-8","cache-control":"public, max-age=3600","x-content-type-options":"nosniff"}});
   }
   if(url.pathname==="/sitemap.txt"&&request.method==="GET"){
-    const sitemap="https://aryanzz-donwloader.aryanz.workers.dev/\n";
+    const sitemapPaths=["/","/panduan","/download-video","/download-mp3","/download-gambar"];
+    const sitemap=sitemapPaths.map(path=>"https://aryanzz-donwloader.aryanz.workers.dev"+path).join("\n")+"\n";
     return new Response(sitemap,{status:200,headers:{"content-type":"text/plain; charset=utf-8","cache-control":"public, max-age=3600","x-content-type-options":"nosniff"}});
   }
   if(url.pathname==="/robots.txt"&&request.method==="GET"){
-    const robots='User-agent: *\\nAllow: /\\nDisallow: /api/\\n\\nSitemap: https://aryanzz-donwloader.aryanz.workers.dev/sitemap.xml\\n';
+    const robots="User-agent: *\nAllow: /\nDisallow: /api/\n\nSitemap: https://aryanzz-donwloader.aryanz.workers.dev/sitemap.xml\n";
     return new Response(robots,{status:200,headers:{"content-type":"text/plain; charset=utf-8","cache-control":"public, max-age=3600","x-content-type-options":"nosniff"}});
   }
   if(request.method==="OPTIONS"&&url.pathname.startsWith("/api/"))return new Response(null,{status:204,headers:{"access-control-allow-origin":url.origin,"access-control-allow-methods":"GET,POST,OPTIONS","access-control-allow-headers":"Content-Type"}});
