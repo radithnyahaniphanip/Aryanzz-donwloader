@@ -87,6 +87,8 @@ assert.equal(scamCore.inspectUrl("http://bit.ly/cek").risk, "review", "Link insp
 assert.equal(scamCore.analyzeScamText("Segera kirim OTP dan transfer biaya admin sekarang juga").level, "high", "Scam heuristics identify multiple risk indicators without claiming guilt");
 assert.equal(scamCore.parseTimeline("[10/11/2026, 10:30] Pelaku: kirim OTP").length, 1, "Timeline extraction recognizes WhatsApp-style timestamps");
 assert.equal(scamCore.extractCoordinates("https://www.google.com/maps/@-6.200000,106.816666,17z")[0].lng, 106.816666, "Map extraction reads explicit shared coordinates");
+assert.equal(scamCore.extractCoordinates("https://maps.google.com/?q=-6.200000%2C106.816666")[0].lat, -6.2, "Map extraction reads URL-encoded shared coordinates");
+assert.equal(scamCore.extractUrls("Lihat https://bit.ly/contoh")[0].host, "bit.ly", "URL extraction recognizes shared links");
 assert.ok(scamCore.mapsLinks(-6.2, 106.816666).google.includes("google.com/maps") && scamCore.mapsLinks(-6.2, 106.816666).osm.includes("openstreetmap.org"), "Evidence Map creates Google Maps and OpenStreetMap links");
 assert.equal(scamCore.validCoords(0, 0), true, "Valid equator/prime-meridian coordinates are accepted");
 
