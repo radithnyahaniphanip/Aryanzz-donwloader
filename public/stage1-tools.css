@@ -51,6 +51,7 @@
 #v1LightTools .v1lt-canvas{display:block;width:100%;height:auto;max-height:65vh;margin:12px 0;border:1px solid var(--v1lt-border);border-radius:13px;background:repeating-conic-gradient(#18283d 0 25%,#0d1a2b 0 50%) 50%/18px 18px;touch-action:pan-y}
 #v1LightTools .v1lt-canvas[hidden]{display:none}
 #v1LightTools #v1ltBlurCanvas,#v1LightTools #v1ltStickerCanvas{touch-action:none;cursor:crosshair}
+#v1LightTools #v1ltBlurCanvas{overscroll-behavior:contain;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
 #v1LightTools .v1lt-canvas-wrap{max-width:100%;overflow:hidden}
 #v1LightTools .v1lt-progress{height:6px;margin:10px 0;border-radius:99px;background:#1a2b43;overflow:hidden}
 #v1LightTools .v1lt-progress i{display:block;width:0;height:100%;border-radius:99px;background:linear-gradient(90deg,#6e66ed,#35c8c0);transition:width .12s}
