@@ -68,7 +68,7 @@ const panelObserver=new MutationObserver(syncBackbar);
 root.querySelectorAll(":scope > .panel").forEach(panel=>panelObserver.observe(panel,{attributes:true,attributeFilter:["class"]}));
 syncBackbar();
 const gridObserver=new MutationObserver(apply);
-gridObserver.observe(grid,{childList:true});
+gridObserver.observe(grid,{childList:true,subtree:true});
 window.ARYANZZToolsWorkspace=Object.freeze({apply,syncBackbar});
 apply();
 })();
