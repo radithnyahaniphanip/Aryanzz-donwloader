@@ -2,9 +2,8 @@
   "use strict";
   const $ = id => document.getElementById(id);
   const gate = $("aryAuthGate"), message = $("aryAuthMessage");
-  const ownerMode = new URLSearchParams(location.search).get("owner") === "1";
-  // Public visitors never see the authentication overlay. The same page is
-  // retained for the explicit administrator route (?owner=1) only.
+  const ownerMode = false;
+  // ARYANZZ is running in public guest mode. The retired Administrator route is disabled.
   if (!ownerMode && gate) {
     gate.hidden = true;
     gate.setAttribute("aria-hidden", "true");
