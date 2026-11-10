@@ -4,7 +4,7 @@ if(!root)return;
 function initialize(){
 const $=id=>root.querySelector("#"+id);
 const qa=(selector,scope=root)=>[...scope.querySelectorAll(selector)];
-const state={image:null,imageName:"",strokes:[],objects:[],tool:"move",selected:-1,gesture:null,aiBlob:null,aiUrl:"",libraryDb:null,ffmpeg:null,ffmpegPromise:null,videoUrl:"",videoFile:null,videoRaf:0,gifUrl:"",videoResultUrl:"",busy:false};
+const state={image:null,imageName:"",strokes:[],objects:[],tool:"move",selected:-1,gesture:null,libraryDb:null,ffmpeg:null,ffmpegPromise:null,videoUrl:"",videoFile:null,videoRaf:0,gifUrl:"",videoResultUrl:""};
 let markupReady=false;
 const canvas=$("emoteCanvas"),ctx=canvas?.getContext("2d");
 const video=$("emoteVideoPreview"),videoCanvas=$("emoteVideoCanvas"),videoCtx=videoCanvas?.getContext("2d");
@@ -96,7 +96,6 @@ function setTool(tool){
 }
 qa("[data-emote-tool]").forEach(button=>button.addEventListener("click",()=>setTool(button.dataset.emoteTool)));
 canvas?.addEventListener("pointerdown",event=>{
- if(state.busy)return;
  const point=canvasPoint(event);canvas.setPointerCapture?.(event.pointerId);
  if(state.tool==="move"){
   const index=hitObject(point);state.selected=index;
@@ -133,11 +132,11 @@ $("emoteClearBtn")?.addEventListener("click",()=>{
  if(!confirm("Hapus semua coretan dan objek dari kanvas? Gambar sumber tetap ada."))return;
  state.strokes=[];state.objects=[];state.selected=-1;renderCanvas();say("emoteEditorStatus","Edit kanvas dibersihkan.");
 });
-async function loadIntoEditor(file,fromAI=false){
+async function loadIntoEditor(file){
  try{
   const bitmap=await loadImageBitmap(file);
-  state.image?.close?.();state.image=bitmap;state.imageName=file.name||"aryanzz-ai-emote";state.strokes=[];state.objects=[];state.selected=-1;
-  renderCanvas();say("emoteEditorStatus",(fromAI?"Hasil AI dimuat":"Gambar dimuat")+" · "+bitmap.width+" × "+bitmap.height+" px. File diproses lokal.","success");
+  state.image?.close?.();state.image=bitmap;state.imageName=file.name||"aryanzz-emote";state.strokes=[];state.objects=[];state.selected=-1;
+  renderCanvas();say("emoteEditorStatus","Gambar dimuat"+" · "+bitmap.width+" × "+bitmap.height+" px. File diproses lokal.","success");
   setTab("editor");
  }catch(error){say("emoteEditorStatus",error.message||"Gambar gagal dibuka.","error")}
 }
@@ -199,50 +198,6 @@ async function refreshLibrary(){
 }
 $("emoteRefreshLibrary")?.addEventListener("click",refreshLibrary);
 
-function bytesToBlob(base64,mime){
- const binary=atob(base64),bytes=new Uint8Array(binary.length);
- for(let i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);
- return new Blob([bytes],{type:mime||"image/png"});
-}
-async function checkAiStatus(){
- const badge=$("emoteAiAvailability"),button=$("emoteGenerateBtn");
- try{
-  const response=await fetch("/api/emote/status",{cache:"no-store"}),data=await response.json();
-  if(!response.ok||!data.ok)throw new Error(data.error||"Status AI tidak tersedia.");
-  if(data.configured){badge.textContent="AI SIAP";badge.dataset.state="ready";button.disabled=false;say("emoteAiStatus","AI aktif · "+(data.model||"image model")+" · penggunaan dapat dikenakan biaya API.","success")}
-  else{badge.textContent="AI BELUM DIATUR";badge.dataset.state="pending";button.disabled=true;say("emoteAiStatus","Editor manual tetap aktif. Untuk AI, pemilik perlu memasang Secret OPENAI_API_KEY pada Cloudflare Worker. Kunci tidak dimasukkan ke browser.","error")}
- }catch(error){badge.textContent="AI TIDAK TERHUBUNG";badge.dataset.state="error";button.disabled=true;say("emoteAiStatus","Status AI belum dapat diperiksa. Editor lokal tetap bisa digunakan. "+(error.message||""),"error")}
-}
-$("emoteCreateMode")?.addEventListener("change",()=>{
- const photo=$("emoteCreateMode").value==="photo";$("emotePhotoWrap").hidden=!photo;
-});
-$("emotePrompt")?.addEventListener("input",()=>{$("emotePromptCount").textContent=$("emotePrompt").value.length+"/900"});
-$("emoteGenerateBtn")?.addEventListener("click",async()=>{
- if(state.busy)return;
- const prompt=$("emotePrompt").value.trim(),mode=$("emoteCreateMode").value,photo=$("emoteReferenceFile").files?.[0];
- if(prompt.length<8){say("emoteAiStatus","Tulis deskripsi karakter minimal 8 karakter.","error");return}
- if(mode==="photo"&&!photo){say("emoteAiStatus","Pilih foto referensi terlebih dahulu.","error");return}
- if(photo&&photo.size>8*1024*1024){say("emoteAiStatus","Foto referensi maksimal 8 MB.","error");return}
- state.busy=true;const button=$("emoteGenerateBtn");button.disabled=true;button.textContent="Membuat karakter…";say("emoteAiStatus","Mengirim permintaan ke layanan AI. Proses dapat memerlukan waktu hingga 2 menit…");
- try{
-  const style=$("emoteStyle").value;
-  const finalPrompt=prompt+". Style: "+style+". Create one single full-body character as a clean die-cut sticker, centered with comfortable margins, expressive clear pose, polished consistent character design, thick clean white sticker outline, transparent background, no captions, no lettering, no watermark.";
-  const form=new FormData();form.set("mode",mode==="photo"?"edit":"generate");form.set("prompt",finalPrompt);form.set("output_format","png");if(photo)form.set("image",photo,photo.name);
-  const response=await fetch("/api/emote/generate",{method:"POST",body:form,signal:AbortSignal.timeout?AbortSignal.timeout(150000):undefined});
-  const data=await response.json().catch(()=>({}));
-  if(!response.ok||!data.ok)throw new Error(data.error||"Layanan AI gagal membuat gambar (HTTP "+response.status+").");
-  const blob=bytesToBlob(data.imageBase64,data.mimeType||"image/png");
-  state.aiBlob=blob;
-  if(state.aiUrl)URL.revokeObjectURL(state.aiUrl);
-  state.aiUrl=URL.createObjectURL(blob);
-  $("emoteAiImage").src=state.aiUrl;$("emoteAiImage").hidden=false;
-  $("emoteAiPreview").querySelector(".emote-empty-art")?.remove();
-  $("emoteAiActions").hidden=false;$("emoteAiDownload").href=state.aiUrl;$("emoteAiDownload").download="aryanzz-emote.png";
-  say("emoteAiStatus","Karakter berhasil dibuat · "+sizeText(blob.size)+" · model "+(data.model||"AI image")+".","success");
- }catch(error){say("emoteAiStatus",error.message||"Gagal membuat karakter. Coba lagi.","error")}
- finally{state.busy=false;button.disabled=false;button.textContent="✦ Generate Karakter";checkAiStatus()}
-});
-$("emoteUseAiImage")?.addEventListener("click",()=>{if(state.aiBlob)loadIntoEditor(new File([state.aiBlob],"aryanzz-ai-emote.png",{type:"image/png"}),true)});
 async function loadFfmpeg(statusId){
  if(state.ffmpeg?.loaded)return state.ffmpeg;
  if(state.ffmpegPromise)return state.ffmpegPromise;
@@ -427,7 +382,6 @@ async function exportVideoMp4(){
  }
 }
 $("emoteExportMp4")?.addEventListener("click",exportVideoMp4);
-checkAiStatus();
 }
 async function boot(){
  try{
