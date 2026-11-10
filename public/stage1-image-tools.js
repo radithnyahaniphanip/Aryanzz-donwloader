@@ -89,46 +89,127 @@ stage.register("image-lightweight",(root,core)=>{
  });
  $("v1ltPaletteDownload")?.addEventListener("click",()=>{if(paletteCss)core.downloadBlob(new Blob([paletteCss],{type:"text/css;charset=utf-8"}),"aryanzz-color-palette.css")});
  const blurCanvas=$("v1ltBlurCanvas"),blurCtx=blurCanvas?.getContext("2d"),blurSource=document.createElement("canvas");
- let blurBitmap=null,blurStrokes=[],blurDrawing=null,blurScale=1;
- function renderBlur(){
-  if(!blurBitmap)return;const w=blurCanvas.width,h=blurCanvas.height,ctx=blurCtx;
-  ctx.clearRect(0,0,w,h);ctx.drawImage(blurSource,0,0);
-  const mode=$("v1ltBlurMode").value,color=$("v1ltBlurColor").value;
-  for(const stroke of blurStrokes){
-   const radius=stroke.width/2;
-   for(const point of stroke.points){
-    ctx.save();ctx.beginPath();ctx.arc(point.x,point.y,radius,0,Math.PI*2);ctx.clip();
-    if(stroke.mode==="solid"){ctx.fillStyle=stroke.color;ctx.fillRect(point.x-radius,point.y-radius,radius*2,radius*2)}
-    else if(stroke.mode==="pixel"){
-     const low=document.createElement("canvas");low.width=8;low.height=8;const lowCtx=low.getContext("2d");
-     lowCtx.drawImage(blurSource,point.x-radius,point.y-radius,radius*2,radius*2,0,0,8,8);
-     ctx.imageSmoothingEnabled=false;ctx.drawImage(low,point.x-radius,point.y-radius,radius*2,radius*2);ctx.imageSmoothingEnabled=true;
-    }else{const left=Math.max(0,point.x-radius*2),top=Math.max(0,point.y-radius*2),right=Math.min(w,point.x+radius*2),bottom=Math.min(h,point.y+radius*2);ctx.filter="blur("+Math.max(7,radius*.55)+"px)";ctx.drawImage(blurSource,left,top,right-left,bottom-top,left,top,right-left,bottom-top);ctx.filter="none"}
-    ctx.restore();
-   }
+ let blurBitmap=null,blurStrokes=[],blurDrawing=null,blurScale=1,blurEffects={blur:null,pixel:null},blurPendingPoint=null,blurFrame=0,blurPointerId=null;
+ function makeBlurEffect(mode){
+  const w=blurSource.width,h=blurSource.height,effect=document.createElement("canvas");
+  effect.width=w;effect.height=h;
+  const ctx=effect.getContext("2d");
+  if(mode==="blur"){
+   ctx.filter="blur(10px)";ctx.drawImage(blurSource,0,0);ctx.filter="none";
+  }else{
+   const low=document.createElement("canvas");
+   low.width=Math.max(1,Math.round(w/18));low.height=Math.max(1,Math.round(h/18));
+   low.getContext("2d").drawImage(blurSource,0,0,low.width,low.height);
+   ctx.imageSmoothingEnabled=false;ctx.drawImage(low,0,0,w,h);ctx.imageSmoothingEnabled=true;
+   low.width=1;low.height=1;
   }
-  if(blurDrawing){const last=blurDrawing.points[blurDrawing.points.length-1];if(last){ctx.save();ctx.strokeStyle="rgba(112,175,255,.8)";ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(last.x,last.y,blurDrawing.width/2,0,Math.PI*2);ctx.stroke();ctx.restore()}}
+  return effect;
+ }
+ function getBlurEffect(mode){
+  if(mode==="solid")return null;
+  if(!blurEffects[mode])blurEffects[mode]=makeBlurEffect(mode);
+  return blurEffects[mode];
+ }
+ function applyBlurDab(stroke,point){
+  const radius=Math.max(2,stroke.width/2),left=Math.max(0,Math.floor(point.x-radius)),top=Math.max(0,Math.floor(point.y-radius));
+  const right=Math.min(blurCanvas.width,Math.ceil(point.x+radius)),bottom=Math.min(blurCanvas.height,Math.ceil(point.y+radius));
+  if(right<=left||bottom<=top)return;
+  blurCtx.save();blurCtx.beginPath();blurCtx.arc(point.x,point.y,radius,0,Math.PI*2);blurCtx.clip();
+  if(stroke.mode==="solid"){
+   blurCtx.fillStyle=stroke.color;blurCtx.fillRect(left,top,right-left,bottom-top);
+  }else{
+   const effect=getBlurEffect(stroke.mode);
+   blurCtx.drawImage(effect,left,top,right-left,bottom-top,left,top,right-left,bottom-top);
+  }
+  blurCtx.restore();
+ }
+ function addBlurSegment(stroke,point){
+  const last=stroke.lastPoint||point,dx=point.x-last.x,dy=point.y-last.y,distance=Math.hypot(dx,dy);
+  const spacing=Math.max(3,Math.min(10,stroke.width*.22)),steps=Math.max(1,Math.ceil(distance/spacing));
+  for(let i=1;i<=steps;i++){
+   if(stroke.points.length>=5000)break;
+   const next={x:last.x+dx*i/steps,y:last.y+dy*i/steps};
+   stroke.points.push(next);applyBlurDab(stroke,next);
+  }
+  stroke.lastPoint=point;
+ }
+ function renderBlur(){
+  if(!blurBitmap)return;
+  if(blurFrame){cancelAnimationFrame(blurFrame);blurFrame=0}
+  blurPendingPoint=null;blurCtx.clearRect(0,0,blurCanvas.width,blurCanvas.height);blurCtx.drawImage(blurSource,0,0);
+  for(const stroke of blurStrokes)for(const point of stroke.points)applyBlurDab(stroke,point);
  }
  function blurPoint(event){
-  const rect=blurCanvas.getBoundingClientRect();return {x:(event.clientX-rect.left)*blurCanvas.width/rect.width,y:(event.clientY-rect.top)*blurCanvas.height/rect.height}
+  const rect=blurCanvas.getBoundingClientRect();
+  return {x:(event.clientX-rect.left)*blurCanvas.width/rect.width,y:(event.clientY-rect.top)*blurCanvas.height/rect.height};
+ }
+ function flushBlurPoint(){
+  blurFrame=0;
+  if(!blurDrawing||!blurPendingPoint)return;
+  const point=blurPendingPoint;blurPendingPoint=null;addBlurSegment(blurDrawing,point);
+ }
+ function queueBlurPoint(point){
+  blurPendingPoint=point;
+  if(!blurFrame)blurFrame=requestAnimationFrame(flushBlurPoint);
+ }
+ function finishBlur(event){
+  if(event&&blurPointerId!==null&&event.pointerId!==blurPointerId)return;
+  if(blurFrame){cancelAnimationFrame(blurFrame);blurFrame=0}
+  flushBlurPoint();
+  if(!blurDrawing)return;
+  if(blurDrawing.points.length)blurStrokes.push(blurDrawing);
+  blurDrawing=null;blurPointerId=null;
+  $("v1ltBlurUndo").disabled=!blurStrokes.length;
+  if(blurStrokes.length&&blurStrokes[blurStrokes.length-1].points.length>=5000)set("v1ltBlurStatus","Batas titik goresan tercapai. Selesaikan area ini atau mulai goresan baru.","info");
  }
  $("v1ltBlurFile")?.addEventListener("change",async()=>{
   const file=$("v1ltBlurFile").files?.[0];if(!file)return;
+  set("v1ltBlurStatus","Menyiapkan gambar…");
   try{
-   blurBitmap?.close?.();blurBitmap=await core.imageBitmap(file);blurScale=Math.min(1,1600/Math.max(blurBitmap.width,blurBitmap.height));blurCanvas.width=Math.round(blurBitmap.width*blurScale);blurCanvas.height=Math.round(blurBitmap.height*blurScale);
+   blurBitmap?.close?.();blurBitmap=await core.imageBitmap(file);blurScale=Math.min(1,1600/Math.max(blurBitmap.width,blurBitmap.height));
+   blurCanvas.width=Math.max(1,Math.round(blurBitmap.width*blurScale));blurCanvas.height=Math.max(1,Math.round(blurBitmap.height*blurScale));
    blurSource.width=blurCanvas.width;blurSource.height=blurCanvas.height;blurSource.getContext("2d").drawImage(blurBitmap,0,0,blurCanvas.width,blurCanvas.height);
-   blurStrokes=[];blurDrawing=null;blurCanvas.hidden=false;["v1ltBlurUndo","v1ltBlurReset","v1ltBlurExport"].forEach(id=>$(id).disabled=false);renderBlur();set("v1ltBlurStatus","Gambar siap. Usapkan kuas pada bagian sensitif; gunakan Undo jika perlu.","success");
-  }catch(error){set("v1ltBlurStatus",error.message,"error")}
+   blurEffects={blur:null,pixel:null};blurStrokes=[];blurDrawing=null;blurPendingPoint=null;blurPointerId=null;
+   blurCanvas.hidden=false;["v1ltBlurUndo","v1ltBlurReset","v1ltBlurExport"].forEach(id=>$(id).disabled=false);
+   renderBlur();$("v1ltBlurUndo").disabled=true;
+   set("v1ltBlurStatus","Gambar siap. Kuas kini menggambar langsung saat digeser. Gunakan Undo untuk membatalkan goresan.","success");
+  }catch(error){set("v1ltBlurStatus",error.message||"Gagal memuat gambar.","error")}
  });
  $("v1ltBlurBrush")?.addEventListener("input",()=>{$("v1ltBlurBrushValue").textContent=$("v1ltBlurBrush").value+" px"});
- $("v1ltBlurMode")?.addEventListener("change",renderBlur);$("v1ltBlurColor")?.addEventListener("change",renderBlur);
- blurCanvas?.addEventListener("pointerdown",event=>{if(!blurBitmap)return;blurCanvas.setPointerCapture(event.pointerId);blurDrawing={mode:$("v1ltBlurMode").value,color:$("v1ltBlurColor").value,width:Number($("v1ltBlurBrush").value),points:[blurPoint(event)]};renderBlur()});
- blurCanvas?.addEventListener("pointermove",event=>{if(!blurDrawing||blurDrawing.points.length>=300)return;const point=blurPoint(event),last=blurDrawing.points[blurDrawing.points.length-1];if(Math.hypot(point.x-last.x,point.y-last.y)>Math.max(5,blurDrawing.width*.3))blurDrawing.points.push(point)});
- function finishBlur(){if(!blurDrawing)return;blurStrokes.push(blurDrawing);blurDrawing=null;renderBlur();$("v1ltBlurUndo").disabled=!blurStrokes.length}
- blurCanvas?.addEventListener("pointerup",finishBlur);blurCanvas?.addEventListener("pointercancel",finishBlur);
- $("v1ltBlurUndo")?.addEventListener("click",()=>{blurStrokes.pop();renderBlur();$("v1ltBlurUndo").disabled=!blurStrokes.length});
- $("v1ltBlurReset")?.addEventListener("click",()=>{blurStrokes=[];renderBlur();$("v1ltBlurUndo").disabled=true;set("v1ltBlurStatus","Semua goresan dihapus.","success")});
- $("v1ltBlurExport")?.addEventListener("click",async()=>{try{renderBlur();const blob=await core.canvasBlob(blurCanvas,"image/png");core.downloadBlob(blob,"aryanzz-privacy-blur.png");set("v1ltBlurStatus","Gambar hasil berhasil diekspor.","success")}catch(error){set("v1ltBlurStatus",error.message,"error")}});
+ $("v1ltBlurMode")?.addEventListener("change",()=>set("v1ltBlurStatus","Mode "+$("v1ltBlurMode").selectedOptions[0].text+" dipilih untuk goresan berikutnya.","info"));
+ $("v1ltBlurColor")?.addEventListener("change",()=>set("v1ltBlurStatus","Warna penutup diperbarui untuk goresan berikutnya.","info"));
+ blurCanvas?.addEventListener("pointerdown",event=>{
+  if(!blurBitmap||!event.isPrimary||event.button!==0)return;
+  event.preventDefault();if(blurDrawing)finishBlur();
+  blurPointerId=event.pointerId;
+  try{blurCanvas.setPointerCapture(event.pointerId)}catch{}
+  const point=blurPoint(event);
+  blurDrawing={mode:$("v1ltBlurMode").value,color:$("v1ltBlurColor").value,width:Number($("v1ltBlurBrush").value),points:[],lastPoint:point};
+  blurDrawing.points.push(point);applyBlurDab(blurDrawing,point);
+ });
+ blurCanvas?.addEventListener("pointermove",event=>{
+  if(!blurDrawing||event.pointerId!==blurPointerId)return;
+  event.preventDefault();queueBlurPoint(blurPoint(event));
+ });
+ blurCanvas?.addEventListener("pointerup",finishBlur);
+ blurCanvas?.addEventListener("pointercancel",finishBlur);
+ blurCanvas?.addEventListener("lostpointercapture",finishBlur);
+ blurCanvas?.addEventListener("contextmenu",event=>event.preventDefault());
+ $("v1ltBlurUndo")?.addEventListener("click",()=>{
+  blurStrokes.pop();renderBlur();$("v1ltBlurUndo").disabled=!blurStrokes.length;
+  set("v1ltBlurStatus",blurStrokes.length?"Goresan terakhir dibatalkan.":"Tidak ada goresan tersisa.","success");
+ });
+ $("v1ltBlurReset")?.addEventListener("click",()=>{
+  if(blurDrawing)finishBlur();blurStrokes=[];renderBlur();$("v1ltBlurUndo").disabled=true;
+  set("v1ltBlurStatus","Semua goresan dihapus.","success");
+ });
+ $("v1ltBlurExport")?.addEventListener("click",async()=>{
+  try{
+   if(blurDrawing)finishBlur();
+   const blob=await core.canvasBlob(blurCanvas,"image/png");core.downloadBlob(blob,"aryanzz-privacy-blur.png");
+   set("v1ltBlurStatus","Gambar hasil berhasil diekspor.","success");
+  }catch(error){set("v1ltBlurStatus",error.message||"Gagal mengekspor gambar.","error")}
+ });
  const stickerCanvas=$("v1ltStickerCanvas"),stickerCtx=stickerCanvas?.getContext("2d"),stickerBase=document.createElement("canvas");
  let stickerBitmap=null,stickerDrawing=false,stickerPoint=null,stickerScale=1;
  function stickerCoords(event){const rect=stickerCanvas.getBoundingClientRect();return {x:(event.clientX-rect.left)*stickerCanvas.width/rect.width,y:(event.clientY-rect.top)*stickerCanvas.height/rect.height}}
