@@ -33,6 +33,7 @@ for (const capability of ["function renderCanvas","function drawStrokeLayer","fu
 assert.ok(js.includes("aryanzz-emote-studio-v1"), "sticker library persists in IndexedDB");
 assert.ok(js.includes("image/webp") && js.includes("image/png"), "PNG and WebP exports are supported");
 assert.ok(js.includes("video/mp4") && js.includes("aryanzz-emote-video.mp4"), "MP4 video export path is present");
+assert.ok(js.includes("async function exportVideoViaFfmpeg") && js.includes("filter_complex"), "FFmpeg direct video overlay fallback supports browsers without MediaRecorder canvas capture");
 assert.ok(css.includes("#emoteStudio") && css.includes("@media(max-width:760px)"), "styles are scoped and responsive");
 
 assert.ok(worker.includes('url.pathname==="/api/emote/status"'), "AI configuration status endpoint is registered");
