@@ -1828,7 +1828,7 @@ async function fetchFacebookPublicReader(rawUrl,timeoutMs=9000){
   if(!parsed||platformIdForUrl(parsed.href)!=="facebook")throw new Error("Tautan Facebook publik tidak valid.");
   const mobileUrl=facebookMobilePageUrl(parsed.href);
   const candidates=[mobileUrl,canonicalFacebookPostUrl(parsed.href)].filter((value,index,array)=>array.indexOf(value)===index);
-  const errors=[];
+  const errors=[];let sawLogin=false;
   for(const candidate of candidates){
     try{
       const page=await fetchSocialPostHtml(candidate,timeoutMs);
@@ -1846,7 +1846,7 @@ async function fetchFacebookPublicReader(rawUrl,timeoutMs=9000){
       return {body:html,html,finalUrl,hasPostContent,images,media,title,source:"Facebook mobile public page"};
     }catch(error){
       const message=String(error?.message||error);
-      if(message==="facebook_login_required")throw error;
+      if(message==="facebook_login_required"){sawLogin=true;continue;}
       errors.push(message.slice(0,120));
     }
   }
@@ -1867,9 +1867,10 @@ async function fetchFacebookPublicReader(rawUrl,timeoutMs=9000){
     if((loginRedirect||(/Log into Facebook|Email or mobile number/i.test(body)&&!hasPostContent))&&!hasPostContent)throw new Error("facebook_login_required");
     return {body,finalUrl,hasPostContent,images:[],media:[],title:(body.match(/^Title:\s*(.{1,300}?)(?:\s*\|\s*Facebook)?$/mi)||[])[1]||"Facebook media",source:"Facebook text reader"};
   }catch(error){
-    if(String(error?.message||error)==="facebook_login_required")throw error;
-    errors.push(String(error?.message||error).slice(0,120));
+    if(String(error?.message||error)==="facebook_login_required")sawLogin=true;
+    else errors.push(String(error?.message||error).slice(0,120));
   }
+  if(sawLogin)throw new Error("facebook_login_required");
   throw new Error(errors.join(" | ")||"Facebook public page unavailable.");
 }
 async function resolveFacebookShareLink(rawUrl,timeoutMs=10000){
