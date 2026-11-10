@@ -49,8 +49,13 @@ async function offlineMediaEntry(key){
 function serveOfflineBlob(request,entry){
  const blob=entry?.blob;
  if(!(blob instanceof Blob))return new Response(JSON.stringify({error:"File offline tidak valid."}),{status:503,headers:{"content-type":"application/json","cache-control":"no-store"}});
- const size=blob.size,type=entry.mimeType||blob.type||"application/octet-stream",range=request.headers.get("range");
+ const size=blob.size,type=entry.mimeType||blob.type||"application/octet-stream",range=request.headers.get("range"),url=new URL(request.url);
  const base={"content-type":type,"accept-ranges":"bytes","cache-control":"no-store","x-content-type-options":"nosniff"};
+ if(url.searchParams.get("probe")==="1"){
+  if(!entry.verified)return new Response(JSON.stringify({valid:false,error:"File offline belum lolos validasi."}),{status:422,headers:{"content-type":"application/json","cache-control":"no-store"}});
+  return new Response(JSON.stringify({valid:true,bytes:size,mimeType:type,extension:entry.extension||url.searchParams.get("ext")||"mp4",rangeSupported:true,offline:true}),{status:200,headers:{"content-type":"application/json","cache-control":"no-store"}});
+ }
+ if(entry.verified)base["x-aryanzz-media-validation"]="signature-ok";
  if(!range)return new Response(blob,{status:200,headers:{...base,"content-length":String(size)}});
  const match=range.match(/^bytes=(\d*)-(\d*)$/i);
  if(!match)return new Response(null,{status:416,headers:{...base,"content-range":"bytes */"+size}});
