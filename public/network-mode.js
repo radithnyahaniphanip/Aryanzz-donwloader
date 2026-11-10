@@ -168,7 +168,7 @@ function installPanel(){
   const anchor=document.getElementById("linkModePanel");
   if(!anchor||document.getElementById("aryanzzNetworkMode"))return;
   const style=document.createElement("style");
-  style.textContent=".ary-network-mode{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin:12px 0 14px;padding:12px 14px;border:1px solid rgba(126,158,210,.2);border-radius:14px;background:rgba(18,29,49,.72)}.ary-network-mode-copy{min-width:180px;flex:1}.ary-network-mode-copy strong{display:block;font-size:13px;color:#eef4ff}.ary-network-mode-copy small{display:block;margin-top:4px;font-size:11px;line-height:1.5;color:#aab9d2}.ary-network-mode-actions{display:flex;gap:7px}.ary-network-mode button{border:1px solid rgba(142,165,204,.28);border-radius:10px;padding:8px 12px;background:rgba(255,255,255,.04);color:#d8e4f7;font:600 12px inherit;cursor:pointer}.ary-network-mode button[aria-pressed=true]{background:linear-gradient(135deg,rgba(46,190,178,.2),rgba(76,132,230,.2));border-color:rgba(92,180,222,.65);color:#fff}.ary-network-mode-status{flex-basis:100%;font-size:11px;line-height:1.45;color:#aab9d2}";
+  style.textContent=".ary-network-mode{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin:12px 0 14px;padding:12px 14px;border:1px solid rgba(126,158,210,.2);border-radius:14px;background:rgba(18,29,49,.72)}.ary-network-mode-copy{min-width:180px;flex:1}.ary-network-mode-copy strong{display:block;font-size:13px;color:#eef4ff}.ary-network-mode-copy small{display:block;margin-top:4px;font-size:11px;line-height:1.5;color:#aab9d2}.ary-network-mode-actions{display:flex;gap:7px}.ary-network-mode button{border:1px solid rgba(142,165,204,.28);border-radius:10px;padding:8px 12px;background:rgba(255,255,255,.04);color:#d8e4f7;font:inherit;font-size:12px;font-weight:600;cursor:pointer}.ary-network-mode button[aria-pressed=true]{background:linear-gradient(135deg,rgba(46,190,178,.2),rgba(76,132,230,.2));border-color:rgba(92,180,222,.65);color:#fff}.ary-network-mode-status{flex-basis:100%;font-size:11px;line-height:1.45;color:#aab9d2}";
   document.head.append(style);
   const panel=document.createElement("section");
   panel.id="aryanzzNetworkMode";panel.className="ary-network-mode";
@@ -183,8 +183,10 @@ function installPanel(){
 function mediaCacheKey(rawUrl){
   try{
     const url=new URL(rawUrl,location.href);
-    if(url.origin!==location.origin||url.pathname!=="/api/social-file")return "";
-    return [url.searchParams.get("source")||"",url.searchParams.get("url")||"",url.searchParams.get("mode")||"video",url.searchParams.get("ext")||"mp4"].join("|");
+    if(url.origin!==location.origin)return "";
+    if(url.pathname==="/api/social-file")return [url.searchParams.get("source")||"",url.searchParams.get("url")||"",url.searchParams.get("mode")||"video",url.searchParams.get("ext")||"mp4"].join("|");
+    if(url.pathname==="/api/youtube/hybrid/browser-file")return ["youtube",url.searchParams.get("url")||"",url.searchParams.get("instance")||"","video",url.searchParams.get("ext")||"mp4"].join("|");
+    return "";
   }catch{return ""}
 }
 async function saveMedia(rawUrl,meta={}){
