@@ -40,7 +40,7 @@ assert.ok(worker.includes('url.pathname==="/api/emote/generate"'), "AI image gen
 assert.ok(worker.includes("OPENAI_API_KEY"), "AI key is read only from Worker secret");
 assert.ok(worker.includes("gpt-image-2.5-sunburst"), "a current GPT Image model is configured by default");
 assert.ok(worker.includes('upstream.append("image[]"'), "photo-to-sticker uses the image edit endpoint");
-assert.ok(worker.includes("background","transparent"), "AI image output requests transparent backgrounds");
+assert.ok(worker.includes('background:"transparent"'), "AI image output requests transparent backgrounds");
 assert.ok(worker.includes("api/emote/generate") && worker.includes("limit:4"), "AI image generation is rate-limited");
 
 console.log("ARYANZZ Emote Studio smoke test passed: modular workspace, AI/photo integration, local editor, IndexedDB library, GIF/MP4 workflows, PWA cache and responsive styles.");
