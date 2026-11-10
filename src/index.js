@@ -1838,19 +1838,9 @@ async function fetchFacebookPublicReader(rawUrl,timeoutMs=9000){
 async function resolveFacebookShareLink(rawUrl,timeoutMs=10000){
   const parsed=safePublicMediaUrl(rawUrl);
   if(!parsed||platformIdForUrl(parsed.href)!=="facebook")return rawUrl;
-  const needsResolve=/\/share\/(?:p|v|r)\//i.test(parsed.pathname)||parsed.pathname==="/story.php"||parsed.hostname.toLowerCase()==="fb.watch";
-  if(!needsResolve)return canonicalFacebookPostUrl(parsed.href);
-  try{
-    const page=await fetchFacebookPublicReader(parsed.href,timeoutMs);
-    if(page.finalUrl){
-      const final=safePublicMediaUrl(page.finalUrl);
-      if(final&&platformIdForUrl(final.href)==="facebook")return canonicalFacebookPostUrl(final.href);
-    }
-    return canonicalFacebookPostUrl(parsed.href);
-  }catch(error){
-    if(String(error?.message||error)==="facebook_login_required")throw error;
-    return canonicalFacebookPostUrl(parsed.href);
-  }
+  // Keep short share URLs intact for the primary provider. The public-reader
+  // fallback resolves them once, avoiding two sequential requests on weak networks.
+  return canonicalFacebookPostUrl(parsed.href);
 }
 async function facebookPublicReaderMediaInfo(rawUrl,requestUrl,timeoutMs=9000){
   let page;
