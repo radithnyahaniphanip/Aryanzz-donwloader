@@ -1,10 +1,10 @@
 <div class="v1lt-shell" id="v1ltApp">
   <header class="v1lt-hero">
-    <div><span class="v1lt-kicker">ARYANZZ V1 · LIGHTWEIGHT LAB</span><h2>Tools Studio</h2><p>14 alat praktis untuk memeriksa video, mengolah gambar, mengelola file, dan membantu pekerjaan developer. Proses lokal di perangkat jika memungkinkan.</p></div>
+    <div><span class="v1lt-kicker">ARYANZZ V1 · LIGHTWEIGHT LAB</span><h2>Tools Studio</h2><p>15 alat praktis untuk memeriksa video, mengolah gambar, mengelola file, dan membantu pekerjaan developer. Proses lokal di perangkat jika memungkinkan.</p></div>
     <div class="v1lt-hero-mark" aria-hidden="true">✦</div>
   </header>
   <div class="v1lt-hub" id="v1ltHub">
-    <div class="v1lt-section-heading"><div><span class="v1lt-kicker">PILIH ALAT</span><h3>Lightweight Tools</h3><p>Ketuk salah satu alat untuk mulai. File asli tidak diubah.</p></div><span class="v1lt-count">14 TOOLS</span></div>
+    <div class="v1lt-section-heading"><div><span class="v1lt-kicker">PILIH ALAT</span><h3>Lightweight Tools</h3><p>Ketuk salah satu alat untuk mulai. File asli tidak diubah.</p></div><span class="v1lt-count">15 TOOLS</span></div>
     <div class="v1lt-grid">
       <button type="button" class="v1lt-tool-card" data-v1lt-open="video-metadata"><span class="v1lt-card-icon">▣</span><b>Video Metadata Inspector</b><small>Periksa durasi, resolusi, codec MP4, FPS, bitrate perkiraan, dan track audio.</small><em>VIDEO</em></button>
       <button type="button" class="v1lt-tool-card" data-v1lt-open="video-frame"><span class="v1lt-card-icon">▧</span><b>Video Frame Extractor</b><small>Ambil frame pada detik tertentu dan ekspor PNG atau JPG.</small><em>VIDEO</em></button>
@@ -21,6 +21,7 @@
       <button type="button" class="v1lt-tool-card" data-v1lt-open="dev-jwt"><span class="v1lt-card-icon">{ }</span><b>JWT Decoder</b><small>Baca header, payload, dan waktu kedaluwarsa token.</small><em>DEVELOPER</em></button>
       <button type="button" class="v1lt-tool-card" data-v1lt-open="dev-regex"><span class="v1lt-card-icon">.*</span><b>Regex Playground</b><small>Uji pola regex dengan highlight dan batas waktu worker.</small><em>DEVELOPER</em></button>
     </div>
+      <button type="button" class="v1lt-tool-card" data-v1lt-open="security-scam"><span class="v1lt-card-icon">⌕</span><b>Scam Evidence Analyzer</b><small>Analisis screenshot, chat, nomor, rekening, tautan, metadata, lokasi bukti, dan kronologi.</small><em>SECURITY · LOCAL-FIRST</em></button>
     <p class="v1lt-privacy-note"><span>◆</span> File lokal diproses di browser. ARYANZZ tidak mengunggah file pilihanmu untuk alat-alat ini.</p>
   </div>
 
@@ -137,6 +138,79 @@
     <label class="v1lt-field-label">Teks uji<textarea id="v1ltRegexText" rows="7" placeholder="Masukkan teks yang ingin diuji..."></textarea></label>
     <button type="button" class="v1lt-primary" id="v1ltRegexRun">Jalankan regex</button><div class="v1lt-status" id="v1ltRegexStatus" role="status" aria-live="polite">Masukkan pola dan teks untuk mulai.</div>
     <div class="v1lt-regex-result"><div id="v1ltRegexSummary"></div><pre id="v1ltRegexHighlight" class="v1lt-highlight"></pre></div>
+  </section>
+
+  <section class="v1lt-view" data-v1lt-view="security-scam" hidden>
+    <div class="v1lt-view-head"><button type="button" class="v1lt-back" data-v1lt-back>← Semua alat</button><span class="v1lt-kicker">SECURITY · 15</span><h3>Scam Evidence Analyzer</h3><p>Periksa screenshot, percakapan, nomor, rekening, tautan, metadata, dan kronologi. Bukti disimpan lokal hanya jika kamu memilih Simpan Kasus.</p></div>
+    <div class="scam-modebar">
+      <label>Mode pemeriksaan<select id="scamMode"><option value="local" selected>Lokal · analisis di perangkat</option><option value="online">Online · buka sumber resmi</option></select></label>
+      <span class="scam-local-note">LOCAL-FIRST · TANPA UNGGAH BUKTI</span>
+    </div>
+    <section class="scam-section">
+      <div class="scam-section-title"><span>01</span><div><h4>Masukkan bukti</h4><p>Screenshot, gambar, PDF, ekspor chat TXT, atau CSV.</p></div></div>
+      <label class="v1lt-upload">Pilih file bukti<input id="scamFiles" type="file" accept="image/*,.txt,.log,.csv,.tsv,.pdf,application/pdf,text/plain,text/csv" multiple></label>
+      <p class="scam-file-summary" id="scamFileSummary">Belum ada file dipilih.</p>
+      <div class="v1lt-actions"><button type="button" class="v1lt-secondary" id="scamOcr">Baca screenshot (OCR)</button><button type="button" class="v1lt-secondary" id="scamClear">Bersihkan form</button></div>
+      <p class="scam-hint">OCR membutuhkan koneksi pertama kali untuk memuat mesin dan data bahasa Indonesia/Inggris. Gambar tetap diproses di browser, bukan dikirim ke layanan OCR. PDF membaca lapisan teks; PDF hasil scan perlu diubah menjadi gambar untuk OCR.</p>
+      <label class="v1lt-field-label">Teks percakapan / hasil OCR<textarea id="scamText" rows="8" maxlength="250000" placeholder="Tempel percakapan WhatsApp, SMS, Telegram, atau teks bukti di sini…"></textarea></label>
+      <div class="v1lt-actions"><button type="button" class="v1lt-primary" id="scamAnalyze">Analisis bukti</button><span id="scamEvidenceCount" class="scam-count">0 file · 0 nomor · 0 tautan</span></div>
+      <div class="v1lt-status" id="scamStatus" role="status" aria-live="polite">Bukti diproses secara lokal. Analisis pola bukan penetapan kesalahan.</div>
+    </section>
+    <section class="scam-risk-panel" aria-live="polite">
+      <div><span class="scam-kicker">RINGKASAN INDIKASI</span><div class="scam-risk-score" id="scamRiskScore">—/100</div><strong id="scamRiskLevel" data-level="low">Belum dianalisis</strong></div>
+      <div class="scam-risk-track"><i id="scamRiskBar"></i></div>
+      <p id="scamRiskDisclaimer">Skor akan dihitung dari pola kata yang ditemukan. Ini bukan keputusan bahwa seseorang melakukan penipuan.</p>
+      <ul id="scamIndicators" class="scam-reasons"><li>Belum ada hasil analisis.</li></ul>
+    </section>
+    <details class="scam-section" open>
+      <summary><span class="scam-section-title"><span>02</span><div><h4>Phone Intelligence & reputasi nomor</h4><p>Normalisasi format dan pemeriksaan laporan publik secara manual.</p></div></span></summary>
+      <div id="scamPhones" class="scam-results"><p class="scam-empty">Nomor telepon belum ditemukan dalam teks.</p></div>
+      <p class="scam-hint">Kode negara/prefix hanya menunjukkan rencana penomoran. Tidak menunjukkan GPS, alamat, nama pemilik, atau posisi real-time.</p>
+      <button type="button" class="v1lt-secondary" id="scamOpenPhone">Buka Aduan Nomor resmi</button>
+    </details>
+    <details class="scam-section" open>
+      <summary><span class="scam-section-title"><span>03</span><div><h4>Account Checker</h4><p>Identifikasi nomor rekening atau e-wallet yang tertulis dalam bukti.</p></div></span></summary>
+      <div id="scamAccounts" class="scam-results"><p class="scam-empty">Nomor rekening/e-wallet belum ditemukan.</p></div>
+      <div class="scam-inline-actions"><button type="button" class="v1lt-secondary" id="scamOpenAccount">CekRekening.id</button><button type="button" class="v1lt-secondary" id="scamOpenIasc">IASC OJK</button></div>
+      <p class="scam-hint">ARYANZZ tidak memiliki akses ke database rekening bank pribadi. Status rekening harus diperiksa langsung melalui portal resmi.</p>
+    </details>
+    <details class="scam-section" open>
+      <summary><span class="scam-section-title"><span>04</span><div><h4>Link Inspector</h4><p>Periksa format URL, domain, HTTPS, pemendek tautan, dan tanda sederhana lainnya.</p></div></span></summary>
+      <div id="scamUrls" class="scam-results"><p class="scam-empty">Tautan belum ditemukan.</p></div>
+      <p class="scam-hint">Pemeriksaan ini berbasis struktur URL. Tidak menjamin situs aman atau berbahaya. Pemeriksaan reputasi eksternal dilakukan manual; bukti tidak dikirim otomatis.</p>
+    </details>
+    <details class="scam-section">
+      <summary><span class="scam-section-title"><span>05</span><div><h4>Device & File Metadata</h4><p>Informasi file asli, dimensi, metadata kamera, waktu, dan fingerprint.</p></div></span></summary>
+      <div id="scamMetadata" class="scam-results"><p class="scam-empty">Metadata file akan muncul setelah file diperiksa.</p></div>
+      <p class="scam-hint">Metadata menjelaskan file yang diunggah, bukan otomatis perangkat atau identitas orang yang mengirim chat. Screenshot sering kali tidak menyimpan model perangkat atau GPS.</p>
+    </details>
+    <details class="scam-section" open>
+      <summary><span class="scam-section-title"><span>06</span><div><h4>Evidence Map · Google Maps + OpenStreetMap</h4><p>Memetakan koordinat yang benar-benar ditemukan dalam bukti.</p></div></span></summary>
+      <label class="v1lt-field-label">Tambah koordinat / tautan peta yang dibagikan<input id="scamManualCoords" type="text" placeholder="-6.200000, 106.816666 atau tautan Google Maps"></label>
+      <button type="button" class="v1lt-secondary" id="scamAddLocation">Tambahkan lokasi bukti</button>
+      <div id="scamLocations" class="scam-results"><p class="scam-empty">Belum ada koordinat GPS atau lokasi eksplisit dalam bukti.</p></div>
+      <p class="scam-hint">Peta hanya dibuat dari GPS EXIF, koordinat/tautan lokasi yang memang dibagikan, atau koordinat yang kamu masukkan. Titik tidak membuktikan bahwa pemilik nomor berada di sana.</p>
+    </details>
+    <details class="scam-section">
+      <summary><span class="scam-section-title"><span>07</span><div><h4>Timeline Analyzer</h4><p>Susun tanggal dan waktu yang dikenali dari percakapan.</p></div></span></summary>
+      <div id="scamTimeline" class="scam-results"><p class="scam-empty">Belum ditemukan tanggal atau waktu.</p></div>
+    </details>
+    <section class="scam-section">
+      <div class="scam-section-title"><span>08</span><div><h4>Evidence Report</h4><p>Simpan kasus di perangkat, ekspor JSON, atau cetak menjadi PDF.</p></div></div>
+      <div class="v1lt-actions"><button type="button" class="v1lt-primary" id="scamSave">Simpan kasus lokal</button><button type="button" class="v1lt-secondary" id="scamExportJson">Ekspor JSON</button><button type="button" class="v1lt-secondary" id="scamPrint">Cetak / Simpan PDF</button></div>
+      <p class="scam-hint">Simpan kasus menyimpan teks, hasil analisis, metadata, dan file bukti ke IndexedDB browser ini saja. Tidak ada sinkronisasi cloud.</p>
+    </section>
+    <details class="scam-section">
+      <summary><span class="scam-section-title"><span>09</span><div><h4>Kasus tersimpan di perangkat ini</h4><p>Buka kembali atau hapus kasus lokal.</p></div></span></summary>
+      <div id="scamSavedCases" class="scam-results"><p class="scam-empty">Memeriksa penyimpanan lokal…</p></div>
+    </details>
+    <section class="scam-online-panel" id="scamOnlinePanel" hidden>
+      <h4>Pemeriksaan sumber resmi</h4>
+      <p>Pilih portal resmi untuk memeriksa laporan nomor, rekening, atau transaksi. ARYANZZ hanya membuka situs; tidak mengirim screenshot, nomor, atau bukti secara otomatis.</p>
+      <div class="scam-inline-actions"><button type="button" class="v1lt-primary" id="scamOnlineOpen">Buka portal resmi</button><a class="scam-link" href="https://transparencyreport.google.com/safe-browsing/search" target="_blank" rel="noopener noreferrer">Google Safe Browsing</a></div>
+      <ul class="scam-reasons"><li>IASC OJK: pelaporan penipuan transaksi keuangan.</li><li>CekRekening.id: pemeriksaan/pelaporan rekening.</li><li>AduanNomor: pelaporan nomor seluler mencurigakan.</li></ul>
+    </section>
+    <div class="scam-safety-note"><strong>Penting:</strong> nomor telepon saja tidak dapat mengungkap GPS, alamat rumah, nama pemilik, atau perangkat seseorang. Jangan menyimpulkan identitas atau kesalahan seseorang hanya dari skor otomatis. Jika ada kerugian transaksi, simpan bukti asli dan segera laporkan melalui bank/e-wallet serta IASC.</div>
   </section>
 
   <footer class="v1lt-footer"><span>ARYANZZ V1 · Tools berjalan secara modular.</span><button type="button" data-panel="allTools">Kembali ke Pusat Alat</button></footer>
