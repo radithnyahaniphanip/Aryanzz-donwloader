@@ -24,8 +24,6 @@ deleted_classes = ["DownloaderContainer"]
 tag = "v3"
 new_sqlite_classes = ["MembershipStore"]
 
-[durable_objects]
-bindings = [{ name = "MEMBERSHIP_STORE", class_name = "MembershipStore" }]
 
 [vars]
 ARYANZZ_BUILD_VERSION = "__ARYANZZ_VERSION__"
