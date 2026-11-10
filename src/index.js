@@ -1885,29 +1885,39 @@ async function facebookPublicReaderMediaInfo(rawUrl,requestUrl,timeoutMs=9000){
   catch(error){
     const detail=String(error?.message||error);
     const login=detail==="facebook_login_required";
-    return json({ok:false,error:login?"Facebook meminta login untuk membaca postingan ini. ARYANZZ hanya memproses postingan yang memang dapat diakses publik tanpa login.":"Facebook belum dapat dibaca melalui jalur metadata publik: "+detail.slice(0,180),errorType:login?"login_required":"public_reader_unavailable",providerName:"Facebook public reader fallback",provider:"Public Reader",fallbackTried:true},login?403:502);
+    return json({ok:false,error:login?"Facebook meminta login untuk membaca postingan ini. ARYANZZ hanya memproses postingan yang memang dapat diakses publik tanpa login.":"Facebook belum dapat dibaca melalui jalur metadata publik: "+detail.slice(0,180),errorType:login?"login_required":"public_reader_unavailable",providerName:"Facebook mobile/public reader fallback",provider:"Facebook public page",fallbackTried:true},login?403:502);
   }
-  const titleMatch=page.body.match(/^Title:\s*(.{1,300}?)(?:\s*\|\s*Facebook)?$/mi);
-  const title=String(titleMatch?.[1]||"Facebook media").replace(/\s+/g," ").trim().slice(0,300);
+  const body=String(page.body||"");
+  const titleMatch=body.match(/^Title:\s*(.{1,300}?)(?:\s*\|\s*Facebook)?$/mi);
+  const title=String(page.title||titleMatch?.[1]||"Facebook media").replace(/\s+/g," ").trim().slice(0,300);
   const candidates=[],seen=new Set();
-  const add=value=>{
-    const decoded=decodeFacebookReaderValue(String(value||"").replace(/[),\]]+$/,""));
+  const add=(value,declared={})=>{
+    const decoded=decodeFacebookReaderValue(String(typeof value==="string"?value:declared.url||"").replace(/[),\]]+$/,""));
     const safe=safePublicMediaUrl(decoded);
-    if(!safe||seen.has(safe.href)||!/\.(?:mp4|m4v|webm)(?:[?#]|$)/i.test(safe.href))return;
-    seen.add(safe.href);candidates.push({type:"video",kind:"video",label:"Video Facebook",url:safe.href,ext:(safe.pathname.match(/\.(mp4|m4v|webm)$/i)||[])[1]||"mp4",mimeType:"video/"+((safe.pathname.match(/\.(mp4|m4v|webm)$/i)||[])[1]||"mp4")});
+    if(!safe||seen.has(safe.href))return;
+    const ext=String(declared.ext||declared.extension||(safe.pathname.match(/\.(mp4|m4v|webm)$/i)||[])[1]||"").replace(/^\./,"").toLowerCase();
+    const mime=String(declared.mimeType||declared.mime_type||"").split(";")[0].toLowerCase();
+    if(!mime.startsWith("video/")&&!["mp4","m4v","webm"].includes(ext)&&!/\.(?:mp4|m4v|webm)(?:[?#]|$)/i.test(safe.href))return;
+    seen.add(safe.href);
+    candidates.push({type:"video",kind:"video",mode:"video",label:declared.label||"Video Facebook",url:safe.href,ext:ext||"mp4",mimeType:mime||"video/"+(ext||"mp4"),height:Number(declared.height)||0});
   };
-  for(const match of page.body.matchAll(/https?:\/\/[^\s"'<>()[\]]{8,3000}\.(?:mp4|m4v|webm)(?:\?[^\s"'<>()[\]]*)?/gi))add(match[0]);
-  for(const match of page.body.matchAll(/(?:video|media)\s*(?:url|src)\s*[:=]\s*["']?(https?:\/\/[^\s"'<>]{8,3000})/gi))add(match[1]);
+  for(const item of Array.isArray(page.media)?page.media:[])add(item.url,item);
+  for(const match of body.matchAll(/https?:\/\/[^\s"'<>()[\]]{8,3000}\.(?:mp4|m4v|webm)(?:\?[^\s"'<>()[\]]*)?/gi))add(match[0]);
+  for(const match of body.matchAll(/(?:video|media)\s*(?:url|src)\s*[:=]\s*["']?(https?:\/\/[^\s"'<>]{8,3000})/gi))add(match[1]);
   const canonicalUrl=page.finalUrl?canonicalFacebookPostUrl(page.finalUrl):canonicalFacebookPostUrl(rawUrl);
-  const normalized=freeProviderMediaInfo({normalized:{title,media:candidates}},canonicalUrl,requestUrl);
-  if(normalized)return json({...normalized,providerName:"Facebook public-reader fallback",provider:"Public Reader · direct media metadata",extractor:"Facebook public reader",fallbackUsed:true,canonicalUrl});
+  const normalized=freeProviderMediaInfo({normalized:{title,thumbnail:page.images?.[0]?.url||null,media:candidates}},canonicalUrl,requestUrl);
+  if(normalized)return json({...normalized,providerName:"Facebook mobile/public-page fallback",provider:"Facebook public page · direct media metadata",extractor:"Facebook mobile page",fallbackUsed:true,canonicalUrl,diagnostics:{source:page.source||"Facebook public page",imagesFound:Number(page.images?.length)||0}});
+  const imageCount=Number(page.images?.length)||0;
   return json({
     ok:false,platform:"facebook",title,canonicalUrl,
-    error:"Postingan Facebook dapat dibaca, tetapi halaman publik tidak mengekspos URL stream video langsung. Pastikan tautan benar-benar menuju video/Reels publik, bukan postingan teks/foto atau konten yang memerlukan login.",
-    errorType:"no_public_video_stream",providerName:"Facebook public-reader fallback",provider:"Public Reader",fallbackTried:true,directDownloadAvailable:false
+    error:imageCount
+      ?"Postingan Facebook ini terbaca sebagai postingan bergambar, bukan video yang menyediakan stream MP4 langsung. Gunakan mode gambar untuk mengambil foto yang tersedia."
+      :"Postingan Facebook dapat dibaca, tetapi halaman publik tidak mengekspos URL stream video langsung. Pastikan tautan menuju video/Reels publik, bukan postingan teks atau konten yang memerlukan login.",
+    errorType:imageCount?"image_only_post":"no_public_video_stream",
+    providerName:"Facebook mobile/public-page fallback",provider:"Facebook public page",fallbackTried:true,directDownloadAvailable:false,
+    diagnostics:{source:page.source||"Facebook public page",imagesFound:imageCount}
   },502);
 }
-
 async function resolveSocialShortLink(rawUrl,key,timeoutMs=11000){
   const canonical=canonicalSocialPostUrl(rawUrl,key);
   if(key==="facebook")return resolveFacebookShareLink(canonical,timeoutMs);
