@@ -28,5 +28,5 @@ AI requests are paid API usage. No image is generated automatically: a visitor m
 - AI reference photo: 8 MB, PNG/JPEG/WEBP.
 - Manual image input: 20 MB.
 - Video overlay input: 35 MB and 60 seconds maximum.
-- MP4 export records the composed video/sticker canvas and attempts local FFmpeg conversion. If the browser/encoder does not expose a compatible audio track, the fallback MP4 may be silent; the UI reports that condition.
+- MP4 export records the composed video/sticker canvas where MediaRecorder capture is available; browsers without that capability use a direct FFmpeg overlay fallback. If the browser/encoder does not expose a compatible audio track, the fallback MP4 may be silent; the UI reports that condition.
 - Low-memory phones may take longer to encode GIF/MP4. Shorter clips and smaller source videos are recommended.
