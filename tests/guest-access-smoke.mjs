@@ -7,8 +7,6 @@ const gate = read("public/auth-gate.js");
 const guest = read("public/guest-access.js");
 const html = read("public/index.html");
 const owner = read("public/owner.js");
-const membership = read("src/membership.js");
-const membershipUi = read("public/membership.js");
 
 assert.ok(auth.includes("/api/auth/guest/bootstrap") && auth.includes("async function guestBootstrap"), "Guest identity must be issued by the server");
 assert.ok(auth.includes('limited(request,"guest-bootstrap",60,60000)'), "Automatic guest ID creation must be rate-limited to reduce bot abuse");
@@ -22,8 +20,7 @@ assert.ok(guest.includes('localStorage.setItem(LOCAL_ID_KEY, String(user.id))'),
 assert.ok(guest.includes("Akunmu telah dipulihkan") && guest.includes("082110767071"), "The guest client must display restoration notice and WhatsApp support");
 assert.ok(guest.includes('document.addEventListener("DOMContentLoaded", start, { once: true })'), "Guest identity bootstrap must wait until the earlier auth-gate initialization has completed");
 assert.ok(guest.includes("guestCopyBound") && guest.includes("navigator.clipboard.writeText"), "The automatically generated ID must be copyable from Profile");
-assert.ok(html.includes("guest-access.js") && html.includes("Akses administrator · Masuk admin"), "The guest client and separate owner entry must be present");
+assert.ok(html.includes("guest-access.js") && !html.includes("Akses administrator · Masuk admin"), "The guest client must remain while the Administrator entry is removed");
 assert.ok(owner.includes("/api/auth/admin/") && owner.includes("ownerBanAccountId"), "Owner moderation UI must keep ban and restore controls");
-assert.ok(membership.includes('String(user.role||"").toLowerCase()==="guest"') && membership.includes("customerEmail"), "Guest Membership checkout must accept a contact email without account login");
-assert.ok(membershipUi.includes("await window.aryanzzGuestReady") && !membershipUi.includes("aryMemCustomerEmail") && !membershipUi.includes("aryMemCustomerName"), "Membership UI must wait for the guest ID and allow checkout without contact details or account registration");
-console.log("ARYANZZ V1 anonymous public access, guest IDs, admin moderation and guest Membership checks passed.");
+assert.ok(!html.includes("membership.js") && !html.includes("membership.css"), "Membership, checkout, cosmetics, and redeem UI must not be loaded");
+console.log("ARYANZZ V1 anonymous public access and guest ID checks passed; retired Membership and Administrator entry are absent.");
