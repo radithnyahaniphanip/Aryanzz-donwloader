@@ -1823,6 +1823,39 @@ function facebookMobilePageUrl(rawUrl){
   if(parsed.hostname==="www.facebook.com"||parsed.hostname==="facebook.com")parsed.hostname="m.facebook.com";
   return parsed.href;
 }
+function extractFacebookEmbeddedMediaCandidates(html,pageUrl){
+  const source=String(html||"").replace(/\\u0026/gi,"&").replace(/\\u003d/gi,"=").replace(/\\u003a/gi,":").replace(/\\\//g,"/");
+  const output=[],seen=new Set();
+  const add=(raw,height=0,label="Facebook video")=>{
+    const value=decodeFacebookReaderValue(raw);
+    let safe;try{safe=safePublicMediaUrl(new URL(value,pageUrl).href)}catch{return}
+    if(!safe||seen.has(safe.href))return;
+    const ext=(safe.pathname.match(/\.(mp4|m4v|webm)(?:$)/i)||[])[1]?.toLowerCase()||"mp4";
+    seen.add(safe.href);
+    output.push({url:safe.href,type:"video",kind:"video",mode:"video",ext,mimeType:ext==="webm"?"video/webm":"video/mp4",height:Number(height)||0,label});
+  };
+  const videoKeys=new Set(["playable_url","playable_url_quality_hd","playable_url_quality_sd","browser_native_hd_url","browser_native_sd_url","hd_src","sd_src","progressive_url","video_src","video_url","videourl","playurl","play_addr","playaddr","download_addr","downloadaddr"]);
+  const walk=(value,depth=0)=>{
+    if(depth>12||!value||typeof value!=="object")return;
+    if(Array.isArray(value)){for(const item of value.slice(0,100))walk(item,depth+1);return}
+    const height=Number(value.height||value.video_height||value.videoHeight)||0;
+    for(const [key,item] of Object.entries(value)){
+      if(typeof item==="string"&&videoKeys.has(key.toLowerCase())&&/^https?:\/\//i.test(decodeFacebookReaderValue(item)))add(item,height,key.toLowerCase().includes("hd")?"Facebook HD video":"Facebook video");
+      else if(item&&typeof item==="object")walk(item,depth+1);
+    }
+  };
+  for(const match of source.matchAll(/<(?:script)\b[^>]*>([\s\S]*?)<\/script>/gi)){
+    const body=String(match[1]||"").trim();if(!body||body.length>3000000)continue;
+    let parsed=null;try{parsed=JSON.parse(body)}catch{
+      const first=body.indexOf("{"),last=body.lastIndexOf("}");
+      if(first>=0&&last>first)try{parsed=JSON.parse(body.slice(first,last+1))}catch{}
+    }
+    if(parsed)walk(parsed);
+    for(const entry of body.matchAll(/"(?:playable_url|playable_url_quality_hd|playable_url_quality_sd|browser_native_hd_url|browser_native_sd_url|hd_src|sd_src|progressive_url|video_src|video_url|videoUrl|playUrl|play_addr|download_addr)"\s*:\s*"((?:\\.|[^"\\])+)"/gi))add(entry[1]);
+  }
+  return output.slice(0,16);
+}
+
 async function fetchFacebookPublicReader(rawUrl,timeoutMs=9000){
   const parsed=safePublicMediaUrl(rawUrl);
   if(!parsed||platformIdForUrl(parsed.href)!=="facebook")throw new Error("Tautan Facebook publik tidak valid.");
@@ -1838,7 +1871,7 @@ async function fetchFacebookPublicReader(rawUrl,timeoutMs=9000){
       const titleMatch=html.match(/<meta\b[^>]*property=["']og:title["'][^>]*content=["']([^"']{1,300})["']/i)||html.match(/<title[^>]*>([^<]{1,300})<\/title>/i);
       const title=String(titleMatch?.[1]||"Facebook media").replace(/&amp;/gi,"&").replace(/\s+/g," ").trim().slice(0,300);
       const images=extractSocialImageCandidates(html,finalUrl,"facebook");
-      const media=extractGenericPublicMediaCandidates(html,finalUrl).filter(item=>item.mode==="video"||item.type==="video");
+      const media=[...extractGenericPublicMediaCandidates(html,finalUrl),...extractFacebookEmbeddedMediaCandidates(html,finalUrl)].filter(item=>item.mode==="video"||item.type==="video");
       const loginRedirect=/\/login(?:\.php)?(?:[/?#]|$)/i.test(new URL(finalUrl).pathname);
       const hasPostContent=!!(images.length||media.length||/<meta\b[^>]*(?:og:title|og:video|og:image)/i.test(html)||/Shared with Public|All reactions:|comments?/i.test(html));
       const loginPage=loginRedirect||(/Log into Facebook|Email or mobile number|Log in to Facebook/i.test(html)&&!hasPostContent);
