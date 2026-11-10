@@ -25,5 +25,5 @@ assert.ok(manifest.architectureGuard?.requiredChecks?.includes("module-boundarie
 const scamModule = manifest.featureModules.find(item => item.root === "#v1LightTools");
 assert.ok(scamModule?.js?.includes("/stage1-scam-evidence.js") && scamModule?.css?.includes("/stage1-scam-evidence.css"), "Scam Evidence must remain owned by the modular Tools workspace");
 const scamSource = fs.readFileSync(new URL("public/stage1-scam-evidence.js", root), "utf8");
-assert.ok(!scamSource.includes("navigator.geolocation") && !/\\bfetch\\s*\\(/.test(scamSource), "Scam Evidence must not track a person or upload private evidence automatically");
+assert.ok(!scamSource.includes("navigator.geolocation") && !/\bfetch\s*\(/.test(scamSource), "Scam Evidence must not track a person or upload private evidence automatically");
 console.log("ARYANZZ V1 module-boundary and feature-isolation checks passed.");
