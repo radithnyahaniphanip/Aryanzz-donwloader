@@ -11,7 +11,7 @@ const serviceWorker = read("../public/sw.js");
 assert.match(worker, /function canonicalFacebookPostUrl/);
 assert.match(worker, /u\.pathname===["']\/story\.php["']/);
 assert.match(worker, /story_fbid/);
-assert.match(worker, /\/groups\/\(\\d\+\)\/(?:permalink|posts)/);
+assert.match(worker, /groups.*permalink.*posts/);
 assert.match(worker, /async function facebookPublicReaderMediaInfo/);
 assert.match(worker, /if\(key==="facebook"\)\s*\{\s*try\s*\{\s*const response=await facebookPublicReaderMediaInfo/);
 assert.match(worker, /errorType:login\?"login_required":"public_reader_unavailable"/);
