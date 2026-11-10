@@ -36,8 +36,10 @@
       ],
       "features": [
         "tool search",
-        "tool category filters",
-        "tool panel visibility"
+        "tool category filters and live category counts",
+        "37-tool discovery catalog",
+        "consistent back navigation for every tool screen",
+        "unified responsive visual system for all internal tool panels"
       ]
     },
     "library": {
