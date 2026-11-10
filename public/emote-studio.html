@@ -3,71 +3,23 @@
     <div>
       <span class="emote-kicker">ARYANZZ V1 · CREATIVE LAB</span>
       <h2>Emote Studio</h2>
-      <p>Buat karakter chibi, stiker reaksi, GIF bergerak, dan video dengan overlay stiker. Mulai dari AI atau edit sendiri.</p>
-      <div class="emote-hero-pills"><span>✦ AI Creator</span><span>✎ Manual Editor</span><span>GIF + MP4</span><span>Local Library</span></div>
+      <p>Buat dan edit stiker sendiri, animasikan menjadi GIF, atau tempelkan ke video.</p>
+      <div class="emote-hero-pills"><span>✎ Manual Editor</span><span>PNG + WEBP</span><span>GIF + MP4</span><span>Local Library</span></div>
     </div>
     <div class="emote-hero-mark" aria-hidden="true">✧</div>
   </header>
 
   <nav class="emote-tabs" aria-label="Emote Studio">
-    <button type="button" class="active" data-emote-tab="create" aria-selected="true">✦ Buat</button>
-    <button type="button" data-emote-tab="editor" aria-selected="false">✎ Editor</button>
+    <button type="button" class="active" data-emote-tab="editor" aria-selected="true">✎ Buat & Edit</button>
     <button type="button" data-emote-tab="motion" aria-selected="false">▶ GIF & Video</button>
     <button type="button" data-emote-tab="library" aria-selected="false">▤ Pustaka</button>
   </nav>
 
-  <section class="emote-view" data-emote-view="create">
-    <div class="emote-section-head">
-      <div><span class="emote-kicker">01 · CREATE</span><h3>AI Character Creator</h3><p>Buat karakter dari deskripsi atau ubah foto menjadi ilustrasi stiker.</p></div>
-      <span class="emote-status-pill" id="emoteAiAvailability">Memeriksa AI…</span>
-    </div>
-    <div class="emote-create-grid">
-      <div class="emote-card">
-        <label class="emote-label" for="emoteCreateMode">METODE PEMBUATAN</label>
-        <select id="emoteCreateMode" class="emote-field">
-          <option value="prompt">AI dari deskripsi</option>
-          <option value="photo">AI dari foto / referensi</option>
-        </select>
-        <label class="emote-label" for="emotePrompt">DESKRIPSI KARAKTER</label>
-        <textarea id="emotePrompt" class="emote-field emote-prompt" maxlength="900" placeholder="Contoh: karakter chibi perempuan berhijab warna lavender, ekspresi tertawa lepas, memegang payung kecil, gaya stiker lucu dengan outline putih tebal…"></textarea>
-        <div class="emote-field-meta"><span>Jelaskan pakaian, pose, ekspresi, warna, dan aksesori.</span><span id="emotePromptCount">0/900</span></div>
-        <div id="emotePhotoWrap" hidden>
-          <label class="emote-label" for="emoteReferenceFile">FOTO REFERENSI (PNG / JPG / WEBP)</label>
-          <input id="emoteReferenceFile" class="emote-file" type="file" accept="image/png,image/jpeg,image/webp">
-          <small class="emote-help">Foto hanya dikirim ke layanan AI ketika kamu menekan tombol Generate. Edit manual tetap diproses di perangkat.</small>
-        </div>
-        <div class="emote-control-row">
-          <label class="emote-label" for="emoteStyle">GAYA ILUSTRASI</label>
-          <select id="emoteStyle" class="emote-field">
-            <option value="cute chibi anime sticker">Cute Chibi</option>
-            <option value="soft pastel kawaii sticker">Pastel Kawaii</option>
-            <option value="clean manga line art sticker">Manga Line Art</option>
-            <option value="3D clay toy character sticker">3D Clay Toy</option>
-            <option value="flat vector mascot sticker">Vector Mascot</option>
-            <option value="expressive hand-drawn meme sticker">Meme Doodle</option>
-          </select>
-        </div>
-        <div class="emote-cost-note">AI menggunakan API berbayar milik pemilik website. Penggunaan hanya berjalan setelah tombol ditekan dan API key dipasang di Cloudflare Worker.</div>
-        <button type="button" class="emote-primary" id="emoteGenerateBtn" disabled>✦ Generate Karakter</button>
-        <p class="emote-status" id="emoteAiStatus" role="status" aria-live="polite">Memeriksa kesiapan layanan AI…</p>
-      </div>
-      <div class="emote-card emote-result-card">
-        <div class="emote-preview-head"><div><b>Hasil karakter</b><small>Pratinjau PNG transparan</small></div><span class="emote-preview-dot"></span></div>
-        <div class="emote-checker emote-ai-preview" id="emoteAiPreview">
-          <div class="emote-empty-art"><span>✧</span><b>Karakter akan muncul di sini</b><small>Gunakan AI Creator atau unggah gambar ke Editor.</small></div>
-          <img id="emoteAiImage" alt="Hasil karakter ARYANZZ" hidden>
-        </div>
-        <div class="emote-result-actions" id="emoteAiActions" hidden>
-          <button type="button" class="emote-secondary" id="emoteUseAiImage">Edit karakter</button>
-          <a class="emote-download" id="emoteAiDownload" download="aryanzz-emote.png">↓ Unduh PNG</a>
-        </div>
-      </div>
-    </div>
-  </section>
+  
 
-  <section class="emote-view" data-emote-view="editor" hidden>
+  <section class="emote-view" data-emote-view="editor">
     <div class="emote-section-head">
-      <div><span class="emote-kicker">02 · EDITOR</span><h3>Sticker Canvas</h3><p>Gambar, hapus bagian latar secara manual, tambahkan teks, emoji, dan outline.</p></div>
+      <div><span class="emote-kicker">01 · EDITOR</span><h3>Buat & Edit Stiker</h3><p>Gambar, hapus bagian latar secara manual, tambahkan teks, emoji, dan outline.</p></div>
       <span class="emote-status-pill">LOKAL · PRIVAT</span>
     </div>
     <div class="emote-editor-grid">
@@ -80,7 +32,7 @@
         </div>
         <div class="emote-checker emote-stage">
           <canvas id="emoteCanvas" width="768" height="768" aria-label="Kanvas editor stiker"></canvas>
-          <div class="emote-canvas-empty" id="emoteCanvasEmpty"><span>✧</span><b>Mulai dari gambar atau kanvas kosong</b><small>Unggah foto, hasil AI, atau mulai menggambar.</small></div>
+          <div class="emote-canvas-empty" id="emoteCanvasEmpty"><span>✧</span><b>Mulai dari gambar atau kanvas kosong</b><small>Unggah gambar atau mulai menggambar.</small></div>
         </div>
         <p class="emote-status" id="emoteEditorStatus" role="status" aria-live="polite">Kanvas siap. Pilih gambar atau alat gambar.</p>
       </div>

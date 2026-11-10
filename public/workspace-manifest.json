@@ -271,7 +271,7 @@
       "js": [
         "/emote-studio.js"
       ],
-      "purpose": "AI-assisted chibi/sticker creation through a protected optional image API; local canvas drawing, erasing, text, emoji, outline, PNG/WebP export, IndexedDB library, FFmpeg GIF animation, and video sticker overlay with MP4 export."
+      "purpose": "Local sticker creation and editing with canvas drawing, erasing, text, emoji, outline, PNG/WebP export, IndexedDB library, FFmpeg GIF animation, and video sticker overlay with MP4 export. No external AI API or API key required."
     }
   ],
   "release": {
