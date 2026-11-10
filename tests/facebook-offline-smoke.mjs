@@ -9,6 +9,10 @@ const network = read("../public/network-mode.js");
 const serviceWorker = read("../public/sw.js");
 
 assert.match(worker, /function canonicalFacebookPostUrl/);
+assert.match(worker, /function facebookMobilePageUrl/);
+assert.match(worker, /function extractFacebookEmbeddedMediaCandidates/);
+assert.match(worker, /playable_url_quality_hd/);
+assert.match(worker, /pageRequestUrl=key==="facebook"\?facebookMobilePageUrl/);
 assert.match(worker, /u\.pathname===["']\/story\.php["']/);
 assert.match(worker, /story_fbid/);
 assert.match(worker, /groups.*permalink.*posts/);

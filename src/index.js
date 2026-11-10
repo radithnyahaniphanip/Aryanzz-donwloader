@@ -1817,23 +1817,94 @@ function canonicalFacebookPostUrl(rawUrl){
   u.hash="";
   return u.href;
 }
+function facebookMobilePageUrl(rawUrl){
+  const parsed=safePublicMediaUrl(rawUrl);
+  if(!parsed||platformIdForUrl(parsed.href)!=="facebook")return rawUrl;
+  if(parsed.hostname==="www.facebook.com"||parsed.hostname==="facebook.com")parsed.hostname="m.facebook.com";
+  return parsed.href;
+}
+function extractFacebookEmbeddedMediaCandidates(html,pageUrl){
+  const source=String(html||"").replace(/\\u0026/gi,"&").replace(/\\u003d/gi,"=").replace(/\\u003a/gi,":").replace(/\\\//g,"/");
+  const output=[],seen=new Set();
+  const add=(raw,height=0,label="Facebook video")=>{
+    const value=decodeFacebookReaderValue(raw);
+    let safe;try{safe=safePublicMediaUrl(new URL(value,pageUrl).href)}catch{return}
+    if(!safe||seen.has(safe.href))return;
+    const ext=(safe.pathname.match(/\.(mp4|m4v|webm)(?:$)/i)||[])[1]?.toLowerCase()||"mp4";
+    seen.add(safe.href);
+    output.push({url:safe.href,type:"video",kind:"video",mode:"video",ext,mimeType:ext==="webm"?"video/webm":"video/mp4",height:Number(height)||0,label});
+  };
+  const videoKeys=new Set(["playable_url","playable_url_quality_hd","playable_url_quality_sd","browser_native_hd_url","browser_native_sd_url","hd_src","sd_src","progressive_url","video_src","video_url","videourl","playurl","play_addr","playaddr","download_addr","downloadaddr"]);
+  const walk=(value,depth=0)=>{
+    if(depth>12||!value||typeof value!=="object")return;
+    if(Array.isArray(value)){for(const item of value.slice(0,100))walk(item,depth+1);return}
+    const height=Number(value.height||value.video_height||value.videoHeight)||0;
+    for(const [key,item] of Object.entries(value)){
+      if(typeof item==="string"&&videoKeys.has(key.toLowerCase())&&/^https?:\/\//i.test(decodeFacebookReaderValue(item)))add(item,height,key.toLowerCase().includes("hd")?"Facebook HD video":"Facebook video");
+      else if(item&&typeof item==="object")walk(item,depth+1);
+    }
+  };
+  for(const match of source.matchAll(/<(?:script)\b[^>]*>([\s\S]*?)<\/script>/gi)){
+    const body=String(match[1]||"").trim();if(!body||body.length>3000000)continue;
+    let parsed=null;try{parsed=JSON.parse(body)}catch{
+      const first=body.indexOf("{"),last=body.lastIndexOf("}");
+      if(first>=0&&last>first)try{parsed=JSON.parse(body.slice(first,last+1))}catch{}
+    }
+    if(parsed)walk(parsed);
+    for(const entry of body.matchAll(/"(?:playable_url|playable_url_quality_hd|playable_url_quality_sd|browser_native_hd_url|browser_native_sd_url|hd_src|sd_src|progressive_url|video_src|video_url|videoUrl|playUrl|play_addr|download_addr)"\s*:\s*"((?:\\.|[^"\\])+)"/gi))add(entry[1]);
+  }
+  return output.slice(0,16);
+}
+
 async function fetchFacebookPublicReader(rawUrl,timeoutMs=9000){
   const parsed=safePublicMediaUrl(rawUrl);
   if(!parsed||platformIdForUrl(parsed.href)!=="facebook")throw new Error("Tautan Facebook publik tidak valid.");
-  const readerUrl="https://r.jina.ai/http://"+parsed.hostname+parsed.pathname+parsed.search;
-  const response=await fetch(readerUrl,{
-    headers:{accept:"text/plain","user-agent":"Mozilla/5.0 (compatible; ARYANZZ Public Link Resolver/1.0)"},
-    signal:AbortSignal.timeout(timeoutMs),cache:"no-store"
-  });
-  if(!response.ok)throw new Error("Facebook public reader HTTP "+response.status+".");
-  const body=(await response.text()).slice(0,1500000);
-  const finalMatch=body.match(/^Final URL:\s*(https?:\/\/[^\s]+)/mi);
-  const finalUrl=finalMatch?decodeFacebookReaderValue(finalMatch[1]):null;
-  const hasPostContent=/Markdown Content:\s*[\s\S]*?(?:##\s*\[|Shared with Public|All reactions:|comments?)/i.test(body);
-  const loginRedirect=!!finalUrl&&/\/login(?:\.php)?(?:[/?#]|$)/i.test(finalUrl);
-  const loginPage=loginRedirect||(/Log into Facebook|Email or mobile number/i.test(body)&&!hasPostContent);
-  if(loginPage&&!hasPostContent)throw new Error("facebook_login_required");
-  return {body,finalUrl,hasPostContent};
+  const mobileUrl=facebookMobilePageUrl(parsed.href);
+  const candidates=[mobileUrl,canonicalFacebookPostUrl(parsed.href)].filter((value,index,array)=>array.indexOf(value)===index);
+  const errors=[];let sawLogin=false;
+  for(const candidate of candidates){
+    try{
+      const page=await fetchSocialPostHtml(candidate,timeoutMs);
+      const finalSafe=safePublicMediaUrl(page.url||candidate);
+      const finalUrl=finalSafe?.href||candidate;
+      const html=String(page.html||"").slice(0,5000000);
+      const titleMatch=html.match(/<meta\b[^>]*property=["']og:title["'][^>]*content=["']([^"']{1,300})["']/i)||html.match(/<title[^>]*>([^<]{1,300})<\/title>/i);
+      const title=String(titleMatch?.[1]||"Facebook media").replace(/&amp;/gi,"&").replace(/\s+/g," ").trim().slice(0,300);
+      const images=extractSocialImageCandidates(html,finalUrl,"facebook");
+      const media=[...extractGenericPublicMediaCandidates(html,finalUrl),...extractFacebookEmbeddedMediaCandidates(html,finalUrl)].filter(item=>item.mode==="video"||item.type==="video");
+      const loginRedirect=/\/login(?:\.php)?(?:[/?#]|$)/i.test(new URL(finalUrl).pathname);
+      const hasPostContent=!!(images.length||media.length||/<meta\b[^>]*(?:og:title|og:video|og:image)/i.test(html)||/Shared with Public|All reactions:|comments?/i.test(html));
+      const loginPage=loginRedirect||(/Log into Facebook|Email or mobile number|Log in to Facebook/i.test(html)&&!hasPostContent);
+      if(loginPage&&!hasPostContent)throw new Error("facebook_login_required");
+      return {body:html,html,finalUrl,hasPostContent,images,media,title,source:"Facebook mobile public page"};
+    }catch(error){
+      const message=String(error?.message||error);
+      if(message==="facebook_login_required"){sawLogin=true;continue;}
+      errors.push(message.slice(0,120));
+    }
+  }
+  // Last resort: a text reader can sometimes expose public posts when Facebook's
+  // own mobile page is temporarily unavailable to the Worker.
+  try{
+    const readerUrl="https://r.jina.ai/http://"+parsed.hostname+parsed.pathname+parsed.search;
+    const response=await fetch(readerUrl,{
+      headers:{accept:"text/plain","user-agent":"Mozilla/5.0 (compatible; ARYANZZ Public Link Resolver/1.0)"},
+      signal:AbortSignal.timeout(timeoutMs),cache:"no-store"
+    });
+    if(!response.ok)throw new Error("Facebook public reader HTTP "+response.status+".");
+    const body=(await response.text()).slice(0,1500000);
+    const finalMatch=body.match(/^Final URL:\s*(https?:\/\/[^\s]+)/mi);
+    const finalUrl=finalMatch?decodeFacebookReaderValue(finalMatch[1]):null;
+    const hasPostContent=/Markdown Content:\s*[\s\S]*?(?:##\s*\[|Shared with Public|All reactions:|comments?)/i.test(body);
+    const loginRedirect=!!finalUrl&&/\/login(?:\.php)?(?:[/?#]|$)/i.test(finalUrl);
+    if((loginRedirect||(/Log into Facebook|Email or mobile number/i.test(body)&&!hasPostContent))&&!hasPostContent)throw new Error("facebook_login_required");
+    return {body,finalUrl,hasPostContent,images:[],media:[],title:(body.match(/^Title:\s*(.{1,300}?)(?:\s*\|\s*Facebook)?$/mi)||[])[1]||"Facebook media",source:"Facebook text reader"};
+  }catch(error){
+    if(String(error?.message||error)==="facebook_login_required")sawLogin=true;
+    else errors.push(String(error?.message||error).slice(0,120));
+  }
+  if(sawLogin)throw new Error("facebook_login_required");
+  throw new Error(errors.join(" | ")||"Facebook public page unavailable.");
 }
 async function resolveFacebookShareLink(rawUrl,timeoutMs=10000){
   const parsed=safePublicMediaUrl(rawUrl);
@@ -1848,29 +1919,39 @@ async function facebookPublicReaderMediaInfo(rawUrl,requestUrl,timeoutMs=9000){
   catch(error){
     const detail=String(error?.message||error);
     const login=detail==="facebook_login_required";
-    return json({ok:false,error:login?"Facebook meminta login untuk membaca postingan ini. ARYANZZ hanya memproses postingan yang memang dapat diakses publik tanpa login.":"Facebook belum dapat dibaca melalui jalur metadata publik: "+detail.slice(0,180),errorType:login?"login_required":"public_reader_unavailable",providerName:"Facebook public reader fallback",provider:"Public Reader",fallbackTried:true},login?403:502);
+    return json({ok:false,error:login?"Facebook meminta login untuk membaca postingan ini. ARYANZZ hanya memproses postingan yang memang dapat diakses publik tanpa login.":"Facebook belum dapat dibaca melalui jalur metadata publik: "+detail.slice(0,180),errorType:login?"login_required":"public_reader_unavailable",providerName:"Facebook mobile/public reader fallback",provider:"Facebook public page",fallbackTried:true},login?403:502);
   }
-  const titleMatch=page.body.match(/^Title:\s*(.{1,300}?)(?:\s*\|\s*Facebook)?$/mi);
-  const title=String(titleMatch?.[1]||"Facebook media").replace(/\s+/g," ").trim().slice(0,300);
+  const body=String(page.body||"");
+  const titleMatch=body.match(/^Title:\s*(.{1,300}?)(?:\s*\|\s*Facebook)?$/mi);
+  const title=String(page.title||titleMatch?.[1]||"Facebook media").replace(/\s+/g," ").trim().slice(0,300);
   const candidates=[],seen=new Set();
-  const add=value=>{
-    const decoded=decodeFacebookReaderValue(String(value||"").replace(/[),\]]+$/,""));
+  const add=(value,declared={})=>{
+    const decoded=decodeFacebookReaderValue(String(typeof value==="string"?value:declared.url||"").replace(/[),\]]+$/,""));
     const safe=safePublicMediaUrl(decoded);
-    if(!safe||seen.has(safe.href)||!/\.(?:mp4|m4v|webm)(?:[?#]|$)/i.test(safe.href))return;
-    seen.add(safe.href);candidates.push({type:"video",kind:"video",label:"Video Facebook",url:safe.href,ext:(safe.pathname.match(/\.(mp4|m4v|webm)$/i)||[])[1]||"mp4",mimeType:"video/"+((safe.pathname.match(/\.(mp4|m4v|webm)$/i)||[])[1]||"mp4")});
+    if(!safe||seen.has(safe.href))return;
+    const ext=String(declared.ext||declared.extension||(safe.pathname.match(/\.(mp4|m4v|webm)$/i)||[])[1]||"").replace(/^\./,"").toLowerCase();
+    const mime=String(declared.mimeType||declared.mime_type||"").split(";")[0].toLowerCase();
+    if(!mime.startsWith("video/")&&!["mp4","m4v","webm"].includes(ext)&&!/\.(?:mp4|m4v|webm)(?:[?#]|$)/i.test(safe.href))return;
+    seen.add(safe.href);
+    candidates.push({type:"video",kind:"video",mode:"video",label:declared.label||"Video Facebook",url:safe.href,ext:ext||"mp4",mimeType:mime||"video/"+(ext||"mp4"),height:Number(declared.height)||0});
   };
-  for(const match of page.body.matchAll(/https?:\/\/[^\s"'<>()[\]]{8,3000}\.(?:mp4|m4v|webm)(?:\?[^\s"'<>()[\]]*)?/gi))add(match[0]);
-  for(const match of page.body.matchAll(/(?:video|media)\s*(?:url|src)\s*[:=]\s*["']?(https?:\/\/[^\s"'<>]{8,3000})/gi))add(match[1]);
+  for(const item of Array.isArray(page.media)?page.media:[])add(item.url,item);
+  for(const match of body.matchAll(/https?:\/\/[^\s"'<>()[\]]{8,3000}\.(?:mp4|m4v|webm)(?:\?[^\s"'<>()[\]]*)?/gi))add(match[0]);
+  for(const match of body.matchAll(/(?:video|media)\s*(?:url|src)\s*[:=]\s*["']?(https?:\/\/[^\s"'<>]{8,3000})/gi))add(match[1]);
   const canonicalUrl=page.finalUrl?canonicalFacebookPostUrl(page.finalUrl):canonicalFacebookPostUrl(rawUrl);
-  const normalized=freeProviderMediaInfo({normalized:{title,media:candidates}},canonicalUrl,requestUrl);
-  if(normalized)return json({...normalized,providerName:"Facebook public-reader fallback",provider:"Public Reader · direct media metadata",extractor:"Facebook public reader",fallbackUsed:true,canonicalUrl});
+  const normalized=freeProviderMediaInfo({normalized:{title,thumbnail:page.images?.[0]?.url||null,media:candidates}},canonicalUrl,requestUrl);
+  if(normalized)return json({...normalized,providerName:"Facebook mobile/public-page fallback",provider:"Facebook public page · direct media metadata",extractor:"Facebook mobile page",fallbackUsed:true,canonicalUrl,diagnostics:{source:page.source||"Facebook public page",imagesFound:Number(page.images?.length)||0}});
+  const imageCount=Number(page.images?.length)||0;
   return json({
     ok:false,platform:"facebook",title,canonicalUrl,
-    error:"Postingan Facebook dapat dibaca, tetapi halaman publik tidak mengekspos URL stream video langsung. Pastikan tautan benar-benar menuju video/Reels publik, bukan postingan teks/foto atau konten yang memerlukan login.",
-    errorType:"no_public_video_stream",providerName:"Facebook public-reader fallback",provider:"Public Reader",fallbackTried:true,directDownloadAvailable:false
+    error:imageCount
+      ?"Postingan Facebook ini terbaca sebagai postingan bergambar, bukan video yang menyediakan stream MP4 langsung. Gunakan mode gambar untuk mengambil foto yang tersedia."
+      :"Postingan Facebook dapat dibaca, tetapi halaman publik tidak mengekspos URL stream video langsung. Pastikan tautan menuju video/Reels publik, bukan postingan teks atau konten yang memerlukan login.",
+    errorType:imageCount?"image_only_post":"no_public_video_stream",
+    providerName:"Facebook mobile/public-page fallback",provider:"Facebook public page",fallbackTried:true,directDownloadAvailable:false,
+    diagnostics:{source:page.source||"Facebook public page",imagesFound:imageCount}
   },502);
 }
-
 async function resolveSocialShortLink(rawUrl,key,timeoutMs=11000){
   const canonical=canonicalSocialPostUrl(rawUrl,key);
   if(key==="facebook")return resolveFacebookShareLink(canonical,timeoutMs);
@@ -2102,7 +2183,8 @@ async function resolveSocialImagePost(rawUrl,requestUrl,options={}){
         }
         return page;
       }
-      let page=await fetchSocialPostHtml(canonicalUrl,Number(options.timeoutMs)||12000).then(result=>{
+      const pageRequestUrl=key==="facebook"?facebookMobilePageUrl(canonicalUrl):canonicalUrl;
+      let page=await fetchSocialPostHtml(pageRequestUrl,Number(options.timeoutMs)||12000).then(result=>{
         const images=extractSocialImageCandidates(result.html,result.url,key);
         if(options.diagnostics)options.diagnostics.value={source:"public-page",status:result.status,bytes:result.html.length,imageCount:images.length};
         if(key==="tiktok"&&options.diagnostics){
