@@ -11,6 +11,8 @@ const video = read("../public/stage1-video-tools.js");
 const image = read("../public/stage1-image-tools.js");
 const files = read("../public/stage1-file-tools.js");
 const developer = read("../public/stage1-dev-tools.js");
+const scam = read("../public/stage1-scam-evidence.js");
+const scamCss = read("../public/stage1-scam-evidence.css");
 const css = read("../public/stage1-tools.css");
 const sw = read("../public/sw.js");
 const manifest = JSON.parse(read("../public/workspace-manifest.json"));
@@ -20,6 +22,7 @@ const tools = [
   ["video-frame", "Video Frame Extractor"],
   ["video-sheet", "Video Contact Sheet"],
   ["image-exif", "EXIF Inspector"],
+  ["security-scam", "Scam Evidence Analyzer"],
   ["image-palette", "Color Palette Extractor"],
   ["image-blur", "Privacy Blur"],
   ["image-sticker", "Sticker Maker"],
@@ -34,16 +37,17 @@ const tools = [
 
 assert.ok(html.includes('id="v1LightTools"'), "Stage 1 tools panel is mounted as a direct workspace panel");
 assert.ok(html.includes('/stage1-tools.css?v=__ARYANZZ_VERSION__'), "Stage 1 stylesheet is linked");
-for (const path of ["stage1-tools-core.js", "stage1-video-tools.js", "stage1-image-tools.js", "stage1-file-tools.js", "stage1-dev-tools.js"]) {
+for (const path of ["stage1-tools-core.js", "stage1-video-tools.js", "stage1-image-tools.js", "stage1-file-tools.js", "stage1-dev-tools.js", "stage1-scam-evidence.js"]) {
   assert.ok(html.includes('/' + path + '?v=__ARYANZZ_VERSION__'), "missing loaded module " + path);
   assert.ok(sw.includes('/' + path + '?v=__ARYANZZ_VERSION__'), "missing precached module " + path);
 }
+assert.ok(html.includes('/stage1-scam-evidence.css?v=__ARYANZZ_VERSION__') && sw.includes('/stage1-scam-evidence.css?v=__ARYANZZ_VERSION__'), "Scam Evidence stylesheet is loaded and precached");
 assert.ok(sw.includes('/stage1-tools-panel.html') && sw.includes('/stage1-tools.css?v=__ARYANZZ_VERSION__'), "panel fragment and CSS are precached");
 for (const [id, label] of tools) {
   assert.ok(panel.includes('data-v1lt-open="' + id + '"'), "missing tool launcher " + id);
   assert.ok(panel.includes(label), "missing tool label " + label);
 }
-assert.equal(tools.length, 14, "Stage 1 must contain exactly 14 tools");
+assert.equal(tools.length, 15, "Stage 1 must contain exactly 15 tools");
 const gridStart = html.indexOf('<div class="all-tools-grid v674-tool-grid" id="toolGrid">');
 const gridEnd = html.indexOf('</div>\n<p class="v674-no-tools"', gridStart);
 assert.ok(gridStart >= 0 && gridEnd > gridStart, "main tools grid has a clear closing boundary");
@@ -61,8 +65,30 @@ assert.ok(!image.includes('const low=document.createElement("canvas");low.width=
 assert.ok(css.includes("overscroll-behavior:contain") && css.includes("-webkit-touch-callout:none"), "Privacy Blur prevents page gestures and text selection during brush use");
 assert.ok(files.includes('register("file-lightweight"') && files.includes("createZip") && files.includes("subtle.digest") && files.includes("parseCsv"), "file module registers ZIP, hashing and CSV operations");
 assert.ok(developer.includes('register("developer-lightweight"') && developer.includes("decodePart") && developer.includes("new Worker"), "developer module registers JWT and isolated regex processing");
+assert.ok(scam.includes('register("scam-evidence"') && scam.includes("openDb") && scam.includes("indexedDB.open") && scam.includes("SHA-256"), "Scam Evidence module registers local case storage and evidence integrity hashes");
+assert.ok(scam.includes("function normalizePhone") && scam.includes("function extractAccounts") && scam.includes("function inspectUrl") && scam.includes("function analyzeScamText"), "Scam Evidence provides phone, account, link and scam-pattern analysis");
+assert.ok(scam.includes("function readExif") && scam.includes("function extractCoordinates") && scam.includes("function parseTimeline") && scam.includes("function mapsLinks"), "Scam Evidence provides EXIF GPS, explicit coordinates, timeline and dual map links");
+assert.ok(scam.includes("tesseract.js@5") && scam.includes("pdfjs-dist@4.10.38") && scam.includes("ind+eng"), "Scam Evidence supports local-in-browser OCR and PDF text extraction with optional online engine loading");
+assert.ok(!/navigator\\.geolocation/.test(scam) && !/\\bfetch\\s*\\(/.test(scam), "Scam Evidence never geolocates a phone or uploads evidence automatically");
+assert.ok(scamCss.includes("#v1LightTools .scam-section") && scamCss.includes("@media(max-width:620px)"), "Scam Evidence styles remain scoped and responsive");
+assert.ok(manifest.featureModules.some(item => item.root === "#v1LightTools" && item.js?.includes("/stage1-scam-evidence.js") && item.css?.includes("/stage1-scam-evidence.css")), "workspace manifest owns the separate Scam Evidence module");
 assert.ok(css.includes("#v1LightTools") && css.includes("@media(max-width:760px)"), "styles are scoped and responsive");
 assert.ok(manifest.featureModules.some(item => item.root === "#v1LightTools" && item.js?.includes("/stage1-tools-core.js")), "workspace manifest owns the Stage 1 panel");
+
+const scamSandbox = { window: { ARYANZZStage1: { register(name, init) { this.registered = name; this.init = init; } } }, URL, TextDecoder, TextEncoder, Uint8Array, DataView, Math, Number, String, Array, Set, Date, RegExp, Object, Error };
+vm.runInNewContext(scam, scamSandbox, { filename: "stage1-scam-evidence.js" });
+const scamCore = scamSandbox.window.ARYANZZScamEvidenceCore;
+assert.ok(scamCore && scamSandbox.window.ARYANZZStage1.registered === "scam-evidence", "Scam Evidence registers as an independent Stage 1 module");
+assert.equal(scamCore.normalizePhone("0812 3456 7890"), "+6281234567890", "Indonesian phone numbers normalize to E.164");
+assert.equal(scamCore.phoneInfo("+6281234567890").country, "Indonesia", "Phone intelligence identifies the country calling code only");
+assert.deepEqual(Array.from(scamCore.extractPhones("Hubungi 081234567890 atau +6289876543210")), ["+6281234567890", "+6289876543210"], "Phone extraction finds normalized numbers");
+assert.equal(scamCore.extractAccounts("Transfer ke BCA 1234567890123")[0].value, "1234567890123", "Account extraction recognizes a labelled bank account");
+assert.equal(scamCore.inspectUrl("http://bit.ly/cek").risk, "review", "Link inspection flags insecure short links for review");
+assert.equal(scamCore.analyzeScamText("Segera kirim OTP dan transfer biaya admin sekarang juga").level, "high", "Scam heuristics identify multiple risk indicators without claiming guilt");
+assert.equal(scamCore.parseTimeline("[10/11/2026, 10:30] Pelaku: kirim OTP").length, 1, "Timeline extraction recognizes WhatsApp-style timestamps");
+assert.equal(scamCore.extractCoordinates("https://www.google.com/maps/@-6.200000,106.816666,17z")[0].lng, 106.816666, "Map extraction reads explicit shared coordinates");
+assert.ok(scamCore.mapsLinks(-6.2, 106.816666).google.includes("google.com/maps") && scamCore.mapsLinks(-6.2, 106.816666).osm.includes("openstreetmap.org"), "Evidence Map creates Google Maps and OpenStreetMap links");
+assert.equal(scamCore.validCoords(0, 0), true, "Valid equator/prime-meridian coordinates are accepted");
 
 const fakeRoot = { querySelector() { return null; }, querySelectorAll() { return []; }, innerHTML: "" };
 const fakeDocument = { readyState: "loading", getElementById(id) { return id === "v1LightTools" ? fakeRoot : null; }, addEventListener() {} };
@@ -125,4 +151,4 @@ function FileShim(blob, name) {
   this.size = blob.size;
   this.arrayBuffer = () => blob.arrayBuffer();
 }
-console.log("ARYANZZ Stage 1 smoke test passed: 14 tools, modular wiring, ZIP round-trip, CSV parsing and export safety.");
+console.log("ARYANZZ Stage 1 smoke test passed: 15 tools, Scam Evidence module, ZIP round-trip, CSV parsing and export safety.");
