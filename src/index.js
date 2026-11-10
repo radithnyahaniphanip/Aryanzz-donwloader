@@ -2149,7 +2149,8 @@ async function resolveSocialImagePost(rawUrl,requestUrl,options={}){
         }
         return page;
       }
-      let page=await fetchSocialPostHtml(canonicalUrl,Number(options.timeoutMs)||12000).then(result=>{
+      const pageRequestUrl=key==="facebook"?facebookMobilePageUrl(canonicalUrl):canonicalUrl;
+      let page=await fetchSocialPostHtml(pageRequestUrl,Number(options.timeoutMs)||12000).then(result=>{
         const images=extractSocialImageCandidates(result.html,result.url,key);
         if(options.diagnostics)options.diagnostics.value={source:"public-page",status:result.status,bytes:result.html.length,imageCount:images.length};
         if(key==="tiktok"&&options.diagnostics){
