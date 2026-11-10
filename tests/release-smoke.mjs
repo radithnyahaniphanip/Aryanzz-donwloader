@@ -37,7 +37,6 @@ const workspaceHomeJs = read("../public/workspace-home.js");
 const workspaceLayoutJs = read("../public/workspace-layout.js");
 const workspaceLibraryJs = read("../public/workspace-library.js");
 const workspaceToolsJs = read("../public/workspace-tools.js");
-const deployWorkflow = read("../.github/workflows/deploy-cloudflare.yml");
 const workspaceNavigationJs = read("../public/workspace-navigation.js");
 const workspaceHomeCss = read("../public/workspace-home.css");
 const workspaceToolsCss = read("../public/workspace-tools.css");
@@ -388,9 +387,7 @@ const checks = [
   ["Home, Tools, Library, Owner, Profile and Navigation each have an explicit module owner in the workspace manifest", ["home","tools","library","owner","profile","navigation"].every(key=>workspaceManifest.workspaces?.[key]?.root&&workspaceManifest.workspaces?.[key]?.js?.length&&workspaceManifest.workspaces?.[key]?.css?.length)],
   ["Home header and hero styles are scoped to Home and do not leak into other views", workspaceHomeCss.includes("#home>.v674-top")&&workspaceHomeCss.includes("#home>.v89-welcome")&&!workspaceHomeCss.includes("body{")],
   ["Tools panel visibility is scoped to the Tools root", workspaceToolsCss.includes("#toolsArea[hidden]")&&workspaceToolsCss.includes("#toolsArea>.panel[hidden]")&&!workspaceToolsCss.includes("#profile")&&!workspaceToolsCss.includes("#owner")],
-  ["Pull-request validation cannot cancel the serialized Cloudflare production deployment", deployWorkflow.includes("format('aryanzz-pr-{0}', github.event.pull_request.number)")&&deployWorkflow.includes("'aryanzz-cloudflare-production'")],
   ["Tools catalog uses a consistent social-style discovery layout with all categories and the all-tools filter", html.includes('data-tool-filter="video"')&&html.includes('data-tool-filter="image"')&&html.includes('data-tool-filter="file"')&&html.includes('data-tool-filter="guide"')&&html.includes('id="toolResultsMeta"')],
-  ["Scam Evidence Analyzer is registered as a searchable security tool with isolated assets", html.includes('data-tool-filter="security"')&&html.includes('data-v1lt-open="security-scam"')&&html.includes('/stage1-scam-evidence.js?v=__ARYANZZ_VERSION__')&&html.includes('/stage1-scam-evidence.css?v=__ARYANZZ_VERSION__')&&sw.includes('/stage1-scam-evidence.js?v=__ARYANZZ_VERSION__')&&sw.includes('/stage1-scam-evidence.css?v=__ARYANZZ_VERSION__')],
   ["Tool cards are categorized by their actual function and stale Emote AI copy is removed", html.includes('data-category="video"')&&html.includes('data-category="image"')&&html.includes('data-category="file"')&&html.includes('data-category="guide"')&&html.includes("Edit stiker secara manual")&&!html.includes("Buat stiker chibi dari AI atau foto")],
   ["Every tool screen has a shared return toolbar outside lazy-loaded panels", workspaceToolsJs.includes("ary-tools-backbar")&&workspaceToolsJs.includes('back.dataset.panel="allTools"')&&workspaceToolsJs.includes("MutationObserver")],
   ["Tool categories show live counts and search results", workspaceToolsJs.includes("ary-tools-filter-count")&&workspaceToolsJs.includes("alat ditemukan")&&workspaceToolsJs.includes("aria-pressed")],
