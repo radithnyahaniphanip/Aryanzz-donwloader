@@ -8,6 +8,7 @@ const cleanText=value=>String(value??"").replace(/\u0000/g,"").trim();
 function normalizePhone(value){
  let digits=String(value||"").replace(/[^\d+]/g,"");
  if(digits.startsWith("00"))digits="+"+digits.slice(2);
+ if(digits.startsWith("620"))digits="62"+digits.slice(3);
  if(digits.startsWith("+"))digits=digits.slice(1);
  else if(digits.startsWith("0"))digits="62"+digits.slice(1);
  if(!/^\d{9,15}$/.test(digits))return "";
@@ -82,7 +83,7 @@ function extractCoordinates(text){
  const patterns=[
   /@(-?\d{1,2}\.\d{3,})\s*,\s*(-?\d{1,3}\.\d{3,})/g,
   /!3d(-?\d{1,2}\.\d{3,})!4d(-?\d{1,3}\.\d{3,})/g,
-  /(?:[?&](?:q|ll|query)=)(-?\d{1,2}\.\d{3,})%?2C?%?2C?(-?\d{1,3}\.\d{3,})/gi,
+  /(?:[?&](?:q|ll|query)=)(-?\d{1,2}\.\d{3,})(?:,|%2C)(-?\d{1,3}\.\d{3,})/gi,
   /(?:^|[^\d])(-?\d{1,2}\.\d{4,})\s*,\s*(-?\d{1,3}\.\d{4,})(?!\d)/g
  ];
  for(const pattern of patterns){let match;while((match=pattern.exec(source))!==null){const lat=Number(match[1]),lng=Number(match[2]);if(!validCoords(lat,lng))continue;const key=lat.toFixed(5)+","+lng.toFixed(5);if(seen.has(key))continue;seen.add(key);out.push({lat,lng,source:"Koordinat eksplisit dalam teks/tautan",verified:false})}}
