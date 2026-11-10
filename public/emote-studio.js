@@ -396,7 +396,7 @@ async function exportVideoMp4(){
  }
 }
 $("emoteExportMp4")?.addEventListener("click",exportVideoMp4);
-
+checkAiStatus();
 }
 async function boot(){
  try{
