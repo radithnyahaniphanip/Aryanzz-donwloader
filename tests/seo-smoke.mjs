@@ -32,7 +32,7 @@ assert.ok(title(home).length >= 45 && title(home).length <= 65, "Homepage title 
 const homeDescription = meta(home, "description");
 assert.ok(homeDescription.length >= 120 && homeDescription.length <= 165, "Homepage meta description should be a useful search snippet");
 assert.ok(home.includes('<h1>Unduh Video, Audio &amp; Gambar<br><span>dari Satu Tautan</span></h1>'));
-assert.ok(home.includes('href="/panduan.html"'), "Homepage should link to the crawlable guide page");
+assert.ok(home.includes('href="/panduan"'), "Homepage should link to the crawlable guide page");
 assert.ok(meta(home, "robots").includes("index,follow"));
 assert.ok(meta(home, "og:image:alt", "property"), "Homepage social image should have descriptive alt text");
 
@@ -44,7 +44,7 @@ assert.equal(appSchema.softwareVersion, "V1");
 assert.equal(appSchema.isAccessibleForFree, true);
 assert.ok(Array.isArray(appSchema.featureList) && appSchema.featureList.length >= 4);
 
-assert.equal(canonical(guide), ORIGIN + "/panduan.html", "Guide canonical must use the official production origin");
+assert.equal(canonical(guide), ORIGIN + "/panduan", "Guide canonical must use the official production origin");
 assert.match(title(guide), /Panduan ARYANZZ Downloader/i);
 const guideDescriptionValue = meta(guide, "description");
 assert.ok(guideDescriptionValue.length >= 120 && guideDescriptionValue.length <= 170, "Guide meta description should be a useful search snippet");
@@ -59,13 +59,13 @@ for (const item of faq.mainEntity) {
 }
 
 const sitemapUrls = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map(match => match[1]);
-assert.deepEqual(sitemapUrls, [ORIGIN + "/", ORIGIN + "/panduan.html"]);
+assert.deepEqual(sitemapUrls, [ORIGIN + "/", ORIGIN + "/panduan"]);
 assert.ok(sitemap.includes("<lastmod>2026-11-11</lastmod>"));
 assert.ok(robots.includes("Disallow: /api/"));
 assert.ok(robots.includes("Sitemap: " + ORIGIN + "/sitemap.xml"));
 assert.equal(manifest.lang, "id-ID");
 assert.ok(manifest.description.includes("video, audio, dan gambar"));
-assert.ok(serviceWorker.includes('"/panduan.html"'), "PWA shell should cache the guide page");
+assert.ok(serviceWorker.includes('"/panduan"'), "PWA shell should cache the guide page");
 
 for (const [name, content] of [["homepage",home],["guide",guide],["sitemap",sitemap],["robots",robots],["manifest",JSON.stringify(manifest)]]) {
   assert.ok(!content.includes(OLD_ORIGIN), name + " must not advertise the retired production origin");
