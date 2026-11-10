@@ -69,7 +69,7 @@ assert.ok(scam.includes('register("scam-evidence"') && scam.includes("openDb") &
 assert.ok(scam.includes("function normalizePhone") && scam.includes("function extractAccounts") && scam.includes("function inspectUrl") && scam.includes("function analyzeScamText"), "Scam Evidence provides phone, account, link and scam-pattern analysis");
 assert.ok(scam.includes("function readExif") && scam.includes("function extractCoordinates") && scam.includes("function parseTimeline") && scam.includes("function mapsLinks"), "Scam Evidence provides EXIF GPS, explicit coordinates, timeline and dual map links");
 assert.ok(scam.includes("tesseract.js@5") && scam.includes("pdfjs-dist@4.10.38") && scam.includes("ind+eng"), "Scam Evidence supports local-in-browser OCR and PDF text extraction with optional online engine loading");
-assert.ok(!/navigator\\.geolocation/.test(scam) && !/\\bfetch\\s*\\(/.test(scam), "Scam Evidence never geolocates a phone or uploads evidence automatically");
+assert.ok(!/navigator\.geolocation/.test(scam) && !/\bfetch\s*\(/.test(scam), "Scam Evidence never geolocates a phone or uploads evidence automatically");
 assert.ok(scamCss.includes("#v1LightTools .scam-section") && scamCss.includes("@media(max-width:620px)"), "Scam Evidence styles remain scoped and responsive");
 assert.ok(manifest.featureModules.some(item => item.root === "#v1LightTools" && item.js?.includes("/stage1-scam-evidence.js") && item.css?.includes("/stage1-scam-evidence.css")), "workspace manifest owns the separate Scam Evidence module");
 assert.ok(css.includes("#v1LightTools") && css.includes("@media(max-width:760px)"), "styles are scoped and responsive");
