@@ -172,7 +172,9 @@ function init(root,api){
   renderList("scamTimeline",state.timeline,item=>{const row=node("article","scam-timeline-item"),time=node("time","",new Date(item.date).toLocaleString("id-ID")),context=node("p","",item.context);row.append(time,context);return row},"Belum ditemukan tanggal atau waktu yang dapat dikenali.");
  }
  function renderLocations(){
-  renderList("scamLocations",state.locations,point=>{const card=node("article","scam-result-card"),title=node("strong","",point.source),coords=node("code","",point.lat.toFixed(6)+", "+point.lng.toFixed(6)),note=node("small","","Koordinat ditemukan dalam bukti; keaslian dan keberadaan seseorang di lokasi tersebut belum terverifikasi."),links=core.mapsLinks(point.lat,point.lng),actions=node("div","scam-inline-actions");if(links)actions.append(makeLink("Google Maps",links.google),makeLink("OpenStreetMap",links.osm));card.append(title,coords,note,actions);return card},"Tidak ada koordinat GPS atau lokasi eksplisit pada bukti yang diperiksa. Nomor telepon tidak digunakan untuk mencari lokasi.");
+  renderList("scamLocations",state.locations,point=>{const card=node("article","scam-result-card"),title=node("strong","",point.source),coords=node("code","",point.lat.toFixed(6)+", "+point.lng.toFixed(6)),note=node("small","","Koordinat ditemukan dalam bukti; keaslian dan keberadaan seseorang di lokasi tersebut belum terverifikasi."),links=core.mapsLinks(point.lat,point.lng),actions=node("div","scam-inline-actions");
+   if(links){actions.append(makeLink("Google Maps",links.google),makeLink("OpenStreetMap",links.osm));const preview=node("button","scam-small-button","Tampilkan peta OpenStreetMap");preview.type="button";preview.addEventListener("click",()=>{if(card.querySelector("iframe"))return;const pad=.01,left=clamp(point.lng-pad,-180,180),right=clamp(point.lng+pad,-180,180),bottom=clamp(point.lat-pad,-90,90),top=clamp(point.lat+pad,-90,90),frame=document.createElement("iframe");frame.className="scam-map-frame";frame.title="Pratinjau OpenStreetMap untuk koordinat bukti";frame.loading="lazy";frame.referrerPolicy="no-referrer";frame.src="https://www.openstreetmap.org/export/embed.html?bbox="+encodeURIComponent(left+","+bottom+","+right+","+top)+"&layer=mapnik&marker="+encodeURIComponent(point.lat+","+point.lng);card.append(frame);preview.textContent="Peta OpenStreetMap dimuat"});actions.append(preview)}
+   card.append(title,coords,note,actions);return card},"Tidak ada koordinat GPS atau lokasi eksplisit pada bukti yang diperiksa. Nomor telepon tidak digunakan untuk mencari lokasi.");
  }
  function renderMetadata(){
   renderList("scamMetadata",state.metadata,item=>{const card=node("article","scam-result-card"),title=node("strong","",item.name),lines=node("ul","scam-reasons");[["Jenis",item.type||"Tidak diketahui"],["Ukuran",api.formatBytes(item.size||0)],["Dimensi",item.dimensions||"—"],["Kamera EXIF",item.camera||"Tidak tersedia"],["Perangkat lunak EXIF",item.software||"Tidak tersedia"],["Waktu EXIF",item.dateTime||"Tidak tersedia"],["GPS",item.gps?"Tersedia":"Tidak tersedia"]].forEach(pair=>lines.append(node("li","",pair[0]+": "+pair[1])));card.append(title,lines);return card},"Metadata file akan muncul setelah file diperiksa.");
@@ -279,9 +281,10 @@ function init(root,api){
    },"Belum ada kasus tersimpan di perangkat ini.");
   }catch(error){target.textContent="Penyimpanan lokal tidak tersedia: "+error.message}
  }
- function restoreCase(record){
+ async function restoreCase(record){
   state.text=record.text||"";state.analysis=record.analysis||core.analyzeScamText(state.text);state.phones=record.phones||[];state.accounts=record.accounts||[];state.urls=record.urls||[];state.timeline=record.timeline||[];state.locations=record.locations||[];state.metadata=record.metadata||[];state.hashes=record.hashes||[];state.caseId=record.id;
-  $("scamText").value=state.text;renderAll();status("Kasus lokal dimuat. File asli tetap tersimpan di perangkat.","success");
+  try{const db=await openDb(),saved=await new Promise((resolve,reject)=>{const request=db.transaction("files","readonly").objectStore("files").index("caseId").getAll(record.id);request.onsuccess=()=>resolve(request.result||[]);request.onerror=()=>reject(request.error)});db.close();state.files=saved.map(item=>new File([item.blob],item.name,{type:item.type||"application/octet-stream"}));}catch{state.files=[]}
+  $("scamText").value=state.text;if($("scamFileSummary"))$("scamFileSummary").textContent=state.files.length?state.files.map(file=>file.name).join(" · "):"File bukti tidak tersimpan pada browser ini.";renderAll();status("Kasus lokal dimuat kembali dari perangkat ini.","success");
  }
  async function deleteCase(id){
   try{
