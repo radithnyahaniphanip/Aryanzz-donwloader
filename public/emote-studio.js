@@ -342,10 +342,41 @@ video?.addEventListener("loadedmetadata",()=>{
  $("emoteExportMp4").disabled=false;say("emoteVideoStatus","Video siap · "+video.videoWidth+" × "+video.videoHeight+" · "+video.duration.toFixed(1)+" detik. Atur posisi stiker lalu ekspor.","success");drawVideoOverlay();
 });
 video?.addEventListener("loadeddata",drawVideoOverlay);video?.addEventListener("play",drawVideoOverlay);video?.addEventListener("pause",()=>{stopVideoLoop();drawVideoOverlay()});
+async function exportVideoViaFfmpeg(button){
+ button.disabled=true;button.textContent="Menyiapkan MP4…";stopVideoLoop();
+ try{
+  const ffmpeg=await loadFfmpeg("emoteVideoStatus");
+  const ext=String((state.videoFile.name.match(/\.([a-z0-9]{2,5})$/i)||[])[1]||"mp4").toLowerCase();
+  const safeExt=["mp4","mov","webm","m4v","3gp"].includes(ext)?ext:"mp4";
+  const inputName="emote-video-source."+safeExt;
+  await ffmpeg.writeFile(inputName,new Uint8Array(await state.videoFile.arrayBuffer()));
+  const sticker=await canvasBlob("image/png");
+  await ffmpeg.writeFile("emote-video-sticker.png",new Uint8Array(await sticker.arrayBuffer()));
+  const factor=Math.min(1,1280/video.videoWidth),outW=Math.max(2,Math.floor(video.videoWidth*factor/2)*2),outH=Math.max(2,Math.floor(video.videoHeight*factor/2)*2);
+  const scale=Number($("emoteVideoScale").value||22)/100,stickerW=Math.max(2,Math.round(Math.min(outW*.7,outW*scale)/2)*2),stickerH=Math.max(2,Math.round(stickerW*canvas.height/canvas.width/2)*2);
+  const x=Math.max(0,Math.round((outW-stickerW)*(Number($("emoteVideoX").value||76)/100))),y=Math.max(0,Math.round((outH-stickerH)*(Number($("emoteVideoY").value||76)/100)));
+  const filter="[0:v]scale="+outW+":"+outH+"[base];[1:v]scale="+stickerW+":"+stickerH+"[sticker];[base][sticker]overlay="+x+":"+y+":shortest=1[outv]";
+  const duration=Math.min(MAX_VIDEO_SECONDS,Math.max(1,Number(video.duration)||MAX_VIDEO_SECONDS));
+  button.textContent="Merender MP4…";say("emoteVideoStatus","Menyusun video dan stiker dengan FFmpeg lokal. Proses ini dapat memerlukan RAM dan waktu lebih besar di HP…");
+  const args=["-i",inputName,"-loop","1","-i","emote-video-sticker.png","-filter_complex",filter,"-map","[outv]","-map","0:a?","-t",String(duration),"-c:v","mpeg4","-q:v","5","-pix_fmt","yuv420p","-c:a","aac","-b:a","96k","-movflags","+faststart","aryanzz-emote-video.mp4"];
+  let silentFallback=false;
+  try{await ffmpeg.exec(args)}catch{
+   silentFallback=true;
+   await ffmpeg.exec(["-i",inputName,"-loop","1","-i","emote-video-sticker.png","-filter_complex",filter,"-map","[outv]","-t",String(duration),"-c:v","mpeg4","-q:v","5","-pix_fmt","yuv420p","-an","-movflags","+faststart","aryanzz-emote-video.mp4"]);
+  }
+  const bytes=await ffmpeg.readFile("aryanzz-emote-video.mp4"),blob=new Blob([bytes],{type:"video/mp4"});
+  if(!blob.size)throw new Error("FFmpeg tidak menghasilkan file MP4.");
+  if(state.videoResultUrl)URL.revokeObjectURL(state.videoResultUrl);state.videoResultUrl=URL.createObjectURL(blob);
+  const link=$("emoteVideoDownload");link.href=state.videoResultUrl;link.download="aryanzz-emote-video.mp4";link.hidden=false;
+  say("emoteVideoStatus","Ekspor MP4 selesai · "+sizeText(blob.size)+(silentFallback?" · audio tidak kompatibel, hasil tanpa suara.":". Siap diunduh."),silentFallback?"info":"success");
+  try{await ffmpeg.deleteFile(inputName);await ffmpeg.deleteFile("emote-video-sticker.png");await ffmpeg.deleteFile("aryanzz-emote-video.mp4")}catch{}
+ }catch(error){say("emoteVideoStatus",error.message||"Ekspor MP4 melalui FFmpeg gagal.","error")}
+ finally{button.disabled=!state.videoFile;button.textContent="▶ Ekspor video MP4";drawVideoOverlay()}
+}
 async function exportVideoMp4(){
  const button=$("emoteExportMp4");if(button.disabled||!state.videoFile)return;
  if(!state.image&&!state.strokes.length&&!state.objects.length){say("emoteVideoStatus","Buat stiker di Editor terlebih dahulu.","error");return}
- if(!window.MediaRecorder||!videoCanvas.captureStream){say("emoteVideoStatus","Browser ini belum mendukung rekam kanvas. Gunakan Chrome atau Safari versi terbaru.","error");return}
+ if(!window.MediaRecorder||!videoCanvas.captureStream){return exportVideoViaFfmpeg(button)}
  button.disabled=true;button.textContent="Merekam video…";stopVideoLoop();
  let canvasStream=null,sourceStream=null,recorder=null;
  try{
