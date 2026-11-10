@@ -1866,11 +1866,11 @@ async function facebookPublicReaderMediaInfo(rawUrl,requestUrl,timeoutMs=9000){
   const add=value=>{
     const decoded=decodeFacebookReaderValue(String(value||"").replace(/[),\]]+$/,""));
     const safe=safePublicMediaUrl(decoded);
-    if(!safe||seen.has(safe.href)||!/\\.(?:mp4|m4v|webm)(?:[?#]|$)/i.test(safe.href))return;
-    seen.add(safe.href);candidates.push({type:"video",kind:"video",label:"Video Facebook",url:safe.href,ext:(safe.pathname.match(/\\.(mp4|m4v|webm)$/i)||[])[1]||"mp4",mimeType:"video/"+((safe.pathname.match(/\\.(mp4|m4v|webm)$/i)||[])[1]||"mp4")});
+    if(!safe||seen.has(safe.href)||!/\.(?:mp4|m4v|webm)(?:[?#]|$)/i.test(safe.href))return;
+    seen.add(safe.href);candidates.push({type:"video",kind:"video",label:"Video Facebook",url:safe.href,ext:(safe.pathname.match(/\.(mp4|m4v|webm)$/i)||[])[1]||"mp4",mimeType:"video/"+((safe.pathname.match(/\.(mp4|m4v|webm)$/i)||[])[1]||"mp4")});
   };
   for(const match of page.body.matchAll(/https?:\/\/[^\s"'<>()[\]]{8,3000}\.(?:mp4|m4v|webm)(?:\?[^\s"'<>()[\]]*)?/gi))add(match[0]);
-  for(const match of page.body.matchAll(/(?:video|media)\\s*(?:url|src)\\s*[:=]\\s*["']?(https?:\/\/[^\\s"'<>]{8,3000})/gi))add(match[1]);
+  for(const match of page.body.matchAll(/(?:video|media)\s*(?:url|src)\s*[:=]\s*["']?(https?:\/\/[^\s"'<>]{8,3000})/gi))add(match[1]);
   const canonicalUrl=page.finalUrl?canonicalFacebookPostUrl(page.finalUrl):canonicalFacebookPostUrl(rawUrl);
   const normalized=freeProviderMediaInfo({normalized:{title,media:candidates}},canonicalUrl,requestUrl);
   if(normalized)return json({...normalized,providerName:"Facebook public-reader fallback",provider:"Public Reader · direct media metadata",extractor:"Facebook public reader",fallbackUsed:true,canonicalUrl});
