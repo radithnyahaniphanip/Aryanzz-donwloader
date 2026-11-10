@@ -80,8 +80,6 @@ for(const marker of [
   'ary-owner2-hero',
   'ary-owner2-social-grid',
   'id="ownerDeveloperBadge"',
-  'id="profileRandomId"',
-  'id="profileCopyId"',
   'id="deviceHistoryList"',
   'id="allTools"',
   'id="toolSearch"',
