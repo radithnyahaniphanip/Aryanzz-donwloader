@@ -11,7 +11,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: aryanzz-cloudflare-production
+  group: ${{ github.event_name == 'pull_request' && format('aryanzz-pr-{0}', github.event.pull_request.number) || 'aryanzz-cloudflare-production' }}
   cancel-in-progress: true
 
 jobs:
