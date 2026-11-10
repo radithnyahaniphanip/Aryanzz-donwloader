@@ -1,6 +1,6 @@
 (() => {
   "use strict";
-  const ownerMode = new URLSearchParams(location.search).get("owner") === "1";
+  const ownerMode = false;
   if (ownerMode) { window.aryanzzGuestReady = Promise.resolve(null); return; }
   const $ = id => document.getElementById(id);
   const LOCAL_ID_KEY = "aryanzz.public.guest.id.v1";
