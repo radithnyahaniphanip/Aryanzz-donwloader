@@ -163,7 +163,8 @@ async function waitForVersionedJson(path,label){
 const release=await waitForVersionedJson("/release.json","Metadata release.json");
 const manifest=await waitForVersionedJson("/manifest.webmanifest?v="+version,"PWA manifest");
 assert.equal(release.release,"V1","Public release label must remain V1");
-assert.match(String(manifest.name||""),/\bV1\b/,"Installed PWA name must show the stable V1 release");
+assert.equal(manifest.name,"ARYANZZ","Installed PWA name must use the ARYANZZ brand");
+assert.equal(manifest.short_name,"ARYANZZ","Installed PWA short name must use the ARYANZZ brand");
 const workspaceManifestResponse=await request("/workspace-manifest.json?v="+version);
 assert.equal(workspaceManifestResponse.status,200,"Workspace ownership manifest tidak tersedia");
 const workspaceManifest=await workspaceManifestResponse.json();
