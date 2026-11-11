@@ -83,6 +83,17 @@ try{
   assert.ok(youtubeTitleData.results.every(item=>item.searchOnly===true||item.verified===true),"YouTube search cards must state whether their download source is verified");
   console.log("✔ YouTube official title search returns in-app results independently from download extraction");
 
+  const youtubeSocialTitleSearch=await worker.fetch(new Request("https://aryanzz.example/api/social/search",{
+    method:"POST",
+    headers:{"content-type":"application/json","cf-connecting-ip":"198.51.100.40"},
+    body:JSON.stringify({query:"Tabola Bale",platform:"youtube",mediaType:"video"})
+  }),{});
+  assert.equal(youtubeSocialTitleSearch.status,200,"YouTube selected-platform search must use the shared source-aware title-search route");
+  const youtubeSocialData=await youtubeSocialTitleSearch.json();
+  assert.ok(youtubeSocialData.results.some(item=>item.platform==="youtube"&&/tabola bale/i.test(item.title)),"Selecting YouTube in the UI must display official YouTube results inside ARYANZZ");
+  assert.ok(youtubeSocialData.results.some(item=>item.searchOnly===true),"YouTube search results remain available even if the download stream has not yet been verified");
+  console.log("✔ Selected YouTube uses the same in-app source-aware result pipeline");
+
   const imageAll=await worker.fetch(new Request("https://aryanzz.example/api/image/search",{
     method:"POST",
     headers:{"content-type":"application/json","cf-connecting-ip":"198.51.100.31"},
@@ -149,7 +160,7 @@ try{
   const expansionData=await expansionSearch.json();
   assert.ok(expansionData.searchVariants.includes("green screen meme template"),"Green-screen meme searches must expand to useful related title variants");
   assert.equal(expansionData.fallbackUsed,true,"A selected social platform with no verified result must activate the YouTube fallback");
-  assert.ok(expansionData.results.some(item=>item.platform==="youtube"&&item.verified===true),"Selected-platform fallback must return only verified YouTube media");
+  assert.ok(expansionData.results.some(item=>item.platform==="youtube"&&item.searchOnly===true),"Selected-platform fallback must show a real YouTube title result even if its stream is not yet verified");
   console.log("✔ Title-search keyword expansion remains active for supported providers");
 
   const videoInfo=await worker.fetch(new Request("https://aryanzz.example/api/platform/info",{
