@@ -117,14 +117,14 @@ footer:not(.owner-footer){padding:20px 0 8px!important;color:#737b91!important;t
 
 /* ARYANZZ V1 regression guard: hidden download controls must stay hidden.
    Older broad form rules used display:block!important and overrode the HTML hidden attribute. */
-#downloadResult .youtube-result [hidden]{display:none!important}
+#downloadResult .youtube-result [hidden],#downloadResult .youtube-result select.field[hidden],#downloadResult .youtube-result .label[hidden]{display:none!important}
 
 /* Search results: readable cards on phones, with full-width pagination. */
 #titleSearchResults.v674-search-results{grid-template-columns:minmax(0,1fr)!important}
 #titleSearchResults .v674-search-result,
 #titleSearchResults .v674-audio-inline-result,
 #titleSearchResults .v736-search-handoff,
-#titleSearchResults .v674-image-results,
+#titleSearchResults .aryanzz-inline-image-grid,
 #titleSearchResults .v674-pagination{grid-column:1/-1!important;min-width:0}
 #titleSearchResults .v674-pagination{width:100%;box-sizing:border-box}
 @media(min-width:760px){
