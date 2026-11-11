@@ -198,17 +198,42 @@ platformPrev?.addEventListener("click",()=>renderPlatformPage(platformPage-1));
 platformNext?.addEventListener("click",()=>renderPlatformPage(platformPage+1));
 platformSearch?.addEventListener("input",()=>renderPlatformPage(1));
 loadPlatformCatalog();
+function searchDomainsForPlatform(platform){
+ const key=SEARCH_PLATFORM_ALIASES[platform]||platform;
+ if(key==="all"){
+  const domains=platformCatalog.flatMap(item=>Array.isArray(item.domains)?item.domains:[]);
+  return [...new Set(domains.length?domains:Object.values(SEARCH_PLATFORM_DOMAINS).flat())];
+ }
+ const entry=platformCatalog.find(item=>item.id===key);
+ const root=entry?.aliasOf?platformCatalog.find(item=>item.id===entry.aliasOf):null;
+ const domains=[...(entry?.domains||[]),...(root?.domains||[]),...(SEARCH_PLATFORM_DOMAINS[key]||[])];
+ return [...new Set(domains)];
+}
+function platformDisplayName(id){
+ return platformCatalog.find(item=>item.id===id)?.name||platforms[id]?.name||id||"Media sosial";
+}
+function searchThumbnailUrl(item){
+ const raw=String(item?.thumbnail||"").trim();
+ try{const url=new URL(raw);if(url.protocol==="https:")return url.href}catch{}
+ try{
+  const source=new URL(item?.url||"");
+  const host=source.hostname.toLowerCase().replace(/^www\./,"");
+  if(host==="youtu.be"||host.endsWith(".youtube.com")||host==="youtube.com"){
+   const id=source.hostname==="youtu.be"?source.pathname.split("/").filter(Boolean)[0]:source.searchParams.get("v")||source.pathname.match(/^\/(?:shorts|embed|live)\/([^/?]+)/)?.[1];
+   if(id&&/^[A-Za-z0-9_-]{6,20}$/.test(id))return "https://i.ytimg.com/vi/"+id+"/hqdefault.jpg";
+  }
+ }catch{}
+ return "";
+}
 function searchResultBelongsTo(item,platform){
  let host="";try{host=new URL(item?.url||item?.sourceUrl||"").hostname.toLowerCase().replace(/^www\./,"")}catch{return false}
- const key=SEARCH_PLATFORM_ALIASES[platform]||platform;
- if(key==="all")return Object.values(SEARCH_PLATFORM_DOMAINS).flat().some(domain=>host===domain||host.endsWith("."+domain));
- return (SEARCH_PLATFORM_DOMAINS[key]||[]).some(domain=>host===domain||host.endsWith("."+domain));
+ return searchDomainsForPlatform(platform).some(domain=>host===String(domain).toLowerCase().replace(/^www\./,"")||host.endsWith("."+String(domain).toLowerCase().replace(/^www\./,"")));
 }
 function showFallback(target,q,kind="video"){
 const card=document.createElement("article");card.className="v674-search-result v736-search-handoff";
 const title=document.createElement("h3");title.textContent="Pencarian "+target.name+" belum mengirim hasil";
 const note=document.createElement("p");note.textContent="Hasil internal belum tersedia atau sedang dibatasi. Kamu bisa membuka pencarian sumber eksternal, lalu tempel tautan postingan publik di ARYANZZ untuk memeriksa format media yang benar-benar tersedia.";
-const fallbackQuery=selected==="all"?"":(SEARCH_PLATFORM_DOMAINS[SEARCH_PLATFORM_ALIASES[selected]||selected]||[]).map(domain=>"site:"+domain).join(" OR ");
+const fallbackQuery=selected==="all"?"":searchDomainsForPlatform(selected).map(domain=>"site:"+domain).join(" OR ");
 const href=kind==="image"
  ?"https://www.google.com/search?tbm=isch&q="+encodeURIComponent([fallbackQuery,q].filter(Boolean).join(" "))
  :target.url(q);
@@ -227,7 +252,7 @@ if(searchType?.value==="audio"){
 const card=document.createElement("article");card.className="v674-audio-inline-result";
 const main=document.createElement("div");main.className="v674-audio-inline-main";
 const title=document.createElement("b");title.textContent=item.title||"Audio tanpa judul";
-const meta=document.createElement("small");meta.textContent=[platforms[item.platform]?.name||item.platform||target.name,duration(item.duration),item.verified?"Audio terverifikasi":"Sumber video"].filter(Boolean).join(" · ");
+const meta=document.createElement("small");meta.textContent=[platformDisplayName(item.platform)||target.name,duration(item.duration),item.verified?"Audio terverifikasi":"Sumber video"].filter(Boolean).join(" · ");
 main.append(title,meta);
 const action=document.createElement("button");action.type="button";action.className="v674-audio-inline-action";action.textContent=item.verified&&String(item.extension||"").toLowerCase()==="mp3"?"↓ Unduh MP3":"♫ Buat MP3";
 action.addEventListener("click",()=>{
@@ -239,10 +264,10 @@ const input=$("url");if(!input)return;input.value=item.url;setMode("link");$("an
 card.append(main,action);results.append(card);return;
 }
 const card=document.createElement("article");card.className="v674-search-result v737-media-result";
-if(item.thumbnail){try{const u=new URL(item.thumbnail);if(u.protocol==="https:"){const img=document.createElement("img");img.src=u.href;img.alt="Pratinjau "+(item.title||"media");img.loading="lazy";card.append(img)}}catch{}}
+const thumbnail=searchThumbnailUrl(item);if(thumbnail){const img=document.createElement("img");img.src=thumbnail;img.alt="Pratinjau "+(item.title||"media");img.loading="lazy";img.decoding="async";img.onerror=()=>{img.remove()};card.append(img)}
 const info=document.createElement("div"),title=document.createElement("h3"),meta=document.createElement("p"),snippet=document.createElement("p"),pick=document.createElement("button");
 title.textContent=item.title||"Media tanpa judul";
-meta.textContent=[item.channel,item.platform||target.name,item.mediaMode==="audio"?"Audio":"Video",duration(item.duration),item.width&&item.height?item.width+" × "+item.height+" px":"",item.searchOnly?"Belum diverifikasi · periksa saat dipilih":item.verified?"✓ Tautan terverifikasi":""].filter(Boolean).join(" · ");
+meta.textContent=[item.channel,platformDisplayName(item.platform)||target.name,item.mediaMode==="audio"?"Audio":"Video",duration(item.duration),item.width&&item.height?item.width+" × "+item.height+" px":"",item.searchOnly?"Belum diverifikasi · periksa saat dipilih":item.verified?"✓ Tautan terverifikasi":""].filter(Boolean).join(" · ");
 snippet.textContent=item.snippet||"Pilih hasil ini untuk memeriksa pratinjau dan format unduhan.";
 if(searchType?.value==="audio"&&item.mediaMode==="audio"&&item.verified&&item.previewUrl){
 try{const audioUrl=new URL(item.previewUrl,location.origin);if(audioUrl.origin===location.origin&&audioUrl.pathname==="/api/social-file"){const player=document.createElement("audio");player.controls=true;player.preload="none";player.src=audioUrl.href;player.setAttribute("aria-label","Pratinjau audio "+(item.title||"hasil pencarian"));player.style.cssText="display:block;width:100%;margin:10px 0";card.append(player);}}catch{}
@@ -283,7 +308,7 @@ if(help)help.textContent=searchType?.value==="audio"?(mediaCount+" pilihan audio
 }
 const go=async()=>{
 const q=(searchInput?.value||"").trim();if(!q){if(help)help.textContent="Masukkan judul atau kata kunci gambar.";return}if(q.length<2){if(help)help.textContent="Masukkan minimal 2 karakter.";return}
-searchController?.abort();searchController=new AbortController();
+searchController?.abort();searchController=new AbortController();currentPage=1;
 results.hidden=false;results.replaceChildren();
 const target=selected==="all"?{name:"Semua 200 platform",url:q=>"https://www.google.com/search?q="+encodeURIComponent(q)}:platforms[selected],kind=["image","audio"].includes(searchType?.value)?searchType.value:"video";
 const loading=document.createElement("div");loading.className="v674-search-loading";loading.textContent=kind==="image"?"Mencari gambar dari "+target.name+"…":kind==="audio"?"Mencari musik dan video sumber untuk dibuat MP3 dari "+target.name+"…":"Mencari video dari "+target.name+"…";results.append(loading);
@@ -308,7 +333,7 @@ render(mediaItems,target,q,unavailable,imageItems);
 const resultCards=[...results.querySelectorAll(".v674-search-result,.v674-audio-inline-result,.aryanzz-inline-image-card")];
 const pager=document.createElement("div");pager.className="v674-pagination";
 const size=document.createElement("select");size.className="field";size.setAttribute("aria-label","Jumlah hasil per halaman");
-[10,50,100,500].forEach(n=>{const o=document.createElement("option");o.value=String(n);o.textContent=n+" hasil/halaman";o.selected=n===pageSize;size.append(o)});
+[10,20,50,100].forEach(n=>{const o=document.createElement("option");o.value=String(n);o.textContent=n+" hasil/halaman";o.selected=n===pageSize;size.append(o)});
 const status=document.createElement("span");status.className="v674-title-help";
 const prev=document.createElement("button");prev.type="button";prev.className="tag";prev.textContent="‹ Sebelumnya";
 const next=document.createElement("button");next.type="button";next.className="primary";next.textContent="Berikutnya ›";
