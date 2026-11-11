@@ -919,20 +919,28 @@ async function proxyPlatform(request,env,path){
   }catch{return json({error:"Backend ekstraksi sedang tidak dapat dijangkau."},502)}
 }
 async function platformStatus(env){
-  const platforms=PLATFORM_CATALOG.map(platform=>({
-    id:platform.id,name:platform.name,domains:platform.domains,aliasOf:platform.aliasOf||null,
-    pasteLink:platform.pasteLink,titleSearch:platform.titleSearch,inputModes:platform.inputModes,preview:platform.preview,mediaModes:platform.mediaModes,
-    mp4:platform.mp4,providerKey:platform.providerKey,extractorStatus:platform.extractorStatus,
-    searchEnabled:platform.searchEnabled
-  }));
+  const platforms=PLATFORM_CATALOG.map(platform=>{
+    const searchModes=platformSearchModes(platform.id);
+    return {
+      id:platform.id,name:platform.name,domains:platform.domains,aliasOf:platform.aliasOf||null,
+      pasteLink:platform.pasteLink,titleSearch:searchModes.length>0,inputModes:platform.inputModes,preview:platform.preview,mediaModes:platform.mediaModes,
+      searchModes,supportsVideoSearch:searchModes.includes("video"),supportsImageSearch:searchModes.includes("image"),
+      mp4:platform.mp4,providerKey:platform.providerKey,extractorStatus:platform.extractorStatus,
+      searchEnabled:searchModes.length>0
+    };
+  });
   const dedicated=platforms.filter(platform=>platform.extractorStatus==="dedicated").length;
   return json({
     ok:true,configured:false,backend:"public-community-api",mode:"zero-server",
     engine:"Cloudflare Worker + public free community extractor",
     platformCount:PLATFORM_CATALOG.length,dedicatedCount:dedicated,
     experimentalCount:PLATFORM_CATALOG.length-dedicated,platforms,
-    liveAvailability:"200 pilihan platform terdaftar. Platform berstatus dedicated memakai jalur provider khusus; platform experimental mencoba auto-detect komunitas dan harus diuji satu per satu. Ketersediaan media tetap bergantung pada provider, privasi konten, dan format sumber.",
-    message:"Katalog berisi 200 pilihan termasuk alias Lite. Logo alias memakai logo aplikasi induk. MP4 hanya tersedia bila sumber memberikan stream video yang valid; platform audio tidak menawarkan MP4. Konten privat, tautan kedaluwarsa, atau media yang tidak diekspos sumber tidak dapat diekstrak."
+    searchablePlatformCounts:{
+      video:new Set(platforms.filter(platform=>platform.searchModes.includes("video")&&!platform.aliasOf).map(platform=>platform.id)).size,
+      image:new Set(platforms.filter(platform=>platform.searchModes.includes("image")&&!platform.aliasOf).map(platform=>platform.id)).size
+    },
+    liveAvailability:"Katalog tetap memuat 200 pilihan untuk deteksi tautan. Menu Cari Judul hanya menampilkan platform dengan provider khusus untuk jenis media yang dipilih; setiap hasil video atau gambar masih harus lolos pemeriksaan file aktual sebelum ditampilkan.",
+    message:"Jumlah 200 adalah jumlah pilihan katalog, bukan klaim bahwa semuanya mendukung semua jenis media. Platform eksperimental tetap dapat dicoba melalui tempel tautan, tetapi tidak dimasukkan ke hasil Cari Judul video/gambar sampai memiliki jalur provider yang dapat diverifikasi."
   });
 }
 function decodeSearchHtml(value){
@@ -948,6 +956,15 @@ function platformIdForUrl(raw){
 function canonicalPlatformId(id){
   const platform=PLATFORM_CATALOG_BY_ID.get(id);
   return platform?.aliasOf||id;
+}
+function platformSearchModes(id){
+  const entry=PLATFORM_CATALOG_BY_ID.get(String(id||"").toLowerCase());
+  const platform=entry?.aliasOf?PLATFORM_CATALOG_BY_ID.get(entry.aliasOf):entry;
+  if(!platform||platform.providerKey==="aio")return [];
+  return (platform.mediaModes||[]).filter(mode=>["video","image","audio"].includes(mode));
+}
+function platformSupportsSearchMode(id,mode){
+  return platformSearchModes(id).includes(String(mode||"").toLowerCase());
 }
 function socialSearchQueryVariants(query){
   const original=String(query||"").replace(/\s+/g," ").trim();
