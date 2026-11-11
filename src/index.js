@@ -4,6 +4,17 @@ import { handleAuthRequest, moderationGate } from "./auth.js";
 import { MembershipStore } from "./membership-store.js";
 const MEDIA_EXT = new Set(["mp4","webm","mov","m4v","mkv","avi","mpeg","mpg","m2ts","mts","ts","3gp","ogv","asf","wmv","mp3","m4a","aac","wav","ogg","oga","flac","opus","wma","aiff","aif","mka"]);
 const MAX_BYTES = 100 * 1024 * 1024;
+const DEFAULT_PUBLIC_ORIGIN = "https://aryanzz-donwloader.aryanz.workers.dev";
+function getPublicOrigin(env) {
+  const configured = String(env?.ARYANZZ_PUBLIC_ORIGIN || DEFAULT_PUBLIC_ORIGIN).trim();
+  try {
+    const parsed = new URL(configured);
+    if (parsed.protocol !== "https:" || parsed.username || parsed.password || parsed.pathname !== "/" || parsed.search || parsed.hash) return DEFAULT_PUBLIC_ORIGIN;
+    return parsed.origin;
+  } catch {
+    return DEFAULT_PUBLIC_ORIGIN;
+  }
+}
 function json(data,status=200){return new Response(JSON.stringify(data),{status,headers:{"content-type":"application/json; charset=utf-8","cache-control":"no-store"}})}
 
 function auddFailure(data,mode="standard"){
@@ -3363,22 +3374,23 @@ const SFL_BYPASS_BUCKETS=new Map();
 
 const workerHandler = {async fetch(request,env){
   const url=new URL(request.url);
+  const publicOrigin=getPublicOrigin(env);
   const moderationResponse=await moderationGate(request,env);
   if(moderationResponse)return moderationResponse;
   // Serve crawler files explicitly so Google receives deterministic XML/plain-text MIME types.
   if(url.pathname==="/sitemap.xml"&&request.method==="GET"){
     const lastmod=new Date().toISOString().slice(0,10);
     const sitemapPaths=["/","/panduan","/download-video","/download-mp3","/download-gambar"];
-    const xml='<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'+sitemapPaths.map(path=>'  <url>\n    <loc>https://aryanzz-donwloader.aryanz.workers.dev'+path+'</loc>\n    <lastmod>'+lastmod+'</lastmod>\n  </url>').join('\n')+'\n</urlset>\n';
+    const xml='<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'+sitemapPaths.map(path=>'  <url>\n    <loc>'+publicOrigin+path+'</loc>\n    <lastmod>'+lastmod+'</lastmod>\n  </url>').join('\n')+'\n</urlset>\n';
     return new Response(xml,{status:200,headers:{"content-type":"application/xml; charset=utf-8","cache-control":"public, max-age=3600","x-content-type-options":"nosniff"}});
   }
   if(url.pathname==="/sitemap.txt"&&request.method==="GET"){
     const sitemapPaths=["/","/panduan","/download-video","/download-mp3","/download-gambar"];
-    const sitemap=sitemapPaths.map(path=>"https://aryanzz-donwloader.aryanz.workers.dev"+path).join("\n")+"\n";
+    const sitemap=sitemapPaths.map(path=>publicOrigin+path).join("\n")+"\n";
     return new Response(sitemap,{status:200,headers:{"content-type":"text/plain; charset=utf-8","cache-control":"public, max-age=3600","x-content-type-options":"nosniff"}});
   }
   if(url.pathname==="/robots.txt"&&request.method==="GET"){
-    const robots="User-agent: *\nAllow: /\nDisallow: /api/\n\nSitemap: https://aryanzz-donwloader.aryanz.workers.dev/sitemap.xml\n";
+    const robots="User-agent: *\nAllow: /\nDisallow: /api/\n\nSitemap: "+publicOrigin+"/sitemap.xml\n";
     return new Response(robots,{status:200,headers:{"content-type":"text/plain; charset=utf-8","cache-control":"public, max-age=3600","x-content-type-options":"nosniff"}});
   }
   if(request.method==="OPTIONS"&&url.pathname.startsWith("/api/"))return new Response(null,{status:204,headers:{"access-control-allow-origin":url.origin,"access-control-allow-methods":"GET,POST,OPTIONS","access-control-allow-headers":"Content-Type"}});
@@ -3428,6 +3440,15 @@ const workerHandler = {async fetch(request,env){
   if(url.pathname.startsWith("/api/"))return json({error:"Endpoint tidak ditemukan."},404);
 
   const assetResponse=await env.ASSETS.fetch(request);
+  const canonicalHtmlPaths=new Set(["/","/index.html","/panduan","/download-video","/download-mp3","/download-gambar"]);
+  if(request.method==="GET"&&canonicalHtmlPaths.has(url.pathname)&&assetResponse.ok&&(assetResponse.headers.get("content-type")||"").toLowerCase().includes("text/html")){
+    const html=(await assetResponse.text()).replaceAll(DEFAULT_PUBLIC_ORIGIN,publicOrigin);
+    const headers=new Headers(assetResponse.headers);
+    headers.set("cache-control","no-store, no-cache, must-revalidate, max-age=0");
+    headers.set("pragma","no-cache");
+    headers.set("expires","0");
+    return new Response(html,{status:assetResponse.status,statusText:assetResponse.statusText,headers});
+  }
   if(request.method==="GET"&&["/","/index.html","/sw.js","/release.json","/manifest.webmanifest","/robots.txt","/sitemap.xml"].includes(url.pathname)){
     const headers=new Headers(assetResponse.headers);
     headers.set("cache-control","no-store, no-cache, must-revalidate, max-age=0");

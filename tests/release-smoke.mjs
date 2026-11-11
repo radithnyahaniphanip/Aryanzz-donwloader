@@ -263,7 +263,7 @@ const checks = [
   ["Worker disables browser caching for the app shell and release metadata", worker.includes('"/release.json"') && worker.includes("no-store, no-cache, must-revalidate, max-age=0")],
   ["ARYANZZ auth gate and favicon retain the refreshed SVG monogram", html.includes("aryanzzAuthMark") && read("../public/favicon.svg").includes('id="mark"')],
   ["PWA manifest exposes scalable install icons and standalone launch behavior", read("../public/manifest.webmanifest").includes('"display": "standalone"') && read("../public/manifest.webmanifest").includes('"sizes": "192x192"') && read("../public/manifest.webmanifest").includes('"sizes": "512x512"')],
-  ["Google crawler metadata points to the XML sitemap and excludes API endpoints", worker.includes("Sitemap: https://aryanzz-donwloader.aryanz.workers.dev/sitemap.xml") && worker.includes("Disallow: /api/")],
+  ["Google crawler metadata points to the XML sitemap and excludes API endpoints", worker.includes('Sitemap: "+publicOrigin+"/sitemap.xml') && worker.includes("Disallow: /api/")],
   ["Android PWA install card is present on the homepage exactly once", (html.match(/id="installBtn"/g)||[]).length===1 && html.indexOf('id="installBtn"')<html.indexOf('<section id="toolsArea"') && html.includes("ary-android-home") && html.includes("Instalasi melalui Chrome Android")],
   ["Install ARYANZZ is removed from the Tools directory and no duplicate install panel remains", !html.includes('data-panel="install"') && !html.includes('id="install"')],
   ["Global SEO prose is removed from app subviews while crawlable metadata remains", !html.includes("ary-seo-about") && html.includes('<meta name="description"') && html.includes('rel="canonical"') && html.includes('application/ld+json')],

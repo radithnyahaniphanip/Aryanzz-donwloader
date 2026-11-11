@@ -27,3 +27,4 @@ new_sqlite_classes = ["MembershipStore"]
 
 [vars]
 ARYANZZ_BUILD_VERSION = "__ARYANZZ_VERSION__"
+ARYANZZ_PUBLIC_ORIGIN = "https://aryanzz-donwloader.aryanz.workers.dev"
