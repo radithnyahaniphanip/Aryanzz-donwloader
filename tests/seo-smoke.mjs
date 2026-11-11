@@ -34,6 +34,10 @@ function jsonLd(html) {
 assert.equal(canonical(home), ORIGIN + "/", "Homepage canonical must use the official production origin");
 assert.match(title(home), /ARYANZZ Downloader V1|ARYANZZ Downloader/i);
 assert.ok(title(home).length >= 45 && title(home).length <= 65, "Homepage title should be concise");
+assert.equal(meta(home, "application-name"), "ARYANZZ");
+assert.equal(meta(home, "apple-mobile-web-app-title"), "ARYANZZ");
+assert.equal(meta(home, "og:site_name", "property"), "ARYANZZ");
+assert.ok(home.includes('rel="icon" type="image/svg+xml" href="/favicon.svg'), "Google and browsers receive the custom ARYANZZ SVG favicon");
 const homeDescription = meta(home, "description");
 assert.ok(homeDescription.length >= 120 && homeDescription.length <= 165, "Homepage meta description should be a useful search snippet");
 assert.ok(home.includes("<h1>Download Video Online<br><span>Audio MP3 &amp; Gambar</span></h1>"));
@@ -45,7 +49,10 @@ assert.ok(meta(home, "robots").includes("index,follow"));
 assert.ok(meta(home, "og:image:alt", "property"), "Homepage social image should have descriptive alt text");
 
 const homeSchemas = jsonLd(home).flatMap(schema => schema["@graph"] ?? [schema]);
-assert.ok(homeSchemas.some(schema => schema["@type"] === "WebSite"), "Homepage WebSite schema is required");
+const websiteSchema = homeSchemas.find(schema => schema["@type"] === "WebSite");
+assert.ok(websiteSchema, "Homepage WebSite schema is required");
+assert.equal(websiteSchema.name, "ARYANZZ");
+assert.equal(websiteSchema.alternateName, "ARYANZZ Downloader");
 const appSchema = homeSchemas.find(schema => schema["@type"] === "SoftwareApplication");
 assert.ok(appSchema, "SoftwareApplication schema is required");
 assert.equal(appSchema.softwareVersion, "V1");
