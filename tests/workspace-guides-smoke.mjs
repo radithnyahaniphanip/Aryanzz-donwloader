@@ -10,6 +10,8 @@ const expected = ["speed","checker","linkBypass","heart","members","mediaStudio"
 assert.ok(html.includes('/workspace-guides.css?v=__ARYANZZ_VERSION__'), "guide stylesheet is linked");
 assert.ok(html.includes('/workspace-guides.js?v=__ARYANZZ_VERSION__'), "guide controller is linked");
 assert.ok(html.includes('data-guide-open="all"'), "guide hub entry is available in Tools");
+assert.ok(!guides.includes("Lihat panduan fitur ini") && !guides.includes("ary-guide-panel-entry"), "contextual guide buttons are removed from every panel, including Profile");
+assert.ok(!css.includes(".ary-guide-panel-button"), "removed contextual guide buttons have no leftover styling");
 assert.ok(sw.includes('/workspace-guides.css?v=__ARYANZZ_VERSION__') && sw.includes('/workspace-guides.js?v=__ARYANZZ_VERSION__'), "service worker precaches guide assets");
 assert.ok(guides.includes("localStorage") && guides.includes("Tandai sudah dipelajari") && guides.includes("Buka fitur"), "guide progress and feature navigation are functional");
 for (const id of expected) assert.ok(guides.includes('id:"'+id+'"'), "missing feature guide: "+id);

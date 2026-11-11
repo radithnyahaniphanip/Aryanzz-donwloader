@@ -1,0 +1,21 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+const read = path => readFileSync(new URL(path, import.meta.url), "utf8");
+const downloader = read("../public/downloader.js");
+const guides = read("../public/workspace-guides.js");
+const guideCss = read("../public/workspace-guides.css");
+const home = read("../public/index.html");
+const serviceWorker = read("../public/sw.js");
+const polish = read("../public/brand-polish.css");
+
+assert.ok(downloader.includes('outputNameWrap.append(outputName)'), "download filename input remains available");
+assert.ok(!downloader.includes("outputNameZoom") && !downloader.includes("ary-output-zoom"), "unused filename zoom and reset controls are removed");
+assert.ok(!downloader.includes("Mode otomatis membaca informasi jaringan HP"), "network helper text is removed");
+assert.ok(!downloader.includes("Hanya unduh konten milikmu atau yang diizinkan."), "extra disclaimer below filename is removed");
+assert.ok(downloader.includes('speedSelect.id="aryDownloadSpeed"'), "download speed selector remains functional");
+assert.ok(!guides.includes("Lihat panduan fitur ini") && !guides.includes("ary-guide-panel-entry"), "contextual guide shortcuts are not injected into Profile or other panels");
+assert.ok(!guideCss.includes(".ary-guide-panel-button"), "removed guide shortcut has no remaining visual style");
+assert.ok(home.includes('/brand-polish.css?v=__ARYANZZ_VERSION__'), "responsive downloader polish stylesheet is linked");
+assert.ok(serviceWorker.includes('/brand-polish.css?v=__ARYANZZ_VERSION__'), "offline shell precaches downloader polish stylesheet");
+assert.ok(polish.includes("#downloadResult #aryOutputName") && polish.includes("min-height:56px") && polish.includes("font-size:16px"), "filename input and result form are enlarged for mobile");
+console.log("ARYANZZ downloader UI smoke test passed: cleaner filename controls, no contextual guide buttons, larger mobile layout.");
