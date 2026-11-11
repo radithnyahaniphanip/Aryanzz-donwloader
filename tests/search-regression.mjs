@@ -8,6 +8,8 @@ assert.ok(searchUi.includes("platform.searchModes")&&searchUi.includes("catalogF
 assert.ok(searchUi.includes("[10,20,50,100]"),"Search result pagination must offer 10, 20, 50 and 100 results per page");
 assert.ok(searchUi.includes("data.fallbackUsed===true")&&searchUi.includes("item?.platform===\"youtube\""),"The UI must allow explicitly marked YouTube fallback results for a selected social platform");
 assert.ok(searchUi.includes("https://www.youtube.com/results?search_query=")&&searchUi.includes("Cari di YouTube"),"Empty social searches must offer YouTube as the external fallback");
+assert.ok(searchUi.includes("Periksa tautan & unduh"),"Public title results without verified streams must still render an in-app check-and-download action");
+assert.ok(searchUi.includes("Mencari judul satu per satu di semua platform video yang didukung"),"All-platform mode must explain that each eligible platform is searched separately");
 
 const originalFetch=globalThis.fetch;
 const imageSearchHtml='<a class="iusc" m=\'{"purl":"https://www.instagram.com/p/123/","murl":"https://cdn.example/cat.jpg","desc":"cat photo","w":640,"h":480}\'></a>';
@@ -18,7 +20,9 @@ const publicImagePostHtml='<html><head><title>Cat image post</title><meta proper
 globalThis.fetch=async(input,init={})=>{
   const url=new URL(typeof input==="string"?input:input instanceof URL?input.href:input.url);
   if(url.hostname==="pipedapi.kavin.rocks"&&url.pathname==="/search"){
-    const searchTitle=String(url.searchParams.get("q")||"Cat video").replace(/\\s+/g," ").trim().slice(0,120)+" official video";
+    const searchQuery=String(url.searchParams.get("q")||"Cat video").replace(/\\s+/g," ").trim();
+    if(/tabola bale/i.test(searchQuery))return new Response(JSON.stringify([]),{status:200,headers:{"content-type":"application/json"}});
+    const searchTitle=searchQuery.slice(0,120)+" official video";
     return new Response(JSON.stringify([{videoId:"abcdefghijk",title:searchTitle,thumbnail:"https://i.ytimg.com/vi/abcdefghijk/hqdefault.jpg",uploaderName:"Test Channel",duration:120}]),{status:200,headers:{"content-type":"application/json"}});
   }
   if(url.hostname==="pipedapi.kavin.rocks"&&url.pathname==="/streams/abcdefghijk")
@@ -27,10 +31,22 @@ globalThis.fetch=async(input,init={})=>{
     return new Response(new Uint8Array([0,0,0,24,0x66,0x74,0x79,0x70,0x69,0x73,0x6f,0x6d,0,0,0,0]),{status:206,headers:{"content-type":"video/mp4","content-length":"16","content-range":"bytes 0-15/1024","accept-ranges":"bytes"}});
   if(url.hostname==="www.bing.com"&&url.pathname==="/images/search")
     return new Response(imageSearchHtml,{status:200,headers:{"content-type":"text/html; charset=utf-8"}});
-  if(url.hostname==="html.duckduckgo.com")
+  if(url.hostname==="html.duckduckgo.com"){
+    const searchQuery=String(url.searchParams.get("q")||"");
+    if(/green screen meme kucing/i.test(searchQuery))return new Response(videoSearchHtml,{status:200,headers:{"content-type":"text/html; charset=utf-8"}});
+    if(/site:instagram\.com/i.test(searchQuery))return new Response('<a class="result__a" href="https://www.instagram.com/reel/ABC123xyz/">Cat video Instagram reel</a><div class="result__snippet">Cat video public reel</div>',{status:200,headers:{"content-type":"text/html; charset=utf-8"}});
+    if(/site:tiktok\.com/i.test(searchQuery))return new Response('<a class="result__a" href="https://www.tiktok.com/@demo/video/1234567890123456789">Cat video TikTok</a><div class="result__snippet">Cat video public TikTok</div>',{status:200,headers:{"content-type":"text/html; charset=utf-8"}});
     return new Response(videoSearchHtml,{status:200,headers:{"content-type":"text/html; charset=utf-8"}});
+  }
   if(url.hostname==="www.bing.com"&&url.pathname==="/search")
     return new Response(videoSearchHtml,{status:200,headers:{"content-type":"text/html; charset=utf-8"}});
+  if(url.hostname==="www.youtube.com"&&url.pathname==="/youtubei/v1/search"){
+    const body=JSON.parse(init.body||"{}");
+    const query=String(body.query||"Tabola Bale");
+    const title=/tabola bale/i.test(query)?"Tabola Bale - Official Music Video":query+" official video";
+    const videoId="zyxwvutsrqp";
+    return new Response(JSON.stringify({contents:{twoColumnSearchResultsRenderer:{primaryContents:{sectionListRenderer:{contents:[{itemSectionRenderer:{contents:[{videoRenderer:{videoId,title:{runs:[{text:title}]},ownerText:{runs:[{text:"Test Channel"}]},lengthText:{simpleText:"3:45"},viewCountText:{simpleText:"1.2M views"},thumbnail:{thumbnails:[{url:"https://i.ytimg.com/vi/"+videoId+"/hqdefault.jpg",width:480,height:360}]}}}]}}]}}}}}),{status:200,headers:{"content-type":"application/json"}});
+  }
   if(url.hostname==="www.google.com")
     return new Response("",{status:200,headers:{"content-type":"text/html; charset=utf-8"}});
   if(url.hostname==="cdn.example"&&url.pathname==="/not-image.jpg")
@@ -55,6 +71,17 @@ try{
   assert.ok(instagram.searchModes.includes("video")&&instagram.searchModes.includes("image"),"Dedicated Instagram provider must advertise its supported search modes");
   assert.ok(statusData.searchablePlatformCounts.video>0&&statusData.searchablePlatformCounts.image>0,"Status must expose real searchable provider counts");
   console.log("✔ Platform status separates the 200 link catalogue from provider-backed title-search capabilities");
+
+  const youtubeTitleSearch=await worker.fetch(new Request("https://aryanzz.example/api/search",{
+    method:"POST",
+    headers:{"content-type":"application/json","cf-connecting-ip":"198.51.100.39"},
+    body:JSON.stringify({query:"Tabola Bale"})
+  }),{});
+  assert.equal(youtubeTitleSearch.status,200,"YouTube title search must return public results even when the download stream cannot be verified");
+  const youtubeTitleData=await youtubeTitleSearch.json();
+  assert.ok(youtubeTitleData.results.some(item=>item.platform==="youtube"&&/tabola bale/i.test(item.title)),"Official YouTube InnerTube search must return the requested title");
+  assert.ok(youtubeTitleData.results.every(item=>item.searchOnly===true||item.verified===true),"YouTube search cards must state whether their download source is verified");
+  console.log("✔ YouTube official title search returns in-app results independently from download extraction");
 
   const imageAll=await worker.fetch(new Request("https://aryanzz.example/api/image/search",{
     method:"POST",
@@ -106,9 +133,10 @@ try{
   }),{});
   assert.equal(allVideoSearch.status,200,"All-platform title search should return a valid response");
   const allVideoData=await allVideoSearch.json();
-  assert.ok(allVideoData.results.every(item=>item.verified===true&&item.downloadable===true&&item.searchOnly!==true),"All visible video results must be verified downloadable media; no unverified search-only cards may leak through");
-  assert.equal(allVideoData.searchOnlyCount,0,"Unverified search-only candidates must never be returned as result cards");
-  assert.ok(allVideoData.results.some(item=>item.platform==="youtube"&&item.verified===true),"All-platform search must retain YouTube results verified through the Hybrid stream path");
+  assert.ok(allVideoData.results.every(item=>(item.verified===true&&item.downloadable===true)||item.searchOnly===true),"Every all-platform result must be either verified media or an explicitly unverified public title candidate");
+  assert.equal(allVideoData.searchOnlyCount,allVideoData.results.filter(item=>item.searchOnly===true).length,"Search-only result count must match the cards that need verification on selection");
+  assert.ok(allVideoData.results.some(item=>item.platform==="youtube"),"All-platform search must include YouTube results from the official search route");
+  assert.ok(allVideoData.results.some(item=>item.platform==="instagram"&&item.searchOnly===true),"All-platform search must keep public Instagram title results even when the downloader cannot verify them");
   assert.ok(allVideoData.unsupportedCandidateCount>0,"AIO-only results must be counted as excluded rather than shown");
   console.log("✔ All-platform video search drops unsupported AIO results and returns verified media only");
 
