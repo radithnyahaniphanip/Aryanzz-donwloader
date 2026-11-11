@@ -23,6 +23,8 @@ globalThis.fetch=async(input,init={})=>{
     return new Response(videoSearchHtml,{status:200,headers:{"content-type":"text/html; charset=utf-8"}});
   if(url.hostname==="www.google.com")
     return new Response("",{status:200,headers:{"content-type":"text/html; charset=utf-8"}});
+  if(url.hostname==="cdn.example"&&url.pathname==="/not-image.jpg")
+    return new Response("<html>not an image</html>",{status:200,headers:{"content-type":"image/jpeg","content-length":"25"}});
   if(url.hostname==="cdn.example")
     return new Response(new Uint8Array([0xff,0xd8,0xff,0xd9]),{status:200,headers:{"content-type":"image/jpeg","content-length":"4"}});
   if(url.hostname==="www.instagram.com")
@@ -56,6 +58,14 @@ try{
   assert.ok(allData.results.every(group=>group.images?.every(image=>image.mediaVerified===true&&image.previewUrl?.includes("/api/social-image-file"))),"Every displayed image must pass the live image MIME check and use ARYANZZ proxy URLs");
   assert.ok(allData.failedImageChecks>=0&&allData.searchablePlatformCount>0,"Image search must report verification and supported-platform diagnostics");
   console.log("✔ All-platform image search filters unsupported providers and validates every displayed image file");
+
+  const invalidImageProbe=await worker.fetch(new Request("https://aryanzz.example/api/social-image-file?url="+encodeURIComponent("https://cdn.example/not-image.jpg")+"&probe=1",{
+    headers:{"cf-connecting-ip":"198.51.100.38"}
+  }),{});
+  assert.equal(invalidImageProbe.status,415,"MIME-spoofed non-image content must fail the image signature probe");
+  const invalidImageData=await invalidImageProbe.json();
+  assert.equal(invalidImageData.valid,false);
+  console.log("✔ Image MIME spoofing is rejected by byte-signature validation");
 
   const imageSelected=await worker.fetch(new Request("https://aryanzz.example/api/image/search",{
     method:"POST",
