@@ -1550,7 +1550,7 @@ function socialNetworkPlan(selected=0){
           .slice(0,3);
         const previewFormat=previewCandidates[0]||null;
         if(previewFormat){
-          const previewWrap=make("div","ary-video-preview-wrap");
+          const previewWrap=make("div","ary-video-preview-wrap ary-tiktok-player");
           const preview=make("video","v737-media-preview");
           preview.controls=false;
           preview.removeAttribute("controls");
