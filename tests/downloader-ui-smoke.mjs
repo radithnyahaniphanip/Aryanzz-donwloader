@@ -19,5 +19,5 @@ assert.ok(!guideCss.includes(".ary-guide-panel-button"), "removed guide shortcut
 assert.ok(home.includes('/brand-polish.css?v=__ARYANZZ_VERSION__'), "responsive downloader polish stylesheet is linked");
 assert.ok(serviceWorker.includes('/brand-polish.css?v=__ARYANZZ_VERSION__'), "offline shell precaches downloader polish stylesheet");
 assert.ok(polish.includes("#downloadResult #aryOutputName") && polish.includes("min-height:56px") && polish.includes("font-size:16px"), "filename input and result form are enlarged for mobile");
-assert.ok(brandSystem.includes("#downloadResult .youtube-result [hidden]{display:none!important}"), "hidden audio format and bitrate controls must not be forced visible by broad form CSS");
+assert.ok(brandSystem.includes("#downloadResult .youtube-result select.field[hidden]") && brandSystem.includes("#downloadResult .youtube-result .label[hidden]"), "hidden audio format and bitrate controls must not be forced visible by broad form CSS");
 console.log("ARYANZZ downloader UI smoke test passed: cleaner filename controls, no contextual guide buttons, larger mobile layout.");
