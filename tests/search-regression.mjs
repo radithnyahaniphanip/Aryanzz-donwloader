@@ -94,6 +94,17 @@ try{
   assert.ok(youtubeSocialData.results.some(item=>item.searchOnly===true),"YouTube search results remain available even if the download stream has not yet been verified");
   console.log("✔ Selected YouTube uses the same in-app source-aware result pipeline");
 
+  const tiktokTitleSearch=await worker.fetch(new Request("https://aryanzz.example/api/social/search",{
+    method:"POST",
+    headers:{"content-type":"application/json","cf-connecting-ip":"198.51.100.41"},
+    body:JSON.stringify({query:"cat",platform:"tiktok",mediaType:"video"})
+  }),{});
+  assert.equal(tiktokTitleSearch.status,200,"TikTok selected-platform title search must return a valid result response");
+  const tiktokTitleData=await tiktokTitleSearch.json();
+  assert.ok(tiktokTitleData.results.some(item=>item.platform==="tiktok"&&item.searchOnly===true),"Selecting TikTok must show TikTok public title results even if the downloader cannot verify a stream before selection");
+  assert.equal(tiktokTitleData.fallbackUsed,false,"YouTube fallback must not replace real TikTok public candidates");
+  console.log("✔ Selected TikTok shows TikTok results in-app before download verification");
+
   const imageAll=await worker.fetch(new Request("https://aryanzz.example/api/image/search",{
     method:"POST",
     headers:{"content-type":"application/json","cf-connecting-ip":"198.51.100.31"},
@@ -148,8 +159,9 @@ try{
   assert.equal(allVideoData.searchOnlyCount,allVideoData.results.filter(item=>item.searchOnly===true).length,"Search-only result count must match the cards that need verification on selection");
   assert.ok(allVideoData.results.some(item=>item.platform==="youtube"),"All-platform search must include YouTube results from the official search route");
   assert.ok(allVideoData.results.some(item=>item.platform==="instagram"&&item.searchOnly===true),"All-platform search must keep public Instagram title results even when the downloader cannot verify them");
+  assert.ok(allVideoData.results.some(item=>item.platform==="tiktok"&&item.searchOnly===true),"All-platform search must keep public TikTok title results even when the downloader cannot verify them");
   assert.ok(allVideoData.unsupportedCandidateCount>0,"AIO-only results must be counted as excluded rather than shown");
-  console.log("✔ All-platform video search drops unsupported AIO results and returns verified media only");
+  console.log("✔ All-platform video search keeps real public platform candidates and labels unverified streams");
 
   const expansionSearch=await worker.fetch(new Request("https://aryanzz.example/api/social/search",{
     method:"POST",
