@@ -306,7 +306,7 @@ snippet.textContent=item.snippet||"Pilih hasil ini untuk memeriksa pratinjau dan
 if(searchType?.value==="audio"&&item.mediaMode==="audio"&&item.verified&&item.previewUrl){
 try{const audioUrl=new URL(item.previewUrl,location.origin);if(audioUrl.origin===location.origin&&audioUrl.pathname==="/api/social-file"){const player=document.createElement("audio");player.controls=true;player.preload="none";player.src=audioUrl.href;player.setAttribute("aria-label","Pratinjau audio "+(item.title||"hasil pencarian"));player.style.cssText="display:block;width:100%;margin:10px 0";card.append(player);}}catch{}
 }
-pick.type="button";pick.className="primary";pick.textContent=searchType?.value==="audio"?"Periksa & buat MP3":"Lihat & unduh";
+pick.type="button";pick.className="primary";pick.textContent=searchType?.value==="audio"?"Periksa & buat MP3":item.searchOnly===true?"Periksa tautan & unduh":"Lihat & unduh";
 pick.addEventListener("click",()=>{const input=$("url");if(!input||!item.url)return;const source=SEARCH_PLATFORM_ALIASES[item.platform]||item.platform;if(platforms[source])setPlatform(source);setMode("link");input.value=item.url;$("analyze")?.click();$("downloadResult")?.scrollIntoView({behavior:"auto",block:"nearest"})});
 info.append(title,meta,snippet,pick);card.append(info);
 // Keep every platform result in one shared grid; platform identity stays on each card.
@@ -349,11 +349,11 @@ results.hidden=false;results.replaceChildren();
 const kind=["image","audio"].includes(searchType?.value)?searchType.value:"video";
 const supportedCount=platformCatalog.filter(platform=>(platform.searchModes||[]).includes(kind)&&!platform.aliasOf).length;
 const target=selected==="all"?{name:"Semua "+supportedCount+" platform "+(kind==="image"?"gambar":"video"),url:q=>"https://www.google.com/search?q="+encodeURIComponent(q)}:platforms[selected];
-const loading=document.createElement("div");loading.className="v674-search-loading";loading.textContent=kind==="image"?"Mencari gambar dari "+target.name+"…":kind==="audio"?"Mencari musik dan video sumber untuk dibuat MP3 dari "+target.name+"…":selected==="all"?"Mencari video dari platform yang didukung dan YouTube sebagai cadangan…":"Mencari video dari "+target.name+"…";results.append(loading);
+const loading=document.createElement("div");loading.className="v674-search-loading";loading.textContent=kind==="image"?"Mencari gambar dari "+target.name+"…":kind==="audio"?"Mencari musik dan video sumber untuk dibuat MP3 dari "+target.name+"…":selected==="all"?"Mencari judul satu per satu di semua platform video yang didukung…":"Mencari judul dari "+target.name+"…";results.append(loading);
 const btn=$("titleSearchBtn");if(btn){btn.disabled=true;btn.textContent="Mencari…"}
-if(help)help.textContent=selected==="all"?(kind==="image"?"Smart Search memeriksa "+supportedCount+" provider gambar. Hanya file gambar yang lolos verifikasi akan ditampilkan.":"Smart Search mencari di "+supportedCount+" provider video dan menambahkan YouTube sebagai sumber cadangan. Hanya stream yang lolos verifikasi akan ditampilkan."):kind==="image"?"Mode gambar: hanya file gambar terverifikasi dari "+target.name+".":kind==="audio"?"Mode audio: hanya file audio yang diverifikasi dari "+target.name+".":"Mode video: hanya stream video terverifikasi dari "+target.name+"; YouTube akan dicoba jika provider ini tidak memberikan hasil.";
+if(help)help.textContent=selected==="all"?(kind==="image"?"Smart Search memeriksa provider gambar yang didukung.":"Smart Search mencari secara terpisah di "+supportedCount+" platform video. Hasil judul publik tetap ditampilkan; status unduhan diperiksa saat hasil dipilih."):kind==="image"?"Mode gambar: hasil gambar publik dari "+target.name+" akan diperiksa sebelum ditampilkan.":kind==="audio"?"Mode audio: hasil audio publik dari "+target.name+" akan diperiksa sebelum dibuat MP3.":"Mode video: hasil judul publik dari "+target.name+" tetap ditampilkan meski stream belum terverifikasi. Pemeriksaan unduhan berjalan saat hasil dipilih.";
 try{
-const endpoint=kind==="image"?"/api/image/search":(selected==="youtube"&&kind==="video"?"/api/search":"/api/social/search");
+const endpoint=kind==="image"?"/api/image/search":"/api/social/search";
 const options={method:"POST",headers:{"content-type":"application/json"},cache:"no-store"};
 const signal=AbortSignal.any([searchController.signal,AbortSignal.timeout(45000)]);
 const response=await fetch(endpoint,{...options,body:JSON.stringify({query:q,platform:selected,mediaType:kind}),signal});
@@ -383,7 +383,7 @@ if(error?.name==="AbortError")return;
 results.replaceChildren();
 const note=document.createElement("p");note.className="v674-title-help";note.textContent=String(error?.message||"Pencarian belum tersedia.").slice(0,220);results.append(note);
 showFallback(target,q,kind);
-if(help)help.textContent=kind==="image"?"Pencarian gambar belum menemukan file yang bisa diverifikasi.":selected!=="youtube"?"Pencarian platform pilihan belum menemukan stream terverifikasi. Gunakan YouTube sebagai sumber cadangan.":"Pencarian YouTube belum menemukan stream yang bisa diverifikasi.";
+if(help)help.textContent=kind==="image"?"Pencarian gambar belum menemukan hasil publik yang dapat diperiksa.":selected==="all"?"Belum ada hasil publik yang terindeks dari platform video yang didukung.":"Belum ada hasil publik yang cocok dari "+target.name+". Coba kata kunci lain atau gunakan tautan publik.";
 }finally{if(btn){btn.disabled=false;btn.textContent="Cari ⌕"}}
 };
 $("titleSearchBtn")?.addEventListener("click",go);searchInput?.addEventListener("keydown",e=>{if(e.key==="Enter")go()});

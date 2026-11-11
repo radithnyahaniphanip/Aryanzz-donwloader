@@ -173,6 +173,13 @@ jobs:
         env:
           WORKER_URL: https://aryanzz-donwloader.aryanz.workers.dev
         run: node tests/live-release-smoke.mjs
+      - name: Diagnose live YouTube and all-platform title search
+        if: success()
+        continue-on-error: true
+        timeout-minutes: 3
+        env:
+          WORKER_URL: https://aryanzz-donwloader.aryanz.workers.dev
+        run: node tests/live-title-search-smoke.mjs
       - name: Verify public access has no login or registration overlay
         env:
           WORKER_URL: https://aryanzz-donwloader.aryanz.workers.dev
