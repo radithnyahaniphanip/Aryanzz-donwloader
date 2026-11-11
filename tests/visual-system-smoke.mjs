@@ -12,7 +12,8 @@ assert.ok(html.indexOf('href="/brand-system.css')>html.indexOf('href="/brand-pol
 assert.ok(html.includes("Media lebih mudah.")&&html.includes("Kreativitas tanpa batas."),"Homepage must use refreshed ARYANZZ hero copy");
 assert.ok(html.includes('class="ary-brand-symbol"'),"Header must use the refreshed vector brand symbol");
 assert.ok(css.includes("#downloadResult .youtube-result{")&&css.includes("width:100%!important"),"Download result must use the full available content width");
-assert.ok(css.includes(".ary-tiktok-player")&&css.includes("aspect-ratio:9/16"),"TikTok official preview must preserve its portrait aspect ratio");
+assert.ok(css.includes(".ary-tiktok-player")&&css.includes("--ary-tiktok-aspect")&&css.includes("aspect-ratio:var(--ary-tiktok-aspect,9/16)"),"TikTok official preview must use intrinsic source dimensions with a portrait fallback");
+assert.ok(downloader.includes("info.width||info.videoWidth")&&downloader.includes("previewWrap.style.setProperty"),"TikTok embed preview must size itself from source dimensions when available");
 assert.ok(css.includes(".ary-player-status")&&css.includes(".ary-player-note"),"TikTok preview status must use calm informational styling");
 assert.ok(css.includes("#toolsArea #allTools .tool")&&css.includes(".nav button.active"),"Tools cards and main navigation must share the new visual system");
 assert.ok(favicon.includes("ARYANZZ")&&favicon.includes("linearGradient"),"Favicon must contain the new original gradient monogram");
