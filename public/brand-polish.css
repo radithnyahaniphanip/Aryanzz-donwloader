@@ -1,0 +1,105 @@
+/* ARYANZZ V1 — larger, clearer downloader result layout */
+#home .v674-download{
+  width:100%!important;
+  max-width:980px!important;
+  margin-inline:auto!important;
+}
+#home .v674-download .field{
+  min-height:54px!important;
+  padding:14px 15px!important;
+  font-size:16px!important;
+  line-height:1.4!important;
+}
+#home .v674-download .label{
+  font-size:13px!important;
+  line-height:1.45!important;
+}
+#downloadResult{
+  width:100%;
+  max-width:980px;
+  margin:18px auto 28px;
+}
+#downloadResult .youtube-result{
+  width:100%;
+  min-width:0;
+  gap:15px;
+  padding:clamp(18px,3.5vw,30px)!important;
+  border-radius:22px!important;
+}
+#downloadResult .youtube-result .label{
+  display:block;
+  max-width:100%;
+  margin:12px 0 0!important;
+  font-size:13px!important;
+  line-height:1.45!important;
+  letter-spacing:.055em;
+}
+#downloadResult .youtube-result select.field,
+#downloadResult .youtube-result input.field,
+#downloadResult #aryOutputName{
+  display:block!important;
+  width:100%!important;
+  max-width:100%!important;
+  min-width:0!important;
+  min-height:56px!important;
+  box-sizing:border-box!important;
+  padding:15px 16px!important;
+  border-radius:14px!important;
+  font-size:16px!important;
+  line-height:1.4!important;
+}
+#downloadResult .ary-output-name-wrap{
+  display:block;
+  width:100%;
+  min-width:0;
+}
+#downloadResult #aryOutputName{
+  margin:8px 0 0!important;
+  font-weight:600;
+  text-align:left!important;
+}
+#downloadResult .youtube-result .youtube-title{
+  font-size:clamp(16px,2vw,19px)!important;
+  line-height:1.45!important;
+}
+#downloadResult .youtube-result .youtube-provider-state,
+#downloadResult .youtube-result .warning{
+  padding:14px 16px!important;
+  font-size:14px!important;
+  line-height:1.65!important;
+}
+#downloadResult .youtube-result .youtube-quality-hint,
+#downloadResult .youtube-result .muted{
+  font-size:13px!important;
+  line-height:1.6!important;
+}
+#downloadResult .youtube-result .youtube-note{
+  display:none!important;
+}
+@media(max-width:680px){
+  .app-shell.wrap{
+    padding-left:max(14px,env(safe-area-inset-left))!important;
+    padding-right:max(14px,env(safe-area-inset-right))!important;
+  }
+  #home .v674-download{
+    padding:18px!important;
+    border-radius:20px!important;
+  }
+  #downloadResult{
+    margin-top:16px;
+  }
+  #downloadResult .youtube-result{
+    gap:14px;
+    padding:18px!important;
+    border-radius:19px!important;
+  }
+  #downloadResult .youtube-result select.field,
+  #downloadResult .youtube-result input.field,
+  #downloadResult #aryOutputName{
+    min-height:56px!important;
+    font-size:16px!important;
+  }
+}
+@media(min-width:900px){
+  #downloadResult{max-width:1020px}
+}
