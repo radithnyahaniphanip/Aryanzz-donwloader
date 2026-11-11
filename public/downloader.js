@@ -1470,8 +1470,15 @@ function socialNetworkPlan(selected=0){
         frame.title="Pemutar resmi TikTok · "+(info.title||"video");
         frame.loading="lazy";frame.referrerPolicy="strict-origin-when-cross-origin";
         frame.allow="accelerometer; autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture; web-share";
+        const dimensionFormat=(info.formats||[]).find(item=>item?.mode==="video"&&Number(item.width)>0&&Number(item.height)>0);
+        const embedWidth=Number(info.width||info.videoWidth||dimensionFormat?.width)||9;
+        const embedHeight=Number(info.height||info.videoHeight||dimensionFormat?.height)||16;
+        const embedAspect=embedWidth+" / "+embedHeight;
+        const embedRatio=embedWidth/embedHeight;
+        wrap.style.setProperty("--ary-tiktok-aspect",embedAspect);
+        wrap.style.setProperty("--ary-tiktok-width",Math.max(1,Math.min(420,window.innerWidth-48,window.innerHeight*.74*embedRatio))+"px");
         frame.allowFullscreen=true;
-        frame.style.cssText="display:block;width:100%;height:100%;min-height:0;margin:0 auto;border:0;border-radius:14px;background:#000;aspect-ratio:9/16";
+        frame.style.cssText="display:block;width:100%;height:100%;min-height:0;margin:0 auto;border:0;border-radius:14px;background:#000;aspect-ratio:"+embedAspect;
         const status=make("small","muted","Memuat pemutar resmi TikTok · durasi akan muncul saat player mengirim metadata.");
         const onPlayerMessage=event=>{
           if(event.origin!=="https://www.tiktok.com"||event.source!==frame.contentWindow)return;
@@ -1639,8 +1646,15 @@ function socialNetworkPlan(selected=0){
             frame.src=embed.href;frame.title="Pemutar resmi TikTok · "+(info.title||"video");
             frame.loading="lazy";frame.referrerPolicy="strict-origin-when-cross-origin";
             frame.allow="accelerometer; autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture; web-share";
+            const dimensionFormat=(info.formats||[]).find(item=>item?.mode==="video"&&Number(item.width)>0&&Number(item.height)>0);
+            const embedWidth=Number(info.width||info.videoWidth||dimensionFormat?.width)||9;
+            const embedHeight=Number(info.height||info.videoHeight||dimensionFormat?.height)||16;
+            const embedAspect=embedWidth+" / "+embedHeight;
+            const embedRatio=embedWidth/embedHeight;
+            previewWrap.style.setProperty("--ary-tiktok-aspect",embedAspect);
+            previewWrap.style.setProperty("--ary-tiktok-width",Math.max(1,Math.min(420,window.innerWidth-48,window.innerHeight*.74*embedRatio))+"px");
             frame.allowFullscreen=true;
-            frame.style.cssText="display:block;width:100%;height:100%;min-height:0;margin:0 auto;border:0;border-radius:14px;background:#000;aspect-ratio:9/16";
+            frame.style.cssText="display:block;width:100%;height:100%;min-height:0;margin:0 auto;border:0;border-radius:14px;background:#000;aspect-ratio:"+embedAspect;
             const onPlayerMessage=event=>{
               if(event.origin!=="https://www.tiktok.com"||event.source!==frame.contentWindow)return;
               const message=event.data;
