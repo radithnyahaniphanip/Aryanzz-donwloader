@@ -6,6 +6,8 @@ const searchUi=readFileSync(new URL("../public/v674.js",import.meta.url),"utf8")
 assert.ok(searchUi.includes("function searchDomainsForPlatform")&&searchUi.includes("platformCatalog.flatMap"),"Link/search filtering must retain the full live platform catalogue");
 assert.ok(searchUi.includes("platform.searchModes")&&searchUi.includes("catalogForMode"),"Title-search picker must filter platforms by verified media modes");
 assert.ok(searchUi.includes("[10,20,50,100]"),"Search result pagination must offer 10, 20, 50 and 100 results per page");
+assert.ok(searchUi.includes("data.fallbackUsed===true")&&searchUi.includes("item?.platform===\"youtube\""),"The UI must allow explicitly marked YouTube fallback results for a selected social platform");
+assert.ok(searchUi.includes("https://www.youtube.com/results?search_query=")&&searchUi.includes("Cari di YouTube"),"Empty social searches must offer YouTube as the external fallback");
 
 const originalFetch=globalThis.fetch;
 const imageSearchHtml='<a class="iusc" m=\'{"purl":"https://www.instagram.com/p/123/","murl":"https://cdn.example/cat.jpg","desc":"cat photo","w":640,"h":480}\'></a>';
@@ -15,6 +17,14 @@ const publicImagePostHtml='<html><head><title>Cat image post</title><meta proper
 
 globalThis.fetch=async(input,init={})=>{
   const url=new URL(typeof input==="string"?input:input instanceof URL?input.href:input.url);
+  if(url.hostname==="pipedapi.kavin.rocks"&&url.pathname==="/search"){
+    const searchTitle=String(url.searchParams.get("q")||"Cat video").replace(/\\s+/g," ").trim().slice(0,120)+" official video";
+    return new Response(JSON.stringify([{videoId:"abcdefghijk",title:searchTitle,thumbnail:"https://i.ytimg.com/vi/abcdefghijk/hqdefault.jpg",uploaderName:"Test Channel",duration:120}]),{status:200,headers:{"content-type":"application/json"}});
+  }
+  if(url.hostname==="pipedapi.kavin.rocks"&&url.pathname==="/streams/abcdefghijk")
+    return new Response(JSON.stringify({title:"Cat video official",uploader:"Test Channel",duration:120,thumbnailUrl:"https://i.ytimg.com/vi/abcdefghijk/hqdefault.jpg",videoStreams:[{url:"https://pipedapi.kavin.rocks/media/cat.mp4",mimeType:"video/mp4",format:"mp4",quality:"720p",height:720,hasAudio:true}]}),{status:200,headers:{"content-type":"application/json"}});
+  if(url.hostname==="pipedapi.kavin.rocks"&&url.pathname==="/media/cat.mp4")
+    return new Response(new Uint8Array([0,0,0,24,0x66,0x74,0x79,0x70,0x69,0x73,0x6f,0x6d,0,0,0,0]),{status:206,headers:{"content-type":"video/mp4","content-length":"16","content-range":"bytes 0-15/1024","accept-ranges":"bytes"}});
   if(url.hostname==="www.bing.com"&&url.pathname==="/images/search")
     return new Response(imageSearchHtml,{status:200,headers:{"content-type":"text/html; charset=utf-8"}});
   if(url.hostname==="html.duckduckgo.com")
@@ -98,6 +108,7 @@ try{
   const allVideoData=await allVideoSearch.json();
   assert.ok(allVideoData.results.every(item=>item.verified===true&&item.downloadable===true&&item.searchOnly!==true),"All visible video results must be verified downloadable media; no unverified search-only cards may leak through");
   assert.equal(allVideoData.searchOnlyCount,0,"Unverified search-only candidates must never be returned as result cards");
+  assert.ok(allVideoData.results.some(item=>item.platform==="youtube"&&item.verified===true),"All-platform search must retain YouTube results verified through the Hybrid stream path");
   assert.ok(allVideoData.unsupportedCandidateCount>0,"AIO-only results must be counted as excluded rather than shown");
   console.log("✔ All-platform video search drops unsupported AIO results and returns verified media only");
 
@@ -109,6 +120,8 @@ try{
   assert.equal(expansionSearch.status,200,"Keyword expansion search should return a valid response");
   const expansionData=await expansionSearch.json();
   assert.ok(expansionData.searchVariants.includes("green screen meme template"),"Green-screen meme searches must expand to useful related title variants");
+  assert.equal(expansionData.fallbackUsed,true,"A selected social platform with no verified result must activate the YouTube fallback");
+  assert.ok(expansionData.results.some(item=>item.platform==="youtube"&&item.verified===true),"Selected-platform fallback must return only verified YouTube media");
   console.log("✔ Title-search keyword expansion remains active for supported providers");
 
   const videoInfo=await worker.fetch(new Request("https://aryanzz.example/api/platform/info",{
