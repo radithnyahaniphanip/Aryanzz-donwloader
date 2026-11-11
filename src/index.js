@@ -422,33 +422,32 @@ function extractSocialVideoDuration(html){
 }
 
 function extractSocialVideoDimensions(html){
-  const source=String(html||"").replaceAll("\\\\u0022",'"').replaceAll("\\\\u003A",":").replaceAll("\\\\u003a",":").replaceAll("\\\\u002F","/").replaceAll("\\\\/","/").replaceAll("&quot;",'"');
+  const source=String(html||"").replaceAll("\\u0022",'"').replaceAll("\\u003A",":").replaceAll("\\u003a",":").replaceAll("\\u002F","/").replaceAll("\\/","/").replaceAll("&quot;",'"');
   const meta={};
-  for(const tag of source.matchAll(/<meta\\b[^>]*>/gi)){
+  for(const tag of source.matchAll(/<meta\b[^>]*>/gi)){
     const attrs={};
-    for(const match of tag[0].matchAll(/([a-zA-Z_:][-a-zA-Z0-9_:]*)\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s>]+))/g))attrs[match[1].toLowerCase()]=match[2]??match[3]??match[4]??"";
+    for(const match of tag[0].matchAll(/([a-zA-Z_:][-a-zA-Z0-9_:]*)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/g))attrs[match[1].toLowerCase()]=match[2]??match[3]??match[4]??"";
     const key=String(attrs.property||attrs.name||"").toLowerCase();
     if(key&&attrs.content)meta[key]=attrs.content;
   }
-  const number=value=>{const parsed=Number(String(value||"").match(/\\d{2,5}/)?.[0]||0);return parsed>=100&&parsed<=20000?parsed:0};
+  const number=value=>{const parsed=Number(String(value||"").match(/\d{2,5}/)?.[0]||0);return parsed>=100&&parsed<=20000?parsed:0};
   let width=number(meta["og:video:width"]||meta["video:width"]||meta["twitter:player:width"]);
   let height=number(meta["og:video:height"]||meta["video:height"]||meta["twitter:player:height"]);
   if(!width||!height){
-    const directWidth=source.match(/"(?:videoWidth|video_width|video_width_px)"\\s*:\\s*["']?(\\d{2,5})/i);
-    const directHeight=source.match(/"(?:videoHeight|video_height|video_height_px)"\\s*:\\s*["']?(\\d{2,5})/i);
+    const directWidth=source.match(/"(?:videoWidth|video_width|video_width_px)"\s*:\s*["']?(\d{2,5})/i);
+    const directHeight=source.match(/"(?:videoHeight|video_height|video_height_px)"\s*:\s*["']?(\d{2,5})/i);
     width=width||number(directWidth?.[1]);height=height||number(directHeight?.[1]);
   }
   if(!width||!height){
-    const objects=[...source.matchAll(/"(?:video|videoInfo|video_info|videoData|video_data)"\\s*:\\s*\\{([^{}]{0,12000})\\}/gi)];
+    const objects=[...source.matchAll(/"(?:video|videoInfo|video_info|videoData|video_data)"\s*:\s*\{([^{}]{0,12000})\}/gi)];
     for(const object of objects){
-      const objectWidth=number(object[1].match(/"width"\\s*:\\s*["']?(\\d{2,5})/i)?.[1]);
-      const objectHeight=number(object[1].match(/"height"\\s*:\\s*["']?(\\d{2,5})/i)?.[1]);
+      const objectWidth=number(object[1].match(/"width"\s*:\s*["']?(\d{2,5})/i)?.[1]);
+      const objectHeight=number(object[1].match(/"height"\s*:\s*["']?(\d{2,5})/i)?.[1]);
       if(objectWidth&&objectHeight){width=width||objectWidth;height=height||objectHeight;break;}
     }
   }
   return width&&height?{width,height,aspectRatio:width/height}:{};
 }
-
 async function enrichTikTokDuration(info,canonicalUrl){
   if(!info||Number(info.duration)>0)return info;
   try{
@@ -1101,23 +1100,23 @@ async function verifySocialSearchResult(result,requestUrl,desiredMode="any"){
   }catch{return searchOnly()}
 }
 function extractSocialSearchThumbnail(html,pageUrl){
-  for(const tag of String(html||"").matchAll(/<meta\\b[^>]*>/gi)){
+  for(const tag of String(html||"").matchAll(/<meta\b[^>]*>/gi)){
     const attrs={};
-    for(const match of tag[0].matchAll(/([a-zA-Z_:][-a-zA-Z0-9_:]*)\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s>]+))/g))attrs[match[1].toLowerCase()]=match[2]??match[3]??match[4]??"";
+    for(const match of tag[0].matchAll(/([a-zA-Z_:][-a-zA-Z0-9_:]*)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/g))attrs[match[1].toLowerCase()]=match[2]??match[3]??match[4]??"";
     const key=String(attrs.property||attrs.name||"").toLowerCase();
     if(!["og:image","og:image:secure_url","twitter:image","twitter:image:src","image","og:video:thumbnail"].includes(key)||!attrs.content)continue;
     try{
       const candidate=safePublicMediaUrl(new URL(decodeSearchHtml(attrs.content),pageUrl).href);
-      if(candidate&&!/\\.(?:svg|ico)(?:[?#]|$)/i.test(candidate.href)&&!/(?:avatar|profile|favicon|logo|emoji|sprite|icon)(?:[._/-]|$)/i.test(candidate.href))return candidate.href;
+      if(candidate&&!/\.(?:svg|ico)(?:[?#]|$)/i.test(candidate.href)&&!/(?:avatar|profile|favicon|logo|emoji|sprite|icon)(?:[._/-]|$)/i.test(candidate.href))return candidate.href;
     }catch{}
   }
   return null;
 }
 function youtubeSearchThumbnail(rawUrl){
   try{
-    const url=new URL(rawUrl),host=url.hostname.toLowerCase().replace(/^www\\./,"");
+    const url=new URL(rawUrl),host=url.hostname.toLowerCase().replace(/^www\./,"");
     if(host==="youtu.be"||host==="youtube.com"||host.endsWith(".youtube.com")){
-      const id=host==="youtu.be"?url.pathname.split("/").filter(Boolean)[0]:url.searchParams.get("v")||url.pathname.match(/^\\/(?:shorts|embed|live)\\/([^/?]+)/)?.[1];
+      const id=host==="youtu.be"?url.pathname.split("/").filter(Boolean)[0]:url.searchParams.get("v")||url.pathname.match(/^\/(?:shorts|embed|live)\/([^/?]+)/)?.[1];
       if(id&&/^[A-Za-z0-9_-]{6,20}$/.test(id))return "https://i.ytimg.com/vi/"+id+"/hqdefault.jpg";
     }
   }catch{}
