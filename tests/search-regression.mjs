@@ -1,10 +1,15 @@
 import assert from "node:assert/strict";
 import worker from "../src/index.js";
+import { readFileSync } from "node:fs";
+
+const searchUi=readFileSync(new URL("../public/v674.js",import.meta.url),"utf8");
+assert.ok(searchUi.includes("function searchDomainsForPlatform")&&searchUi.includes("platformCatalog.flatMap"),"Search filtering must use the full live 200-platform catalogue");
+assert.ok(searchUi.includes("[10,20,50,100]"),"Search result pagination must offer 10, 20, 50 and 100 results per page");
 
 const originalFetch=globalThis.fetch;
 const imageSearchHtml='<a class="iusc" m=\'{"purl":"https://bsky.app/profile/demo/post/123","murl":"https://cdn.example/cat.jpg","desc":"cat photo","w":640,"h":480}\'></a>';
 const videoSearchHtml='<a class="result__a" href="https://bsky.app/profile/demo/post/123">Cat video</a><div class="result__snippet">Cat video from a public post</div>';
-const publicPostHtml='<html><head><title>Cat video post</title><meta property="og:title" content="Cat video post"><meta property="og:image" content="https://cdn.example/cat.jpg"><meta property="og:video" content="https://cdn.example/clip.mp4"><meta property="og:video:type" content="video/mp4"></head><body></body></html>';
+const publicPostHtml='<html><head><title>Cat video post</title><meta property="og:title" content="Cat video post"><meta property="og:image" content="https://cdn.example/cat.jpg"><meta property="og:video" content="https://cdn.example/clip.mp4"><meta property="og:video:type" content="video/mp4"><meta property="og:video:width" content="1920"><meta property="og:video:height" content="1080"></head><body></body></html>';
 const publicImagePostHtml='<html><head><title>Cat image post</title><meta property="og:title" content="Cat image post"><meta property="og:image" content="https://cdn.example/cat.jpg"></head><body></body></html>';
 
 globalThis.fetch=async(input,init={})=>{
@@ -56,6 +61,17 @@ try{
   assert.ok(videoData.results.some(item=>item.platform==="bluesky"&&item.searchOnly===true),"Video title search must preserve AIO results as clearly unverified candidates, not drop them");
   console.log("✔ Selected-platform video title search returns generic-provider candidates without mislabeling them as verified");
 
+  const allVideoSearch=await worker.fetch(new Request("https://aryanzz.example/api/social/search",{
+    method:"POST",
+    headers:{"content-type":"application/json","cf-connecting-ip":"198.51.100.37"},
+    body:JSON.stringify({query:"cat",platform:"all",mediaType:"video"})
+  }),{});
+  assert.equal(allVideoSearch.status,200,"All-platform title search should return a valid response");
+  const allVideoData=await allVideoSearch.json();
+  assert.ok(allVideoData.results.some(item=>item.platform==="bluesky"&&item.searchOnly===true),"All-platform title search must retain catalogue platforms outside the original hard-coded platform subset");
+  assert.ok(allVideoData.results.some(item=>item.thumbnail==="https://cdn.example/cat.jpg"),"All-platform title search should enrich public result cards with an OG thumbnail");
+  console.log("✔ All-platform search keeps 200-catalogue candidates and attaches public-page thumbnails");
+
   const expansionSearch=await worker.fetch(new Request("https://aryanzz.example/api/social/search",{
     method:"POST",
     headers:{"content-type":"application/json","cf-connecting-ip":"198.51.100.36"},
@@ -74,7 +90,10 @@ try{
   const videoInfoData=await videoInfo.json();
   assert.equal(videoInfo.status,200,"Generic public-page video metadata should be extracted for an AIO platform: "+JSON.stringify(videoInfoData));
   assert.ok(videoInfoData.formats?.some(item=>item.mode==="video"&&item.ext==="mp4"),"Generic public-page fallback should preserve an actual MP4 source");
-  console.log("✔ Generic platform video links reach the public-page media metadata fallback");
+  assert.equal(videoInfoData.width,1920,"Generic video metadata should preserve source width");
+  assert.equal(videoInfoData.height,1080,"Generic video metadata should preserve source height");
+  assert.equal(videoInfoData.aspectRatio,1920/1080,"Generic video metadata should preserve the source aspect ratio");
+  console.log("✔ Generic platform video links preserve MP4 metadata and intrinsic dimensions");
 
   const imageInfo=await worker.fetch(new Request("https://aryanzz.example/api/image/extract?url="+encodeURIComponent("https://bsky.app/profile/demo/post/456"),{
     headers:{"cf-connecting-ip":"198.51.100.35"}
