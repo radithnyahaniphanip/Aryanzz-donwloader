@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import worker from "../src/index.js";
 
 const DEFAULT_ORIGIN = "https://aryanzz-donwloader.aryanz.workers.dev";
-const CUSTOM_ORIGIN = "https://aryanzz.id";
+const CUSTOM_ORIGIN = "https://aryanzz.net";
 const SEO_PATHS = ["/", "/panduan", "/download-video", "/download-mp3", "/download-gambar"];
 
 function envFor(origin, htmlPath = "/") {
