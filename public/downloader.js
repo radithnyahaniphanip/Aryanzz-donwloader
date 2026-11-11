@@ -1462,7 +1462,7 @@ function socialNetworkPlan(selected=0){
         box.replaceChildren();
         const title=make("b","youtube-title",info.title||"Video TikTok");
         const meta=make("small","muted",["TikTok Embed Player",info.embedAuthor||""].filter(Boolean).join(" · "));
-        const wrap=make("div","ary-video-preview-wrap");
+        const wrap=make("div","ary-video-preview-wrap ary-tiktok-player");
         const frame=make("iframe","youtube-embed-frame");
         const embed=new URL(info.embedUrl);
         if(embed.origin!=="https://www.tiktok.com"||!/^\/player\/v1\/\d{8,}$/.test(embed.pathname))throw new Error("Alamat player TikTok tidak valid.");
@@ -1471,7 +1471,7 @@ function socialNetworkPlan(selected=0){
         frame.loading="lazy";frame.referrerPolicy="strict-origin-when-cross-origin";
         frame.allow="accelerometer; autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture; web-share";
         frame.allowFullscreen=true;
-        frame.style.cssText="display:block;width:min(100%,380px);height:min(680px,78svh);min-height:420px;margin:0 auto;border:0;border-radius:14px;background:#000;aspect-ratio:9/16";
+        frame.style.cssText="display:block;width:100%;height:100%;min-height:0;margin:0 auto;border:0;border-radius:14px;background:#000;aspect-ratio:9/16";
         const status=make("small","muted","Memuat pemutar resmi TikTok · durasi akan muncul saat player mengirim metadata.");
         const onPlayerMessage=event=>{
           if(event.origin!=="https://www.tiktok.com"||event.source!==frame.contentWindow)return;
@@ -1489,7 +1489,7 @@ function socialNetworkPlan(selected=0){
         };
         window.addEventListener("message",onPlayerMessage);
         wrap.append(frame);
-        const note=make("p","warning",info.downloadMessage||"Video dapat diputar melalui player resmi TikTok, tetapi file MP4 langsung belum tersedia dari provider publik.");
+        const note=make("p","ary-player-note",info.downloadMessage||"Video dapat diputar melalui pemutar resmi TikTok. File MP4 belum tersedia dari sumber publik untuk tautan ini.");
         const source=make("a","tag","Buka video di TikTok ↗");
         source.href="https://www.tiktok.com/video/"+encodeURIComponent(info.embedId||"");
         source.target="_blank";source.rel="noopener noreferrer";
@@ -1640,7 +1640,7 @@ function socialNetworkPlan(selected=0){
             frame.loading="lazy";frame.referrerPolicy="strict-origin-when-cross-origin";
             frame.allow="accelerometer; autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture; web-share";
             frame.allowFullscreen=true;
-            frame.style.cssText="display:block;width:min(100%,380px);height:min(680px,78svh);min-height:420px;margin:0 auto;border:0;border-radius:14px;background:#000;aspect-ratio:9/16";
+            frame.style.cssText="display:block;width:100%;height:100%;min-height:0;margin:0 auto;border:0;border-radius:14px;background:#000;aspect-ratio:9/16";
             const onPlayerMessage=event=>{
               if(event.origin!=="https://www.tiktok.com"||event.source!==frame.contentWindow)return;
               const message=event.data;
@@ -1649,15 +1649,15 @@ function socialNetworkPlan(selected=0){
                 const current=Number(message.value.currentTime),total=Number(message.value.duration);
                 if(Number.isFinite(total)&&total>0){
                   const fmt=value=>Math.floor(value/60)+":"+String(Math.floor(value%60)).padStart(2,"0");
-                  previewStatus.textContent="Pemutar resmi TikTok · "+(Number.isFinite(current)?fmt(Math.max(0,current))+" / ":"")+fmt(total)+" · stream MP4 langsung tidak tersedia.";
+                  previewStatus.textContent="Pratinjau TikTok · "+(Number.isFinite(current)?fmt(Math.max(0,current))+" / ":"")+fmt(total);
                   mediaMetaLine.textContent=[info.extractor||"TikTok",fmt(total),info.size?(info.size/1048576).toFixed(1)+" MB":""].filter(Boolean).join(" · ");
                 }
               }
             };
             window.addEventListener("message",onPlayerMessage);
             previewWrap.replaceChildren(frame);
-            previewStatus.textContent="Stream langsung sedang bermasalah · memakai pemutar resmi TikTok. Unduhan MP4 tetap memerlukan file publik yang dapat diakses.";
-            previewStatus.className="warning";
+            previewStatus.textContent="Video dibuka melalui pemutar resmi TikTok. File MP4 belum tersedia dari sumber publik untuk tautan ini.";
+            previewStatus.className="ary-player-status";
             return true;
           };
           const showUnavailablePreview=()=>{
