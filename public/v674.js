@@ -226,8 +226,12 @@ function searchThumbnailUrl(item){
  return "";
 }
 function searchResultBelongsTo(item,platform){
+ const key=SEARCH_PLATFORM_ALIASES[platform]||platform;
+ // The Worker has already constrained All 200 results to catalogue domains.
+ // Re-filtering them through a small client-side list used to silently drop most platforms.
+ if(key==="all")return true;
  let host="";try{host=new URL(item?.url||item?.sourceUrl||"").hostname.toLowerCase().replace(/^www\./,"")}catch{return false}
- return searchDomainsForPlatform(platform).some(domain=>host===String(domain).toLowerCase().replace(/^www\./,"")||host.endsWith("."+String(domain).toLowerCase().replace(/^www\./,"")));
+ return searchDomainsForPlatform(key).some(domain=>host===String(domain).toLowerCase().replace(/^www\./,"")||host.endsWith("."+String(domain).toLowerCase().replace(/^www\./,"")));
 }
 function showFallback(target,q,kind="video"){
 const card=document.createElement("article");card.className="v674-search-result v736-search-handoff";
