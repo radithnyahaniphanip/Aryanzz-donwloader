@@ -1145,7 +1145,7 @@ async function verifyYouTubeSearchResult(result,requestUrl,desiredMode="video"){
 async function verifySocialSearchResult(result,requestUrl,desiredMode="video"){
   const key=freePlatformKey(result.url),platformId=platformIdForUrl(result.url);
   const searchOnly=()=>({...result,platform:platformId||result.platform||"unknown",verified:false,downloadable:false,searchOnly:true,mediaMode:desiredMode==="audio"?"audio":"video",channel:"Hasil publik · unduhan belum diverifikasi"});
-  if(platformId==="youtube"||key==="youtube")return verifyYouTubeSearchResult(result,requestUrl,desiredMode);
+  if(platformId==="youtube"||key==="youtube")return {...result,platform:"youtube",verified:false,downloadable:false,searchOnly:true,mediaMode:desiredMode,channel:result.channel||"YouTube · periksa saat dipilih"};
   if(!key||!platformSupportsSearchMode(platformId,desiredMode))return searchOnly();
   const endpoint=FREE_MEDIA_API+"/api/download/"+key+"?url="+encodeURIComponent(result.url);
   try{
