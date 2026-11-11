@@ -50,7 +50,7 @@ $("aryGuideFilters").addEventListener("click",event=>{const button=event.target.
 overlay.addEventListener("click",event=>{if(event.target===overlay||event.target.closest("[data-guide-close]"))closeGuide();});
 document.addEventListener("keydown",event=>{if(event.key==="Escape"&&!overlay.hidden)closeGuide();if(event.key==="Tab"&&!overlay.hidden){const items=[...overlay.querySelectorAll("button:not(:disabled),input:not(:disabled)")];if(!items.length)return;const first=items[0],last=items[items.length-1];if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus();}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus();}}});
 document.addEventListener("click",event=>{const trigger=event.target.closest("[data-guide-open]");if(!trigger)return;event.preventDefault();openGuide(trigger.dataset.guideOpen);});
-guides.forEach(g=>{const panel=document.getElementById(g.panel);if(!panel||panel.querySelector(".ary-guide-panel-entry"))return;const wrap=el("div","ary-guide-panel-entry"),button=el("button","ary-guide-panel-button","?  Lihat panduan fitur ini");button.type="button";button.dataset.guideOpen=g.id;wrap.append(button);panel.insertBefore(wrap,panel.firstChild);});
+// Contextual per-panel guide shortcuts are intentionally omitted from the workspace UI.
 window.ARYANZZGuides=Object.freeze({open:openGuide,close:closeGuide,total:guides.length,progress:()=>({completed:completed.size,total:guides.length})});
 renderProgress();renderList();renderDetail();
 })();
