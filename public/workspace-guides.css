@@ -1,9 +1,6 @@
 /* ARYANZZ V1 — Interactive feature guides */
 #toolsArea #allTools .ary-guide-hub-card{border-color:rgba(111,167,255,.55)!important;background:linear-gradient(145deg,rgba(38,67,112,.98),rgba(15,35,67,.99))!important;box-shadow:0 12px 28px rgba(39,91,171,.22),inset 0 1px 0 rgba(255,255,255,.08)!important}
 #toolsArea #allTools .ary-guide-hub-card .ico{background:linear-gradient(145deg,#5b8fff,#25b9c9)!important;color:#fff!important}
-.ary-guide-panel-entry{display:flex;justify-content:flex-end;margin:0 0 14px;position:relative;z-index:1}
-.ary-guide-panel-button{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:34px;padding:8px 12px;border:1px solid rgba(114,157,224,.28);border-radius:999px;background:rgba(43,76,125,.2);color:#b9d5ff;font-family:inherit;font-size:11px;font-weight:700;line-height:1.2;cursor:pointer}
-.ary-guide-panel-button:hover{background:rgba(63,112,184,.3);border-color:rgba(126,177,255,.55)}
 .ary-guide-overlay[hidden]{display:none!important}
 .ary-guide-overlay{position:fixed;inset:0;z-index:10000;display:grid;place-items:center;padding:18px;background:rgba(2,7,16,.78);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
 .ary-guide-dialog{width:min(1120px,100%);height:min(880px,92dvh);min-height:420px;display:flex;flex-direction:column;overflow:hidden;border:1px solid rgba(132,166,220,.26);border-radius:24px;background:linear-gradient(145deg,#111d33,#091322 70%);color:#edf4ff;box-shadow:0 30px 90px rgba(0,0,0,.48)}
