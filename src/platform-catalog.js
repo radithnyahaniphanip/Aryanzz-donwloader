@@ -10,15 +10,23 @@ export const PLATFORM_CATALOG = rows.map(row => {
   const inputModes = audioOnly && searchOnlyAudio.has(row.id) ? ["search"]
     : audioOnly && linkOnlyAudio.has(row.id) ? ["link"]
     : ["link","search"];
+  // Title search only advertises media types with a real provider route.
+  // The 180 AIO catalogue entries remain available for pasted-link auto-detection,
+  // but are not presented as verified video/image search providers.
+  const searchModes = row.providerKey === "aio"
+    ? []
+    : row.mediaModes.filter(mode => ["video","image","audio"].includes(mode));
+  const titleSearch = inputModes.includes("search") && searchModes.length > 0;
   return {
     ...row,
     inputModes,
+    searchModes,
     pasteLink: inputModes.includes("link"),
-    titleSearch: inputModes.includes("search"),
+    titleSearch,
     preview: row.mediaModes.includes("video") ? "range-proxy" : row.mediaModes.includes("image") ? "image-preview" : "audio-range-proxy",
     mp4: row.mediaModes.includes("video") ? "provider-dependent" : "not-applicable",
     extractorStatus: row.providerKey === "aio" ? "experimental" : "dedicated",
-    searchEnabled: inputModes.includes("search")
+    searchEnabled: titleSearch
   };
 });
 export const PLATFORM_CATALOG_BY_ID = new Map(PLATFORM_CATALOG.map(platform => [platform.id, platform]));

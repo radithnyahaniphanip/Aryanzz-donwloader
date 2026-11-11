@@ -919,20 +919,28 @@ async function proxyPlatform(request,env,path){
   }catch{return json({error:"Backend ekstraksi sedang tidak dapat dijangkau."},502)}
 }
 async function platformStatus(env){
-  const platforms=PLATFORM_CATALOG.map(platform=>({
-    id:platform.id,name:platform.name,domains:platform.domains,aliasOf:platform.aliasOf||null,
-    pasteLink:platform.pasteLink,titleSearch:platform.titleSearch,inputModes:platform.inputModes,preview:platform.preview,mediaModes:platform.mediaModes,
-    mp4:platform.mp4,providerKey:platform.providerKey,extractorStatus:platform.extractorStatus,
-    searchEnabled:platform.searchEnabled
-  }));
+  const platforms=PLATFORM_CATALOG.map(platform=>{
+    const searchModes=platformSearchModes(platform.id);
+    return {
+      id:platform.id,name:platform.name,domains:platform.domains,aliasOf:platform.aliasOf||null,
+      pasteLink:platform.pasteLink,titleSearch:searchModes.length>0,inputModes:platform.inputModes,preview:platform.preview,mediaModes:platform.mediaModes,
+      searchModes,supportsVideoSearch:searchModes.includes("video"),supportsImageSearch:searchModes.includes("image"),
+      mp4:platform.mp4,providerKey:platform.providerKey,extractorStatus:platform.extractorStatus,
+      searchEnabled:searchModes.length>0
+    };
+  });
   const dedicated=platforms.filter(platform=>platform.extractorStatus==="dedicated").length;
   return json({
     ok:true,configured:false,backend:"public-community-api",mode:"zero-server",
     engine:"Cloudflare Worker + public free community extractor",
     platformCount:PLATFORM_CATALOG.length,dedicatedCount:dedicated,
     experimentalCount:PLATFORM_CATALOG.length-dedicated,platforms,
-    liveAvailability:"200 pilihan platform terdaftar. Platform berstatus dedicated memakai jalur provider khusus; platform experimental mencoba auto-detect komunitas dan harus diuji satu per satu. Ketersediaan media tetap bergantung pada provider, privasi konten, dan format sumber.",
-    message:"Katalog berisi 200 pilihan termasuk alias Lite. Logo alias memakai logo aplikasi induk. MP4 hanya tersedia bila sumber memberikan stream video yang valid; platform audio tidak menawarkan MP4. Konten privat, tautan kedaluwarsa, atau media yang tidak diekspos sumber tidak dapat diekstrak."
+    searchablePlatformCounts:{
+      video:new Set(platforms.filter(platform=>platform.searchModes.includes("video")&&!platform.aliasOf).map(platform=>platform.id)).size,
+      image:new Set(platforms.filter(platform=>platform.searchModes.includes("image")&&!platform.aliasOf).map(platform=>platform.id)).size
+    },
+    liveAvailability:"Katalog tetap memuat 200 pilihan untuk deteksi tautan. Menu Cari Judul hanya menampilkan platform dengan provider khusus untuk jenis media yang dipilih; setiap hasil video atau gambar masih harus lolos pemeriksaan file aktual sebelum ditampilkan.",
+    message:"Jumlah 200 adalah jumlah pilihan katalog, bukan klaim bahwa semuanya mendukung semua jenis media. Platform eksperimental tetap dapat dicoba melalui tempel tautan, tetapi tidak dimasukkan ke hasil Cari Judul video/gambar sampai memiliki jalur provider yang dapat diverifikasi."
   });
 }
 function decodeSearchHtml(value){
@@ -948,6 +956,15 @@ function platformIdForUrl(raw){
 function canonicalPlatformId(id){
   const platform=PLATFORM_CATALOG_BY_ID.get(id);
   return platform?.aliasOf||id;
+}
+function platformSearchModes(id){
+  const entry=PLATFORM_CATALOG_BY_ID.get(String(id||"").toLowerCase());
+  const platform=entry?.aliasOf?PLATFORM_CATALOG_BY_ID.get(entry.aliasOf):entry;
+  if(!platform||platform.providerKey==="aio")return [];
+  return (platform.mediaModes||[]).filter(mode=>["video","image","audio"].includes(mode));
+}
+function platformSupportsSearchMode(id,mode){
+  return platformSearchModes(id).includes(String(mode||"").toLowerCase());
 }
 function socialSearchQueryVariants(query){
   const original=String(query||"").replace(/\s+/g," ").trim();
@@ -1071,10 +1088,10 @@ function parseBingSocialVideoResults(html,platform,query,seen){
   }
   return out;
 }
-async function verifySocialSearchResult(result,requestUrl,desiredMode="any"){
+async function verifySocialSearchResult(result,requestUrl,desiredMode="video"){
   const key=freePlatformKey(result.url),platformId=platformIdForUrl(result.url);
   const searchOnly=()=>({...result,platform:platformId||result.platform||"unknown",verified:false,downloadable:false,searchOnly:true,mediaMode:desiredMode==="audio"?"audio":"video",channel:"Hasil publik · unduhan belum diverifikasi"});
-  if(!key||key==="aio")return searchOnly();
+  if(!key||!platformSupportsSearchMode(platformId,desiredMode))return searchOnly();
   const endpoint=FREE_MEDIA_API+"/api/download/"+key+"?url="+encodeURIComponent(result.url);
   try{
     const response=await fetch(endpoint,{headers:{accept:"application/json"},signal:AbortSignal.timeout(9000),cache:"no-store"});
@@ -1175,15 +1192,19 @@ function parseGoogleSocialVideoResults(html,platform,query,seen){
 async function searchSocial(request){
   let body;try{body=await request.json()}catch{return json({error:"Body JSON tidak valid."},400)}
   const platform=String(body?.platform||"").toLowerCase(),query=String(body?.query||"").replace(/\s+/g," ").trim();
-  const requestedMode=String(body?.mediaType||"any").toLowerCase();
-  const desiredMode=["video","audio"].includes(requestedMode)?requestedMode:"any";
-  if(!socialSearchDomains(platform).length)return json({error:"Platform pencarian belum didukung."},400);
+  const requestedMode=String(body?.mediaType||"video").toLowerCase();
+  const desiredMode=requestedMode==="audio"?"audio":"video";
+  const canonicalPlatform=platform==="all"?"all":canonicalPlatformId(platform);
+  const domains=socialSearchDomains(platform);
+  if(!domains.length)return json({ok:false,error:"Platform pencarian belum didukung."},400);
+  if(platform!=="all"&&!platformSupportsSearchMode(canonicalPlatform,desiredMode)){
+    const name=PLATFORM_CATALOG_BY_ID.get(canonicalPlatform)?.name||platform;
+    return json({ok:false,error:name+" belum memiliki provider "+desiredMode+" terverifikasi untuk Cari Judul. Gunakan Tempel Tautan untuk pemeriksaan manual jika sumbernya publik."},400);
+  }
   if(query.length<2||query.length>120)return json({error:"Masukkan judul antara 2 sampai 120 karakter."},400);
   if(socialRateLimited(request))return json({error:"Batas pencarian gratis tercapai. Tunggu satu menit lalu coba lagi."},429);
-  const domains=socialSearchDomains(platform),site=platform==="all"?"":domains.map(domain=>"site:"+domain).join(" OR ");
-  const platformDomains={tiktok:"tiktok.com",instagram:"instagram.com",snackvideo:"snackvideo.com",pinterest:"pinterest.com",facebook:"facebook.com",x:"x.com",reddit:"reddit.com",vimeo:"vimeo.com",threads:"threads.net",soundcloud:"soundcloud.com",capcut:"capcut.com",snapchat:"snapchat.com",idnapp:"idntimes.com",linkedin:"linkedin.com",wechat:"wechat.com",kakaotalk:"kakao.com",youtube:"youtube.com"};
-    const searchSites=platform==="all"?[""]:domains.map(domain=>"site:"+domain);
-  const canonicalPlatform=canonicalPlatformId(platform);
+  const site=platform==="all"?"":domains.map(domain=>"site:"+domain).join(" OR ");
+  const searchSites=platform==="all"?[""]:domains.map(domain=>"site:"+domain);
   try{
     const baseVariants=socialSearchQueryVariants(query);
     const variants=(desiredMode==="audio"
@@ -1267,20 +1288,28 @@ async function searchSocial(request){
         if(!seen.has(item.url)){seen.add(item.url);candidates.push({...item,platform:"youtube",snippet:item.channel||"YouTube video",searchProvider:item.searchProvider||"YouTube public search"});}
       }
     }
-    const canonicalResultKey=value=>({twitter:"x",tiktoklite:"tiktok",instagramlite:"instagram",facebooklite:"facebook"})[value]||value;
     const platformScopedCandidates=platform==="all"
-      ?candidates.filter(item=>!!freePlatformKey(item.url))
-      :candidates.filter(item=>canonicalPlatformId(platformIdForUrl(item.url)||"")===canonicalPlatform);
+      ?candidates.filter(item=>platformSupportsSearchMode(platformIdForUrl(item.url),desiredMode))
+      :candidates.filter(item=>{
+        const itemPlatform=platformIdForUrl(item.url);
+        return !!itemPlatform&&canonicalPlatformId(itemPlatform)===canonicalPlatform&&platformSupportsSearchMode(itemPlatform,desiredMode);
+      });
     const relevantCandidates=platformScopedCandidates.filter(item=>{
       const score=publicSearchRelevance(query,item.title+" "+item.snippet);
       // YouTube titles often omit generic words such as "lagu", "official", or "DJ"; preserve strong title matches.
       return score>=0.25||(item.platform==="youtube"&&score>=0.16);
     });
-    const orderedCandidates=platform==="all"?(()=>{const buckets=new Map();for(const item of relevantCandidates){const key=platformIdForUrl(item.url)||"other";if(!buckets.has(key))buckets.set(key,[]);buckets.get(key).push(item)}const out=[];for(let round=0;round<12;round++)for(const list of buckets.values())if(list[round])out.push(list[round]);return out})():relevantCandidates;
-    const verificationLimit=platform==="all"?6:12;const verificationCandidates=orderedCandidates.slice(0,verificationLimit);const checked=await Promise.all(verificationCandidates.map(item=>verifySocialSearchResult(item,request.url,desiredMode)));const searchOnlyRemainder=orderedCandidates.slice(verificationLimit,500).map(item=>({...item,platform:platformIdForUrl(item.url)||item.platform||"unknown",verified:false,downloadable:false,searchOnly:true,mediaMode:desiredMode==="audio"?"audio":"video",channel:desiredMode==="audio"?"Sumber video · audio MP3 diproses saat dipilih":"Hasil publik · unduhan belum diverifikasi"}));
-    const results=[...checked.filter(Boolean),...searchOnlyRemainder].slice(0,500);
+    const orderedCandidates=platform==="all"?(()=>{const buckets=new Map();for(const item of relevantCandidates){const key=canonicalPlatformId(platformIdForUrl(item.url)||"other");if(!buckets.has(key))buckets.set(key,[]);buckets.get(key).push(item)}const out=[];for(let round=0;round<12;round++)for(const list of buckets.values())if(list[round])out.push(list[round]);return out})():relevantCandidates;
+    // Never send unverified search-engine links to the result cards. Every visible result
+    // must have a provider-returned MP4/audio URL and pass the actual media signature probe.
+    const verificationLimit=platform==="all"?12:20;
+    const verificationCandidates=orderedCandidates.slice(0,verificationLimit);
+    const checked=await Promise.all(verificationCandidates.map(item=>verifySocialSearchResult(item,request.url,desiredMode)));
+    const results=checked.filter(item=>item?.verified===true&&item?.downloadable===true&&item.mediaMode===desiredMode).slice(0,verificationLimit);
     const resultsWithThumbnails=await enrichSocialSearchThumbnails(results,12);
-    return json({ok:true,platform,query,mediaType:desiredMode,results:resultsWithThumbnails,candidateCount:candidates.length,ddgCandidateCount,bingCandidateCount,relevantCount:relevantCandidates.length,thumbnailCount:resultsWithThumbnails.filter(item=>item.thumbnail).length,verifiedCount:resultsWithThumbnails.filter(item=>item.verified).length,searchOnlyCount:resultsWithThumbnails.filter(item=>item.searchOnly).length,unavailableCount:relevantCandidates.length-resultsWithThumbnails.length,candidateSamples:candidates.slice(0,5).map(item=>({title:item.title,url:item.url,score:publicSearchRelevance(query,item.title+" "+item.snippet)})),providerDiagnostics:{ddgPages:pages.length,ddgNonEmpty:pages.filter(Boolean).length,bingPages:bingPages.length,bingNonEmpty:bingPages.filter(Boolean).length,googlePages:googlePages.length,googleNonEmpty:googlePages.filter(Boolean).length,googleCandidateCount,ddgResultLinkCount:pages.reduce((sum,page)=>sum+[...page.matchAll(/class=["'][^"']*\bresult__a\b/gi)].length,0),bingCandidateCount,tiktokPublicPage:tiktokPageDiagnostics},searchVariants:variants,verification:"provider-and-media-signature",verificationLimit,searchScope:platform==="all"?"all-200-catalog-platforms":"selected-platform",returnedPublicResults:results.length,verifiedChecks:verificationCandidates.length});
+    const verificationFailedCount=Math.max(0,verificationCandidates.length-results.length);
+    const unsupportedCandidateCount=Math.max(0,candidates.length-platformScopedCandidates.length);
+    return json({ok:true,platform,query,mediaType:desiredMode,results:resultsWithThumbnails,candidateCount:candidates.length,ddgCandidateCount,bingCandidateCount,relevantCount:relevantCandidates.length,thumbnailCount:resultsWithThumbnails.filter(item=>item.thumbnail).length,verifiedCount:resultsWithThumbnails.filter(item=>item.verified).length,searchOnlyCount:0,unavailableCount:Math.max(0,relevantCandidates.length-resultsWithThumbnails.length),unsupportedCandidateCount,verificationFailedCount,candidateSamples:candidates.slice(0,5).map(item=>({title:item.title,url:item.url,score:publicSearchRelevance(query,item.title+" "+item.snippet)})),providerDiagnostics:{ddgPages:pages.length,ddgNonEmpty:pages.filter(Boolean).length,bingPages:bingPages.length,bingNonEmpty:bingPages.filter(Boolean).length,googlePages:googlePages.length,googleNonEmpty:googlePages.filter(Boolean).length,googleCandidateCount,ddgResultLinkCount:pages.reduce((sum,page)=>sum+[...page.matchAll(/class=["'][^"']*\bresult__a\b/gi)].length,0),bingCandidateCount,tiktokPublicPage:tiktokPageDiagnostics},searchVariants:variants,verification:"provider-and-media-signature",verificationLimit,searchScope:platform==="all"?"all-provider-backed-platforms":"selected-provider-platform",returnedPublicResults:results.length,verifiedChecks:verificationCandidates.length});
   }catch(error){return json({error:"Pencarian publik gagal dijangkau. Coba lagi nanti. "+String(error?.message||error).slice(0,100)},502)}
 }
 
@@ -2459,23 +2488,42 @@ function parseSocialImageSearchLinks(html,platform,seen,limit=18){
   }
   return out;
 }
+async function verifySocialImageSearchResult(item,requestUrl){
+  const sourceUrl=String(item?.sourceUrl||"");
+  const platformId=platformIdForUrl(sourceUrl);
+  if(!platformSupportsSearchMode(platformId,"image"))return null;
+  let preview;
+  try{preview=new URL(item.previewUrl,requestUrl)}catch{return null}
+  if(preview.origin!==new URL(requestUrl).origin||preview.pathname!=="/api/social-image-file")return null;
+  try{
+    preview.searchParams.set("probe","1");
+    const response=await socialImageFile(new Request(preview.href));
+    const data=await response.json().catch(()=>({}));
+    const mime=String(data.mimeType||"").split(";")[0].toLowerCase();
+    if(!response.ok||data.valid!==true||!/^image\/(?:jpeg|png|webp|gif|avif|bmp)$/.test(mime))return null;
+    return {...item,platform:canonicalPlatformId(platformId),verified:true,mediaVerified:true,mimeType:mime,imageSignature:data.signature||null};
+  }catch{return null}
+}
 async function socialImageSearch(request){
   let body;try{body=await request.json()}catch{return json({error:"Body JSON tidak valid."},400)}
   const platform=String(body?.platform||"").toLowerCase(),query=String(body?.query||"").replace(/\s+/g," ").trim();
   const domains=socialSearchDomains(platform);
-  if(!domains.length||!freePlatformKey("https://"+domains[0]))return json({error:"Pencarian gambar untuk platform ini belum tersedia."},400);
+  const canonicalPlatform=platform==="all"?"all":canonicalPlatformId(platform);
+  if(!domains.length)return json({ok:false,error:"Platform pencarian gambar belum didukung."},400);
+  if(platform!=="all"&&!platformSupportsSearchMode(canonicalPlatform,"image")){
+    const name=PLATFORM_CATALOG_BY_ID.get(canonicalPlatform)?.name||platform;
+    return json({ok:false,error:name+" belum memiliki provider gambar terverifikasi untuk Cari Judul. Gunakan Tempel Tautan untuk pemeriksaan manual jika sumbernya publik."},400);
+  }
   if(query.length<2||query.length>120)return json({error:"Masukkan kata kunci antara 2 sampai 120 karakter."},400);
   if(socialRateLimited(request))return json({error:"Batas pencarian gambar gratis tercapai. Tunggu satu menit lalu coba lagi."},429);
   try{
     // Build result buckets from the full live catalogue. AIO/experimental platforms
     // must keep their real platform IDs instead of collapsing into the generic "aio" provider key.
     const imageSearchPlatforms=[...new Set(PLATFORM_CATALOG
-      .filter(item=>Array.isArray(item.mediaModes)&&item.mediaModes.some(mode=>mode==="image"||mode==="video"))
+      .filter(item=>platformSearchModes(item.id).includes("image"))
       .map(item=>canonicalPlatformId(item.id)))];
-    // Keep extra targeted queries bounded; the broad Bing query still checks all catalogue domains.
-    const targetedAllPlatforms=["pinterest","tiktok","instagram","facebook","x","reddit","threads","snackvideo","capcut","youtube","vimeo","soundcloud","snapchat","idnapp","linkedin","wechat","kakaotalk"]
-      .map(canonicalPlatformId).filter((key,index,array)=>imageSearchPlatforms.includes(key)&&array.indexOf(key)===index);
-    const canonicalPlatform=platform==="all"?"all":canonicalPlatformId(platform);
+    // Only query platforms with a provider-backed image route; AIO-only entries stay in link mode.
+    const targetedAllPlatforms=imageSearchPlatforms.filter((key,index,array)=>array.indexOf(key)===index);
     const fetchBing=async(searchTerm,scope,allowWeb=false,first=1)=>{
       const url=new URL("https://www.bing.com/images/search");
       url.searchParams.set("q",canonicalPublicSearchQuery(searchTerm));url.searchParams.set("form","HDRSC3");url.searchParams.set("count","50");url.searchParams.set("first",String(first));
@@ -2484,12 +2532,14 @@ async function socialImageSearch(request){
         return response.ok?parseBingSocialImageResults(await response.text(),scope,request.url,query,allowWeb):[];
       }catch{return []}
     };
-    const buckets=[...imageSearchPlatforms.map(key=>({platform:key,results:[]})),{platform:"web",results:[]}];
+    const buckets=imageSearchPlatforms.map(key=>({platform:key,results:[]}));
     if(platform==="all"){
       const general=await fetchBing(query,"all",true);
       for(const item of general){
-        const bucket=buckets.find(entry=>entry.platform===(item.platform||""));
-        if(bucket&&!bucket.results.some(existing=>existing.url===item.url))bucket.results.push(item);
+        const key=canonicalPlatformId(item.platform||"");
+        if(!platformSupportsSearchMode(key,"image"))continue;
+        const bucket=buckets.find(entry=>entry.platform===key);
+        if(bucket&&!bucket.results.some(existing=>existing.url===item.url))bucket.results.push({...item,platform:key});
       }
       for(let offset=0;offset<targetedAllPlatforms.length;offset+=3){
         const batch=targetedAllPlatforms.slice(offset,offset+3).filter(key=>(buckets.find(entry=>entry.platform===key)?.results.length||0)<6);
@@ -2514,16 +2564,17 @@ async function socialImageSearch(request){
       }
     }
     const results=[],seenImages=new Set(),platformCounts={};
-    const maxPerPlatform=platform==="all"?20:100;
+    const maxPerPlatform=platform==="all"?3:24;
+    const maxResults=24;
     if(platform==="all"){
-      for(let round=0;results.length<100;round++){
+      for(let round=0;results.length<maxResults;round++){
         let added=false;
         for(const bucket of buckets){
           const item=bucket.results[round];if(!item)continue;
           const key=item.platform||bucket.platform;
           if((platformCounts[key]||0)>=maxPerPlatform||seenImages.has(item.url))continue;
           seenImages.add(item.url);results.push(item);platformCounts[key]=(platformCounts[key]||0)+1;added=true;
-          if(results.length>=100)break;
+          if(results.length>=maxResults)break;
         }
         if(!added)break;
       }
@@ -2531,13 +2582,13 @@ async function socialImageSearch(request){
       for(const item of (buckets.find(entry=>entry.platform===canonicalPlatform)?.results||[])){
         if(seenImages.has(item.url))continue;
         seenImages.add(item.url);results.push(item);platformCounts[item.platform||platform]=(platformCounts[item.platform||platform]||0)+1;
-        if(results.length>=100)break;
+        if(results.length>=maxResults)break;
       }
     }
     let candidates=[];
     const distinctPlatforms=Object.keys(platformCounts).length;
     const distinctSocialPlatforms=Object.keys(platformCounts).filter(key=>key!=="web").length;
-    const needsFallback=results.length<50||(platform==="all"&&distinctSocialPlatforms<3);
+    const needsFallback=results.length<maxResults||(platform==="all"&&distinctSocialPlatforms<2);
     if(needsFallback){
       const allDomains=socialSearchDomains(platform),site=allDomains.map(domain=>"site:"+domain).join(" OR ");
       const searchTerm=platform==="all"?"("+site+") "+query:site+" "+query;
@@ -2548,7 +2599,8 @@ async function socialImageSearch(request){
       }));
       const seenPosts=new Set();
       for(const page of pages)candidates.push(...parseSocialImageSearchLinks(page,platform,seenPosts,50-candidates.length).filter(item=>publicSearchRelevance(query,item.title)>=0.12));
-      const posts=await Promise.all(candidates.slice(0,30).map(item=>resolveSocialImagePost(item.url,request.url,{timeoutMs:8000,providerTimeoutMs:9000}).then(post=>post?{item,post}:null).catch(()=>null)));
+      const eligibleCandidates=candidates.filter(item=>platformSupportsSearchMode(platformIdForUrl(item.url),"image"));
+      const posts=await Promise.all(eligibleCandidates.slice(0,platform==="all"?6:12).map(item=>resolveSocialImagePost(item.url,request.url,{timeoutMs:8000,providerTimeoutMs:9000}).then(post=>post?{item,post}:null).catch(()=>null)));
       for(const entry of posts.filter(Boolean)){
         for(const image of entry.post.images||[]){
           if(results.length>=100)break;
@@ -2561,10 +2613,26 @@ async function socialImageSearch(request){
         if(results.length>=100)break;
       }
     }
-    const grouped=results.slice(0,100).map(item=>({title:item.title||query,sourceUrl:item.sourceUrl,platform:item.platform||platform,verified:!!item.verified,images:[item]}));
+    const verificationCandidates=results.slice(0,maxResults).filter(item=>platformSupportsSearchMode(platformIdForUrl(item.sourceUrl),"image"));
+    const verifiedImages=[];
+    for(let offset=0;offset<verificationCandidates.length;offset+=4){
+      const batch=await Promise.all(verificationCandidates.slice(offset,offset+4).map(item=>verifySocialImageSearchResult(item,request.url)));
+      for(const item of batch)if(item)verifiedImages.push(item);
+    }
+    const grouped=verifiedImages.map(item=>({title:item.title||query,sourceUrl:item.sourceUrl,platform:item.platform||platform,verified:true,images:[item]}));
     const counts=grouped.reduce((out,item)=>{const key=socialImagePlatformKey(item.sourceUrl,item.platform||"other");out[key]=(out[key]||0)+1;return out},{});
-    return json({ok:true,platform,query,results:grouped,imageCount:grouped.length,verifiedCount:grouped.length,platformCounts:counts,unavailableCount:Math.max(0,candidates.length-grouped.length),searchProvider:"Bing Images + public social posts"});
+    return json({ok:true,platform,query,results:grouped,imageCount:grouped.length,verifiedCount:grouped.length,platformCounts:counts,searchablePlatformCount:imageSearchPlatforms.length,unsupportedCandidateCount:Math.max(0,results.length-verificationCandidates.length),failedImageChecks:Math.max(0,verificationCandidates.length-grouped.length),unavailableCount:Math.max(0,candidates.length-grouped.length),searchProvider:"Bing Images + provider-backed source filtering + live image MIME verification"});
   }catch(error){return json({error:"Pencarian gambar gagal dijangkau. "+String(error?.message||error).slice(0,120)},502)}
+}
+function imageSignatureMatches(bytes,mime){
+  const b=bytes instanceof Uint8Array?bytes:new Uint8Array(bytes||[]);
+  if(mime==="image/jpeg")return b.length>=3&&b[0]===0xff&&b[1]===0xd8&&b[2]===0xff;
+  if(mime==="image/png")return b.length>=8&&b[0]===0x89&&b[1]===0x50&&b[2]===0x4e&&b[3]===0x47&&b[4]===0x0d&&b[5]===0x0a&&b[6]===0x1a&&b[7]===0x0a;
+  if(mime==="image/gif")return b.length>=6&&String.fromCharCode(...b.slice(0,6)).match(/^GIF8[79]a$/)!==null;
+  if(mime==="image/webp")return b.length>=12&&String.fromCharCode(...b.slice(0,4))==="RIFF"&&String.fromCharCode(...b.slice(8,12))==="WEBP";
+  if(mime==="image/avif")return b.length>=12&&String.fromCharCode(...b.slice(4,8))==="ftyp"&&/^(?:avif|avis)$/.test(String.fromCharCode(...b.slice(8,12)));
+  if(mime==="image/bmp")return b.length>=2&&b[0]===0x42&&b[1]===0x4d;
+  return false;
 }
 async function socialImageFile(request){
   const u=new URL(request.url),raw=u.searchParams.get("url")||"",source=safePublicMediaUrl(raw),sourcePageRaw=u.searchParams.get("source")||"",sourcePage=safePublicMediaUrl(sourcePageRaw);
@@ -2593,6 +2661,21 @@ async function socialImageFile(request){
     if(!/^image\/(jpeg|png|webp|gif|avif|bmp)$/.test(mime)){await upstream.body.cancel().catch(()=>{});return json({error:"Sumber tidak mengembalikan file gambar yang didukung ("+(mime||"tipe tidak diketahui")+")."},415)}
     const maxBytes=25*1024*1024,length=Number(upstream.headers.get("content-length")||0);
     if(length>maxBytes){await upstream.body.cancel().catch(()=>{});return json({error:"Gambar melebihi batas 25 MB."},413)}
+    if(u.searchParams.get("probe")==="1"){
+      const reader=upstream.body.getReader(),parts=[];let total=0,done=false;
+      try{
+        while(total<16&&!done){
+          const part=await reader.read();done=!!part.done;
+          if(part.value){parts.push(part.value);total+=part.value.byteLength;}
+        }
+      }finally{await reader.cancel().catch(()=>{});}
+      const sample=new Uint8Array(Math.min(total,32));let offset=0;
+      for(const part of parts){const take=Math.min(part.byteLength,sample.length-offset);if(take<=0)break;sample.set(part.subarray(0,take),offset);offset+=take;}
+      const valid=imageSignatureMatches(sample,mime);
+      if(!valid)return json({valid:false,mimeType:mime,error:"Isi file tidak cocok dengan signature gambar yang didukung."},415);
+      const extension=({"image/jpeg":"jpg","image/png":"png","image/webp":"webp","image/gif":"gif","image/avif":"avif","image/bmp":"bmp"})[mime]||"";
+      return json({valid:true,mimeType:mime,extension,signature:mime.slice(6)},200);
+    }
     const reader=upstream.body.getReader();let transferred=0;
     const limited=new ReadableStream({
       async pull(controller){
