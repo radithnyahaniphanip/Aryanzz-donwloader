@@ -6,7 +6,7 @@ const searchUi=readFileSync(new URL("../public/v674.js",import.meta.url),"utf8")
 assert.ok(searchUi.includes("function searchDomainsForPlatform")&&searchUi.includes("platformCatalog.flatMap"),"Link/search filtering must retain the full live platform catalogue");
 assert.ok(searchUi.includes("platform.searchModes")&&searchUi.includes("catalogForMode"),"Title-search picker must filter platforms by verified media modes");
 assert.ok(searchUi.includes("[10,20,50,100]"),"Search result pagination must offer 10, 20, 50 and 100 results per page");
-assert.ok(searchUi.includes("data.fallbackUsed===true")&&searchUi.includes("item.platform===\"youtube\""),"The UI must allow explicitly marked YouTube fallback results for a selected social platform");
+assert.ok(searchUi.includes("data.fallbackUsed===true")&&searchUi.includes("item?.platform===\"youtube\""),"The UI must allow explicitly marked YouTube fallback results for a selected social platform");
 assert.ok(searchUi.includes("https://www.youtube.com/results?search_query=")&&searchUi.includes("Cari di YouTube"),"Empty social searches must offer YouTube as the external fallback");
 
 const originalFetch=globalThis.fetch;
@@ -17,8 +17,10 @@ const publicImagePostHtml='<html><head><title>Cat image post</title><meta proper
 
 globalThis.fetch=async(input,init={})=>{
   const url=new URL(typeof input==="string"?input:input instanceof URL?input.href:input.url);
-  if(url.hostname==="pipedapi.kavin.rocks"&&url.pathname==="/search")
-    return new Response(JSON.stringify([{videoId:"abcdefghijk",title:"Cat video official",thumbnail:"https://i.ytimg.com/vi/abcdefghijk/hqdefault.jpg",uploaderName:"Test Channel",duration:120}]),{status:200,headers:{"content-type":"application/json"}});
+  if(url.hostname==="pipedapi.kavin.rocks"&&url.pathname==="/search"){
+    const searchTitle=String(url.searchParams.get("q")||"Cat video").replace(/\\s+/g," ").trim().slice(0,120)+" official video";
+    return new Response(JSON.stringify([{videoId:"abcdefghijk",title:searchTitle,thumbnail:"https://i.ytimg.com/vi/abcdefghijk/hqdefault.jpg",uploaderName:"Test Channel",duration:120}]),{status:200,headers:{"content-type":"application/json"}});
+  }
   if(url.hostname==="pipedapi.kavin.rocks"&&url.pathname==="/streams/abcdefghijk")
     return new Response(JSON.stringify({title:"Cat video official",uploader:"Test Channel",duration:120,thumbnailUrl:"https://i.ytimg.com/vi/abcdefghijk/hqdefault.jpg",videoStreams:[{url:"https://pipedapi.kavin.rocks/media/cat.mp4",mimeType:"video/mp4",format:"mp4",quality:"720p",height:720,hasAudio:true}]}),{status:200,headers:{"content-type":"application/json"}});
   if(url.hostname==="pipedapi.kavin.rocks"&&url.pathname==="/media/cat.mp4")
