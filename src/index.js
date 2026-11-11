@@ -2496,11 +2496,12 @@ async function verifySocialImageSearchResult(item,requestUrl){
   try{preview=new URL(item.previewUrl,requestUrl)}catch{return null}
   if(preview.origin!==new URL(requestUrl).origin||preview.pathname!=="/api/social-image-file")return null;
   try{
+    preview.searchParams.set("probe","1");
     const response=await socialImageFile(new Request(preview.href));
-    const mime=String(response.headers.get("content-type")||"").split(";")[0].toLowerCase();
-    await response.body?.cancel().catch(()=>{});
-    if(!response.ok||!/^image\/(?:jpeg|png|webp|gif|avif|bmp)$/.test(mime))return null;
-    return {...item,platform:canonicalPlatformId(platformId),verified:true,mediaVerified:true,mimeType:mime};
+    const data=await response.json().catch(()=>({}));
+    const mime=String(data.mimeType||"").split(";")[0].toLowerCase();
+    if(!response.ok||data.valid!==true||!/^image\/(?:jpeg|png|webp|gif|avif|bmp)$/.test(mime))return null;
+    return {...item,platform:canonicalPlatformId(platformId),verified:true,mediaVerified:true,mimeType:mime,imageSignature:data.signature||null};
   }catch{return null}
 }
 async function socialImageSearch(request){
@@ -2623,6 +2624,16 @@ async function socialImageSearch(request){
     return json({ok:true,platform,query,results:grouped,imageCount:grouped.length,verifiedCount:grouped.length,platformCounts:counts,searchablePlatformCount:imageSearchPlatforms.length,unsupportedCandidateCount:Math.max(0,results.length-verificationCandidates.length),failedImageChecks:Math.max(0,verificationCandidates.length-grouped.length),unavailableCount:Math.max(0,candidates.length-grouped.length),searchProvider:"Bing Images + provider-backed source filtering + live image MIME verification"});
   }catch(error){return json({error:"Pencarian gambar gagal dijangkau. "+String(error?.message||error).slice(0,120)},502)}
 }
+function imageSignatureMatches(bytes,mime){
+  const b=bytes instanceof Uint8Array?bytes:new Uint8Array(bytes||[]);
+  if(mime==="image/jpeg")return b.length>=3&&b[0]===0xff&&b[1]===0xd8&&b[2]===0xff;
+  if(mime==="image/png")return b.length>=8&&b[0]===0x89&&b[1]===0x50&&b[2]===0x4e&&b[3]===0x47&&b[4]===0x0d&&b[5]===0x0a&&b[6]===0x1a&&b[7]===0x0a;
+  if(mime==="image/gif")return b.length>=6&&String.fromCharCode(...b.slice(0,6)).match(/^GIF8[79]a$/)!==null;
+  if(mime==="image/webp")return b.length>=12&&String.fromCharCode(...b.slice(0,4))==="RIFF"&&String.fromCharCode(...b.slice(8,12))==="WEBP";
+  if(mime==="image/avif")return b.length>=12&&String.fromCharCode(...b.slice(4,8))==="ftyp"&&/^(?:avif|avis)$/.test(String.fromCharCode(...b.slice(8,12)));
+  if(mime==="image/bmp")return b.length>=2&&b[0]===0x42&&b[1]===0x4d;
+  return false;
+}
 async function socialImageFile(request){
   const u=new URL(request.url),raw=u.searchParams.get("url")||"",source=safePublicMediaUrl(raw),sourcePageRaw=u.searchParams.get("source")||"",sourcePage=safePublicMediaUrl(sourcePageRaw);
   if(!source)return json({error:"Alamat gambar tidak valid atau tidak aman."},400);
@@ -2650,6 +2661,21 @@ async function socialImageFile(request){
     if(!/^image\/(jpeg|png|webp|gif|avif|bmp)$/.test(mime)){await upstream.body.cancel().catch(()=>{});return json({error:"Sumber tidak mengembalikan file gambar yang didukung ("+(mime||"tipe tidak diketahui")+")."},415)}
     const maxBytes=25*1024*1024,length=Number(upstream.headers.get("content-length")||0);
     if(length>maxBytes){await upstream.body.cancel().catch(()=>{});return json({error:"Gambar melebihi batas 25 MB."},413)}
+    if(u.searchParams.get("probe")==="1"){
+      const reader=upstream.body.getReader(),parts=[];let total=0,done=false;
+      try{
+        while(total<16&&!done){
+          const part=await reader.read();done=!!part.done;
+          if(part.value){parts.push(part.value);total+=part.value.byteLength;}
+        }
+      }finally{await reader.cancel().catch(()=>{});}
+      const sample=new Uint8Array(Math.min(total,32));let offset=0;
+      for(const part of parts){const take=Math.min(part.byteLength,sample.length-offset);if(take<=0)break;sample.set(part.subarray(0,take),offset);offset+=take;}
+      const valid=imageSignatureMatches(sample,mime);
+      if(!valid)return json({valid:false,mimeType:mime,error:"Isi file tidak cocok dengan signature gambar yang didukung."},415);
+      const extension=({"image/jpeg":"jpg","image/png":"png","image/webp":"webp","image/gif":"gif","image/avif":"avif","image/bmp":"bmp"})[mime]||"";
+      return json({valid:true,mimeType:mime,extension,signature:mime.slice(6)},200);
+    }
     const reader=upstream.body.getReader();let transferred=0;
     const limited=new ReadableStream({
       async pull(controller){
