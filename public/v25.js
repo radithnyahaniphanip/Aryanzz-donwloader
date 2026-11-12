@@ -242,7 +242,7 @@
     const rawModel=ua.match(/Android[^;)]*;\s*([^;)]+?)(?:\s+Build\/|\))/i)?.[1]?.trim()||"";
     const model=rawModel.length>=3&&!/^(?:Linux|Android|Mobile|wv)$/i.test(rawModel)?rawModel:"Tidak dibagikan browser";
     const kind=/iPad|Tablet/i.test(ua)||(/Android/i.test(ua)&&!/Mobile/i.test(ua))?"Tablet":/Android|iPhone|iPod/i.test(ua)?"Ponsel":"Komputer";
-    return {os,browser:fullBrowser,model,kind,label:[model!=="Tidak dibagikan browser"?model:kind,os.split(" ")[0],browser].join(" · ")};
+    return {os,browser:fullBrowser,model,kind,label:[model!=="Tidak dibagikan browser"?model:kind,os.split(" ")[0],browser].join(" / ")};
   }
   function deviceLabel(){return browserDeviceInfo().label;}
   function writeDeviceSpec(key,value){
@@ -265,13 +265,13 @@
     writeDeviceSpec("cpu",threads?threads+" thread logis (perkiraan)":"Tidak dibagikan browser");
     writeDeviceSpec("ram",ram?ram+" GB (perkiraan)":"Tidak dibagikan browser");
     writeDeviceSpec("network",connection?.effectiveType?String(connection.effectiveType).toUpperCase()+" (estimasi)":"Tidak dibagikan browser");
-    writeDeviceSpec("locale",(navigator.language||"Tidak diketahui")+" · "+timezone);
+    writeDeviceSpec("locale",(navigator.language||"Tidak diketahui")+" / "+timezone);
     writeDeviceSpec("battery","Tidak dibagikan browser");
     if(typeof navigator.getBattery==="function"){
       navigator.getBattery().then(battery=>{
         if(!battery)return;
         const node=document.querySelector('#deviceSpecGrid [data-device-spec="battery"]');
-        if(node)node.textContent=Math.round(Number(battery.level)*100)+"%"+(battery.charging?" · mengisi daya":"");
+        if(node)node.textContent=Math.round(Number(battery.level)*100)+"%"+(battery.charging?" (mengisi daya)":"");
       }).catch(()=>{});
     }
     if(navigator.userAgentData?.getHighEntropyValues){
