@@ -46,7 +46,7 @@ const PLATFORM_GUIDES={
  vimeo:{link:"Tempel tautan video Vimeo…",search:"Cari judul video Vimeo…",videoHelp:"Vimeo: periksa video publik yang tidak dilindungi kata sandi.",imageHelp:"Vimeo: gambar hanya tersedia jika halaman publik mengekspos media gambar asli."},
  soundcloud:{link:"Tempel tautan lagu atau audio SoundCloud…",search:"Cari judul lagu SoundCloud…",videoHelp:"SoundCloud adalah platform audio; hasilnya tidak akan dipaksakan menjadi MP4.",imageHelp:"SoundCloud: pencarian gambar tidak tersedia untuk konten audio."}
 };
-const setMode=v=>{const link=v==="link";if(link&&selected==="all")setPlatform("youtube");const entry=platformCatalog.find(platform=>platform.id===selected);const modes=entry?.inputModes||["link","search"];const canLink=modes.includes("link"),canSearch=modes.includes("search");if(!canLink&&canSearch)v="title";if(!canSearch&&canLink)v="link";activeMode=v;const useLink=v==="link";if(x)x.hidden=!useLink;if(y)y.hidden=useLink;const allButton=picker?.querySelector('[data-platform="all"]');if(allButton)allButton.hidden=useLink;if(a){a.hidden=!canLink;a.disabled=!canLink;a.classList.toggle("active",useLink);a.setAttribute("aria-selected",String(useLink))}if(b){b.hidden=!canSearch;b.disabled=!canSearch;b.classList.toggle("active",!useLink);b.setAttribute("aria-selected",String(!useLink))}};
+const setMode=v=>{const link=v==="link";if(link&&selected==="all")setPlatform("youtube");const entry=platformCatalog.find(platform=>platform.id===selected);const modes=entry?.inputModes||["link","search"];const canLink=modes.includes("link"),canSearch=modes.includes("search");if(!canLink&&canSearch)v="title";if(!canSearch&&canLink)v="link";activeMode=v;const useLink=v==="link";if(x)x.hidden=!useLink;if(y)y.hidden=useLink;const workCard=document.querySelector("#home .v674-download");if(workCard)workCard.dataset.mode=useLink?"link":"title";const workspaceHeading=document.getElementById("aryWorkspaceHeadline");if(workspaceHeading)workspaceHeading.textContent=useLink?"Tempel tautan, mulai berkarya":"Cari media dari judul";const allButton=picker?.querySelector('[data-platform="all"]');if(allButton)allButton.hidden=useLink;if(a){a.hidden=!canLink;a.disabled=!canLink;a.classList.toggle("active",useLink);a.setAttribute("aria-selected",String(useLink))}if(b){b.hidden=!canSearch;b.disabled=!canSearch;b.classList.toggle("active",!useLink);b.setAttribute("aria-selected",String(!useLink))}};
 a?.addEventListener("click",()=>{setMode("link");renderPlatformPage(1)});
 b?.addEventListener("click",()=>{
  setMode("title");
@@ -146,8 +146,8 @@ function renderPlatformPage(nextPage){
  picker.replaceChildren();
  if(allPlatformButton){
   const supportedCount=platformCatalog.filter(platform=>(platform.searchModes||[]).includes(mode)&&!platform.aliasOf).length;
-  allPlatformButton.querySelector("span:last-child").textContent=activeMode==="link"?"Semua 200":"Semua "+(mode==="image"?"gambar":"video")+" · "+supportedCount;
-  allPlatformButton.title=activeMode==="link"?"Semua 200 pilihan katalog":"Cari di "+supportedCount+" platform dengan provider "+(mode==="image"?"gambar":"video")+" terverifikasi";
+  allPlatformButton.querySelector("span:last-child").textContent=activeMode==="link"?"Semua platform":"Semua "+(mode==="image"?"gambar":"video")+" · "+supportedCount;
+  allPlatformButton.title=activeMode==="link"?"Katalog 200 sumber tautan":"Cari di "+supportedCount+" platform dengan provider "+(mode==="image"?"gambar":"video")+" terverifikasi";
   allPlatformButton.hidden=!!query||activeMode==="link"||supportedCount===0;
   if(!query)picker.append(allPlatformButton);
  }
