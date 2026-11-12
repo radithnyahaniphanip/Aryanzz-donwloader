@@ -49,6 +49,19 @@ const platformInfo=async url=>{
 };
 
 try{
+  // This endpoint must succeed without calling the free media provider at all.
+  const directEndpoint=new URL(base+"/api/threads/direct");
+  directEndpoint.searchParams.set("url","https://www.threads.com/share/_hmjQ-mLv");
+  const directResponse=await worker.fetch(new Request(directEndpoint),{});
+  const directData=await directResponse.json();
+  assert.equal(directResponse.status,200,JSON.stringify(directData));
+  assert.ok(directData.formats?.some(item=>item.mode==="video"&&item.downloadUrl),"Independent Threads route must provide MP4");
+  assert.match(directData.providerName,/Threads direct public media/);
+  assert.equal(directData.canonicalUrl,videoPost);
+  const forbidden=new URL(base+"/api/threads/direct");
+  forbidden.searchParams.set("url","https://www.threads.com.attacker.invalid/share/_hmjQ-mLv");
+  const refused=await worker.fetch(new Request(forbidden),{});
+  assert.equal(refused.status,400,"Direct endpoint must reject host lookalikes");
   const video=await platformInfo("https://www.threads.com/share/_hmjQ-mLv");
   assert.equal(video.response.status,200,JSON.stringify(video.data));
   assert.ok(video.data.formats?.some(item=>item.mode==="video"&&item.downloadUrl),JSON.stringify(video.data));
