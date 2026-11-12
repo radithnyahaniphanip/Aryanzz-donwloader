@@ -160,6 +160,7 @@ html[data-ary-home-motion="off"] #home>.v89-welcome p,
 html[data-ary-home-motion="off"] #home .v89-welcome-mark svg,
 html[data-ary-home-motion="off"] #home .ary-brand-symbol{animation:none!important;transform:none!important;opacity:1!important}
 
+#home .v674-download #platformPicker .v736-platform[hidden]{display:none!important}
 /* V1 regression repair: the previous release hid the link-platform catalogue.
    Tool text must wrap between words, never split a word or category label. */
 #home .v674-download[data-mode="link"] #platformPicker .v736-platform[hidden],
