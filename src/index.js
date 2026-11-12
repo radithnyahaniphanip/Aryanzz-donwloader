@@ -531,7 +531,8 @@ async function freePublicMediaInfo(rawUrl,requestUrl,options={}){
   let primaryError=resolutionError;
   try{
     let response=null,data={},attempts=fast?1:(key==="instagram"?2:1);
-    const primaryTargets=key==="tiktok"?providerUrls.slice(0,fast?1:4):[canonicalUrl];
+    const primaryTargets=key==="tiktok"?providerUrls.slice(0,fast?1:4)
+      :(key==="threads"||key==="twitter")?[...new Set([canonicalUrl,rawUrl])].slice(0,2):[canonicalUrl];
     const primaryResults=await Promise.allSettled(primaryTargets.map(async targetUrl=>{
       let candidateResponse=null,candidateData={};
       for(let attempt=0;attempt<attempts;attempt++){
@@ -548,7 +549,10 @@ async function freePublicMediaInfo(rawUrl,requestUrl,options={}){
       return {response:candidateResponse,data:candidateData,targetUrl};
     }));
     const fulfilled=primaryResults.filter(item=>item.status==="fulfilled").map(item=>item.value);
-    const chosen=fulfilled.find(item=>item.response?.ok||item.response&&item.response.status<500)||fulfilled[0];
+    // A 200 OK with no playable media is not a successful extraction. Prefer the
+    // candidate that actually contains a normalized media format.
+    const chosen=fulfilled.find(item=>item.response?.ok&&item.data?.success!==false&&freeProviderMediaInfo(item.data,canonicalUrl,requestUrl))
+      ||fulfilled.find(item=>item.response?.ok)||fulfilled[0];
     if(chosen){response=chosen.response;data=chosen.data;}
     else if(primaryResults.length)primaryError=String(primaryResults[0].reason?.message||primaryResults[0].reason||"Provider utama gagal").slice(0,180);
     if(response?.ok&&data?.success!==false){
