@@ -1389,9 +1389,8 @@ async function searchSocial(request){
         return !!itemPlatform&&canonicalPlatformId(itemPlatform)===canonicalPlatform&&platformSupportsSearchMode(itemPlatform,desiredMode);
       });
     const relevantCandidates=platformScopedCandidates.filter(item=>{
-      const score=publicSearchRelevance(query,item.title+" "+item.snippet);
-      // YouTube titles often omit generic words such as "lagu", "official", or "DJ"; preserve strong title matches.
-      return score>=0.25||(item.platform==="youtube"&&score>=0.16);
+      const score=strictTitleIntentScore(query,item.title,item.snippet||"");
+      return score>=0.7;
     });
     const orderedCandidates=platform==="all"?(()=>{const buckets=new Map();for(const item of relevantCandidates){const key=canonicalPlatformId(platformIdForUrl(item.url)||"other");if(!buckets.has(key))buckets.set(key,[]);buckets.get(key).push(item)}const out=[];for(let round=0;round<12;round++)for(const list of buckets.values())if(list[round])out.push(list[round]);return out})():relevantCandidates;
     // Verify the first candidates for direct download availability, but do not discard valid public title results.
@@ -1416,7 +1415,7 @@ async function searchSocial(request){
         if(!youtubeSeen.has(item.url)){youtubeSeen.add(item.url);youtubeCandidates.push({...item,platform:"youtube",snippet:item.snippet||item.channel||"YouTube video",searchProvider:item.searchProvider||item.provider||"YouTube public search"});}
       }
       for(const item of directYoutube)if(!youtubeSeen.has(item.url)){youtubeSeen.add(item.url);youtubeCandidates.push({...item,platform:"youtube",snippet:item.snippet||item.channel||"YouTube video",searchProvider:item.searchProvider||"YouTube public search"});}
-      const relevantYoutube=youtubeCandidates.filter(item=>publicSearchRelevance(query,item.title+" "+item.snippet)>=0.16);
+      const relevantYoutube=youtubeCandidates.filter(item=>strictTitleIntentScore(query,item.title,item.snippet||"")>=0.7);
       youtubeFallbackCandidates=relevantYoutube.slice(0,20);
       youtubeFallbackCandidateCount=relevantYoutube.length;
       // Penelusuran judul menampilkan kandidat publik terlebih dahulu; verifikasi media pada pemilihan hasil.
@@ -2571,6 +2570,19 @@ function publicSearchRelevance(query,text){
   if(/green\s*screen|greenscreen|layar\s*hijau/i.test(String(query||""))&&/green\s*screen|greenscreen|chroma\s*key|layar\s*hijau|green\s*background/i.test(String(text||"")))score=Math.max(score,0.42);
   if(/meme\s+kucing|kucing\s+meme|cat\s+meme/i.test(String(query||""))&&/cat|kucing|kitten|meow/i.test(String(text||"")))score=Math.max(score,0.38);
   return score;
+}
+function strictTitleIntentScore(query,title,snippet=""){
+  const stop=new Set(["dj","remix","official","video","audio","music","lagu","song","full","hd","viral","the","and","for","with","from"]);
+  const normalize=value=>String(value||"").toLowerCase().normalize("NFD").replace(/[\\u0300-\\u036f]/g,"").replace(/[^a-z0-9]+/g," ").trim();
+  const tokens=[...new Set(normalize(query).split(" ").filter(token=>token.length>1&&!stop.has(token)))];
+  if(!tokens.length)return publicSearchRelevance(query,title+" "+snippet);
+  const titleWords=new Set(normalize(title).split(" "));
+  const snippetWords=new Set(normalize(snippet).split(" "));
+  const matched=tokens.filter(token=>titleWords.has(token)||snippetWords.has(token));
+  // Never classify a different track as an exact match based on only one generic keyword.
+  if(matched.length!==tokens.length)return 0;
+  const titleMatches=tokens.filter(token=>titleWords.has(token)).length;
+  return Math.min(1,0.7+0.3*titleMatches/tokens.length);
 }
 function parseBingSocialImageResults(html,platform,requestUrl,query,allowWeb=false){
   const results=[],seen=new Set(),domains=socialSearchDomains(platform);
