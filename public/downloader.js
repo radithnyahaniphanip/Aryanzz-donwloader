@@ -1353,7 +1353,12 @@ function socialNetworkPlan(selected=0){
       const catalogPlatform=(window.ARYANZZ_PLATFORM_CATALOG||[]).find(platform=>platform.id===selectedPlatform);
       const shouldTryImageExtraction=isTikTokPhotoPost||isTikTokShortLink||isYouTubePhotoPost||isPhotoRoute||(!isYouTube&&!isExplicitVideoRoute&&selectedPlatform!=="soundcloud"&&!isTikTokPlatform&&catalogPlatform?.mediaModes?.includes("image"));
       const isSocialImagePostRoute=/\/(?:p|post|posts|status|pin|photo|photos|image|images|album|gallery|share)\//i.test(url.pathname);
-      const imageCheckTimeout=fast?((isTikTokPhotoPost||isTikTokShortLink)?11000:8500):((isTikTokPhotoPost||isTikTokShortLink)?30000:(isYouTubePhotoPost||isPhotoRoute||isSocialImagePostRoute)?14000:10000);
+      const slowSocialSource=selectedPlatform==="threads"||selectedPlatform==="x";
+      // Share-link resolution and image extraction may require multiple upstream requests.
+      // Do not cancel those requests earlier than the backend's own fallback budget.
+      const imageCheckTimeout=slowSocialSource?(fast?25000:38000)
+        :fast?((isTikTokPhotoPost||isTikTokShortLink)?16000:13000)
+        :((isTikTokPhotoPost||isTikTokShortLink)?34000:(isYouTubePhotoPost||isPhotoRoute||isSocialImagePostRoute)?20000:16000);
       const imageExtractionPromise=shouldTryImageExtraction
         ?(async()=>{
           const endpoint="/api/image/extract?url="+encodeURIComponent(url.href);
@@ -1379,7 +1384,7 @@ function socialNetworkPlan(selected=0){
           ?await browserHybridYoutubeInfo(url.href,fast?12500:25000)
           :isTikTokPhotoPost
             ?{ok:true,title:"TikTok Photo Mode",filename:"TikTok Photo Mode",type:"image",formats:[],extractor:"TikTok Photo Mode"}
-            :await postJson("/api/platform/info",{url:url.href,expectedPlatform:selectedPlatform,fast},fast?11500:27000);
+            :await postJson("/api/platform/info",{url:url.href,expectedPlatform:selectedPlatform,fast},slowSocialSource?(fast?28000:41000):(fast?20000:34000));
       }catch(error){
         if(!shouldTryImageExtraction)throw error;
         info={ok:false,error:String(error?.message||error),title:"",formats:[],type:"image"};
