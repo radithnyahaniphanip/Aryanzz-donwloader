@@ -12,6 +12,7 @@ assert.ok(searchUi.includes("Periksa tautan & unduh"),"Public title results with
 assert.ok(searchUi.includes("Mencari judul satu per satu di semua platform video yang didukung"),"All-platform mode must explain that each eligible platform is searched separately");
 
 const originalFetch=globalThis.fetch;
+const publicSearchRequests=[];
 const imageSearchHtml='<a class="iusc" m=\'{"purl":"https://www.instagram.com/p/123/","murl":"https://cdn.example/cat.jpg","desc":"cat photo","w":640,"h":480}\'></a>';
 const videoSearchHtml='<a class="result__a" href="https://bsky.app/profile/demo/post/123">Cat video</a><div class="result__snippet">Cat video from a public post</div>';
 const publicPostHtml='<html><head><title>Cat video post</title><meta property="og:title" content="Cat video post"><meta property="og:image" content="https://cdn.example/cat.jpg"><meta property="og:video" content="https://cdn.example/clip.mp4"><meta property="og:video:type" content="video/mp4"><meta property="og:video:width" content="1920"><meta property="og:video:height" content="1080"></head><body></body></html>';
@@ -19,6 +20,7 @@ const publicImagePostHtml='<html><head><title>Cat image post</title><meta proper
 
 globalThis.fetch=async(input,init={})=>{
   const url=new URL(typeof input==="string"?input:input instanceof URL?input.href:input.url);
+  if(["html.duckduckgo.com","www.bing.com","www.google.com"].includes(url.hostname)&&["/html/","/search"].includes(url.pathname))publicSearchRequests.push({host:url.hostname,query:url.searchParams.get("q")||""});
   if(url.hostname==="pipedapi.kavin.rocks"&&url.pathname==="/search"){
     const searchQuery=String(url.searchParams.get("q")||"Cat video").replace(/\\s+/g," ").trim();
     if(/tabola bale/i.test(searchQuery))return new Response(JSON.stringify([]),{status:200,headers:{"content-type":"application/json"}});
@@ -148,6 +150,7 @@ try{
   assert.match(videoData.error,/provider video terverifikasi/i);
   console.log("✔ Selected AIO video title search is blocked before searching");
 
+  publicSearchRequests.length=0;
   const allVideoSearch=await worker.fetch(new Request("https://aryanzz.example/api/social/search",{
     method:"POST",
     headers:{"content-type":"application/json","cf-connecting-ip":"198.51.100.37"},
@@ -161,6 +164,19 @@ try{
   assert.ok(allVideoData.results.some(item=>item.platform==="instagram"&&item.searchOnly===true),"All-platform search must keep public Instagram title results even when the downloader cannot verify them");
   assert.ok(allVideoData.results.some(item=>item.platform==="tiktok"&&item.searchOnly===true),"All-platform search must keep public TikTok title results even when the downloader cannot verify them");
   assert.ok(allVideoData.unsupportedCandidateCount>0,"AIO-only results must be counted as excluded rather than shown");
+  const ddgQueries=publicSearchRequests.filter(item=>item.host==="html.duckduckgo.com");
+  const bingQueries=publicSearchRequests.filter(item=>item.host==="www.bing.com");
+  const googleQueries=publicSearchRequests.filter(item=>item.host==="www.google.com");
+  assert.equal(allVideoData.platformSearchTargetCount,15,"All-platform video search must cover each of the 15 eligible providers");
+  assert.equal(ddgQueries.length,15,"All-platform mode must issue one primary-domain query per supported video provider");
+  assert.ok(ddgQueries.some(item=>item.query.startsWith("site:youtube.com cat")),"YouTube must be searched as one independent primary site");
+  assert.ok(ddgQueries.some(item=>item.query.startsWith("site:tiktok.com cat")),"TikTok must be searched separately from YouTube");
+  assert.ok(ddgQueries.some(item=>item.query.startsWith("site:instagram.com cat")),"Instagram must be searched separately from YouTube");
+  assert.ok(bingQueries.length<=6&&googleQueries.length<=4,"Secondary search engines must stay bounded to avoid Worker subrequest exhaustion");
+  assert.ok(publicSearchRequests.length<=25,"All-platform title search must not flood public search providers");
+  assert.equal(allVideoData.verifiedChecks,0,"The title-search endpoint must defer expensive stream validation until selection");
+  console.log("✔ All 15 eligible video providers receive separate, bounded title-search queries");
+
   console.log("✔ All-platform video search keeps real public platform candidates and labels unverified streams");
 
   const expansionSearch=await worker.fetch(new Request("https://aryanzz.example/api/social/search",{
