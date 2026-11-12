@@ -1677,6 +1677,7 @@ async function fetchSocialPostHtml(pageUrl,timeoutMs=18000){
   let current=safePublicMediaUrl(pageUrl);if(!current)throw new Error("Tautan postingan harus HTTPS dan tidak boleh mengarah ke jaringan lokal.");
   for(let hop=0;hop<6;hop++){
     const isTikTokHost=current.hostname==="tiktok.com"||current.hostname.endsWith(".tiktok.com");
+    const isThreadsHost=platformForHost(current.hostname)?.id==="threads";
     const baseHeaders={
       accept:"text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
       "accept-language":"en-US,en;q=0.9,id;q=0.8"
@@ -1684,11 +1685,14 @@ async function fetchSocialPostHtml(pageUrl,timeoutMs=18000){
     const headerVariants=isTikTokHost?[
       {...baseHeaders,"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",referer:"https://www.tiktok.com/"},
       {...baseHeaders,"user-agent":"Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36",referer:"https://www.tiktok.com/",origin:"https://www.tiktok.com"}
+    ]:isThreadsHost?[
+      {...baseHeaders,"user-agent":"facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)",referer:"https://www.threads.com/"},
+      {...baseHeaders,"user-agent":"Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 Chrome/130.0.0.0 Mobile Safari/537.36"}
     ]:[{...baseHeaders,"user-agent":"Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36"}];
     let response=null,lastResponseError="";
     for(const requestHeaders of headerVariants){
       response=await fetchSocialHeaders(current.href,{headers:requestHeaders,redirect:"manual",cache:"no-store"},timeoutMs);
-      if(isTikTokHost&&[403,429,500,502,503,504].includes(response.status)&&headerVariants.length>1){
+      if((isTikTokHost||isThreadsHost)&&[403,429,500,502,503,504].includes(response.status)&&headerVariants.length>1){
         lastResponseError="HTTP "+response.status;
         await response.body?.cancel().catch(()=>{});
         continue;
@@ -1702,6 +1706,7 @@ async function fetchSocialPostHtml(pageUrl,timeoutMs=18000){
       if(redirectUrl.protocol==="http:"&&isPlatformLink(redirectUrl.href))redirectUrl.protocol="https:";
       const next=safePublicMediaUrl(redirectUrl.href);
       if(!next)throw new Error("Pengalihan postingan menuju alamat yang tidak aman atau HTTPS tidak tersedia.");
+      if(isThreadsHost&&platformForHost(next.hostname)?.id!=="threads")throw new Error("Tautan Threads mengalihkan ke domain di luar Threads.");
       current=next;continue;
     }
     if(!response.ok)throw new Error("Halaman sumber menjawab HTTP "+response.status+".");
