@@ -362,31 +362,35 @@
       renderLocationMap(saved);
       if(status)status.textContent="Peta lokasi terakhir ditampilkan dari penyimpanan browser.";
     });
+    let locationBusy=false;
     locate?.addEventListener("click",()=>{
-      if(!navigator.geolocation){
-        if(status)status.textContent="Browser tidak mendukung geolokasi.";return;
-      }
-      if(status)status.textContent="Menunggu izin lokasi dari browser…";
-      if(locate)locate.disabled=true;
-      navigator.geolocation.getCurrentPosition(pos=>{
-        if(locate)locate.disabled=false;
-        const item={latitude:Number(pos.coords.latitude),longitude:Number(pos.coords.longitude),
-          accuracy:Number(pos.coords.accuracy),at:Date.now()};
-        if(!validSavedDeviceLocation(item)){
-          if(status)status.textContent="Koordinat tidak valid. Coba pindai lagi.";return;
-        }
+      if(locationBusy)return;
+      if(!navigator.geolocation){if(status)status.textContent="Browser tidak mendukung geolokasi.";return;}
+      locationBusy=true;
+      if(locate){locate.disabled=true;locate.textContent="Mencari lokasi…";}
+      if(status)status.textContent="Meminta izin lokasi dan menyiapkan peta…";
+      const finish=()=>{locationBusy=false;if(locate){locate.disabled=false;locate.textContent="Pindai lokasi";}};
+      const accept=pos=>{
+        const item={latitude:Number(pos.coords.latitude),longitude:Number(pos.coords.longitude),accuracy:Number(pos.coords.accuracy),at:Date.now()};
+        if(!validSavedDeviceLocation(item)){finish();if(status)status.textContent="Koordinat tidak valid.";return;}
         const stored=safeSet(LOCATION_KEY,JSON.stringify(item));
         renderLocationMap(item);
-        if(status)status.textContent=(stored?"Lokasi berhasil dipindai dan tersimpan di browser ini. ":"Lokasi berhasil dipindai tetapi belum tersimpan. ")
-          +"Akurasi sekitar ±"+Math.round(Math.max(0,item.accuracy||0))+" meter.";
+        if(status)status.textContent="Peta berhasil ditampilkan. Akurasi sekitar ±"+Math.round(Math.max(0,item.accuracy||0))+" meter.";
         if(showSaved)showSaved.hidden=!stored;
         if(remove)remove.hidden=!stored;
-        toast("Lokasi ditampilkan langsung di ARYANZZ.");
-      },err=>{
-        if(locate)locate.disabled=false;
-        if(status)status.textContent=err.code===1?"Izin lokasi ditolak. Periksa izin lokasi untuk situs ini di Chrome.":
-          err.code===3?"Pindai lokasi melewati batas waktu. Coba lagi.":"Lokasi tidak tersedia. Periksa GPS dan jaringan.";
-      },{enableHighAccuracy:true,timeout:18000,maximumAge:0});
+        finish();
+      };
+      const fail=err=>{
+        finish();
+        if(status)status.textContent=err.code===1?"Izin lokasi ditolak. Aktifkan izin lokasi untuk situs ini di Chrome.":err.code===3?"GPS belum merespons. Pastikan layanan lokasi HP aktif, lalu coba lagi.":"Lokasi belum tersedia. Periksa pengaturan lokasi perangkat.";
+      };
+      // Fast cached/coarse fix first; high accuracy only if the initial GPS request times out.
+      navigator.geolocation.getCurrentPosition(accept,err=>{
+        if(err.code===3){
+          if(status)status.textContent="GPS membutuhkan waktu lebih lama. Mencoba akurasi tinggi…";
+          navigator.geolocation.getCurrentPosition(accept,fail,{enableHighAccuracy:true,timeout:22000,maximumAge:60000});
+        }else fail(err);
+      },{enableHighAccuracy:false,timeout:12000,maximumAge:120000});
     });
     remove?.addEventListener("click",()=>{
       try{localStorage.removeItem(LOCATION_KEY);}catch{}
