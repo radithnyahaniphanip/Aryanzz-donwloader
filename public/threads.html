@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#10172c">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <title>Threads Direct | ARYANZZ V1</title>
+  <meta name="description" content="Jalur alternatif ARYANZZ untuk mengunduh video dan gambar Threads publik langsung dari tautan.">
+  <link rel="stylesheet" href="/threads-direct.css">
+  <script src="/threads-direct.js" defer></script>
+</head>
+<body>
+  <main class="shell">
+    <nav class="topnav"><a href="/" aria-label="Kembali ke ARYANZZ">← ARYANZZ V1</a><span class="version">THREADS DIRECT</span></nav>
+    <section class="hero">
+      <span class="eyebrow">JALUR ALTERNATIF · THREADS</span>
+      <h1>Unduh video &amp; foto Threads</h1>
+      <p>Pemeriksaan publik langsung dari postingan Threads, terpisah dari mesin Tempel Tautan utama ARYANZZ.</p>
+      <form id="threadsForm" novalidate>
+        <label for="threadsInput">Tempel tautan Threads</label>
+        <div class="form-row"><input id="threadsInput" type="url" inputmode="url" autocomplete="url" placeholder="https://www.threads.com/share/..." required><button id="threadsCheck" type="submit">Periksa</button></div>
+      </form>
+      <p id="threadsStatus" class="status" aria-live="polite">Tempel tautan Threads publik untuk memulai.</p>
+      <a id="sourceLink" class="source-link" target="_blank" rel="noopener noreferrer" hidden>Buka postingan sumber ↗</a>
+    </section>
+    <section id="videosSection" class="results" hidden><div class="result-head"><h2>Video / audio tersedia</h2><small>Pratinjau &amp; unduh file media</small></div><div id="videosGrid" class="videos-grid"></div></section>
+    <section id="imagesSection" class="results" hidden><div class="result-head"><h2>Foto tersedia</h2><small>Hasil dalam grid</small></div><div id="imagesGrid" class="images-grid"></div></section>
+    <p class="footnote">Konten privat, memerlukan login, atau tidak menyediakan file publik mungkin tidak dapat diunduh. URL video/foto diverifikasi melalui proxy ARYANZZ; tidak ada MP4 palsu.</p>
+  </main>
+</body>
+</html>
