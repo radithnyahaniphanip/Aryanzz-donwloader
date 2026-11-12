@@ -1353,7 +1353,8 @@ function socialNetworkPlan(selected=0){
       const catalogPlatform=(window.ARYANZZ_PLATFORM_CATALOG||[]).find(platform=>platform.id===selectedPlatform);
       const shouldTryImageExtraction=isTikTokPhotoPost||isTikTokShortLink||isYouTubePhotoPost||isPhotoRoute||(!isYouTube&&!isExplicitVideoRoute&&selectedPlatform!=="soundcloud"&&!isTikTokPlatform&&catalogPlatform?.mediaModes?.includes("image"));
       const isSocialImagePostRoute=/\/(?:p|post|posts|status|pin|photo|photos|image|images|album|gallery|share)\//i.test(url.pathname);
-      const slowSocialSource=selectedPlatform==="threads"||selectedPlatform==="x";
+      const isThreadsPlatform=selectedPlatform==="threads";
+      const slowSocialSource=isThreadsPlatform||selectedPlatform==="x";
       // Share-link resolution and image extraction may require multiple upstream requests.
       // Do not cancel those requests earlier than the backend's own fallback budget.
       const imageCheckTimeout=slowSocialSource?(fast?25000:38000)
@@ -1384,14 +1385,15 @@ function socialNetworkPlan(selected=0){
           ?await browserHybridYoutubeInfo(url.href,fast?12500:25000)
           :isTikTokPhotoPost
             ?{ok:true,title:"TikTok Photo Mode",filename:"TikTok Photo Mode",type:"image",formats:[],extractor:"TikTok Photo Mode"}
-            :await postJson("/api/platform/info",{url:url.href,expectedPlatform:selectedPlatform,fast},slowSocialSource?(fast?28000:41000):(fast?20000:34000));
+            :await postJson("/api/platform/info",{url:url.href,expectedPlatform:selectedPlatform,fast:fast&&!isThreadsPlatform},isThreadsPlatform?65000:slowSocialSource?(fast?28000:41000):(fast?20000:34000));
       }catch(error){
         if(!shouldTryImageExtraction)throw error;
         info={ok:false,error:String(error?.message||error),title:"",formats:[],type:"image"};
       }
       if(runId!==analysisRunId)return;
       const hasVideoFormat=(info.formats||[]).some(item=>item?.mode==="video"||item?.type==="video"||/^video\//i.test(String(item?.mimeType||item?.mime_type||""))||["mp4","m4v","webm","mov","avi","3gp"].includes(String(item?.ext||"").toLowerCase()));
-      const imageNeedsWait=shouldTryImageExtraction&&(!hasVideoFormat||isTikTokPhotoPost||isYouTubePhotoPost||isPhotoRoute||isSocialImagePostRoute);
+      // If Threads has an MP4, do not keep the result screen blocked on an unrelated photo request.
+      const imageNeedsWait=shouldTryImageExtraction&&(!hasVideoFormat||isTikTokPhotoPost||isYouTubePhotoPost||isPhotoRoute||(!isThreadsPlatform&&isSocialImagePostRoute));
       const imageResult=imageNeedsWait?await imageExtractionPromise:null;
       if(runId!==analysisRunId)return;
       const imageData=imageResult?.data||{};
