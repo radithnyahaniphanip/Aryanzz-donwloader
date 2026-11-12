@@ -49,6 +49,7 @@ jobs:
           node --check tests/live-release-smoke.mjs
           node --check tests/live-platform-matrix.mjs
           node --check tests/live-tiktok-user-link.mjs
+          node --check tests/live-threads-user-links.mjs
           node --check tests/live-tiktok-photo-diagnostics.mjs
           node --check tests/tiktok-native-fallback.mjs
           node --check tests/live-instagram-image-link.mjs
@@ -241,6 +242,13 @@ jobs:
         env:
           WORKER_URL: https://aryanzz-donwloader.aryanz.workers.dev
         run: node tests/live-provider-fallbacks.mjs
+      - name: Diagnose the two user-supplied Threads share links (live public media)
+        if: success()
+        continue-on-error: true
+        timeout-minutes: 4
+        env:
+          WORKER_URL: https://aryanzz-donwloader.aryanz.workers.dev
+        run: node tests/live-threads-user-links.mjs
       - name: Optional manual diagnostic matrix for the 20 dedicated provider choices
         if: success() && (github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && contains(github.event.head_commit.message, 'RUN FULL PLATFORM MATRIX')))
         continue-on-error: true
