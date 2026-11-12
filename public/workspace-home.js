@@ -9,7 +9,7 @@ if(header&&header.parentElement!==home)home.insertBefore(header,home.firstChild)
 if(welcome&&welcome.parentElement!==home)home.insertBefore(welcome,download||null);
 const publicVersion=document.querySelector('meta[name="aryanzz-public-version"]')?.content||"V1";
 const badge=document.getElementById("homeReleaseVersion");
-if(badge)badge.textContent=publicVersion+" · GRATIS";
+if(badge)badge.textContent=publicVersion+" GRATIS";
 async function initSecurityIndicator(){
  const el=document.getElementById("securityStatusIndicator");
  if(!el)return;
