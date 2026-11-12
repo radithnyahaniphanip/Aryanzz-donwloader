@@ -330,6 +330,36 @@ async function genericPublicPageMediaInfo(rawUrl,requestUrl,platformEntry,timeou
     return json({ok:false,platform:platformEntry.id,providerName:"Public page metadata fallback",provider:"Generic public metadata",experimental:true,fallbackTried:true,directDownloadAvailable:false,error:platformEntry.name+" belum dapat dibaca melalui jalur metadata publik: "+String(error?.message||error).slice(0,180)},502);
   }
 }
+async function threadsDirectMediaInfo(request){
+  const raw=String(new URL(request.url).searchParams.get("url")||"").trim();
+  if(!raw||raw.length>3000)return json({ok:false,error:"Tautan Threads tidak valid."},400);
+  let input;
+  try{input=new URL(raw)}catch{return json({ok:false,error:"URL Threads tidak valid."},400)}
+  if(!["http:","https:"].includes(input.protocol)||input.username||input.password||input.port||platformForHost(input.hostname)?.id!=="threads")return json({ok:false,error:"Endpoint khusus ini hanya menerima URL Threads resmi."},400);
+  input.protocol="https:";
+  let canonicalUrl=input.href;
+  try{canonicalUrl=await resolveSocialShortLink(input.href,"threads",13000)}catch{}
+  let canonical;
+  try{canonical=new URL(canonicalUrl)}catch{return json({ok:false,error:"Alamat Threads hasil pengalihan tidak valid."},400)}
+  if(platformForHost(canonical.hostname)?.id!=="threads")return json({ok:false,error:"Pengalihan Threads tidak mengarah ke postingan Threads."},400);
+  const entry=platformForHost(canonical.hostname),sources=[canonical.href];
+  if(/^\/(?:@[^/]+\/post|t)\/[A-Za-z0-9_-]+\/?$/i.test(canonical.pathname)){
+    const embed=new URL(canonical.href);
+    embed.pathname=canonical.pathname.replace(/\/$/,"")+"/embed/";embed.search="";embed.hash="";
+    sources.push(embed.href);
+  }
+  // Independent of the community API: inspect the exact public post and its embed.
+  // A successful HTTP 200 must contain a real video/audio format, not only metadata.
+  const tried=await Promise.allSettled(sources.map(async source=>{
+    const response=await genericPublicPageMediaInfo(source,request.url,entry,13000);
+    const data=await response.json().catch(()=>({}));
+    return {ok:response.ok&&data.ok!==false&&Array.isArray(data.formats)&&data.formats.some(x=>x?.mode==="video"||x?.mode==="audio"),data};
+  }));
+  const found=tried.find(t=>t.status==="fulfilled"&&t.value.ok);
+  if(found)return json({...found.value.data,canonicalUrl:canonical.href,providerName:"Threads direct public media",provider:"Threads post/embed",fallbackUsed:true,directDownloadAvailable:true});
+  const errors=tried.map(t=>t.status==="fulfilled"?String(t.value.data?.error||"Tidak ada stream publik"):String(t.reason?.message||t.reason)).slice(0,2);
+  return json({ok:false,platform:"threads",canonicalUrl:canonical.href,providerName:"Threads direct public media",error:"Video/audio langsung belum ditemukan pada halaman Threads publik. Jika postingan berupa foto, ARYANZZ akan memeriksa galeri secara terpisah.",diagnostics:errors},404);
+}
 async function platformMediaInfo(request){
   let body;try{body=await request.json()}catch{return json({error:"Body JSON tidak valid."},400)}
   const raw=String(body?.url||"").trim();
@@ -3940,6 +3970,7 @@ const workerHandler = {async fetch(request,env){
   if(url.pathname.startsWith("/api/auth/"))return handleAuthRequest(request,env);
   if(url.pathname==="/api/health"&&request.method==="GET")return json({ok:true,service:"ARYANZZ",version:"V1",publicVersion:"V1",buildId:env.ARYANZZ_BUILD_VERSION||BUILD_VERSION,securityActive:true,mode:"cloudflare-worker-zero-server-hybrid",directMediaDownload:true,selfHostedDownloader:false,youtubeDownloader:true,youtubeApiKeyConfigured:false,cobalt:false,paidYoutubeProvider:false,musicRecognitionConfigured:!!env.AUDD_API_TOKEN,musicFallbackReady:false,musicVideoRecognitionReady:false,platformExtraction:true,platformBackend:"public-free-community-api"});
   if(url.pathname==="/api/social-file"&&request.method==="GET")return socialMediaFile(request);
+  if(url.pathname==="/api/threads/direct"&&request.method==="GET")return threadsDirectMediaInfo(request);
   if(url.pathname==="/api/platform/info"&&request.method==="POST")return platformMediaInfo(request);
   if(url.pathname==="/api/info"&&request.method==="POST"){const proxied=await proxyPlatform(request,env,"/api/info");if(proxied)return proxied;return info(request);}
   if(url.pathname==="/api/direct-file"&&request.method==="GET")return download(request);
