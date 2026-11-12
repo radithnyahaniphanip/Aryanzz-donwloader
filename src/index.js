@@ -627,9 +627,8 @@ async function freePublicMediaInfo(rawUrl,requestUrl,options={}){
   // This path was implemented but not previously wired into the fallback cascade.
   if(key==="tiktok"&&!isTikTokPhotoRoute){
     try{
-      const nativeResponse=await tikTokNativePageFallback(canonicalUrl,requestUrl,7000);
-      const nativeData=await nativeResponse.clone().json().catch(()=>({}));
-      if(nativeResponse.ok&&nativeData?.ok!==false&&Array.isArray(nativeData.formats)&&nativeData.formats.some(item=>item?.downloadUrl||item?.url)){
+      const nativeData=await tikTokNativePageFallback(canonicalUrl,requestUrl,7000);
+      if(nativeData?.ok!==false&&Array.isArray(nativeData.formats)&&nativeData.formats.some(item=>item?.downloadUrl||item?.url)){
         return json({...nativeData,providerName:"TikTok native public metadata fallback",fallbackUsed:true,canonicalUrl:canonicalUrl!==rawUrl?canonicalUrl:undefined});
       }
       primaryError+="; TikTok native: no verified direct media";
