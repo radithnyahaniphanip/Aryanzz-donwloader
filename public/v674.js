@@ -30,7 +30,7 @@ const platforms={
  wechat:{name:"WeChat",url:q=>"https://www.google.com/search?q="+encodeURIComponent("site:wechat.com OR site:weixin.qq.com "+q)},
  kakaotalk:{name:"KakaoTalk",url:q=>"https://www.google.com/search?q="+encodeURIComponent("site:kakao.com "+q)}
 };
-let selected="youtube",activeMode="link",searchController=null,pageSize=10,currentPage=1;
+let selected="all",activeMode="link",searchController=null,pageSize=10,currentPage=1;
 let platformCatalog=[],platformPage=1;
 const PLATFORM_GUIDES={
  youtube:{link:"Tempel tautan video, Shorts, atau audio YouTube…",search:"Cari judul video YouTube…",videoHelp:"YouTube: periksa video atau Shorts publik, lalu pilih format dan kualitas yang tersedia.",imageHelp:"YouTube: cari gambar atau thumbnail publik. Hasil gambar dipisahkan dari hasil video."},
@@ -46,7 +46,7 @@ const PLATFORM_GUIDES={
  vimeo:{link:"Tempel tautan video Vimeo…",search:"Cari judul video Vimeo…",videoHelp:"Vimeo: periksa video publik yang tidak dilindungi kata sandi.",imageHelp:"Vimeo: gambar hanya tersedia jika halaman publik mengekspos media gambar asli."},
  soundcloud:{link:"Tempel tautan lagu atau audio SoundCloud…",search:"Cari judul lagu SoundCloud…",videoHelp:"SoundCloud adalah platform audio; hasilnya tidak akan dipaksakan menjadi MP4.",imageHelp:"SoundCloud: pencarian gambar tidak tersedia untuk konten audio."}
 };
-const setMode=v=>{const link=v==="link";if(link&&selected==="all")setPlatform("youtube");const entry=platformCatalog.find(platform=>platform.id===selected);const modes=entry?.inputModes||["link","search"];const canLink=modes.includes("link"),canSearch=modes.includes("search");if(!canLink&&canSearch)v="title";if(!canSearch&&canLink)v="link";activeMode=v;const useLink=v==="link";if(x)x.hidden=!useLink;if(y)y.hidden=useLink;const workCard=document.querySelector("#home .v674-download");if(workCard)workCard.dataset.mode=useLink?"link":"title";const workspaceHeading=document.getElementById("aryWorkspaceHeadline");if(workspaceHeading)workspaceHeading.textContent=useLink?"Tempel tautan, mulai berkarya":"Cari media dari judul";const allButton=picker?.querySelector('[data-platform="all"]');if(allButton)allButton.hidden=useLink;if(a){a.hidden=!canLink;a.disabled=!canLink;a.classList.toggle("active",useLink);a.setAttribute("aria-selected",String(useLink))}if(b){b.hidden=!canSearch;b.disabled=!canSearch;b.classList.toggle("active",!useLink);b.setAttribute("aria-selected",String(!useLink))}};
+const setMode=v=>{const link=v==="link";const entry=platformCatalog.find(platform=>platform.id===selected);const modes=entry?.inputModes||["link","search"];const canLink=modes.includes("link"),canSearch=modes.includes("search");if(!canLink&&canSearch)v="title";if(!canSearch&&canLink)v="link";activeMode=v;const useLink=v==="link";if(x)x.hidden=!useLink;if(y)y.hidden=useLink;const workCard=document.querySelector("#home .v674-download");if(workCard)workCard.dataset.mode=useLink?"link":"title";const workspaceHeading=document.getElementById("aryWorkspaceHeadline");if(workspaceHeading)workspaceHeading.textContent=useLink?"Tempel tautan, mulai berkarya":"Cari media dari judul";const allButton=picker?.querySelector('[data-platform="all"]');if(allButton)allButton.hidden=false;if(a){a.hidden=!canLink;a.disabled=!canLink;a.classList.toggle("active",useLink);a.setAttribute("aria-selected",String(useLink))}if(b){b.hidden=!canSearch;b.disabled=!canSearch;b.classList.toggle("active",!useLink);b.setAttribute("aria-selected",String(!useLink))}};
 a?.addEventListener("click",()=>{setMode("link");renderPlatformPage(1)});
 b?.addEventListener("click",()=>{
  setMode("title");
@@ -88,7 +88,7 @@ const setPlatform=(id,options={})=>{
  if(linkLabel)linkLabel.textContent=selected==="all"?"TEMPEL TAUTAN MEDIA":"TEMPEL TAUTAN "+name.toUpperCase();
  if(linkInput){
   const types=[modes.includes("video")?"video":"",modes.includes("image")?"foto":"",modes.includes("audio")?"audio":""].filter(Boolean).join(" atau ");
-  linkInput.placeholder=guide.link||(types?"Tempel tautan "+name+" ("+types+")…":"Tempel tautan publik "+name+"…");
+  linkInput.placeholder=selected==="all"?"Tempel tautan video, gambar, atau audio dari platform yang didukung…":(guide.link||(types?"Tempel tautan "+name+" ("+types+")…":"Tempel tautan publik "+name+"…"));
  }
  const searchLabel=y?.querySelector("label");
  if(searchLabel)searchLabel.textContent="CARI JUDUL · "+name.toUpperCase();
@@ -105,7 +105,7 @@ const updateSearchHelp=()=>{
  const count=platformCatalog.filter(platform=>(platform.searchModes||[]).includes(mode)&&!platform.aliasOf).length;
  const name=selected==="all"?"semua "+count+" platform "+(mode==="image"?"gambar":"video"):(platforms[selected]?.name||selected);
  const guide=PLATFORM_GUIDES[selected]||{};
- if(selected==="all")help.textContent=mode==="image"?"Smart Search memeriksa "+count+" provider gambar. Hanya file gambar yang lolos verifikasi yang ditampilkan.":"Smart Search memeriksa provider video yang tersedia dan turut mencari YouTube sebagai sumber cadangan. Hanya stream yang lolos verifikasi yang ditampilkan.";
+ if(selected==="all")help.textContent=mode==="image"?"Pencarian judul memeriksa "+count+" provider gambar. Hanya file gambar yang lolos verifikasi yang ditampilkan.":"Pencarian judul memeriksa provider video yang tersedia dan turut mencari YouTube sebagai sumber cadangan. Hanya stream yang lolos verifikasi yang ditampilkan.";
  else if(mode==="image")help.textContent=guide.imageHelp||"Foto dan gambar publik dari "+name+". Hanya file gambar yang berhasil diverifikasi yang akan ditampilkan.";
  else help.textContent=guide.videoHelp||"Cari video publik di "+name+". Hanya stream video yang berhasil diverifikasi yang akan ditampilkan.";
 };
@@ -146,9 +146,9 @@ function renderPlatformPage(nextPage){
  picker.replaceChildren();
  if(allPlatformButton){
   const supportedCount=platformCatalog.filter(platform=>(platform.searchModes||[]).includes(mode)&&!platform.aliasOf).length;
-  allPlatformButton.querySelector("span:last-child").textContent=activeMode==="link"?"Semua platform":"Semua "+(mode==="image"?"gambar":"video")+" · "+supportedCount;
-  allPlatformButton.title=activeMode==="link"?"Katalog 200 sumber tautan":"Cari di "+supportedCount+" platform dengan provider "+(mode==="image"?"gambar":"video")+" terverifikasi";
-  allPlatformButton.hidden=!!query||activeMode==="link"||supportedCount===0;
+  allPlatformButton.querySelector("span:last-child").textContent=activeMode==="link"?"Semua 200":"Semua "+(mode==="image"?"gambar":"video")+" · "+supportedCount;
+  allPlatformButton.title=activeMode==="link"?"Tempel tautan dari 200 platform. Sistem mendeteksi sumber berdasarkan URL.":"Cari di "+supportedCount+" platform dengan provider "+(mode==="image"?"gambar":"video")+" terverifikasi";
+  allPlatformButton.hidden=!!query||(activeMode!=="link"&&supportedCount===0);
   if(!query)picker.append(allPlatformButton);
  }
  if(!visible.length){
@@ -351,7 +351,7 @@ const supportedCount=platformCatalog.filter(platform=>(platform.searchModes||[])
 const target=selected==="all"?{name:"Semua "+supportedCount+" platform "+(kind==="image"?"gambar":"video"),url:q=>"https://www.google.com/search?q="+encodeURIComponent(q)}:platforms[selected];
 const loading=document.createElement("div");loading.className="v674-search-loading";loading.textContent=kind==="image"?"Mencari gambar dari "+target.name+"…":kind==="audio"?"Mencari musik dan video sumber untuk dibuat MP3 dari "+target.name+"…":selected==="all"?"Mencari judul satu per satu di semua platform video yang didukung…":"Mencari judul dari "+target.name+"…";results.append(loading);
 const btn=$("titleSearchBtn");if(btn){btn.disabled=true;btn.textContent="Mencari…"}
-if(help)help.textContent=selected==="all"?(kind==="image"?"Smart Search memeriksa provider gambar yang didukung.":"Smart Search mencari secara terpisah di "+supportedCount+" platform video. Hasil judul publik tetap ditampilkan; status unduhan diperiksa saat hasil dipilih."):kind==="image"?"Mode gambar: hasil gambar publik dari "+target.name+" akan diperiksa sebelum ditampilkan.":kind==="audio"?"Mode audio: hasil audio publik dari "+target.name+" akan diperiksa sebelum dibuat MP3.":"Mode video: hasil judul publik dari "+target.name+" tetap ditampilkan meski stream belum terverifikasi. Pemeriksaan unduhan berjalan saat hasil dipilih.";
+if(help)help.textContent=selected==="all"?(kind==="image"?"Pencarian judul memeriksa provider gambar yang didukung.":"Pencarian judul mencari secara terpisah di "+supportedCount+" platform video. Hasil judul publik tetap ditampilkan; status unduhan diperiksa saat hasil dipilih."):kind==="image"?"Mode gambar: hasil gambar publik dari "+target.name+" akan diperiksa sebelum ditampilkan.":kind==="audio"?"Mode audio: hasil audio publik dari "+target.name+" akan diperiksa sebelum dibuat MP3.":"Mode video: hasil judul publik dari "+target.name+" tetap ditampilkan meski stream belum terverifikasi. Pemeriksaan unduhan berjalan saat hasil dipilih.";
 try{
 const endpoint=kind==="image"?"/api/image/search":"/api/social/search";
 const options={method:"POST",headers:{"content-type":"application/json"},cache:"no-store"};
