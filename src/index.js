@@ -707,9 +707,9 @@ async function freePublicMediaInfo(rawUrl,requestUrl,options={}){
     // The public /embed/ representation is a distinct, lighter media source.
     try{
       const post=new URL(canonicalUrl);
-      if(/^\\/(?:@[^/]+\\/post|t)\\/[A-Za-z0-9_-]+\\/?$/i.test(post.pathname)){
+      if(/^\/(?:@[^/]+\/post|t)\/[A-Za-z0-9_-]+\/?$/i.test(post.pathname)){
         const embed=new URL(post.href);
-        embed.pathname=post.pathname.replace(/\\/$/,"")+"/embed/";
+        embed.pathname=post.pathname.replace(/\/$/,"")+"/embed/";
         embed.search="";embed.hash="";
         const entry=platformForHost(post.hostname);
         const response=await genericPublicPageMediaInfo(embed.href,requestUrl,entry,9000);
