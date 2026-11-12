@@ -1613,7 +1613,9 @@ function socialNetworkPlan(selected=0){
           const updatePlayerControls=()=>{
             const total=Number(preview.duration),current=Number(preview.currentTime)||0;
             seek.value=Number.isFinite(total)&&total>0?String(Math.max(0,Math.min(1000,Math.round(current/total*1000)))):"0";
-            playerTime.textContent=playerClock(current)+" / "+(Number.isFinite(total)&&total>0?playerClock(total):"--:--");
+            const metadataDuration=Number(info.duration||info.durationSeconds||info.videoDuration||0);
+            const shownDuration=Number.isFinite(total)&&total>0?total:(Number.isFinite(metadataDuration)&&metadataDuration>0?metadataDuration:0);
+            playerTime.textContent=playerClock(current)+" / "+(shownDuration>0?playerClock(shownDuration):"--:--");
             playToggle.textContent=preview.paused?"▶":"Ⅱ";
             playToggle.setAttribute("aria-label",preview.paused?"Putar video":"Jeda video");
             muteToggle.textContent=preview.muted||preview.volume===0?"🔇":"🔊";

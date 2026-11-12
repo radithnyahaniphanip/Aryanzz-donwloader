@@ -2578,11 +2578,11 @@ function strictTitleIntentScore(query,title,snippet=""){
   if(!tokens.length)return publicSearchRelevance(query,title+" "+snippet);
   const titleWords=new Set(normalize(title).split(" "));
   const snippetWords=new Set(normalize(snippet).split(" "));
-  const matched=tokens.filter(token=>titleWords.has(token)||snippetWords.has(token));
-  // Never classify a different track as an exact match based on only one generic keyword.
-  if(matched.length!==tokens.length)return 0;
   const titleMatches=tokens.filter(token=>titleWords.has(token)).length;
-  return Math.min(1,0.7+0.3*titleMatches/tokens.length);
+  // Snippets often contain recommendations for unrelated tracks. Require the actual title
+  // to match all distinctive words; a matching description alone is not an exact title match.
+  if(titleMatches!==tokens.length)return 0;
+  return 1;
 }
 function parseBingSocialImageResults(html,platform,requestUrl,query,allowWeb=false){
   const results=[],seen=new Set(),domains=socialSearchDomains(platform);
