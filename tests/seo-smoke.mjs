@@ -40,7 +40,7 @@ assert.equal(meta(home, "og:site_name", "property"), "ARYANZZ");
 assert.ok(home.includes('rel="icon" type="image/svg+xml" href="/favicon.svg'), "Google and browsers receive the custom ARYANZZ SVG favicon");
 const homeDescription = meta(home, "description");
 assert.ok(homeDescription.length >= 120 && homeDescription.length <= 165, "Homepage meta description should be a useful search snippet");
-assert.ok(home.includes("<h1>Media lebih mudah.<br><span>Kreativitas tanpa batas.</span></h1>"));
+assert.ok(home.includes('class="ary-v1-hero-title"')&&home.includes("Semua berawal")&&home.includes("dari satu tautan"),"Homepage must display the approved V1 hero headline.");
 assert.ok(home.includes('href="/panduan"'), "Homepage should link to the general guide");
 for (const path of ["/download-video", "/download-mp3", "/download-gambar"]) {
   assert.ok(home.includes('href="' + path + '"'), "Homepage should link to " + path);
