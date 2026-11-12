@@ -2660,17 +2660,15 @@ async function socialImageSearch(request){
         const bucket=buckets.find(entry=>entry.platform===key);
         if(bucket&&!bucket.results.some(existing=>existing.url===item.url))bucket.results.push({...item,platform:key});
       }
-      for(let offset=0;offset<targetedAllPlatforms.length;offset+=3){
-        const batch=targetedAllPlatforms.slice(offset,offset+3).filter(key=>(buckets.find(entry=>entry.platform===key)?.results.length||0)<6);
-        const batchResults=await Promise.all(batch.map(async key=>{
-          const site=socialSearchDomains(key).map(domain=>"site:"+domain).join(" OR ");
-          return {platform:key,results:await fetchBing(site+" "+query,key)};
-        }));
-        for(const entry of batchResults){
-          const bucket=buckets.find(item=>item.platform===entry.platform);
-          for(const item of entry.results||[])if(bucket&&!bucket.results.some(existing=>existing.url===item.url))bucket.results.push(item);
-        }
-        // Keep searching every platform; early results must not starve later sources.
+      // All supported image providers are searched concurrently in a bounded set.
+      const pending=targetedAllPlatforms.filter(key=>(buckets.find(entry=>entry.platform===key)?.results.length||0)<4);
+      const additional=await Promise.all(pending.map(async key=>{
+        const site=socialSearchDomains(key).map(domain=>"site:"+domain).join(" OR ");
+        return {platform:key,results:await fetchBing(site+" "+query,key)};
+      }));
+      for(const entry of additional){
+        const bucket=buckets.find(item=>item.platform===entry.platform);
+        for(const item of entry.results||[])if(bucket&&!bucket.results.some(existing=>existing.url===item.url))bucket.results.push(item);
       }
     }else{
       const site=domains.map(domain=>"site:"+domain).join(" OR ");
@@ -2678,7 +2676,8 @@ async function socialImageSearch(request){
       if(selectedBucket){
         const normalizedQuery=query.replace(/greenscreen/ig,"green screen");
         const terms=[query,normalizedQuery,query+" image",query+" photo",query+" meme",query+" wallpaper",normalizedQuery+" background",normalizedQuery+" template",normalizedQuery+" overlay","chroma key "+normalizedQuery,"meme template "+normalizedQuery,normalizedQuery+" png"];
-        const batches=await Promise.all(terms.flatMap((term,index)=>[fetchBing(site+" "+term,platform,false,1),...(index<5?[fetchBing(site+" "+term,platform,false,51)]:[])]));
+        const focusedTerms=[...new Set([query,normalizedQuery,query+" image",query+" photo",normalizedQuery+" background"])].slice(0,4);
+        const batches=await Promise.all(focusedTerms.map(term=>fetchBing(site+" "+term,platform,false,1)));
         const seenItems=new Set();for(const batch of batches)for(const item of batch){if(!seenItems.has(item.url)){seenItems.add(item.url);selectedBucket.results.push(item)}if(selectedBucket.results.length>=100)break;}
       }
     }
@@ -2707,19 +2706,19 @@ async function socialImageSearch(request){
     let candidates=[];
     const distinctPlatforms=Object.keys(platformCounts).length;
     const distinctSocialPlatforms=Object.keys(platformCounts).filter(key=>key!=="web").length;
-    const needsFallback=results.length<maxResults||(platform==="all"&&distinctSocialPlatforms<2);
+    const needsFallback=results.length<4||(platform==="all"&&distinctSocialPlatforms<2);
     if(needsFallback){
       const allDomains=socialSearchDomains(platform),site=allDomains.map(domain=>"site:"+domain).join(" OR ");
       const searchTerm=platform==="all"?"("+site+") "+query:site+" "+query;
       const ddgQueries=[searchTerm,searchTerm+" (image OR photo OR meme OR gambar OR foto OR pin)"];
       const pages=await Promise.all(ddgQueries.map(async term=>{
         const url=new URL("https://html.duckduckgo.com/html/");url.searchParams.set("q",term);
-        try{const response=await fetch(url.href,{headers:{accept:"text/html","user-agent":"Mozilla/5.0 (compatible; ARYANZZ/81.4)"},signal:AbortSignal.timeout(11000),cache:"no-store"});return response.ok?await response.text():""}catch{return ""}
+        try{const response=await fetch(url.href,{headers:{accept:"text/html","user-agent":"Mozilla/5.0 (compatible; ARYANZZ/81.4)"},signal:AbortSignal.timeout(5000),cache:"no-store"});return response.ok?await response.text():""}catch{return ""}
       }));
       const seenPosts=new Set();
       for(const page of pages)candidates.push(...parseSocialImageSearchLinks(page,platform,seenPosts,50-candidates.length).filter(item=>publicSearchRelevance(query,item.title)>=0.12));
       const eligibleCandidates=candidates.filter(item=>platformSupportsSearchMode(platformIdForUrl(item.url),"image"));
-      const posts=await Promise.all(eligibleCandidates.slice(0,platform==="all"?6:12).map(item=>resolveSocialImagePost(item.url,request.url,{timeoutMs:8000,providerTimeoutMs:9000}).then(post=>post?{item,post}:null).catch(()=>null)));
+      const posts=await Promise.all(eligibleCandidates.slice(0,platform==="all"?4:6).map(item=>resolveSocialImagePost(item.url,request.url,{timeoutMs:5000,providerTimeoutMs:5500}).then(post=>post?{item,post}:null).catch(()=>null)));
       for(const entry of posts.filter(Boolean)){
         for(const image of entry.post.images||[]){
           if(results.length>=100)break;
@@ -2732,12 +2731,9 @@ async function socialImageSearch(request){
         if(results.length>=100)break;
       }
     }
-    const verificationCandidates=results.slice(0,maxResults).filter(item=>platformSupportsSearchMode(platformIdForUrl(item.sourceUrl),"image"));
-    const verifiedImages=[];
-    for(let offset=0;offset<verificationCandidates.length;offset+=4){
-      const batch=await Promise.all(verificationCandidates.slice(offset,offset+4).map(item=>verifySocialImageSearchResult(item,request.url)));
-      for(const item of batch)if(item)verifiedImages.push(item);
-    }
+    const verificationCandidates=results.slice(0,platform==="all"?12:12).filter(item=>platformSupportsSearchMode(platformIdForUrl(item.sourceUrl),"image"));
+    // Probe the true MIME/signature concurrently; do not mark unchecked images as verified.
+    const verifiedImages=(await Promise.all(verificationCandidates.map(item=>verifySocialImageSearchResult(item,request.url)))).filter(Boolean);
     const grouped=verifiedImages.map(item=>({title:item.title||query,sourceUrl:item.sourceUrl,platform:item.platform||platform,verified:true,images:[item]}));
     const counts=grouped.reduce((out,item)=>{const key=socialImagePlatformKey(item.sourceUrl,item.platform||"other");out[key]=(out[key]||0)+1;return out},{});
     return json({ok:true,platform,query,results:grouped,imageCount:grouped.length,verifiedCount:grouped.length,platformCounts:counts,searchablePlatformCount:imageSearchPlatforms.length,unsupportedCandidateCount:Math.max(0,results.length-verificationCandidates.length),failedImageChecks:Math.max(0,verificationCandidates.length-grouped.length),unavailableCount:Math.max(0,candidates.length-grouped.length),searchProvider:"Bing Images + provider-backed source filtering + live image MIME verification"});
