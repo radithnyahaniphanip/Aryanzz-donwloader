@@ -8,7 +8,7 @@ const sourceUrls={
   "_hmjQ-mLv":videoPost,
   "BBbOsV3Lue":imagePost
 };
-const mediaVideo="https://cdn.example/media/clip.mp4";
+const mediaVideo="https://scontent.cdninstagram.com/media/clip.mp4";
 const mediaImage="https://cdn.example/media/photo.jpg";
 const seen=[];
 const originalFetch=globalThis.fetch;
@@ -31,7 +31,7 @@ globalThis.fetch=async(input,init={})=>{
       const embed=uri.pathname.includes("/embed/");
       const html=embed
         ?uri.pathname.includes("VideoExample")
-          ?'<html><head><title>Video post</title><meta property="og:video" content="'+mediaVideo+'"><meta property="og:video:type" content="video/mp4"><meta property="og:video:width" content="1280"><meta property="og:video:height" content="720"></head><body></body></html>'
+          ?'<html><head><title>Video post</title></head><body><script type="application/json">{"video_versions":[{"url":"'+mediaVideo+'","width":1280,"height":720}]}</script></body></html>'
           :'<html><head><title>Photo post</title><meta property="og:image" content="'+mediaImage+'"></head><body></body></html>'
         :'<html><head><title>Threads app shell</title><link rel="canonical" href="'+uri.href+'"></head><body>Client-side app</body></html>';
       return new Response(html,{status:200,headers:{"content-type":"text/html; charset=utf-8"}});
