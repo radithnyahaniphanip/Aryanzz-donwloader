@@ -1262,9 +1262,17 @@ async function searchSocial(request){
   const searchTargets=platform==="all"
     ?PLATFORM_CATALOG.filter(item=>!item.aliasOf&&platformSupportsSearchMode(item.id,desiredMode))
     :[PLATFORM_CATALOG_BY_ID.get(canonicalPlatform)].filter(Boolean);
+  // Use the primary indexed domain per provider; OR-chains of site: operators were unreliable.
   const searchSites=platform==="all"
-    ?searchTargets.map(item=>(item.domains||[]).map(domain=>"site:"+domain).join(" OR ")).filter(Boolean)
+    ?searchTargets.map(item=>item.domains?.[0]?"site:"+item.domains[0]:"").filter(Boolean)
     :domains.map(domain=>"site:"+domain);
+  async function boundedLookup(inputs,task,parallel=3){
+    const out=new Array(inputs.length);let cursor=0;
+    await Promise.all(Array.from({length:Math.min(parallel,inputs.length)},async()=>{
+      while(cursor<inputs.length){const index=cursor++;try{out[index]=await task(inputs[index])}catch{out[index]=""}}
+    }));
+    return out;
+  }
   try{
     const baseVariants=socialSearchQueryVariants(query);
     const variants=(desiredMode==="audio"
@@ -1273,13 +1281,11 @@ async function searchSocial(request){
         ? [query,query+" video",query+" clip",query+" shorts",query+" DJ remix",query+" official video",...baseVariants]
         : baseVariants).filter((value,index,array)=>array.indexOf(value)===index).slice(0,platform==="all"?3:12);
     const searchTerms=platform==="all"?[query]:variants.slice(0,4);
-    const pages=await Promise.all(searchTerms.flatMap(term=>searchSites.map(async searchSite=>{
+    const pages=await boundedLookup(searchTerms.flatMap(term=>searchSites.map(searchSite=>({term,searchSite}))),async ({term,searchSite})=>{
       const url=new URL("https://html.duckduckgo.com/html/");url.searchParams.set("q",(searchSite?searchSite+" ":"")+term);
-      try{
-        const response=await fetch(url.href,{headers:{accept:"text/html","user-agent":"Mozilla/5.0 (compatible; ARYANZZ/86.2; +https://aryanzz-donwloader.aryanz.workers.dev)"},signal:AbortSignal.timeout(10000),cache:"no-store"});
-        return response.ok?await response.text():"";
-      }catch{return ""}
-    })));
+      const response=await fetch(url.href,{headers:{accept:"text/html","user-agent":"Mozilla/5.0 (compatible; ARYANZZ/86.2; +https://aryanzz-donwloader.aryanz.workers.dev)"},signal:AbortSignal.timeout(7000),cache:"no-store"});
+      return response.ok?await response.text():"";
+    });
     const candidates=[],seen=new Set(),candidateBuckets=new Map();
     for(const html of pages){
       const anchors=/<a\b([^>]*)>([\s\S]*?)<\/a>/gi;
@@ -1311,24 +1317,29 @@ async function searchSocial(request){
       candidates.splice(100);
     }
     const ddgCandidateCount=candidates.length;
-    const bingPages=await Promise.all(searchTerms.flatMap(term=>searchSites.map(async searchSite=>{
+    const bingQueries=platform==="all"
+      ?searchTargets.filter(item=>!candidateBuckets.has(item.id)).slice(0,6).map(item=>({term:query,searchSite:"site:"+item.domains[0]}))
+      :searchTerms.flatMap(term=>searchSites.map(searchSite=>({term,searchSite})));
+    const bingPages=await boundedLookup(bingQueries,async ({term,searchSite})=>{
       const url=new URL("https://www.bing.com/search");url.searchParams.set("q",(searchSite?searchSite+" ":"")+term);url.searchParams.set("form","QBLH");
-      try{const response=await fetch(url.href,{headers:{accept:"text/html,application/xhtml+xml","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/130.0.0.0 Safari/537.36"},signal:AbortSignal.timeout(8000),cache:"no-store"});return response.ok?await response.text():""}catch{return ""}
-    })));
+      const response=await fetch(url.href,{headers:{accept:"text/html,application/xhtml+xml","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/130.0.0.0 Safari/537.36"},signal:AbortSignal.timeout(7000),cache:"no-store"});
+      return response.ok?await response.text():"";
+    });
     let bingCandidateCount=0;
     for(const page of bingPages){const parsed=parseBingSocialVideoResults(page,platform,query,seen);bingCandidateCount+=parsed.length;candidates.push(...parsed)}
     const googleQueries=platform==="all"
-      ?searchSites.map(searchSite=>({term:query,searchSite}))
+      ?searchTargets.filter(item=>!candidates.some(candidate=>canonicalPlatformId(platformIdForUrl(candidate.url))===item.id)).slice(0,4).map(item=>({term:query,searchSite:"site:"+item.domains[0]}))
       :variants.slice(0,3).map(term=>({term,searchSite:site}));
-    const googlePages=await Promise.all(googleQueries.map(async ({term,searchSite})=>{
+    const googlePages=await boundedLookup(googleQueries,async ({term,searchSite})=>{
       const url=new URL("https://www.google.com/search");url.searchParams.set("q",(searchSite?searchSite+" ":"")+term);url.searchParams.set("tbm","vid");url.searchParams.set("num","30");url.searchParams.set("filter","0");
-      try{const response=await fetch(url.href,{headers:{accept:"text/html,application/xhtml+xml","user-agent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/131.0.0.0 Safari/537.36","accept-language":"id-ID,id;q=0.9,en-US;q=0.8"},signal:AbortSignal.timeout(9000),cache:"no-store"});return response.ok?await response.text():""}catch{return ""}
-    }));
+      const response=await fetch(url.href,{headers:{accept:"text/html,application/xhtml+xml","user-agent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/131.0.0.0 Safari/537.36","accept-language":"id-ID,id;q=0.9,en-US;q=0.8"},signal:AbortSignal.timeout(7000),cache:"no-store"});
+      return response.ok?await response.text():"";
+    });
     let googleCandidateCount=0;
     for(const page of googlePages){const parsed=parseGoogleSocialVideoResults(page,platform,query,seen);googleCandidateCount+=parsed.length;candidates.push(...parsed)}
     let tiktokPageDiagnostics={status:null,bytes:0,count:0,queries:[]};
     if(platform==="tiktok"||platform==="tiktoklite"||platform==="all"){
-      const directPages=await Promise.all(variants.slice(0,platform==="all"?3:5).map(term=>searchTikTokPublicPage(term)));
+      const directPages=await Promise.all(variants.slice(0,platform==="all"?1:3).map(term=>searchTikTokPublicPage(term)));
       for(let index=0;index<directPages.length;index++){
         const direct=directPages[index];
         tiktokPageDiagnostics.queries.push({query:variants[index],status:direct.status,bytes:direct.bytes,count:direct.items.length});
@@ -1336,8 +1347,8 @@ async function searchSocial(request){
         for(const item of direct.items){if(!seen.has(item.url)){seen.add(item.url);candidates.push(item)}}
       }
     }
-    if(platform==="all"||platform==="youtube"){
-      // Search YouTube independently: one combined site: query across 19 domains is not a reliable YouTube search.
+    if((platform==="all"||platform==="youtube")&&!candidates.some(item=>platformIdForUrl(item.url)==="youtube")){
+      // Community YouTube providers are only used when the indexed search found no YouTube candidate.
       const youtubeTerms=[query,query+" lagu",query+" song",query+" official audio",query+" DJ remix",...variants]
         .map(value=>String(value||"").replace(/\s+/g," ").trim())
         .filter((value,index,array)=>value.length>=2&&array.indexOf(value)===index).slice(0,platform==="all"?3:5);
@@ -1365,7 +1376,8 @@ async function searchSocial(request){
     const orderedCandidates=platform==="all"?(()=>{const buckets=new Map();for(const item of relevantCandidates){const key=canonicalPlatformId(platformIdForUrl(item.url)||"other");if(!buckets.has(key))buckets.set(key,[]);buckets.get(key).push(item)}const out=[];for(let round=0;round<12;round++)for(const list of buckets.values())if(list[round])out.push(list[round]);return out})():relevantCandidates;
     // Verify the first candidates for direct download availability, but do not discard valid public title results.
     // Search discovery and download extraction are separate stages: an unverified result can still be opened and checked on selection.
-    const verificationLimit=platform==="all"?12:20;
+    // Public title discovery and playable-file verification are separate. Verify the stream when the result is selected.
+    const verificationLimit=0;
     const verificationCandidates=orderedCandidates.slice(0,verificationLimit);
     const checked=await Promise.all(verificationCandidates.map(item=>verifySocialSearchResult(item,request.url,desiredMode)));
     const verifiedResults=checked.filter(item=>item?.verified===true&&item?.downloadable===true&&item.mediaMode===desiredMode);
@@ -1405,12 +1417,12 @@ async function searchSocial(request){
       if(results.length>=resultLimit)break;
     }
     const fallbackUsed=platform!=="all"&&platform!=="youtube"&&(fallbackSearchOnly.length>0||verifiedResults.some(item=>item.platform==="youtube"));
-    const resultsWithThumbnails=await enrichSocialSearchThumbnails(results,platform==="all"?24:12);
+    const resultsWithThumbnails=await enrichSocialSearchThumbnails(results,platform==="all"?6:4);
     const searchOnlyCount=resultsWithThumbnails.filter(item=>item.searchOnly===true).length;
     const verifiedCount=resultsWithThumbnails.filter(item=>item.verified===true&&item.downloadable===true).length;
     const verificationFailedCount=Math.max(0,checked.length+youtubeFallbackCandidates.slice(0,8).length-verifiedResults.length);
     const unsupportedCandidateCount=Math.max(0,candidates.length-platformScopedCandidates.length);
-    return json({ok:true,platform,query,mediaType:desiredMode,results:resultsWithThumbnails,candidateCount:candidates.length+youtubeFallbackCandidateCount,ddgCandidateCount,bingCandidateCount,relevantCount:relevantCandidates.length,thumbnailCount:resultsWithThumbnails.filter(item=>item.thumbnail).length,verifiedCount,searchOnlyCount,unavailableCount:Math.max(0,relevantCandidates.length+youtubeFallbackCandidateCount-resultsWithThumbnails.length),unsupportedCandidateCount,verificationFailedCount,fallbackUsed,youtubeFallbackAttempted,youtubeFallbackCandidateCount,platformSearchTargetCount:searchTargets.length,searchEngineQueryCount:searchTerms.length*searchSites.length+googleQueries.length,candidateSamples:candidates.slice(0,5).map(item=>({title:item.title,url:item.url,score:publicSearchRelevance(query,item.title+" "+item.snippet)})),providerDiagnostics:{ddgPages:pages.length,ddgNonEmpty:pages.filter(Boolean).length,bingPages:bingPages.length,bingNonEmpty:bingPages.filter(Boolean).length,googlePages:googlePages.length,googleNonEmpty:googlePages.filter(Boolean).length,googleCandidateCount,ddgResultLinkCount:pages.reduce((sum,page)=>sum+[...page.matchAll(/class=["'][^"']*\bresult__a\b/gi)].length,0),bingCandidateCount,tiktokPublicPage:tiktokPageDiagnostics,youtubeFallbackAttempted,youtubeFallbackCandidateCount,platformSearchTargetCount:searchTargets.length,searchEngineQueryCount:searchTerms.length*searchSites.length+googleQueries.length},searchVariants:variants,verification:"download-verified-on-search-or-selection",verificationLimit,searchScope:fallbackUsed?"selected-platform-with-youtube-fallback":platform==="all"?"per-platform-public-search":"selected-provider-platform",returnedPublicResults:resultsWithThumbnails.length,verifiedChecks:checked.length+youtubeFallbackCandidates.slice(0,8).length});  }catch(error){return json({error:"Pencarian publik gagal dijangkau. Coba lagi nanti. "+String(error?.message||error).slice(0,100)},502)}
+    return json({ok:true,platform,query,mediaType:desiredMode,results:resultsWithThumbnails,candidateCount:candidates.length+youtubeFallbackCandidateCount,ddgCandidateCount,bingCandidateCount,relevantCount:relevantCandidates.length,thumbnailCount:resultsWithThumbnails.filter(item=>item.thumbnail).length,verifiedCount,searchOnlyCount,unavailableCount:Math.max(0,relevantCandidates.length+youtubeFallbackCandidateCount-resultsWithThumbnails.length),unsupportedCandidateCount,verificationFailedCount,fallbackUsed,youtubeFallbackAttempted,youtubeFallbackCandidateCount,platformSearchTargetCount:searchTargets.length,searchEngineQueryCount:searchTerms.length*searchSites.length+bingQueries.length+googleQueries.length,candidateSamples:candidates.slice(0,5).map(item=>({title:item.title,url:item.url,score:publicSearchRelevance(query,item.title+" "+item.snippet)})),providerDiagnostics:{ddgPages:pages.length,ddgNonEmpty:pages.filter(Boolean).length,bingPages:bingPages.length,bingNonEmpty:bingPages.filter(Boolean).length,googlePages:googlePages.length,googleNonEmpty:googlePages.filter(Boolean).length,googleCandidateCount,ddgResultLinkCount:pages.reduce((sum,page)=>sum+[...page.matchAll(/class=["'][^"']*\bresult__a\b/gi)].length,0),bingCandidateCount,tiktokPublicPage:tiktokPageDiagnostics,youtubeFallbackAttempted,youtubeFallbackCandidateCount,platformSearchTargetCount:searchTargets.length,searchEngineQueryCount:searchTerms.length*searchSites.length+bingQueries.length+googleQueries.length},searchVariants:variants,verification:"download-verified-on-search-or-selection",verificationLimit,searchScope:fallbackUsed?"selected-platform-with-youtube-fallback":platform==="all"?"per-platform-public-search":"selected-provider-platform",returnedPublicResults:resultsWithThumbnails.length,verifiedChecks:checked.length+youtubeFallbackCandidates.slice(0,8).length});  }catch(error){return json({error:"Pencarian publik gagal dijangkau. Coba lagi nanti. "+String(error?.message||error).slice(0,100)},502)}
 }
 
 function imageSafeFilename(title,index,ext){
