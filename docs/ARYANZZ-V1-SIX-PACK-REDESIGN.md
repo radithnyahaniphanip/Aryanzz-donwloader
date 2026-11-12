@@ -4,8 +4,8 @@ Status: Implementasi modular pada branch pengembangan. Release publik tetap **V1
 
 ## Paket 1 — Perbaikan tampilan per section
 - Beranda mempertahankan brand header, hero, workspace, alat, navigasi bawah, dan halaman profil/owner yang sudah ada.
-- **Tempel tautan** fokus pada satu kolom URL + tombol Periksa + hasil. Katalog/pencarian platform, pager dan opsi “Semua” tidak ditampilkan.
-- **Cari judul** tetap menampilkan katalog dan pencarian 15 provider video yang mendukung, serta provider gambar sesuai kapabilitas. Mode ini tidak dicampur dengan tautan manual.
+- **Tempel tautan** menampilkan seluruh katalog 200 platform, pencarian platform dan opsi “Semua 200” untuk tautan video, gambar, dan audio. Saat “Semua 200” dipilih, sistem menentukan sumber dari URL yang ditempel. Mesin **Cari Judul** tetap terpisah dan bukan bagian dari Tempel Tautan.
+- **Cari judul** tetap menampilkan hanya provider dengan dukungan pencarian video/gambar yang diketahui. Label “Smart Search” dihapus, tetapi fungsi Cari Judul dipertahankan.
 - Indikator titik dekoratif di header disembunyikan tanpa menonaktifkan pemeriksaan keamanan. Metadata bantuan tetap terbaca.
 
 ## Paket 2 — Naskah antarmuka final
@@ -42,3 +42,8 @@ Keterangan keamanan: browser hanya membuka peta setelah pengguna memilih menampi
 - Pastikan sintaks semua JS, laman rumah/profil, PWA cache \`/v1-experience.css\`, lokasi consent, serta mode pencarian/tautan.
 - CI PR wajib hijau sebelum merge; deployment worker Cloudflare dijalankan dari \`main\` dan diverifikasi lewat health/release/asset smoke.
 - Jika ada regresi, gunakan checkpoint tag dari workflow deployment; jangan mengganti public release V1 atau memulihkan membership yang sudah dipensiunkan.
+
+## Perbaikan regresi katalog, animasi dan kartu alat
+- Full katalog 200 platform beserta pencarian nama dan pagination tersedia lagi pada mode Tempel Tautan; opsi default adalah **Semua 200**.
+- Hero dan logo animasi diaktifkan dengan override CSS khusus tanpa mengaktifkan animasi scroll global. Ketuk lambang A pada hero untuk memutar ulang animasi (dengan menghormati pengaturan reduce-motion).
+- Di layar HP, kartu alat menjadi satu kolom penuh, nama dan deskripsi hanya pindah baris antar kata, badge kategori tidak dipotong di tengah kata.

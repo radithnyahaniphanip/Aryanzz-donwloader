@@ -1,11 +1,12 @@
 /* ARYANZZ V1 · editorial home + local device studio. Loaded after brand-system.css. */
-/* The link workspace only accepts a single URL. Catalogue search is exclusive to Cari Judul. */
+/* Restore the full 200-source link catalogue. Smart Search labels remain exclusive to title search. */
 #home .v674-download[data-mode="link"] .v736-platform-search-heading,
 #home .v674-download[data-mode="link"] .v736-platform-search-wrap,
-#home .v674-download[data-mode="link"] #platformPicker,
-#home .v674-download[data-mode="link"] #platformPager,
-#home .v674-download[data-mode="link"] .format-strip{display:none!important}
-#home .v674-download[data-mode="link"] #linkModePanel{display:block!important;margin-top:17px}
+#home .v674-download[data-mode="link"] #platformPicker{display:revert!important}
+#home .v674-download[data-mode="link"] #platformPicker{display:grid!important}
+#home .v674-download[data-mode="link"] #platformPager:not([hidden]){display:flex!important}
+#home .v674-download[data-mode="link"] .format-strip{display:flex!important}
+#home .v674-download[data-mode="link"] #linkModePanel{display:block!important;margin-top:16px}
 #home .v674-download[data-mode="title"] #linkModePanel{display:none!important}
 #home .v674-download[data-mode="title"] .v736-platform-search-heading{margin-top:18px!important}
 #home .v674-download[data-mode="link"] .v674-mode-switch{margin-bottom:0!important}
@@ -158,3 +159,89 @@ html[data-ary-home-motion="off"] #home .ary-v1-brand-letter,
 html[data-ary-home-motion="off"] #home>.v89-welcome p,
 html[data-ary-home-motion="off"] #home .v89-welcome-mark svg,
 html[data-ary-home-motion="off"] #home .ary-brand-symbol{animation:none!important;transform:none!important;opacity:1!important}
+
+#home .v674-download #platformPicker .v736-platform[hidden]{display:none!important}
+/* V1 regression repair: the previous release hid the link-platform catalogue.
+   Tool text must wrap between words, never split a word or category label. */
+#home .v674-download[data-mode="link"] #platformPicker .v736-platform[hidden],
+#home .v674-download[data-mode="link"] #platformPager[hidden]{display:none!important}
+#home .v674-download[data-mode="link"] #platformPicker>[data-platform="all"]{
+  background:linear-gradient(115deg,#23213b,#17263e)!important;
+  border:1px solid #666b9a!important;
+}
+#home .v674-download[data-mode="link"] #platformPicker>[data-platform="all"] .v736-logo{
+  color:#aedaf1!important;font-weight:800!important;font-size:22px!important
+}
+#toolsArea #allTools .v674-tool-grid{width:100%;min-width:0}
+#toolsArea #allTools .tool{grid-template-columns:46px minmax(0,1fr)!important;min-width:0!important;min-height:120px!important;padding:13px 34px 13px 13px!important;gap:4px 12px!important;align-content:center!important}
+#toolsArea #allTools .tool .ico{width:46px!important;height:46px!important;grid-column:1!important;grid-row:1/4!important}
+#toolsArea #allTools .tool b,
+#toolsArea #allTools .tool small,
+#toolsArea #allTools .tool .v674-tool-category{
+  grid-column:2!important;min-width:0!important;
+  overflow-wrap:normal!important;word-break:normal!important;
+  hyphens:none!important;white-space:normal!important
+}
+#toolsArea #allTools .tool b{font-size:14px!important;line-height:1.35!important;letter-spacing:0!important}
+#toolsArea #allTools .tool small{font-size:11px!important;line-height:1.45!important}
+#toolsArea #allTools .tool .v674-tool-category{
+  width:max-content!important;max-width:100%!important;
+  font-size:9px!important;letter-spacing:.2px!important;
+  line-height:1.3!important;padding:4px 7px!important;
+  white-space:nowrap!important;word-break:keep-all!important;overflow-wrap:normal!important;
+}
+#toolsArea #allTools .tool:after{right:12px!important}
+@media(max-width:680px){
+  #toolsArea #allTools .v674-tool-grid{grid-template-columns:minmax(0,1fr)!important;gap:10px!important}
+  #toolsArea #allTools .tool{min-height:115px!important;padding:15px 32px 15px 14px!important;grid-template-columns:46px minmax(0,1fr)!important}
+}
+@media(min-width:681px) and (max-width:1000px){
+  #toolsArea #allTools .v674-tool-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+}
+/* Browser starts with body data-motion=off. That old global universal rule accidentally
+   suppressed Home's independent opted-in animations, even when HTML said motion=on. */
+@keyframes aryV1GradientBreathe{
+  0%,100%{background-position:0% 50%}50%{background-position:100% 50%}
+}
+html[data-ary-home-motion="on"] body[data-motion="off"] #home>.v89-welcome .ary-v1-hero-line,
+html[data-ary-home-motion="on"] body[data-motion="on"] #home>.v89-welcome .ary-v1-hero-line{
+ animation:aryV1WordReveal .9s cubic-bezier(.18,.8,.2,1) both!important
+}
+html[data-ary-home-motion="on"] body #home>.v89-welcome .ary-v1-hero-gradient{
+ background-size:200% 100%!important;
+ animation:aryV1WordReveal .9s cubic-bezier(.18,.8,.2,1) .18s both,aryV1GradientBreathe 7s ease-in-out 1.3s infinite!important
+}
+html[data-ary-home-motion="on"] body #home>.v89-welcome p{
+ animation:aryV1WordReveal .7s ease-out .38s both!important
+}
+html[data-ary-home-motion="on"] body #home>.v674-top .ary-v1-brand-letter{
+ animation:aryV1LetterReveal .7s cubic-bezier(.2,.9,.3,1) both!important;
+ animation-delay:calc(var(--ary-letter-index,0)*60ms)!important
+}
+html[data-ary-home-motion="on"] body #home>.v89-welcome .v89-welcome-mark svg{
+ animation:aryV1LogoLift 3.2s ease-in-out .8s infinite!important
+}
+html[data-ary-home-motion="on"] body #home>.v674-top .ary-brand-symbol{
+ animation:aryV1LogoLift 4s ease-in-out .5s infinite!important
+}
+@media(prefers-reduced-motion:reduce){
+ html[data-ary-home-motion] body #home .ary-v1-hero-line,
+ html[data-ary-home-motion] body #home .ary-v1-brand-letter,
+ html[data-ary-home-motion] body #home>.v89-welcome p,
+ html[data-ary-home-motion] body #home .v89-welcome-mark svg,
+ html[data-ary-home-motion] body #home .ary-brand-symbol{animation:none!important;opacity:1!important;transform:none!important}
+}
+html[data-ary-home-motion="off"] body #home .ary-v1-hero-line,
+html[data-ary-home-motion="off"] body #home .ary-v1-brand-letter,
+html[data-ary-home-motion="off"] body #home>.v89-welcome p,
+html[data-ary-home-motion="off"] body #home .v89-welcome-mark svg,
+html[data-ary-home-motion="off"] body #home .ary-brand-symbol{animation:none!important;opacity:1!important;transform:none!important}
+
+/* Accessible animation replay: the existing A mark becomes the only replay control. */
+#home>.v89-welcome #aryHeroReplay{
+  appearance:none;-webkit-appearance:none;cursor:pointer;touch-action:manipulation;
+}
+#home>.v89-welcome #aryHeroReplay:focus-visible{
+  outline:2px solid #a9efff!important;outline-offset:4px!important
+}
+#home>.v89-welcome #aryHeroReplay:disabled{cursor:default}

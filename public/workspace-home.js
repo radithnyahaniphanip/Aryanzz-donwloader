@@ -55,6 +55,23 @@ function initHomeEntrance(){
  };
  applyMotion();
  window.addEventListener("aryanzz:motion-changed",applyMotion);
+ const replay=document.getElementById("aryHeroReplay");
+ if(replay){
+  const reduced=window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches===true;
+  if(reduced){
+   replay.disabled=true;
+   replay.title="Animasi dinonaktifkan oleh pengaturan aksesibilitas perangkat";
+   replay.setAttribute("aria-label","Animasi nonaktif mengikuti pengaturan perangkat");
+  }else{
+   replay.addEventListener("click",()=>{
+    try{localStorage.setItem("aryanzz.motion.v75","on")}catch{}
+    document.documentElement.dataset.aryHomeMotion="off";
+    void welcome?.offsetWidth;
+    document.documentElement.dataset.aryHomeMotion="on";
+    window.dispatchEvent(new Event("aryanzz:motion-changed"));
+   });
+  }
+ }
 }
 initHomeEntrance();
 
