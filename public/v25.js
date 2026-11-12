@@ -222,51 +222,183 @@
   }
 
   const DEVICE_KEY="aryanzz.device.sessions.v26", DEVICE_ID_KEY="aryanzz.device.id.v26";
-  function deviceLabel(){
-    const ua=navigator.userAgent||"";
-    const os=/Android/i.test(ua)?"Android":/iPhone|iPad|iPod/i.test(ua)?"iOS":/Windows/i.test(ua)?"Windows":/Mac OS|Macintosh/i.test(ua)?"macOS":/Linux/i.test(ua)?"Linux":"Perangkat";
-    const match=ua.match(/Android[^;)]*;\s*([^;)]+?)(?:\s+Build|\))/i);
-    const model=match?match[1].trim():"";
-    const browser=/Edg\//.test(ua)?"Edge":/Firefox\//.test(ua)?"Firefox":/SamsungBrowser\//.test(ua)?"Samsung Internet":/Chrome\//.test(ua)?"Chrome":/Safari\//.test(ua)?"Safari":"Browser";
-    return [model,os,browser].filter(Boolean).join(" · ");
-  }
-  function localDate(value=Date.now()){return new Date(value).toLocaleString("id-ID",{day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"});}
+  const LOCATION_KEY="aryanzz.device.location.v26";
   let currentDeviceId="";
+  const deviceDate=value=>{
+    const ms=Number(value);
+    if(!Number.isFinite(ms)||ms<=0)return "Waktu tidak tersedia";
+    return new Date(ms).toLocaleString("id-ID",{day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"});
+  };
+  function browserDeviceInfo(){
+    const ua=String(navigator.userAgent||"");
+    const android=ua.match(/Android\s*([\d.]+)/i),ios=ua.match(/(?:iPhone OS|CPU OS)\s*([\d_]+)/i);
+    const os=android?"Android "+android[1]:ios?"iOS "+ios[1].replace(/_/g,"."):
+      /Windows NT/i.test(ua)?"Windows":/Mac OS X/i.test(ua)?"macOS":/Linux/i.test(ua)?"Linux":"Sistem tidak tersedia";
+    const browserMatch=ua.match(/(?:Edg|Firefox|SamsungBrowser|Chrome|Version)\/([\d.]+)/);
+    const browser=/Edg\//.test(ua)?"Microsoft Edge":/Firefox\//.test(ua)?"Mozilla Firefox":
+      /SamsungBrowser\//.test(ua)?"Samsung Internet":/Chrome\//.test(ua)?"Google Chrome":
+      /Safari\//.test(ua)?"Safari":"Browser tidak teridentifikasi";
+    const fullBrowser=browserMatch?browser+" "+browserMatch[1].split(".")[0]:browser;
+    const rawModel=ua.match(/Android[^;)]*;\s*([^;)]+?)(?:\s+Build\/|\))/i)?.[1]?.trim()||"";
+    const model=rawModel.length>=3&&!/^(?:Linux|Android|Mobile|wv)$/i.test(rawModel)?rawModel:"Tidak dibagikan browser";
+    const kind=/iPad|Tablet/i.test(ua)||(/Android/i.test(ua)&&!/Mobile/i.test(ua))?"Tablet":/Android|iPhone|iPod/i.test(ua)?"Ponsel":"Komputer";
+    return {os,browser:fullBrowser,model,kind,label:[model!=="Tidak dibagikan browser"?model:kind,os.split(" ")[0],browser].join(" · ")};
+  }
+  function deviceLabel(){return browserDeviceInfo().label;}
+  function writeDeviceSpec(key,value){
+    const node=document.querySelector('#deviceSpecGrid [data-device-spec="'+key+'"]');
+    if(node)node.textContent=String(value??"Tidak tersedia");
+  }
+  function renderDeviceSpecifications(info){
+    const width=Number(window.screen?.width)||0,height=Number(window.screen?.height)||0;
+    const dpr=Number(window.devicePixelRatio)||1;
+    const connection=navigator.connection||navigator.mozConnection||navigator.webkitConnection;
+    const threads=Number(navigator.hardwareConcurrency)||0;
+    const ram=Number(navigator.deviceMemory)||0;
+    const timezone=Intl.DateTimeFormat().resolvedOptions().timeZone||"Tidak diketahui";
+    writeDeviceSpec("os",info.os);
+    writeDeviceSpec("model",info.model);
+    writeDeviceSpec("browser",info.browser);
+    writeDeviceSpec("kind",info.kind);
+    writeDeviceSpec("screen",width&&height?width+" × "+height+" CSS px":"Tidak tersedia");
+    writeDeviceSpec("scale",Number.isFinite(dpr)?dpr.toFixed(2)+"×":"Tidak tersedia");
+    writeDeviceSpec("cpu",threads?threads+" thread logis (perkiraan)":"Tidak dibagikan browser");
+    writeDeviceSpec("ram",ram?ram+" GB (perkiraan)":"Tidak dibagikan browser");
+    writeDeviceSpec("network",connection?.effectiveType?String(connection.effectiveType).toUpperCase()+" (estimasi)":"Tidak dibagikan browser");
+    writeDeviceSpec("locale",(navigator.language||"Tidak diketahui")+" · "+timezone);
+    writeDeviceSpec("battery","Tidak dibagikan browser");
+    if(typeof navigator.getBattery==="function"){
+      navigator.getBattery().then(battery=>{
+        if(!battery)return;
+        const node=document.querySelector('#deviceSpecGrid [data-device-spec="battery"]');
+        if(node)node.textContent=Math.round(Number(battery.level)*100)+"%"+(battery.charging?" · mengisi daya":"");
+      }).catch(()=>{});
+    }
+    if(navigator.userAgentData?.getHighEntropyValues){
+      navigator.userAgentData.getHighEntropyValues(["model"]).then(data=>{
+        const model=String(data?.model||"").trim();
+        if(model.length>=3&&!/^(?:Linux|Android|Mobile)$/i.test(model))writeDeviceSpec("model",model);
+      }).catch(()=>{});
+    }
+  }
   function renderDeviceHistory(){
     const box=$("deviceHistoryList");if(!box)return;
-    const sessions=read(DEVICE_KEY,[]);box.replaceChildren();
-    if(!Array.isArray(sessions)||!sessions.length){box.textContent="Belum ada riwayat perangkat.";return;}
-    sessions.slice(0,8).forEach(item=>{
-      const row=document.createElement("div");row.className="v25-device-row";
-      const title=document.createElement("b");title.textContent=item.label||"Perangkat";
-      const meta=document.createElement("small");meta.textContent=(item.id===currentDeviceId?"Perangkat ini · ":"")+localDate(item.at);
-      row.append(title,meta);box.append(row);
+    const sessions=read(DEVICE_KEY,[]);
+    box.replaceChildren();
+    if(!Array.isArray(sessions)||!sessions.length){
+      const empty=document.createElement("p");empty.className="ary-v1-device-empty";empty.textContent="Belum ada sesi yang tersimpan di browser ini.";box.append(empty);return;
+    }
+    sessions.slice(0,10).forEach(item=>{
+      const row=document.createElement("article");row.className="ary-v1-device-history-row";
+      const icon=document.createElement("span");icon.className="ary-v1-device-history-icon";icon.setAttribute("aria-hidden","true");
+      const copy=document.createElement("div");copy.className="ary-v1-device-history-copy";
+      const title=document.createElement("b");title.textContent=String(item?.label||"Perangkat").slice(0,100);
+      const meta=document.createElement("small");meta.textContent=deviceDate(item?.at);
+      copy.append(title,meta);
+      row.append(icon,copy);
+      if(item?.id===currentDeviceId){
+        const active=document.createElement("span");active.className="ary-v1-device-history-badge";active.textContent="Browser ini";row.append(active);
+      }
+      box.append(row);
     });
   }
+  function validSavedDeviceLocation(item){
+    return !!item&&Number.isFinite(Number(item.latitude))&&Number.isFinite(Number(item.longitude))
+      &&Number(item.latitude)>=-90&&Number(item.latitude)<=90&&Number(item.longitude)>=-180&&Number(item.longitude)<=180;
+  }
+  function renderLocationMap(item){
+    if(!validSavedDeviceLocation(item))return;
+    const latitude=Number(item.latitude),longitude=Number(item.longitude);
+    const latDelta=.009,lonDelta=.014;
+    const west=Math.max(-180,longitude-lonDelta),east=Math.min(180,longitude+lonDelta);
+    const south=Math.max(-90,latitude-latDelta),north=Math.min(90,latitude+latDelta);
+    const mapUrl=new URL("https://www.openstreetmap.org/export/embed.html");
+    mapUrl.searchParams.set("bbox",[west,south,east,north].join(","));
+    mapUrl.searchParams.set("layer","mapnik");
+    mapUrl.searchParams.set("marker",latitude+","+longitude);
+    const frame=$("deviceMapFrame"),panel=$("deviceMapPanel");
+    if(frame)frame.src=mapUrl.href;
+    if(panel)panel.hidden=false;
+    const details={
+      coordinates:latitude.toFixed(5)+", "+longitude.toFixed(5),
+      accuracy:Number.isFinite(Number(item.accuracy))?"±"+Math.round(Math.max(0,Number(item.accuracy)))+" m":"Tidak tersedia",
+      time:deviceDate(item.at)
+    };
+    for(const [key,value] of Object.entries(details)){
+      const node=panel?.querySelector('[data-map-detail="'+key+'"]');
+      if(node)node.textContent=value;
+    }
+  }
+  function hideLocationMap(){
+    const frame=$("deviceMapFrame"),panel=$("deviceMapPanel");
+    if(frame)frame.removeAttribute("src");
+    if(panel)panel.hidden=true;
+  }
   function initDeviceHistory(){
-    const label=deviceLabel();
+    const info=browserDeviceInfo();
     currentDeviceId=safeGet(DEVICE_ID_KEY,"")||("dev-"+(window.crypto?.randomUUID?.()||Math.random().toString(36).slice(2)));
     safeSet(DEVICE_ID_KEY,currentDeviceId);
     const old=read(DEVICE_KEY,[]);
-    write(DEVICE_KEY,[{id:currentDeviceId,label,at:Date.now()},...(Array.isArray(old)?old.filter(x=>x.id!==currentDeviceId):[])].slice(0,15));
-    if($("deviceCurrent"))$("deviceCurrent").textContent=label;
+    write(DEVICE_KEY,[{id:currentDeviceId,label:info.label,os:info.os,browser:info.browser,at:Date.now()},
+      ...(Array.isArray(old)?old.filter(item=>item?.id!==currentDeviceId):[])].slice(0,15));
+    if($("deviceCurrent"))$("deviceCurrent").textContent=info.label;
+    renderDeviceSpecifications(info);
     renderDeviceHistory();
-    const status=$("deviceLocationStatus"),saved=read("aryanzz.device.location.v26",null);
-    const validSavedLocation=saved&&Number.isFinite(Number(saved.latitude))&&Number.isFinite(Number(saved.longitude));
-    if(status)status.textContent=validSavedLocation?"Lokasi terakhir: "+Number(saved.latitude).toFixed(5)+", "+Number(saved.longitude).toFixed(5)+" · "+localDate(saved.at):"Lokasi belum dibagikan.";
-    $("deviceGetLocation")?.addEventListener("click",()=>{
-      if(!navigator.geolocation){if(status)status.textContent="Browser tidak mendukung lokasi.";return;}
-      if(status)status.textContent="Meminta izin lokasi dari HP…";
-      navigator.geolocation.getCurrentPosition(pos=>{
-        const item={latitude:pos.coords.latitude,longitude:pos.coords.longitude,accuracy:Math.round(pos.coords.accuracy),at:Date.now()};
-        const stored=safeSet("aryanzz.device.location.v26",JSON.stringify(item));
-        if(status)status.textContent=stored?"Lokasi tersimpan lokal: "+item.latitude.toFixed(5)+", "+item.longitude.toFixed(5)+" (akurasi ±"+item.accuracy+" m).":"Lokasi didapat, tetapi browser tidak dapat menyimpannya.";
-        const link=$("deviceMapLink");if(link){link.href="https://www.google.com/maps?q="+item.latitude+","+item.longitude;link.hidden=false;}
-        toast("Lokasi berhasil disimpan di browser ini.");
-      },err=>{if(status)status.textContent=err.code===1?"Izin lokasi ditolak. Aktifkan izin lokasi Chrome.":"Lokasi tidak tersedia. Periksa GPS dan jaringan.";},{enableHighAccuracy:true,timeout:15000,maximumAge:60000});
+
+    const status=$("deviceLocationStatus"),locate=$("deviceGetLocation"),
+      showSaved=$("deviceShowSavedLocation"),remove=$("deviceRemoveLocation");
+    const readLocation=()=>read(LOCATION_KEY,null);
+    function refreshLocationStatus(){
+      const saved=readLocation();
+      const valid=validSavedDeviceLocation(saved);
+      if(showSaved)showSaved.hidden=!valid;
+      if(remove)remove.hidden=!valid;
+      if(status)status.textContent=valid?"Lokasi lokal terakhir: "+deviceDate(saved.at)+". Tekan Tampilkan lokasi tersimpan untuk memuat peta.":"Lokasi belum dipindai.";
+    }
+    refreshLocationStatus();
+    showSaved?.addEventListener("click",()=>{
+      const saved=readLocation();
+      if(!validSavedDeviceLocation(saved)){refreshLocationStatus();return;}
+      renderLocationMap(saved);
+      if(status)status.textContent="Peta lokasi terakhir ditampilkan dari penyimpanan browser.";
     });
-    if(validSavedLocation){const link=$("deviceMapLink");if(link){link.href="https://www.google.com/maps?q="+Number(saved.latitude)+","+Number(saved.longitude);link.hidden=false;}}
-    $("deviceClearHistory")?.addEventListener("click",()=>{if(!write(DEVICE_KEY,[])){toast("Riwayat tidak dapat dihapus karena penyimpanan browser tidak tersedia.");return;}renderDeviceHistory();toast("Riwayat perangkat dihapus.");});
+    locate?.addEventListener("click",()=>{
+      if(!navigator.geolocation){
+        if(status)status.textContent="Browser tidak mendukung geolokasi.";return;
+      }
+      if(status)status.textContent="Menunggu izin lokasi dari browser…";
+      if(locate)locate.disabled=true;
+      navigator.geolocation.getCurrentPosition(pos=>{
+        if(locate)locate.disabled=false;
+        const item={latitude:Number(pos.coords.latitude),longitude:Number(pos.coords.longitude),
+          accuracy:Number(pos.coords.accuracy),at:Date.now()};
+        if(!validSavedDeviceLocation(item)){
+          if(status)status.textContent="Koordinat tidak valid. Coba pindai lagi.";return;
+        }
+        const stored=safeSet(LOCATION_KEY,JSON.stringify(item));
+        renderLocationMap(item);
+        if(status)status.textContent=(stored?"Lokasi berhasil dipindai dan tersimpan di browser ini. ":"Lokasi berhasil dipindai tetapi belum tersimpan. ")
+          +"Akurasi sekitar ±"+Math.round(Math.max(0,item.accuracy||0))+" meter.";
+        if(showSaved)showSaved.hidden=!stored;
+        if(remove)remove.hidden=!stored;
+        toast("Lokasi ditampilkan langsung di ARYANZZ.");
+      },err=>{
+        if(locate)locate.disabled=false;
+        if(status)status.textContent=err.code===1?"Izin lokasi ditolak. Periksa izin lokasi untuk situs ini di Chrome.":
+          err.code===3?"Pindai lokasi melewati batas waktu. Coba lagi.":"Lokasi tidak tersedia. Periksa GPS dan jaringan.";
+      },{enableHighAccuracy:true,timeout:18000,maximumAge:0});
+    });
+    remove?.addEventListener("click",()=>{
+      try{localStorage.removeItem(LOCATION_KEY);}catch{}
+      hideLocationMap();
+      refreshLocationStatus();
+      toast("Lokasi dihapus dari browser ini.");
+    });
+    $("deviceClearHistory")?.addEventListener("click",()=>{
+      if(!write(DEVICE_KEY,[])){toast("Riwayat tidak dapat dihapus karena penyimpanan browser tidak tersedia.");return;}
+      renderDeviceHistory();
+      toast("Riwayat perangkat dihapus.");
+    });
   }
 
 
