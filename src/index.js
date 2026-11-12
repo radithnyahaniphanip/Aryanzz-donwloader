@@ -564,6 +564,9 @@ async function freePublicMediaInfo(rawUrl,requestUrl,options={}){
           }catch{}
           await enrichInstagramDuration(normalized,canonicalUrl);
         }
+        // Photo Mode needs strict media signature checks even on the quick path;
+        // video/photo spoofing must never be traded for speed.
+        if(key==="tiktok"&&fast&&isTikTokPhotoRoute)await verifyTikTokPhotoVideoFormats(normalized,canonicalUrl);
         if(key==="tiktok"&&!fast){
           if(!isTikTokPhotoRoute){
             try{
