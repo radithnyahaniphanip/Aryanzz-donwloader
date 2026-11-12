@@ -9,7 +9,8 @@
     whatsapp: "https://wa.me/6282110767071",
     github: "https://github.com/radithnyahaniphanip",
     telegram: "",
-    tiktok: "https://www.tiktok.com/@azazeuu?_r=1&_t=ZS-9B2FU0QemSi"
+    tiktok: "https://www.tiktok.com/@azazeuu?_r=1&_t=ZS-9B2FU0QemSi",
+    youtube: "https://www.youtube.com/@aryanz2855"
   };
   const safeRead = (key, fallback) => {
     try {
@@ -39,7 +40,8 @@
       whatsapp: "ownerWhatsappUrl",
       github: "ownerGithubUrl",
       telegram: "ownerTelegramUrl",
-      tiktok: "ownerTiktokUrl"
+      tiktok: "ownerTiktokUrl",
+      youtube: "ownerYoutubeUrl"
     };
     Object.entries(fields).forEach(([key, id]) => {
       const input = $(id);
@@ -55,7 +57,7 @@
         card.rel = "noopener noreferrer";
         card.classList.remove("is-unset");
         card.setAttribute("aria-disabled", "false");
-        if (action) action.textContent = ({whatsapp:"Chat WhatsApp",github:"Kunjungi GitHub",telegram:"Buka Telegram",tiktok:"Follow di TikTok"})[key] || "Buka tautan";
+        if (action) action.textContent = ({whatsapp:"Chat WhatsApp",github:"Kunjungi GitHub",telegram:"Buka Telegram",tiktok:"Follow di TikTok",youtube:"Kunjungi Kanal YouTube"})[key] || "Buka tautan";
       } else {
         card.removeAttribute("href");
         card.removeAttribute("target");
@@ -101,11 +103,12 @@
       whatsapp: $("ownerWhatsappUrl")?.value.trim() || "",
       github: $("ownerGithubUrl")?.value.trim() || "",
       telegram: $("ownerTelegramUrl")?.value.trim() || "",
-      tiktok: $("ownerTiktokUrl")?.value.trim() || ""
+      tiktok: $("ownerTiktokUrl")?.value.trim() || "",
+      youtube: $("ownerYoutubeUrl")?.value.trim() || ""
     };
     for (const [key, value] of Object.entries(values)) {
       if (value && !validLink(value)) {
-        const input = ({whatsapp:"ownerWhatsappUrl",github:"ownerGithubUrl",telegram:"ownerTelegramUrl",tiktok:"ownerTiktokUrl"})[key];
+        const input = ({whatsapp:"ownerWhatsappUrl",github:"ownerGithubUrl",telegram:"ownerTelegramUrl",tiktok:"ownerTiktokUrl",youtube:"ownerYoutubeUrl"})[key];
         $(input)?.focus();
         alert("Tautan " + key + " harus berupa URL lengkap yang diawali https:// atau http://.");
         return;
@@ -172,6 +175,15 @@
     renderLinks();
     initSecurityCenter();
     $("ownerLinksSave")?.addEventListener("click", saveLinks);
+    document.querySelectorAll("#owner .ary-owner2-social-card").forEach(card=>{
+      card.addEventListener("click",()=>{
+        if(card.getAttribute("aria-disabled")==="true"||!card.href)return;
+        card.classList.remove("ary-social-activated");
+        void card.offsetWidth;
+        card.classList.add("ary-social-activated");
+        window.setTimeout(()=>card.classList.remove("ary-social-activated"),1100);
+      });
+    });
     $("ownerEditProfile")?.addEventListener("click", () => window.aryanzzShowPanel?.("profile"));
     window.addEventListener("storage", event => {
       if (!event.key || [PROFILE_KEY, DESIGN_KEY, "aryanzz.profile.v2", "aryanzz.history.v2", "aryanzz-download-history-v1"].includes(event.key)) renderOwnerProfile();
