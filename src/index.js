@@ -349,7 +349,9 @@ async function platformMediaInfo(request){
   }
   const normalizedExpected=expectedEntry?.providerKey||({x:"twitter",twitter:"twitter",instagramlite:"instagram",facebooklite:"facebook",tiktoklite:"tiktok"})[expected]||expected;
   if(normalizedExpected!==key)return json({ok:false,error:"GAGAL — tautan "+key+" ditolak karena endpoint ini khusus untuk "+normalizedExpected+"."},400);
-  return freePublicMediaInfo(parsed.href,request.url,{fast:body?.fast===true});
+  // Threads share URLs are multi-hop; always use the proven full extraction cascade.
+  // The quick path routinely exits before the public post/embedding fallbacks finish.
+  return freePublicMediaInfo(parsed.href,request.url,{fast:body?.fast===true&&key!=="threads"});
 }
 async function snackVideoNativePageFallback(rawUrl,requestUrl,timeoutMs=8500){
   const response=await fetch(rawUrl,{

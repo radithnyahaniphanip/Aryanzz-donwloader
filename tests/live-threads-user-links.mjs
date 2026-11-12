@@ -3,7 +3,7 @@ const examples=[
   {kind:"video",url:"https://www.threads.com/share/_hmjQ-mLv"},
   {kind:"image",url:"https://www.threads.com/share/BBbOsV3Lue"}
 ];
-const report={test:"actual user-supplied Threads public URLs",date:new Date().toISOString(),items:[]};
+const report={test:"real Threads mobile default fast-button path and image proxy",date:new Date().toISOString(),items:[]};
 const request=async(url,options={})=>fetch(url,{cache:"no-store",signal:AbortSignal.timeout(65000),...options});
 let success=true;
 for(const test of examples){
@@ -14,7 +14,7 @@ for(const test of examples){
       const response=await request(origin+"/api/platform/info",{
         method:"POST",
         headers:{"content-type":"application/json","accept":"application/json"},
-        body:JSON.stringify({url:test.url,expectedPlatform:"threads",fast:false})
+        body:JSON.stringify({url:test.url,expectedPlatform:"threads",fast:true})
       });
       item.status=response.status;
       const data=await response.json().catch(()=>({}));
