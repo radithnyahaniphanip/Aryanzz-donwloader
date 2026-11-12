@@ -1347,7 +1347,7 @@ async function searchSocial(request){
         for(const item of direct.items){if(!seen.has(item.url)){seen.add(item.url);candidates.push(item)}}
       }
     }
-    if((platform==="all"||platform==="youtube")&&!candidates.some(item=>platformIdForUrl(item.url)==="youtube")){
+    if((platform==="all"||platform==="youtube")&&!candidates.some(item=>platformIdForUrl(item.url)==="youtube"&&publicSearchRelevance(query,item.title+" "+(item.snippet||""))>=0.16)){
       // Community YouTube providers are only used when the indexed search found no YouTube candidate.
       const youtubeTerms=[query,query+" lagu",query+" song",query+" official audio",query+" DJ remix",...variants]
         .map(value=>String(value||"").replace(/\s+/g," ").trim())
@@ -3337,10 +3337,43 @@ async function hybridInnerTubeSearch(query,parentSignal){
   });
   try{return await Promise.any(attempts);}catch{return null;}
 }
+async function youtubeHtmlSearch(query,parentSignal){
+  // The public results page embeds real videoRenderer records in ytInitialData.
+  // This route does not require a stream extractor or forge media URLs.
+  const url=new URL("https://www.youtube.com/results");url.searchParams.set("search_query",query);
+  try{
+    const signal=parentSignal?AbortSignal.any([parentSignal,AbortSignal.timeout(7000)]):AbortSignal.timeout(7000);
+    const response=await fetch(url.href,{
+      headers:{accept:"text/html,application/xhtml+xml","accept-language":"id-ID,id;q=0.9,en-US;q=0.8",
+        "user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+        cookie:"CONSENT=YES+cb"},
+      cache:"no-store",signal
+    });
+    if(!response.ok)return null;
+    const html=(await response.text()).slice(0,5000000);
+    let parsed=null;
+    for(const pattern of [/(?:var\s+ytInitialData|window\[\s*["']ytInitialData["']\s*\])\s*=\s*(\{[\s\S]*?\})\s*;\s*<\/script>/i,/(?:var\s+ytInitialData|window\[\s*["']ytInitialData["']\s*\])\s*=\s*(\{[\s\S]*?\})\s*;/i]){
+      const found=html.match(pattern);
+      if(found){try{parsed=JSON.parse(found[1]);break;}catch{}}
+    }
+    if(!parsed)return null;
+    const results=[],seen=new Set();
+    collectYouTubeSearchItems(parsed,results,seen);
+    const relevant=results.filter(item=>publicSearchRelevance(query,item.title+" "+(item.channel||""))>=0.16);
+    if(!relevant.length)return null;
+    return {ok:true,results:relevant.slice(0,20).map(item=>({...item,searchProvider:"YouTube public results page"})),provider:"YouTube public results page"};
+  }catch{return null;}
+}
 async function hybridYouTubeSearch(query){
   const controller=new AbortController();
+  const isRelevant=results=>Array.isArray(results)&&results.some(item=>publicSearchRelevance(query,item.title+" "+(item.channel||""))>=0.16);
   const directAttempt=hybridInnerTubeSearch(query,controller.signal).then(result=>{
-    if(!result?.results?.length)throw new Error("YouTube official search unavailable");
+    if(!isRelevant(result?.results))throw new Error("YouTube InnerTube returned no relevant titles");
+    controller.abort();
+    return result;
+  });
+  const htmlAttempt=youtubeHtmlSearch(query,controller.signal).then(result=>{
+    if(!isRelevant(result?.results))throw new Error("YouTube results page unavailable");
     controller.abort();
     return result;
   });
@@ -3366,11 +3399,12 @@ async function hybridYouTubeSearch(query){
     const data=await hybridFetchJson(candidate.url,controller.signal);
     const items=Array.isArray(data)?data:Array.isArray(data?.items)?data.items:Array.isArray(data?.results)?data.results:[];
     const results=items.map(item=>normalize(item,candidate.provider,candidate.instance)).filter(Boolean);
-    if(!results.length)throw new Error(candidate.provider+" tidak menemukan video.");
+    const relevant=results.filter(item=>publicSearchRelevance(query,item.title+" "+(item.channel||""))>=0.16);
+    if(!relevant.length)throw new Error(candidate.provider+" tidak menemukan judul yang sesuai.");
     controller.abort();
-    return {ok:true,results:results.slice(0,8),provider:candidate.provider+" public instances"};
+    return {ok:true,results:relevant.slice(0,8),provider:candidate.provider+" public instances"};
   });
-  attempts.push(directAttempt);
+  attempts.push(directAttempt,htmlAttempt);
   try{return await Promise.any(attempts);}catch{return null;}
 }
 async function freeYouTubeSearchItems(query,queryVariants=null,timeoutMs=18000){
