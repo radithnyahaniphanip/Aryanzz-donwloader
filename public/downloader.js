@@ -158,14 +158,14 @@
       button.textContent = exists ? "♡ Favorit" : "♥ Tersimpan";
     } catch { button.textContent = "Favorit tidak tersimpan"; }
   }
-  async function postJson(path, body) {
+  async function postJson(path, body, timeoutMs=18000) {
     const response = await fetch(path, {
       method: "POST",
       headers: {"Content-Type":"application/json","Accept":"application/json"},
       body: JSON.stringify(body),
       cache: "no-store",
       credentials: "same-origin",
-      signal: downloadTimeoutSignal(18000)
+      signal: downloadTimeoutSignal(timeoutMs)
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.error || "Server downloader tidak dapat memproses tautan.");
@@ -1279,14 +1279,14 @@ function socialNetworkPlan(selected=0){
       const thumb=Array.isArray(data.videoThumbnails)?data.videoThumbnails.find(x=>x.quality==="maxresdefault")||data.videoThumbnails[0]:null;
       return {ok:true,providerReady:true,providerName:"Hybrid",provider:"Invidious",instance,title:String(data.title).slice(0,300),thumbnail:typeof thumb?.url==="string"?thumb.url:null,duration:Number(data.lengthSeconds)||null,uploader:String(data.author||"").slice(0,160),formats,message:"Stream diperoleh langsung dari browser melalui instance komunitas."};
   }
-  async function browserHybridYoutubeInfo(raw){
+  async function browserHybridYoutubeInfo(raw,timeoutMs=25000){
     const parsed=new URL(raw);
     const match=parsed.hostname.toLowerCase().includes("youtu.be")
       ?parsed.pathname.split("/").filter(Boolean)[0]||""
       :parsed.searchParams.get("v")||parsed.pathname.match(/^\/(?:shorts|embed|live|v)\/([A-Za-z0-9_-]{6,20})/)?.[1]||"";
     if(!/^[A-Za-z0-9_-]{6,20}$/.test(match))throw new Error("ID video YouTube tidak valid.");
     const endpoint="/api/youtube/hybrid/info?url="+encodeURIComponent(parsed.href);
-    const response=await fetch(endpoint,{cache:"no-store",credentials:"same-origin",signal:downloadTimeoutSignal(25000)});
+    const response=await fetch(endpoint,{cache:"no-store",credentials:"same-origin",signal:downloadTimeoutSignal(timeoutMs)});
     const data=await response.json().catch(()=>({}));
     if(!response.ok)throw new Error(data.error||"Worker YouTube gagal memeriksa tautan (HTTP "+response.status+").");
     if(data.isLive||data.isUpcoming)return {...data,videoId:data.videoId||match,liveEmbedUrl:"https://www.youtube-nocookie.com/embed/"+match};
@@ -1295,7 +1295,8 @@ function socialNetworkPlan(selected=0){
     }
     return {...data,videoId:data.videoId||match};
   }
-  async function checkLink(url, button) {
+  async function checkLink(url, button, options={}) {
+    const fast=options.deep!==true;
     const runId=++analysisRunId;
     const out = $("downloadResult");
     out.hidden = false;
@@ -1349,17 +1350,17 @@ function socialNetworkPlan(selected=0){
       const catalogPlatform=(window.ARYANZZ_PLATFORM_CATALOG||[]).find(platform=>platform.id===selectedPlatform);
       const shouldTryImageExtraction=isTikTokPhotoPost||isTikTokShortLink||isYouTubePhotoPost||isPhotoRoute||(!isYouTube&&!isExplicitVideoRoute&&selectedPlatform!=="soundcloud"&&!isTikTokPlatform&&catalogPlatform?.mediaModes?.includes("image"));
       const isSocialImagePostRoute=/\/(?:p|post|posts|status|pin|photo|photos|image|images|album|gallery|share)\//i.test(url.pathname);
-      const imageCheckTimeout=(isTikTokPhotoPost||isTikTokShortLink)?30000:(isYouTubePhotoPost||isPhotoRoute||isSocialImagePostRoute)?14000:10000;
+      const imageCheckTimeout=fast?((isTikTokPhotoPost||isTikTokShortLink)?11000:8500):((isTikTokPhotoPost||isTikTokShortLink)?30000:(isYouTubePhotoPost||isPhotoRoute||isSocialImagePostRoute)?14000:10000);
       const imageExtractionPromise=shouldTryImageExtraction
         ?fetch("/api/image/extract?url="+encodeURIComponent(url.href),{cache:"no-store",credentials:"same-origin",signal:AbortSignal.timeout(imageCheckTimeout)}).then(async response=>({ok:response.ok,data:await response.json().catch(()=>({}))})).catch(error=>({ok:false,data:{error:String(error?.message||error)}}))
         :Promise.resolve(null);
       let info;
       try{
         info=isYouTube
-          ?await browserHybridYoutubeInfo(url.href)
+          ?await browserHybridYoutubeInfo(url.href,fast?12500:25000)
           :isTikTokPhotoPost
             ?{ok:true,title:"TikTok Photo Mode",filename:"TikTok Photo Mode",type:"image",formats:[],extractor:"TikTok Photo Mode"}
-            :await postJson("/api/platform/info",{url:url.href,expectedPlatform:selectedPlatform});
+            :await postJson("/api/platform/info",{url:url.href,expectedPlatform:selectedPlatform,fast},fast?11500:27000);
       }catch(error){
         if(!shouldTryImageExtraction)throw error;
         info={ok:false,error:String(error?.message||error),title:"",formats:[],type:"image"};
@@ -2008,6 +2009,13 @@ function socialNetworkPlan(selected=0){
       });
     } catch (error) {
       showError(out,error,url.href);
+      if(fast&&runId===analysisRunId){
+        const retry=make("button","tag ary-fast-link-retry","Coba pemeriksaan lengkap");
+        retry.type="button";
+        retry.addEventListener("click",()=>checkLink(url,button,{deep:true}),{once:true});
+        const note=make("p","muted","Pemeriksaan cepat belum mendapatkan hasil yang cukup. Kamu bisa mencoba jalur lengkap jika sumber publik merespons lambat.");
+        out.append(note,retry);
+      }
     } finally {
       if(runId===analysisRunId){
         button.disabled = false;
