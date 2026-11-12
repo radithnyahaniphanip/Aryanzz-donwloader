@@ -245,8 +245,10 @@ window.fetch=async function(input,init){
     if(response.ok){
       const data=await response.clone().json().catch(()=>null);
       if(data&&data.ok!==false){
-        await storeApiCache(key,data,response.status);
-        if(details.url.pathname==="/api/platform/info")await storeLibrary(body,data);
+        // Jangan menahan hasil API hanya karena transaksi IndexedDB lambat pada HP.
+        // Data lokal tetap disimpan; error penyimpanan sudah ditangani masing-masing fungsi.
+        void storeApiCache(key,data,response.status);
+        if(details.url.pathname==="/api/platform/info")void storeLibrary(body,data);
       }
     }else if(response.status>=500||response.status===429){
       const cached=await readApiCache(key);
