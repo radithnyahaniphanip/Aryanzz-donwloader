@@ -235,3 +235,12 @@ html[data-ary-home-motion="off"] body #home .ary-v1-brand-letter,
 html[data-ary-home-motion="off"] body #home>.v89-welcome p,
 html[data-ary-home-motion="off"] body #home .v89-welcome-mark svg,
 html[data-ary-home-motion="off"] body #home .ary-brand-symbol{animation:none!important;opacity:1!important;transform:none!important}
+
+/* Accessible animation replay: the existing A mark becomes the only replay control. */
+#home>.v89-welcome #aryHeroReplay{
+  appearance:none;-webkit-appearance:none;cursor:pointer;touch-action:manipulation;
+}
+#home>.v89-welcome #aryHeroReplay:focus-visible{
+  outline:2px solid #a9efff!important;outline-offset:4px!important
+}
+#home>.v89-welcome #aryHeroReplay:disabled{cursor:default}
