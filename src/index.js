@@ -702,6 +702,25 @@ async function freePublicMediaInfo(rawUrl,requestUrl,options={}){
       }
     }catch(error){primaryError+="; HTML metadata fallback: "+String(error?.message||error).slice(0,160)}
   }
+  if(key==="threads"){
+    // Threads' ordinary post page may return a JavaScript shell without media tags.
+    // The public /embed/ representation is a distinct, lighter media source.
+    try{
+      const post=new URL(canonicalUrl);
+      if(/^\/(?:@[^/]+\/post|t)\/[A-Za-z0-9_-]+\/?$/i.test(post.pathname)){
+        const embed=new URL(post.href);
+        embed.pathname=post.pathname.replace(/\/$/,"")+"/embed/";
+        embed.search="";embed.hash="";
+        const entry=platformForHost(post.hostname);
+        const response=await genericPublicPageMediaInfo(embed.href,requestUrl,entry,9000);
+        const fallback=await response.json().catch(()=>({}));
+        if(response.ok&&fallback.ok!==false&&Array.isArray(fallback.formats)&&fallback.formats.some(item=>item?.mode==="video"||item?.mode==="audio")){
+          return json({...fallback,providerName:"Threads public embed fallback",provider:"Threads public embed",fallbackUsed:true,canonicalUrl:post.href,primaryProviderError:primaryError.slice(0,300)});
+        }
+        primaryError+="; Threads embed: "+String(fallback.error||"tidak ada file video atau audio publik").slice(0,140);
+      }
+    }catch(error){primaryError+="; Threads embed: "+String(error?.message||error).slice(0,160)}
+  }
   const restricted=key==="tiktok"&&/protected|age.?restricted|status\s*10216|login required|requires login|private|Native TikTok metadata/i.test(primaryError);
   const userMessage=restricted
     ? "TikTok tidak mengirim stream video publik untuk tautan ini. Provider juga gagal mengambil metadata; video mungkin dibatasi usia, privasi, wilayah, atau memerlukan login. Coba tautan video lain yang dapat diputar tanpa login."
@@ -1677,6 +1696,7 @@ async function fetchSocialPostHtml(pageUrl,timeoutMs=18000){
   let current=safePublicMediaUrl(pageUrl);if(!current)throw new Error("Tautan postingan harus HTTPS dan tidak boleh mengarah ke jaringan lokal.");
   for(let hop=0;hop<6;hop++){
     const isTikTokHost=current.hostname==="tiktok.com"||current.hostname.endsWith(".tiktok.com");
+    const isThreadsHost=platformForHost(current.hostname)?.id==="threads";
     const baseHeaders={
       accept:"text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
       "accept-language":"en-US,en;q=0.9,id;q=0.8"
@@ -1684,11 +1704,14 @@ async function fetchSocialPostHtml(pageUrl,timeoutMs=18000){
     const headerVariants=isTikTokHost?[
       {...baseHeaders,"user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",referer:"https://www.tiktok.com/"},
       {...baseHeaders,"user-agent":"Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36",referer:"https://www.tiktok.com/",origin:"https://www.tiktok.com"}
+    ]:isThreadsHost?[
+      {...baseHeaders,"user-agent":"facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)",referer:"https://www.threads.com/"},
+      {...baseHeaders,"user-agent":"Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 Chrome/130.0.0.0 Mobile Safari/537.36"}
     ]:[{...baseHeaders,"user-agent":"Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36"}];
     let response=null,lastResponseError="";
     for(const requestHeaders of headerVariants){
       response=await fetchSocialHeaders(current.href,{headers:requestHeaders,redirect:"manual",cache:"no-store"},timeoutMs);
-      if(isTikTokHost&&[403,429,500,502,503,504].includes(response.status)&&headerVariants.length>1){
+      if((isTikTokHost||isThreadsHost)&&[403,429,500,502,503,504].includes(response.status)&&headerVariants.length>1){
         lastResponseError="HTTP "+response.status;
         await response.body?.cancel().catch(()=>{});
         continue;
@@ -1702,6 +1725,7 @@ async function fetchSocialPostHtml(pageUrl,timeoutMs=18000){
       if(redirectUrl.protocol==="http:"&&isPlatformLink(redirectUrl.href))redirectUrl.protocol="https:";
       const next=safePublicMediaUrl(redirectUrl.href);
       if(!next)throw new Error("Pengalihan postingan menuju alamat yang tidak aman atau HTTPS tidak tersedia.");
+      if(isThreadsHost&&platformForHost(next.hostname)?.id!=="threads")throw new Error("Tautan Threads mengalihkan ke domain di luar Threads.");
       current=next;continue;
     }
     if(!response.ok)throw new Error("Halaman sumber menjawab HTTP "+response.status+".");
@@ -2500,6 +2524,21 @@ async function resolveSocialImagePost(rawUrl,requestUrl,options={}){
           const best=fallbacks.filter(Boolean).sort((a,b)=>(b.images?.length||0)-(a.images?.length||0))[0];
           if(best&&(!page||(best.images?.length||0)>(page.images?.length||0)))page=best;
         }
+      }
+      if((!page||!page.images?.length)&&key==="threads"){
+        try{
+          const source=new URL(canonicalUrl);
+          if(/^\/(?:@[^/]+\/post|t)\/[A-Za-z0-9_-]+\/?$/i.test(source.pathname)){
+            const embed=new URL(source.href);
+            embed.pathname=source.pathname.replace(/\/$/,"")+"/embed/";
+            embed.search="";embed.hash="";
+            const result=await fetchSocialPostHtml(embed.href,8500);
+            if(platformIdForUrl(result.url)==="threads"){
+              const photos=extractSocialImageCandidates(result.html,result.url,key);
+              if(photos.length)page={...result,images:photos};
+            }
+          }
+        }catch{}
       }
       return page;
     })(),
