@@ -1352,7 +1352,23 @@ function socialNetworkPlan(selected=0){
       const isSocialImagePostRoute=/\/(?:p|post|posts|status|pin|photo|photos|image|images|album|gallery|share)\//i.test(url.pathname);
       const imageCheckTimeout=fast?((isTikTokPhotoPost||isTikTokShortLink)?11000:8500):((isTikTokPhotoPost||isTikTokShortLink)?30000:(isYouTubePhotoPost||isPhotoRoute||isSocialImagePostRoute)?14000:10000);
       const imageExtractionPromise=shouldTryImageExtraction
-        ?fetch("/api/image/extract?url="+encodeURIComponent(url.href),{cache:"no-store",credentials:"same-origin",signal:AbortSignal.timeout(imageCheckTimeout)}).then(async response=>({ok:response.ok,data:await response.json().catch(()=>({}))})).catch(error=>({ok:false,data:{error:String(error?.message||error)}}))
+        ?(async()=>{
+          const endpoint="/api/image/extract?url="+encodeURIComponent(url.href);
+          const requestImage=async timeoutMs=>{
+            const response=await fetch(endpoint,{cache:"no-store",credentials:"same-origin",signal:downloadTimeoutSignal(timeoutMs)});
+            const data=await response.json().catch(()=>({}));
+            return {ok:response.ok&&data.ok!==false,data};
+          };
+          try{return await requestImage(imageCheckTimeout)}
+          catch(error){
+            if(error?.name==="AbortError")return {ok:false,data:{error:"Pemeriksaan dibatalkan."}};
+            if(error?.name==="TimeoutError"&&(isTikTokPhotoPost||isTikTokShortLink)){
+              try{return await requestImage(22000)}
+              catch(retryError){return {ok:false,data:{error:"Server sumber atau provider tidak merespons tepat waktu, bukan berarti sinyal HP lemah. Coba pemeriksaan lengkap atau ulangi nanti.",diagnostics:String(retryError?.message||retryError)}}}
+            }
+            return {ok:false,data:{error:String(error?.message||error)}};
+          }
+        })()
         :Promise.resolve(null);
       let info;
       try{
