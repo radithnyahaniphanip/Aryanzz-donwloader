@@ -313,11 +313,11 @@ async function platformMediaInfo(request){
   const expectedEntry=PLATFORM_CATALOG_BY_ID.get(expected);
   if(key==="aio"){
     if(!expectedEntry||expectedEntry.id!==platformEntry.id)return json({ok:false,error:"GAGAL — tautan "+platformEntry.name+" tidak sesuai dengan platform yang dipilih."},400);
-    return genericPublicPageMediaInfo(parsed.href,request.url,platformEntry);
+    return genericPublicPageMediaInfo(parsed.href,request.url,platformEntry,body?.fast===true?5200:11000);
   }
   const normalizedExpected=expectedEntry?.providerKey||({x:"twitter",twitter:"twitter",instagramlite:"instagram",facebooklite:"facebook",tiktoklite:"tiktok"})[expected]||expected;
   if(normalizedExpected!==key)return json({ok:false,error:"GAGAL — tautan "+key+" ditolak karena endpoint ini khusus untuk "+normalizedExpected+"."},400);
-  return freePublicMediaInfo(parsed.href,request.url);
+  return freePublicMediaInfo(parsed.href,request.url,{fast:body?.fast===true});
 }
 async function snackVideoNativePageFallback(rawUrl,requestUrl,timeoutMs=8500){
   const response=await fetch(rawUrl,{
@@ -496,7 +496,8 @@ function tikTokUrlCandidates(rawUrl,canonicalUrl){
   }
   return candidates;
 }
-async function freePublicMediaInfo(rawUrl,requestUrl){
+async function freePublicMediaInfo(rawUrl,requestUrl,options={}){
+  const fast=options.fast===true;
   const key=freePlatformKey(rawUrl);
   if(!key)return json({error:"Platform belum didukung oleh provider gratis."},400);
   const labels={tiktok:"TikTok",instagram:"Instagram",snackvideo:"SnackVideo",capcut:"CapCut",pinterest:"Pinterest",facebook:"Facebook",twitter:"X",reddit:"Reddit",vimeo:"Vimeo",threads:"Threads",soundcloud:"SoundCloud"};
@@ -515,7 +516,7 @@ async function freePublicMediaInfo(rawUrl,requestUrl){
     soundcloud:"SoundCloud diproses sebagai audio (MP3/M4A jika tersedia), bukan video MP4."
   };
   let canonicalUrl=rawUrl,resolutionError="";
-  try{canonicalUrl=await resolveSocialShortLink(rawUrl,key,key==="tiktok"?8000:key==="facebook"?9500:11000)}
+  try{canonicalUrl=await resolveSocialShortLink(rawUrl,key,fast?5200:(key==="tiktok"?8000:key==="facebook"?9500:11000))}
   catch(error){
     resolutionError=String(error?.message||error).slice(0,180);
     if(key==="facebook"&&resolutionError==="facebook_login_required")
@@ -529,14 +530,14 @@ async function freePublicMediaInfo(rawUrl,requestUrl){
   }
   let primaryError=resolutionError;
   try{
-    let response=null,data={},attempts=key==="instagram"?2:1;
-    const primaryTargets=key==="tiktok"?providerUrls.slice(0,4):[canonicalUrl];
+    let response=null,data={},attempts=fast?1:(key==="instagram"?2:1);
+    const primaryTargets=key==="tiktok"?providerUrls.slice(0,fast?1:4):[canonicalUrl];
     const primaryResults=await Promise.allSettled(primaryTargets.map(async targetUrl=>{
       let candidateResponse=null,candidateData={};
       for(let attempt=0;attempt<attempts;attempt++){
         try{
           const endpoint=FREE_MEDIA_API+"/api/download/"+key+"?url="+encodeURIComponent(targetUrl);
-          candidateResponse=await fetch(endpoint,{headers:{accept:"application/json","user-agent":"Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/130.0.0.0 Mobile Safari/537.36",...(key==="instagram"?{referer:"https://www.instagram.com/"}:{})},signal:AbortSignal.timeout(key==="snackvideo"?12000:key==="tiktok"?10000:14000),cache:"no-store"});
+          candidateResponse=await fetch(endpoint,{headers:{accept:"application/json","user-agent":"Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/130.0.0.0 Mobile Safari/537.36",...(key==="instagram"?{referer:"https://www.instagram.com/"}:{})},signal:AbortSignal.timeout(fast?5500:(key==="snackvideo"?12000:key==="tiktok"?10000:14000)),cache:"no-store"});
           candidateData=await candidateResponse.json().catch(()=>({}));
           if(candidateResponse.ok||candidateResponse.status<500||attempt===attempts-1)break;
         }catch(error){
@@ -553,7 +554,7 @@ async function freePublicMediaInfo(rawUrl,requestUrl){
     if(response?.ok&&data?.success!==false){
       const normalized=freeProviderMediaInfo(data,canonicalUrl,requestUrl);
       if(normalized){
-        if(key==="instagram"){
+        if(key==="instagram"&&!fast){
           try{
             const alternative=normalizeWeirdDlInstagramData(await fetchWeirdDlInstagramData(canonicalUrl,9000),canonicalUrl,requestUrl);
             if(alternative){
@@ -563,7 +564,7 @@ async function freePublicMediaInfo(rawUrl,requestUrl){
           }catch{}
           await enrichInstagramDuration(normalized,canonicalUrl);
         }
-        if(key==="tiktok"){
+        if(key==="tiktok"&&!fast){
           if(!isTikTokPhotoRoute){
             try{
               const fallback=await tikwmFallbackMediaInfo(canonicalUrl,requestUrl,providerUrls.filter(value=>value!==canonicalUrl));
@@ -583,7 +584,7 @@ async function freePublicMediaInfo(rawUrl,requestUrl){
           await verifyTikTokPhotoVideoFormats(normalized,canonicalUrl);
           if(!isTikTokPhotoRoute)await enrichTikTokDuration(normalized,canonicalUrl);
         }
-        return json({...normalized,canonicalUrl:canonicalUrl!==rawUrl?canonicalUrl:undefined});
+        return json({...normalized,fastResponse:fast,canonicalUrl:canonicalUrl!==rawUrl?canonicalUrl:undefined});
       }
       primaryError="Provider utama tidak mengembalikan stream video/audio yang valid.";
     }else{
