@@ -190,6 +190,14 @@ body:before{content:"";position:fixed;z-index:-1;inset:-30%;pointer-events:none;
 @media(max-width:600px){.all-tools-grid,.all-tools-grid.v674-tool-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}.all-tools-grid .tool{min-width:0;min-height:106px;padding:10px 7px;overflow-wrap:anywhere}.all-tools-grid .tool b{font-size:11px;line-height:1.3}.all-tools-grid .tool small{font-size:10px;line-height:1.35}.v736-platform-search-heading{margin-top:22px}}
 @media(min-width:420px) and (max-width:600px){.all-tools-grid,.all-tools-grid.v674-tool-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
 @media(prefers-reduced-motion:reduce){.ary-v1-hero-title .ary-v1-hero-line{animation:none}}
+/* V1 responsive media results: compact photo and download cards */
+#downloadResult .aryanzz-inline-image-grid,.image-download-results{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;align-items:stretch}
+#downloadResult .aryanzz-inline-image-card,.image-download-results>*{min-width:0;max-width:100%;overflow:hidden}
+#downloadResult .aryanzz-inline-image-card img{display:block;width:100%;aspect-ratio:1/1;object-fit:cover}
+#downloadResult .aryanzz-inline-image-actions{display:flex;flex-wrap:wrap;gap:6px}
+#downloadResult .aryanzz-inline-image-actions button{min-width:0;max-width:100%;white-space:normal}
+@media(min-width:480px){#downloadResult .aryanzz-inline-image-grid,.image-download-results{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(min-width:760px){#downloadResult .aryanzz-inline-image-grid,.image-download-results{grid-template-columns:repeat(4,minmax(0,1fr))}}
 </style><link rel="stylesheet" href="/v15.css?v=59.5"><link rel="stylesheet" href="/v25.css?v=__ARYANZZ_VERSION__"><link rel="stylesheet" href="/owner.css?v=__ARYANZZ_VERSION__"><link rel="stylesheet" href="/downloader.css?v=88.3&build=__ARYANZZ_VERSION__"><link rel="stylesheet" href="/v59.css?v=59.5"><link rel="stylesheet" href="/editor-pro.css?v=65.0"><link rel="stylesheet" href="/music-recognition.css?v=71.0"><link rel="stylesheet" href="/brand-refresh.css?v=82.1">
 <link rel="stylesheet" href="/v89.css?v=93.2"><style>
 .ary-members-panel{padding:18px}.ary-members-status,.ary-member-privacy,.ary-members-empty{padding:14px;border:1px solid #354664;border-radius:14px;margin-top:12px;background:#111d32}.ary-members-status p,.ary-member-privacy p{font-size:13px;line-height:1.55;color:#b9c6da;margin:6px 0 0}.ary-members-empty{color:#aebed4;text-align:center;font-size:13px}
