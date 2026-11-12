@@ -1279,7 +1279,7 @@ async function searchSocial(request){
     :[PLATFORM_CATALOG_BY_ID.get(canonicalPlatform)].filter(Boolean);
   // Use the primary indexed domain per provider; OR-chains of site: operators were unreliable.
   const searchSites=platform==="all"
-    ?searchTargets.map(item=>item.domains?.[0]?"site:"+item.domains[0]:"").filter(Boolean)
+    ?searchTargets.slice(0,12).map(item=>item.domains?.[0]?"site:"+item.domains[0]:"").filter(Boolean)
     :domains.map(domain=>"site:"+domain);
   async function boundedLookup(inputs,task,parallel=6){
     const out=new Array(inputs.length);let cursor=0;
