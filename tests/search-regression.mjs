@@ -35,6 +35,8 @@ globalThis.fetch=async(input,init={})=>{
     return new Response(imageSearchHtml,{status:200,headers:{"content-type":"text/html; charset=utf-8"}});
   if(url.hostname==="html.duckduckgo.com"){
     const searchQuery=String(url.searchParams.get("q")||"");
+    if(/site:youtube\.com/i.test(searchQuery)&&/tabola bale/i.test(searchQuery))
+      return new Response('<a class="result__a" href="https://www.youtube.com/watch?v=dQw4w9WgXcQ">Completely unrelated cooking recipe</a><div class="result__snippet">Not the requested song</div>',{status:200,headers:{"content-type":"text/html; charset=utf-8"}});
     if(/green screen meme kucing/i.test(searchQuery))return new Response(videoSearchHtml,{status:200,headers:{"content-type":"text/html; charset=utf-8"}});
     if(/site:instagram\.com/i.test(searchQuery))return new Response('<a class="result__a" href="https://www.instagram.com/reel/ABC123xyz/">Cat video Instagram reel</a><div class="result__snippet">Cat video public reel</div>',{status:200,headers:{"content-type":"text/html; charset=utf-8"}});
     if(/site:tiktok\.com/i.test(searchQuery))return new Response('<a class="result__a" href="https://www.tiktok.com/@demo/video/1234567890123456789">Cat video TikTok</a><div class="result__snippet">Cat video public TikTok</div>',{status:200,headers:{"content-type":"text/html; charset=utf-8"}});
@@ -45,9 +47,16 @@ globalThis.fetch=async(input,init={})=>{
   if(url.hostname==="www.youtube.com"&&url.pathname==="/youtubei/v1/search"){
     const body=JSON.parse(init.body||"{}");
     const query=String(body.query||"Tabola Bale");
+    if(/tabola bale/i.test(query))return new Response("rate limited",{status:429,headers:{"content-type":"text/plain"}});
     const title=/tabola bale/i.test(query)?"Tabola Bale - Official Music Video":query+" official video";
     const videoId="zyxwvutsrqp";
     return new Response(JSON.stringify({contents:{twoColumnSearchResultsRenderer:{primaryContents:{sectionListRenderer:{contents:[{itemSectionRenderer:{contents:[{videoRenderer:{videoId,title:{runs:[{text:title}]},ownerText:{runs:[{text:"Test Channel"}]},lengthText:{simpleText:"3:45"},viewCountText:{simpleText:"1.2M views"},thumbnail:{thumbnails:[{url:"https://i.ytimg.com/vi/"+videoId+"/hqdefault.jpg",width:480,height:360}]}}}]}}]}}}}}),{status:200,headers:{"content-type":"application/json"}});
+  }
+  if(url.hostname==="www.youtube.com"&&url.pathname==="/results"){
+    const query=String(url.searchParams.get("search_query")||"Tabola Bale");
+    const title=/tabola bale/i.test(query)?"Tabola Bale - Official Music Video":query+" video";
+    const initial={contents:{twoColumnSearchResultsRenderer:{primaryContents:{sectionListRenderer:{contents:[{itemSectionRenderer:{contents:[{videoRenderer:{videoId:"zyxwvutsrqp",title:{runs:[{text:title}]},ownerText:{runs:[{text:"Test Channel"}]},lengthText:{simpleText:"3:45"},thumbnail:{thumbnails:[{url:"https://i.ytimg.com/vi/zyxwvutsrqp/hqdefault.jpg",width:480,height:360}]}}}]}}]}}}}};
+    return new Response("<html><script>var ytInitialData = "+JSON.stringify(initial)+";</script></html>",{status:200,headers:{"content-type":"text/html; charset=utf-8"}});
   }
   if(url.hostname==="www.google.com")
     return new Response("",{status:200,headers:{"content-type":"text/html; charset=utf-8"}});
@@ -81,9 +90,9 @@ try{
   }),{});
   assert.equal(youtubeTitleSearch.status,200,"YouTube title search must return public results even when the download stream cannot be verified");
   const youtubeTitleData=await youtubeTitleSearch.json();
-  assert.ok(youtubeTitleData.results.some(item=>item.platform==="youtube"&&/tabola bale/i.test(item.title)),"Official YouTube InnerTube search must return the requested title");
+  assert.ok(youtubeTitleData.results.some(item=>item.platform==="youtube"&&/tabola bale/i.test(item.title)),"YouTube public HTML search must return the requested title when InnerTube is rate-limited");
   assert.ok(youtubeTitleData.results.every(item=>item.searchOnly===true||item.verified===true),"YouTube search cards must state whether their download source is verified");
-  console.log("✔ YouTube official title search returns in-app results independently from download extraction");
+  console.log("✔ YouTube title search survives InnerTube rate limiting by parsing real public HTML results");
 
   const youtubeSocialTitleSearch=await worker.fetch(new Request("https://aryanzz.example/api/social/search",{
     method:"POST",
