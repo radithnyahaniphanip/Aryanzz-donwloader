@@ -34,5 +34,29 @@ async function initSecurityIndicator(){
  setInterval(check,60000);
 }
 
+function initHomeEntrance(){
+ const word=home.querySelector(".v674-brand>span:last-child");
+ if(word&&!word.querySelector(".ary-v1-brand-letters")){
+  const textNode=Array.from(word.childNodes).find(node=>node.nodeType===Node.TEXT_NODE&&node.textContent.trim());
+  if(textNode){
+   const letters=document.createElement("span");letters.className="ary-v1-brand-letters";
+   letters.setAttribute("aria-label",textNode.textContent.trim());
+   Array.from(textNode.textContent.trim()).forEach((letter,index)=>{
+    const span=document.createElement("span");span.className="ary-v1-brand-letter";
+    span.textContent=letter;span.setAttribute("aria-hidden","true");span.style.setProperty("--ary-letter-index",String(index));letters.append(span);
+   });
+   word.replaceChild(letters,textNode);
+  }
+ }
+ const applyMotion=()=>{
+  let saved="";try{saved=localStorage.getItem("aryanzz.motion.v75")||""}catch{}
+  const prefersReduced=window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches===true;
+  document.documentElement.dataset.aryHomeMotion=saved==="off"||(!saved&&prefersReduced)?"off":"on";
+ };
+ applyMotion();
+ window.addEventListener("aryanzz:motion-changed",applyMotion);
+}
+initHomeEntrance();
+
 initSecurityIndicator();
 })();
