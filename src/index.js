@@ -2525,6 +2525,21 @@ async function resolveSocialImagePost(rawUrl,requestUrl,options={}){
           if(best&&(!page||(best.images?.length||0)>(page.images?.length||0)))page=best;
         }
       }
+      if((!page||!page.images?.length)&&key==="threads"){
+        try{
+          const source=new URL(canonicalUrl);
+          if(/^\/(?:@[^/]+\/post|t)\/[A-Za-z0-9_-]+\/?$/i.test(source.pathname)){
+            const embed=new URL(source.href);
+            embed.pathname=source.pathname.replace(/\/$/,"")+"/embed/";
+            embed.search="";embed.hash="";
+            const result=await fetchSocialPostHtml(embed.href,8500);
+            if(platformIdForUrl(result.url)==="threads"){
+              const photos=extractSocialImageCandidates(result.html,result.url,key);
+              if(photos.length)page={...result,images:photos};
+            }
+          }
+        }catch{}
+      }
       return page;
     })(),
     key==="tiktok"&&!isTikTokPhotoRoute?fetchTikwmData(canonicalUrl,9000).then(data=>{
