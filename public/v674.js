@@ -342,6 +342,8 @@ const youtubeFallbackOnly=mediaCount>0&&selected!=="all"&&selected!=="youtube"&&
 const parts=[];if(mediaCount)parts.push(mediaCount+" video/audio dari "+(youtubeFallbackOnly?"YouTube (cadangan)":sourceNames.length===1?sourceNames[0]:sourceNames.length>1?sourceNames.length+" platform":target.name));if(images.length)parts.push(images.length+" gambar dari "+target.name);
 if(help)help.textContent=youtubeFallbackOnly?(mediaCount+" hasil YouTube ditemukan sebagai sumber cadangan karena pencarian "+target.name+" belum memberikan hasil terverifikasi. Pilih hasil untuk memeriksa dan mengunduh.") : searchType?.value==="audio"?(mediaCount+" pilihan audio dari "+target.name+" · pilih Buat MP3 untuk memeriksa sumber dan format yang tersedia.") : parts.length?parts.join(" · ")+(Number(unavailableCount)>0?" · "+Number(unavailableCount)+" tautan media dilewati":"")+" · pilih hasil untuk melihat atau mengunduh.":"Tidak ada hasil publik yang cocok. Coba kata kunci lain.";
 }
+// Cache kecil khusus sesi ini; pencarian yang sama muncul tanpa permintaan ulang.
+const recentTitleSearch=new Map();
 const go=async()=>{
 const q=(searchInput?.value||"").trim();if(!q){if(help)help.textContent="Masukkan judul atau kata kunci gambar.";return}if(q.length<2){if(help)help.textContent="Masukkan minimal 2 karakter.";return}
 searchController?.abort();searchController=new AbortController();currentPage=1;
@@ -355,10 +357,20 @@ if(help)help.textContent=selected==="all"?(kind==="image"?"Pencarian judul memer
 try{
 const endpoint=kind==="image"?"/api/image/search":"/api/social/search";
 const options={method:"POST",headers:{"content-type":"application/json"},cache:"no-store"};
-const signal=AbortSignal.any([searchController.signal,AbortSignal.timeout(45000)]);
-const response=await fetch(endpoint,{...options,body:JSON.stringify({query:q,platform:selected,mediaType:kind}),signal});
-const data=await response.json().catch(()=>({}));
-if(!response.ok||data.ok===false)throw new Error(data.error||"Pencarian "+target.name+" belum tersedia.");
+const cacheKey=JSON.stringify([kind,selected,q.toLocaleLowerCase("id-ID")]);
+const saved=recentTitleSearch.get(cacheKey);
+let data;
+if(saved&&Date.now()-saved.at<45000){
+  data=saved.data;
+}else{
+  const signal=AbortSignal.any([searchController.signal,AbortSignal.timeout(34000)]);
+  const response=await fetch(endpoint,{...options,body:JSON.stringify({query:q,platform:selected,mediaType:kind}),signal});
+  data=await response.json().catch(()=>({}));
+  if(!response.ok||data.ok===false)throw new Error(data.error||"Pencarian "+target.name+" belum tersedia.");
+  if(recentTitleSearch.size>=20)recentTitleSearch.delete(recentTitleSearch.keys().next().value);
+  recentTitleSearch.set(cacheKey,{data,at:Date.now()});
+}
+if(data.ok===false)throw new Error(data.error||"Pencarian "+target.name+" belum tersedia.");
 let mediaItems=[],imageItems=[],unavailable=Number(data.unavailableCount)||0;
 if(kind==="image"){
 imageItems=(data.results||[]).flatMap(group=>(Array.isArray(group?.images)?group.images:[]).map(item=>({...item,platform:item.platform||group.platform,sourceUrl:item.sourceUrl||group.sourceUrl}))).filter(item=>searchResultBelongsTo({url:item.sourceUrl},selected));
@@ -380,6 +392,7 @@ size.onchange=()=>{pageSize=Number(size.value);currentPage=1;updatePage()};prev.
 pager.append(prev,status,size,next);results.append(pager);updatePage();
 }catch(error){
 if(error?.name==="AbortError")return;
+if(error?.name==="TimeoutError")error=new Error("Sumber pencarian terlalu lambat. Coba judul lebih spesifik atau pilih platform terlebih dahulu.");
 results.replaceChildren();
 const note=document.createElement("p");note.className="v674-title-help";note.textContent=String(error?.message||"Pencarian belum tersedia.").slice(0,220);results.append(note);
 showFallback(target,q,kind);
