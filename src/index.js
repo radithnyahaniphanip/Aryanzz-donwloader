@@ -623,6 +623,18 @@ async function freePublicMediaInfo(rawUrl,requestUrl,options={}){
       primaryError+="; TikTok fallback: "+String(error?.message||error).slice(0,900);
     }
   }
+  // Attempt TikTok's public item metadata and page extraction before generic scraping.
+  // This path was implemented but not previously wired into the fallback cascade.
+  if(key==="tiktok"&&!isTikTokPhotoRoute){
+    try{
+      const nativeResponse=await tikTokNativePageFallback(canonicalUrl,requestUrl,7000);
+      const nativeData=await nativeResponse.clone().json().catch(()=>({}));
+      if(nativeResponse.ok&&nativeData?.ok!==false&&Array.isArray(nativeData.formats)&&nativeData.formats.some(item=>item?.downloadUrl||item?.url)){
+        return json({...nativeData,providerName:"TikTok native public metadata fallback",fallbackUsed:true,canonicalUrl:canonicalUrl!==rawUrl?canonicalUrl:undefined});
+      }
+      primaryError+="; TikTok native: no verified direct media";
+    }catch(error){primaryError+="; TikTok native: "+String(error?.message||error).slice(0,180)}
+  }
   if(key==="tiktok"&&!isTikTokPhotoRoute){
     try{
       const entry=platformForHost(new URL(canonicalUrl).hostname)||platformForHost(new URL(rawUrl).hostname);
