@@ -11,6 +11,14 @@ for(const test of examples){
   report.items.push(item);
   try{
     if(test.kind==="video"){
+      const directUrl=new URL(origin+"/api/threads/direct");
+      directUrl.searchParams.set("url",test.url);
+      const directResponse=await request(directUrl.href);
+      const directInfo=await directResponse.json().catch(()=>({}));
+      item.directStatus=directResponse.status;
+      item.directProvider=directInfo.providerName||null;
+      item.directFormats=Array.isArray(directInfo.formats)?directInfo.formats.filter(v=>v.mode==="video"&&v.downloadUrl).length:0;
+      item.directError=directInfo.error||null;
       const response=await request(origin+"/api/platform/info",{
         method:"POST",
         headers:{"content-type":"application/json","accept":"application/json"},
