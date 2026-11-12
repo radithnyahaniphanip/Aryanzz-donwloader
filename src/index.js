@@ -2573,7 +2573,7 @@ function publicSearchRelevance(query,text){
 }
 function strictTitleIntentScore(query,title,snippet=""){
   const stop=new Set(["dj","remix","official","video","audio","music","lagu","song","full","hd","viral","the","and","for","with","from"]);
-  const normalize=value=>String(value||"").toLowerCase().normalize("NFD").replace(/[\\u0300-\\u036f]/g,"").replace(/[^a-z0-9]+/g," ").trim();
+  const normalize=value=>String(value||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]+/g," ").trim();
   const tokens=[...new Set(normalize(query).split(" ").filter(token=>token.length>1&&!stop.has(token)))];
   if(!tokens.length)return publicSearchRelevance(query,title+" "+snippet);
   const titleWords=new Set(normalize(title).split(" "));
