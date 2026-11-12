@@ -16,7 +16,7 @@
     ["bilibili.com","Bilibili"],["b23.tv","Bilibili"],["vk.com","VK"],["ok.ru","OK.ru"],
     ["rutube.ru","Rutube"],["likee.video","Likee"],["snapchat.com","Snapchat"],
     ["imgur.com","Imgur"],["bandcamp.com","Bandcamp"],["mixcloud.com","Mixcloud"],["snapchat.com","Snapchat"],["linkedin.com","LinkedIn"],["wechat.com","WeChat"],["weixin.qq.com","WeChat"],["kakao.com","KakaoTalk"],["idntimes.com","IDN App"],
-    ["ted.com","TED"],["archive.org","Internet Archive"],["snackvideo.com","SnackVideo"],["threads.net","Threads"],["bluesky.app","Bluesky"],["kick.com","Kick"],["rumble.com","Rumble"],["odysee.com","Odysee"]
+    ["ted.com","TED"],["archive.org","Internet Archive"],["snackvideo.com","SnackVideo"],["threads.net","Threads"],["threads.com","Threads"],["bluesky.app","Bluesky"],["kick.com","Kick"],["rumble.com","Rumble"],["odysee.com","Odysee"]
   ];
   let activeDownloadController=null,activeDownloadFfmpeg=null,analysisRunId=0;
   function downloadTimeoutSignal(ms){
@@ -1316,9 +1316,12 @@ function socialNetworkPlan(selected=0){
       let selectedPlatform=aliases[selectedRaw]||selectedRaw;
       const selectedNames=Object.fromEntries((window.ARYANZZ_PLATFORM_CATALOG||[]).map(platform=>[platform.id,platform.name]));
       const detectedAliases={"idn app":"idnapp"};
-      const detectedKey=window.aryanzzPlatformForUrl?.(url.href)||(detectedPlatform==="Direct Media URL"?"":(detectedAliases[detectedPlatform.toLowerCase()]||detectedPlatform.toLowerCase()));
+      const knownSocialHost=url.hostname.toLowerCase().replace(/^www\\./,"");
+      const explicitPlatform=knownSocialHost==="threads.com"||knownSocialHost.endsWith(".threads.com")||knownSocialHost==="threads.net"||knownSocialHost.endsWith(".threads.net")?"threads"
+        :knownSocialHost==="x.com"||knownSocialHost.endsWith(".x.com")||knownSocialHost==="twitter.com"||knownSocialHost.endsWith(".twitter.com")?"x":"";
+      const detectedKey=explicitPlatform||window.aryanzzPlatformForUrl?.(url.href)||(detectedPlatform==="Direct Media URL"?"":(detectedAliases[detectedPlatform.toLowerCase()]||detectedPlatform.toLowerCase()));
       const detectedEntry=(window.ARYANZZ_PLATFORM_CATALOG||[]).find(platform=>platform.id===detectedKey);
-      if(!detectedKey||!detectedEntry){
+      if(!detectedKey||(!detectedEntry&&detectedKey!=="threads"&&detectedKey!=="x")){
         const message=detectedPlatform==="Direct Media URL"
           ?"Tautan ini merupakan URL file langsung atau CDN yang belum terdaftar sebagai tautan postingan platform."
           :"Domain tautan belum dikenali dalam katalog platform ARYANZZ.";
