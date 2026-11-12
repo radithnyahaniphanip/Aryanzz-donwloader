@@ -9,7 +9,7 @@ const sw=readFileSync("public/sw.js","utf8");
 const manifest=JSON.parse(readFileSync("public/manifest.webmanifest","utf8"));
 assert.ok(html.includes('href="/brand-system.css?v=__ARYANZZ_VERSION__"'),"Premium design system must be loaded by the homepage");
 assert.ok(html.indexOf('href="/brand-system.css')>html.indexOf('href="/brand-polish.css'),"Design system must load after legacy brand styles");
-assert.ok(html.includes("Media lebih mudah.")&&html.includes("Kreativitas tanpa batas."),"Homepage must use refreshed ARYANZZ hero copy");
+assert.ok(html.includes("Semua berawal")&&html.includes("dari satu tautan"),"Homepage must use approved ARYANZZ V1 hero copy");
 assert.ok(html.includes('class="ary-brand-symbol"'),"Header must use the refreshed vector brand symbol");
 assert.ok(css.includes("#downloadResult .youtube-result{")&&css.includes("width:100%!important"),"Download result must use the full available content width");
 assert.ok(css.includes(".ary-tiktok-player")&&css.includes("--ary-tiktok-aspect")&&css.includes("aspect-ratio:var(--ary-tiktok-aspect,9/16)"),"TikTok official preview must use intrinsic source dimensions with a portrait fallback");
