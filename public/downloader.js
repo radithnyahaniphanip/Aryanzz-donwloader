@@ -46,7 +46,7 @@
   function normalizeMediaInput(raw) {
     let text=String(raw||"").trim();
     if(!text)return null;
-    const social=text.match(/(?:https?:\/\/)?(?:[a-z0-9-]+\.)*(?:youtube\.com|youtu\.be|tiktok\.com|instagram\.com|instagr\.am|snackvideo\.com|capcut\.com|facebook\.com|fb\.watch|pinterest\.com|pin\.it|x\.com|twitter\.com|reddit\.com|redd\.it|vimeo\.com|threads\.net|soundcloud\.com)(?:\/[^\s<>"']*)?/i);
+    const social=text.match(/(?:https?:\/\/)?(?:[a-z0-9-]+\.)*(?:youtube\.com|youtu\.be|tiktok\.com|instagram\.com|instagr\.am|snackvideo\.com|capcut\.com|facebook\.com|fb\.watch|pinterest\.com|pin\.it|x\.com|twitter\.com|reddit\.com|redd\.it|vimeo\.com|threads\.com|threads\.net|soundcloud\.com)(?:\/[^\s<>"']*)?/i);
     const generic=text.match(/https?:\/\/[^\s<>"']+/i);
     text=social?.[0]||generic?.[0]||text;
     text=text.replace(/^[<("'\x60]+/,"").replace(/[> "'\x60]+$/,"").replace(/[),.;!?\]}]+$/,"");
@@ -1385,7 +1385,30 @@ function socialNetworkPlan(selected=0){
           ?await browserHybridYoutubeInfo(url.href,fast?12500:25000)
           :isTikTokPhotoPost
             ?{ok:true,title:"TikTok Photo Mode",filename:"TikTok Photo Mode",type:"image",formats:[],extractor:"TikTok Photo Mode"}
-            :await postJson("/api/platform/info",{url:url.href,expectedPlatform:selectedPlatform,fast:fast&&!isThreadsPlatform},isThreadsPlatform?65000:slowSocialSource?(fast?28000:41000):(fast?20000:34000));
+            :isThreadsPlatform
+              ?await (async()=>{
+                // Two independent sources race: Threads public post/embed and the generic provider cascade.
+                // Accept only a response containing real media formats, never a metadata-only HTTP 200.
+                const direct=async()=>{
+                  const response=await fetch("/api/threads/direct?url="+encodeURIComponent(url.href),{
+                    cache:"no-store",credentials:"same-origin",signal:downloadTimeoutSignal(43000)
+                  });
+                  const data=await response.json().catch(()=>({}));
+                  if(!response.ok||!Array.isArray(data.formats)||!data.formats.some(item=>item?.downloadUrl))throw new Error(String(data.error||"Threads direct: no public media"));
+                  return data;
+                };
+                const provider=async()=>{
+                  const data=await postJson("/api/platform/info",{url:url.href,expectedPlatform:"threads",fast:false},65000);
+                  if(!Array.isArray(data.formats)||!data.formats.some(item=>item?.downloadUrl))throw new Error(String(data.error||"Threads provider: no public media"));
+                  return data;
+                };
+                try{return await Promise.any([direct(),provider()])}
+                catch(error){
+                  const reasons=Array.isArray(error?.errors)?error.errors.map(item=>String(item?.message||item).slice(0,150)):[String(error?.message||error)];
+                  return {ok:false,type:"image",title:"Threads",formats:[],error:"Belum ditemukan video/audio langsung. Memeriksa gambar Threads…",diagnostics:reasons};
+                }
+              })()
+              :await postJson("/api/platform/info",{url:url.href,expectedPlatform:selectedPlatform,fast},slowSocialSource?(fast?28000:41000):(fast?20000:34000));
       }catch(error){
         if(!shouldTryImageExtraction)throw error;
         info={ok:false,error:String(error?.message||error),title:"",formats:[],type:"image"};
