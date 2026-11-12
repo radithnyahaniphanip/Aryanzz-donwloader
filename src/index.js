@@ -283,6 +283,37 @@ function extractGenericPublicMediaCandidates(html,pageUrl){
   for(const pattern of patterns)for(const match of decoded.matchAll(pattern.regex))add(match[1],pattern.mode,"",pattern.mode==="audio"?"Audio":"Video");
   return output.slice(0,20);
 }
+function extractThreadsVideoVersions(html){
+  // Threads often exposes MP4 variants only in embedded hydration JSON, not OG tags.
+  // Restrict extracted URLs to known Meta delivery domains rather than arbitrary links.
+  const source=String(html||"").replace(/\\u0026/gi,"&").replace(/\\u003d/gi,"=").replace(/\\\//g,"/").replace(/&amp;/gi,"&");
+  const results=[],seen=new Set();
+  const add=(raw,width=0,height=0)=>{
+    const safe=safePublicMediaUrl(String(raw||"").replace(/\\\//g,"/").replace(/&amp;/gi,"&"));
+    if(!safe)return;
+    const host=safe.hostname.toLowerCase();
+    if(!/(^|\.)(?:cdninstagram\.com|fbcdn\.net|fbsbx\.com)$/.test(host)||seen.has(safe.href))return;
+    if(/(?:profile_pic|video_default|cover_frame|thumbnail)/i.test(safe.pathname))return;
+    seen.add(safe.href);
+    const h=Number(height)||0,w=Number(width)||0;
+    results.push({url:safe.href,type:"video",mode:"video",ext:"mp4",mimeType:"video/mp4",
+      label:h>=100?h+"p MP4":"MP4",width:w,height:h});
+  };
+  for(const match of source.matchAll(/"video_versions"\s*:\s*\[([\s\S]{0,50000}?)\]/gi)){
+    try{
+      const versions=JSON.parse("["+match[1]+"]");
+      for(const item of versions.slice(0,15))add(item?.url,item?.width,item?.height);
+    }catch{
+      for(const item of match[1].matchAll(/"url"\s*:\s*"((?:\\.|[^"\\])+)"/gi)){
+        try{add(JSON.parse('"'+item[1]+'"'))}catch{add(item[1])}
+      }
+    }
+  }
+  for(const match of source.matchAll(/"(?:playback_url|video_dash_manifest_url|video_url)"\s*:\s*"((?:\\.|[^"\\])+)"/gi)){
+    try{add(JSON.parse('"'+match[1]+'"'))}catch{add(match[1])}
+  }
+  return results.slice(0,12);
+}
 async function genericPublicPageMediaInfo(rawUrl,requestUrl,platformEntry,timeoutMs=11000){
   try{
     const page=await fetchSocialPostHtml(rawUrl,timeoutMs);
@@ -290,6 +321,7 @@ async function genericPublicPageMediaInfo(rawUrl,requestUrl,platformEntry,timeou
     const title=String(titleMatch?.[1]||platformEntry.name+" media").replace(/&amp;/gi,"&").slice(0,300);
     const thumbnail=extractSocialImageCandidates(page.html,page.url,platformEntry.id)[0]?.url||null;
     const media=extractGenericPublicMediaCandidates(page.html,page.url);
+    if(platformEntry.id==="threads")for(const video of extractThreadsVideoVersions(page.html))if(!media.some(item=>item.url===video.url))media.push(video);
     const dimensions=extractSocialVideoDimensions(page.html);
     const normalized=freeProviderMediaInfo({normalized:{title,thumbnail,media,...dimensions}},rawUrl,requestUrl);
     if(!normalized)return json({ok:false,platform:platformEntry.id,title,thumbnail,providerName:"Public page metadata fallback",provider:"Generic public metadata",experimental:true,fallbackTried:true,directDownloadAvailable:false,error:platformEntry.name+" tidak mengekspos file video/audio langsung pada halaman publik. Konten privat, DRM, atau player streaming memerlukan extractor khusus."},502);
