@@ -2216,6 +2216,23 @@ async function facebookPublicReaderMediaInfo(rawUrl,requestUrl,timeoutMs=9000){
 async function resolveSocialShortLink(rawUrl,key,timeoutMs=11000){
   const canonical=canonicalSocialPostUrl(rawUrl,key);
   if(key==="facebook")return resolveFacebookShareLink(canonical,timeoutMs);
+  // Threads /share/ URLs are share wrappers, not media posts. Resolve to a real /post/ URL first.
+  if(key==="threads"){
+    let shared;try{shared=new URL(canonical)}catch{return canonical}
+    if(/^\\/share\\/[^/]+\\/?$/i.test(shared.pathname)){
+      try{
+        const page=await fetchSocialPostHtml(shared.href,timeoutMs);
+        const candidates=[page.url];
+        for(const match of String(page.html||"").matchAll(/<(?:link|meta)\\b[^>]*(?:rel=["']canonical["']|property=["']og:url["'])[^>]*>/gi)){
+          const tag=match[0];const raw=tag.match(/(?:href|content)=["']([^"']+)["']/i)?.[1];if(raw)candidates.push(raw.replace(/&amp;/g,"&"));
+        }
+        for(const raw of candidates){
+          let target;try{target=new URL(raw,shared.href)}catch{continue}
+          if(platformIdForUrl(target.href)==="threads"&&/^\\/(?:@[^/]+\\/)?post\\/[^/]+\\/?$/i.test(target.pathname))return target.href;
+        }
+      }catch{}
+    }
+  }
   let input;try{input=new URL(canonical)}catch{return canonical}
   const host=input.hostname.toLowerCase();
   const shortLink=(key==="tiktok"&&/^(?:vt|vm)\.tiktok\.com$/.test(host))
