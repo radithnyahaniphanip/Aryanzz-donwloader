@@ -702,6 +702,25 @@ async function freePublicMediaInfo(rawUrl,requestUrl,options={}){
       }
     }catch(error){primaryError+="; HTML metadata fallback: "+String(error?.message||error).slice(0,160)}
   }
+  if(key==="threads"){
+    // Threads' ordinary post page may return a JavaScript shell without media tags.
+    // The public /embed/ representation is a distinct, lighter media source.
+    try{
+      const post=new URL(canonicalUrl);
+      if(/^\\/(?:@[^/]+\\/post|t)\\/[A-Za-z0-9_-]+\\/?$/i.test(post.pathname)){
+        const embed=new URL(post.href);
+        embed.pathname=post.pathname.replace(/\\/$/,"")+"/embed/";
+        embed.search="";embed.hash="";
+        const entry=platformForHost(post.hostname);
+        const response=await genericPublicPageMediaInfo(embed.href,requestUrl,entry,9000);
+        const fallback=await response.json().catch(()=>({}));
+        if(response.ok&&fallback.ok!==false&&Array.isArray(fallback.formats)&&fallback.formats.some(item=>item?.mode==="video"||item?.mode==="audio")){
+          return json({...fallback,providerName:"Threads public embed fallback",provider:"Threads public embed",fallbackUsed:true,canonicalUrl:post.href,primaryProviderError:primaryError.slice(0,300)});
+        }
+        primaryError+="; Threads embed: "+String(fallback.error||"tidak ada file video atau audio publik").slice(0,140);
+      }
+    }catch(error){primaryError+="; Threads embed: "+String(error?.message||error).slice(0,160)}
+  }
   const restricted=key==="tiktok"&&/protected|age.?restricted|status\s*10216|login required|requires login|private|Native TikTok metadata/i.test(primaryError);
   const userMessage=restricted
     ? "TikTok tidak mengirim stream video publik untuk tautan ini. Provider juga gagal mengambil metadata; video mungkin dibatasi usia, privasi, wilayah, atau memerlukan login. Coba tautan video lain yang dapat diputar tanpa login."
