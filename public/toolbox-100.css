@@ -38,3 +38,32 @@
 #toolbox100 .back-home{margin-top:13px}
 @media(max-width:760px){#toolbox100 .t100-layout{grid-template-columns:1fr}#toolbox100 .t100-grid{grid-template-columns:repeat(2,minmax(0,1fr));max-height:340px}#toolbox100 .t100-library,#toolbox100 .t100-work{padding:10px}#toolbox100 .t100-head{gap:8px}#toolbox100 .t100-count{font-size:8px;padding:7px}}
 @media(max-width:380px){#toolbox100 .t100-grid{grid-template-columns:1fr}#toolbox100 .t100-card{min-height:72px}}
+
+
+#toolbox100 .t100-head-actions{display:flex;flex-direction:column;align-items:flex-end;gap:8px;flex:0 0 auto}
+#toolbox100 .t100-guide-open,#toolbox100 #t100CloseGuide{min-height:38px;padding:8px 12px;border:1px solid #7ca9ec77;border-radius:11px;background:#1b3452;color:#eaf3ff;font-size:10px;font-weight:850}
+#toolbox100 .t100-guide-view[hidden],#toolbox100 .t100-toolbar[hidden],#toolbox100 .t100-layout[hidden]{display:none!important}
+#toolbox100 .t100-guide-view{min-width:0}
+#toolbox100 .t100-guide-top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:4px 0 16px;padding:15px;border:1px solid #7189ad33;border-radius:14px;background:linear-gradient(125deg,#142a45,#101c30)}
+#toolbox100 .t100-guide-top h3{margin:5px 0;font-size:19px;letter-spacing:-.4px}
+#toolbox100 .t100-guide-top p{margin:0;color:#9fb0c7;font-size:11px;line-height:1.55}
+#toolbox100 .t100-guide-controls{display:grid;gap:10px;margin-bottom:10px}
+#toolbox100 .t100-guide-count{margin:0 0 10px;color:#9fb0c7;font-size:10px}
+#toolbox100 .t100-guide-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;align-items:stretch}
+#toolbox100 .t100-guide-card{display:flex;flex-direction:column;min-width:0;padding:13px;border:1px solid #7189ad33;border-radius:13px;background:#0d1a2d;overflow:hidden}
+#toolbox100 .t100-guide-card[hidden]{display:none!important}
+#toolbox100 .t100-guide-card-top{display:flex;flex-direction:column;align-items:flex-start;gap:6px}
+#toolbox100 .t100-guide-tag{display:inline-flex;max-width:100%;padding:4px 7px;border:1px solid #7ca9ec44;border-radius:999px;background:#172b45;color:#9fc4f3;font-size:8px;font-weight:850;letter-spacing:.3px}
+#toolbox100 .t100-guide-card h4{margin:0;color:#f0f5fd;font-size:13px;line-height:1.35}
+#toolbox100 .t100-guide-desc{margin:8px 0;color:#a9bad0;font-size:10px;line-height:1.55}
+#toolbox100 .t100-guide-steps{margin:0 0 10px;padding-left:19px;color:#c5d3e6;font-size:9px;line-height:1.6}
+#toolbox100 .t100-guide-steps li{padding:2px 0}
+#toolbox100 .t100-guide-examples{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-top:auto}
+#toolbox100 .t100-guide-examples>div{min-width:0;padding:8px;border:1px solid #7189ad2b;border-radius:9px;background:#081426}
+#toolbox100 .t100-guide-examples b{display:block;margin-bottom:5px;color:#9bb8df;font-size:8px;text-transform:uppercase;letter-spacing:.5px}
+#toolbox100 .t100-guide-examples pre{max-height:88px;margin:0;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;color:#e1eafa;font:9px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace}
+#toolbox100 .t100-guide-note{margin:9px 0 0;padding:8px;border-left:2px solid #d7a45b;background:#2b241a;color:#e7c99a;font-size:9px;line-height:1.5}
+#toolbox100 .t100-guide-try{width:100%;min-height:37px;margin-top:10px;border:1px solid #8fb5f6;border-radius:9px;background:linear-gradient(110deg,#7358e8,#287fc9);color:#fff;font-size:10px;font-weight:900}
+#toolbox100 .t100-guide-open:focus-visible,#toolbox100 #t100CloseGuide:focus-visible,#toolbox100 .t100-guide-try:focus-visible{outline:2px solid #b8d2ff;outline-offset:2px}
+@media(max-width:760px){#toolbox100 .t100-head-actions{align-items:flex-end}#toolbox100 .t100-guide-grid{grid-template-columns:1fr}#toolbox100 .t100-guide-card{padding:12px}#toolbox100 .t100-guide-top{align-items:flex-start;flex-direction:column}#toolbox100 .t100-guide-top button{width:100%}}
+@media(max-width:380px){#toolbox100 .t100-head{flex-direction:column}#toolbox100 .t100-head-actions{width:100%;flex-direction:row;align-items:center;justify-content:space-between}#toolbox100 .t100-guide-examples{grid-template-columns:1fr}}
