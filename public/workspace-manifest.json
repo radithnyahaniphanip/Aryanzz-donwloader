@@ -37,7 +37,7 @@
       "features": [
         "tool search",
         "tool category filters and live category counts",
-        "37-tool discovery catalog",
+        "38-tool discovery catalog, including the 100 Tools Lab and searchable step-by-step tutorials for all 100 local tools",
         "consistent back navigation for every tool screen",
         "unified responsive visual system for all internal tool panels"
       ]
@@ -274,6 +274,16 @@
         "/emote-studio.js"
       ],
       "purpose": "Local sticker creation and editing with canvas drawing, erasing, text, emoji, outline, PNG/WebP export, IndexedDB library, FFmpeg GIF animation, and video sticker overlay with MP4 export. No external AI API or API key required."
+    },
+    {
+      "root": "#toolbox100",
+      "css": [
+        "/toolbox-100.css"
+      ],
+      "js": [
+        "/toolbox-100.js"
+      ],
+      "purpose": "100 local browser tools across ten categories, each with a searchable step-by-step tutorial, sample input, optional parameter and one-click example runner. No remote processing required."
     }
   ],
   "release": {
