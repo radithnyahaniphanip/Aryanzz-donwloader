@@ -37,7 +37,7 @@
       "features": [
         "tool search",
         "tool category filters and live category counts",
-        "38-tool discovery catalog, including the 100 Tools Lab",
+        "38-tool discovery catalog, including the 100 Tools Lab and searchable step-by-step tutorials for all 100 local tools",
         "consistent back navigation for every tool screen",
         "unified responsive visual system for all internal tool panels"
       ]
@@ -283,7 +283,7 @@
       "js": [
         "/toolbox-100.js"
       ],
-      "purpose": "100 local browser tools across text, analysis, data, encoding, math, date/time, color, validation, file and creative workflows. No remote processing required."
+      "purpose": "100 local browser tools across ten categories, each with a searchable step-by-step tutorial, sample input, optional parameter and one-click example runner. No remote processing required."
     }
   ],
   "release": {
