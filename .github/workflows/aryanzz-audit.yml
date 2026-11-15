@@ -26,7 +26,5 @@ jobs:
           node-version: 22
       - name: Install dependencies
         run: npm install --package-lock=false --ignore-scripts --no-audit --no-fund
-      - name: Run core smoke tests
-        run: npm test
       - name: Run full release regression tests
         run: npm run test:release
