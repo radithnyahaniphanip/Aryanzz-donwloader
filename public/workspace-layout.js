@@ -3,8 +3,11 @@ const $=id=>document.getElementById(id);
 function normalizeWorkspaceLayout(){
   const toolsArea=$('toolsArea'),profilePanel=$('profile'),libraryPanel=$('history');
   const colorPanel=$('colorStudio'),mediaStudio=$('mediaStudio');
+  const waQuotePanel=$('waQuoteTools');
   if(toolsArea&&colorPanel&&colorPanel.parentElement!==toolsArea)toolsArea.insertBefore(colorPanel,profilePanel||null);
   if(toolsArea&&mediaStudio&&mediaStudio.parentElement!==toolsArea)toolsArea.insertBefore(mediaStudio,libraryPanel||null);
+  /* WA Quote used to sit outside #toolsArea, so navigation rejected it and fell back to the tool catalog. */
+  if(toolsArea&&waQuotePanel&&waQuotePanel.parentElement!==toolsArea)toolsArea.insertBefore(waQuotePanel,profilePanel||null);
   if(profilePanel){
     const oldBackup=profilePanel.querySelector('.v25-backup-card');
     if(oldBackup&&libraryPanel){
