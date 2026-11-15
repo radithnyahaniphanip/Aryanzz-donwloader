@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: aryanzz-audit-\${{ github.ref }}
+  group: aryanzz-audit-feature
   cancel-in-progress: true
 
 jobs:
