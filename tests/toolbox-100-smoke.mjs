@@ -21,6 +21,17 @@ assert.equal(api.catalog.length, 100, "exactly 100 tools are registered");
 assert.equal(new Set(api.catalog.map(x => x.id)).size, 100, "tool ids are unique");
 assert.equal(new Set(api.catalog.map(x => x.group)).size, 10, "tools cover ten distinct categories");
 assert.ok(api.catalog.every(x => x.title && x.desc), "every tool has a title and a functional description");
+assert.equal(Object.keys(api.examples).length, 100, "every tool has an individual tutorial example");
+assert.ok(api.catalog.every(x => x.example && typeof x.example.input === "string" && typeof x.example.arg === "string"), "every catalog entry exposes a usable input and parameter example");
+assert.ok(api.catalog.every(x => typeof (api.guideNotes[x.id] || "") === "string"), "tutorial notes are available for safety-sensitive tools");
+for (const item of api.catalog) {
+  const sample = api.examples[item.id];
+  const result = await api.run(item.id, sample.input, sample.arg);
+  assert.notEqual(result, undefined, item.id + " tutorial example returns a result");
+  assert.ok(String(result).length > 0, item.id + " tutorial example produces visible output");
+}
+assert.ok(source.includes("t100GuideView") && source.includes("t100GuideSearch") && source.includes("data-guide-try"), "the 100-tool tutorial library is searchable and has try-example actions");
+assert.ok(source.includes("Panduan 100 alat") && source.includes("Contoh input") && source.includes("Jalankan alat"), "tutorial cards explain how to use each tool");
 assert.equal(api.run("uppercase", "aryanzz"), "ARYANZZ");
 assert.ok(String(api.run("word-count", "one two three")).includes("Kata: 3"));
 assert.equal(api.run("slug-generator", "Halo Dunia!"), "halo-dunia");
