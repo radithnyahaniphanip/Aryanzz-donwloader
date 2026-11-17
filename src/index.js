@@ -3031,7 +3031,14 @@ const PIPED_PUBLIC_INSTANCES=[
 const INVIDIOUS_PUBLIC_INSTANCES=["https://inv.nadeko.net","https://invidious.nerdvpn.de","https://invidious.tiekoetter.com"];
 const HYBRID_MEDIA_ROOTS=["kavin.rocks","leptons.xyz","nosebs.ru","privacy.com.de","adminforge.de","piped.yt","drgns.space","owo.si","ducks.party","codespace.cz","reallyaweso.me","private.coffee","darkness.services","orangenet.cc"];
 function youtubeVideoId(raw){
-  try{const u=new URL(raw),h=u.hostname.toLowerCase();if(h==="youtu.be"||h==="www.youtu.be")return u.pathname.split("/").filter(Boolean)[0]||null;const v=u.searchParams.get("v");if(v)return v;return u.pathname.match(/^\/(?:shorts|embed|live|v)\/([A-Za-z0-9_-]{6,20})/)?.[1]||null;}catch{return null;}
+  try{
+    const u=new URL(raw),host=u.hostname.toLowerCase();
+    if(host==="youtu.be"||host==="www.youtu.be")return u.pathname.split("/").filter(Boolean)[0]||null;
+    const queryId=u.searchParams.get("v");
+    if(queryId)return queryId;
+    const pathMatch=u.pathname.match(/^\/(?:shorts|embed|live|v)\/([A-Za-z0-9_-]{6,20})(?:\/|$)/);
+    return pathMatch?.[1]||null;
+  }catch{return null;}
 }
 function hybridProviderRoot(host){
   const labels=String(host||"").toLowerCase().split(".").filter(Boolean);
