@@ -18,12 +18,12 @@
     ["imgur.com","Imgur"],["bandcamp.com","Bandcamp"],["mixcloud.com","Mixcloud"],["snapchat.com","Snapchat"],["linkedin.com","LinkedIn"],["wechat.com","WeChat"],["weixin.qq.com","WeChat"],["kakao.com","KakaoTalk"],["idntimes.com","IDN App"],
     ["ted.com","TED"],["archive.org","Internet Archive"],["snackvideo.com","SnackVideo"],["threads.net","Threads"],["threads.com","Threads"],["bluesky.app","Bluesky"],["kick.com","Kick"],["rumble.com","Rumble"],["odysee.com","Odysee"]
   ];
-  let activeDownloadController=null,activeDownloadFfmpeg=null,analysisRunId=0;
+  let activeDownloadController=null,activeDownloadFfmpeg=null,analysisRunId=0,activeYouTubeLiveMonitor=null;
   function downloadTimeoutSignal(ms){
     const timeout=AbortSignal.timeout(ms),parent=activeDownloadController?.signal;
     return parent&&typeof AbortSignal.any==="function"?AbortSignal.any([parent,timeout]):parent||timeout;
   }
-  const make = (tag, cls, text) => {
+  function stopYouTubeLiveMonitor(){\n    if(activeYouTubeLiveMonitor?.timer)clearTimeout(activeYouTubeLiveMonitor.timer);\n    activeYouTubeLiveMonitor=null;\n  }\n  const make = (tag, cls, text) => {
     const el = document.createElement(tag);
     if (cls) el.className = cls;
     if (text !== undefined) el.textContent = text;
@@ -1371,7 +1371,7 @@ function socialNetworkPlan(selected=0){
   }
   async function checkLink(url, button, options={}) {
     const fast=options.deep!==true;
-    const runId=++analysisRunId;
+    stopYouTubeLiveMonitor();\n    const runId=++analysisRunId;
     const out = $("downloadResult");
     out.hidden = false;
     out.replaceChildren();
@@ -1510,7 +1510,92 @@ function socialNetworkPlan(selected=0){
           frame.allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share";
           frame.allowFullscreen=true;wrap.append(frame);box.append(wrap);
         }
-        box.append(make("p","warning",info.isLive?"Siaran masih berlangsung. ARYANZZ memakai pemutar resmi YouTube; file MP4 arsip baru bisa diproses setelah siaran selesai dan YouTube menyiapkan rekamannya.":"Siaran belum dimulai. Pemutar resmi YouTube akan menampilkan jadwal atau hitung mundur."));
+        box.append(make("p","warning",info.isLive?"Siaran masih berlangsung. ARYANZZ tidak akan mengklaim file MP4 lengkap sebelum YouTube menyelesaikan arsipnya. Gunakan pemutar resmi atau aktifkan pantauan sampai arsip siap.":"Siaran belum dimulai. Pemutar resmi YouTube akan menampilkan jadwal atau hitung mundur."));
+        if(info.isLive){
+          const monitorPanel=make("section","youtube-live-monitor");
+          const monitorTitle=make("b","","Unduh arsip setelah LIVE selesai");
+          const monitorNote=make("p","muted","ARYANZZ dapat memeriksa status siaran setiap 60 detik. Saat YouTube menerbitkan arsip dan stream tersedia, pilihan resolusi akan terbuka otomatis. Biarkan halaman ini tetap terbuka.");
+          const monitorActions=make("div","youtube-live-monitor-actions");
+          const monitorButton=make("button","primary","Pantau hingga arsip siap");
+          monitorButton.type="button";
+          const stopButton=make("button","tag","Hentikan pantauan");
+          stopButton.type="button";stopButton.hidden=true;
+          const monitorStatus=make("small","muted","Belum ada pantauan otomatis.");
+          const stopCurrent=()=>{
+            const current=activeYouTubeLiveMonitor;
+            if(current?.timer)clearTimeout(current.timer);
+            activeYouTubeLiveMonitor=null;
+            monitorButton.disabled=false;
+            monitorButton.textContent="Pantau hingga arsip siap";
+            stopButton.hidden=true;
+          };
+          stopButton.addEventListener("click",()=>{
+            stopCurrent();
+            monitorStatus.textContent="Pantauan dihentikan. Kamu bisa memulai lagi kapan saja.";
+          });
+          monitorButton.addEventListener("click",()=>{
+            if(activeYouTubeLiveMonitor)stopYouTubeLiveMonitor();
+            const monitor={timer:null,checks:0,startedAt:Date.now()};
+            activeYouTubeLiveMonitor=monitor;
+            monitorButton.disabled=true;
+            monitorButton.textContent="Pantauan aktif";
+            stopButton.hidden=false;
+            monitorStatus.textContent="Memeriksa status LIVE…";
+            const finish=message=>{
+              if(monitor.timer)clearTimeout(monitor.timer);
+              if(activeYouTubeLiveMonitor===monitor)activeYouTubeLiveMonitor=null;
+              monitorButton.disabled=false;
+              monitorButton.textContent="Pantau hingga arsip siap";
+              stopButton.hidden=true;
+              monitorStatus.textContent=message;
+            };
+            const poll=async()=>{
+              if(activeYouTubeLiveMonitor!==monitor||runId!==analysisRunId)return;
+              if(Date.now()-monitor.startedAt>6*60*60*1000){
+                finish("Pantauan otomatis berhenti setelah 6 jam. Periksa ulang tautan untuk melanjutkan.");
+                return;
+              }
+              if(document.hidden){
+                monitorStatus.textContent="Halaman sedang di latar belakang. Pemeriksaan berikutnya dalam 60 detik.";
+                monitor.timer=setTimeout(poll,60000);
+                return;
+              }
+              monitor.checks++;
+              monitorStatus.textContent="Pemeriksaan ke-"+monitor.checks+" · menghubungi provider YouTube…";
+              try{
+                const endpoint="/api/youtube/hybrid/info?url="+encodeURIComponent(url.href);
+                const response=await fetch(endpoint,{cache:"no-store",credentials:"same-origin",signal:AbortSignal.timeout(30000)});
+                const latest=await response.json().catch(()=>({}));
+                if(!response.ok)throw new Error(String(latest.error||"Pemeriksaan arsip gagal (HTTP "+response.status+")."));
+                if(activeYouTubeLiveMonitor!==monitor||runId!==analysisRunId)return;
+                const formats=Array.isArray(latest.formats)?latest.formats:[];
+                const hasDownloadableVideo=formats.some(item=>item.mode==="video"&&item.url&&["mp4","webm"].includes(String(item.ext||"").toLowerCase()));
+                if(!latest.isLive&&!latest.isUpcoming&&hasDownloadableVideo){
+                  finish("Arsip LIVE sudah tersedia. Membuka pilihan kualitas…");
+                  checkLink(url,button,{deep:true});
+                  return;
+                }
+                if(latest.isLive){
+                  monitorStatus.textContent="Siaran masih LIVE · pemeriksaan berikutnya dalam 60 detik.";
+                }else if(latest.isUpcoming){
+                  monitorStatus.textContent="Siaran belum dimulai · status diperiksa kembali dalam 60 detik.";
+                }else if(latest.isLiveArchive||formats.length===0){
+                  monitorStatus.textContent="Siaran selesai atau terputus, tetapi arsip/stream belum siap dari YouTube. Menunggu dan mencoba lagi dalam 60 detik.";
+                }else{
+                  monitorStatus.textContent="Provider belum memastikan arsip selesai. Mencoba kembali dalam 60 detik.";
+                }
+              }catch(error){
+                if(activeYouTubeLiveMonitor!==monitor||runId!==analysisRunId)return;
+                monitorStatus.textContent="Provider sementara tidak merespons: "+String(error?.message||error).slice(0,110)+". Akan dicoba lagi dalam 60 detik.";
+              }
+              if(activeYouTubeLiveMonitor===monitor)monitor.timer=setTimeout(poll,60000);
+            };
+            poll();
+          });
+          monitorActions.append(monitorButton,stopButton);
+          monitorPanel.append(monitorTitle,monitorNote,monitorActions,monitorStatus);
+          box.append(monitorPanel);
+        }
         return;
       }
       let imageGallery=null,imageGalleryNote=null,imageGalleryAction=null;
