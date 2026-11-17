@@ -2061,9 +2061,11 @@ async function fetchTikTokPhotoEmbedProxy(canonicalUrl,timeoutMs=22000){
   const encoded=encodeURIComponent(target);
   const headers={"accept":"text/plain, text/markdown, */*","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"};
   const jina=[
-    {name:"Jina Reader Markdown",url:"https://r.jina.ai/http://www.tiktok.com/embed/v2/"+itemId,headers},
-    {name:"CORS.dev → Jina Reader",url:"https://proxy.cors.dev/https://r.jina.ai/http://www.tiktok.com/embed/v2/"+itemId,headers:{accept:"text/plain,text/html,*/*"}},
-    {name:"Jina Reader Markdown HTTPS",url:"https://r.jina.ai/https://www.tiktok.com/embed/v2/"+itemId,headers}
+    // Live production diagnostics show HTTPS Markdown is the responsive Jina route;
+    // try it first so a slow HTTP route cannot consume the whole gallery budget.
+    {name:"Jina Reader Markdown HTTPS",url:"https://r.jina.ai/https://www.tiktok.com/embed/v2/"+itemId,headers},
+    {name:"Jina Reader Markdown HTTP",url:"https://r.jina.ai/http://www.tiktok.com/embed/v2/"+itemId,headers},
+    {name:"CORS.dev → Jina Reader",url:"https://proxy.cors.dev/https://r.jina.ai/https://www.tiktok.com/embed/v2/"+itemId,headers:{accept:"text/plain, text/markdown, */*"}}
   ];
   const fallbacks=[
     {name:"AllOrigins",url:"https://api.allorigins.win/raw?url="+encoded,headers:{accept:"text/html,*/*"}},
