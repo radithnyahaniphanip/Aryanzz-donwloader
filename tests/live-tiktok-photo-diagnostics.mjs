@@ -75,7 +75,6 @@ await probe("post-item-list",postList.href,{"referer":canonicalUrl});
 await probe("oembed", "https://www.tiktok.com/oembed?url="+encodeURIComponent(canonicalUrl));
 await probe("photo-page",canonicalUrl,{"referer":"https://www.tiktok.com/"});
 await probe("embed-v2","https://www.tiktok.com/embed/v2/"+itemId);
-await probe("jina-embed-v2-http","https://r.jina.ai/http://www.tiktok.com/embed/v2/"+itemId);
 await probe("jina-embed-v2-https","https://r.jina.ai/https://www.tiktok.com/embed/v2/"+itemId);
 await probe("jina-embed-v2-markdown","https://r.jina.ai/http://www.tiktok.com/embed/v2/"+itemId);
 await probe("allorigins-embed","https://api.allorigins.win/raw?url="+encodeURIComponent("https://www.tiktok.com/embed/v2/"+itemId));
