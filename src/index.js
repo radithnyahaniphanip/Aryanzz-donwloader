@@ -3227,7 +3227,10 @@ function hybridYouTubeLiveState(details={},liveDetails={},streaming={},playabili
   const hasManifest=Boolean(streaming.hlsManifestUrl||streaming.dashManifestUrl);
   const liveContent=flag(details.isLiveContent)||flag(details.is_live_content)||flag(details.isLive);
   const isUpcoming=flag(liveDetails.isUpcoming)||flag(liveDetails.is_upcoming)||(Number.isFinite(startMs)&&startMs>Date.now()&&!hasEnd)||(playability==="LIVE_STREAM_OFFLINE"&&Number.isFinite(startMs)&&startMs>Date.now()&&!hasEnd);
-  const isLive=!isUpcoming&&!hasEnd&&(flag(liveDetails.isLiveNow)||flag(liveDetails.is_live_now)||flag(details.isLive)||(liveContent&&duration<=0&&(hasManifest||playability==="OK"||Boolean(startValue))));
+  // YouTube can expose an elapsed lengthSeconds while a broadcast is still live.
+  // An active HLS/DASH manifest plus live-content metadata is stronger evidence
+  // than duration alone; do not misclassify that stream as a finished archive.
+  const isLive=!isUpcoming&&!hasEnd&&(flag(liveDetails.isLiveNow)||flag(liveDetails.is_live_now)||flag(details.isLive)||(liveContent&&hasManifest&&(playability==="OK"||!playability))||(liveContent&&duration<=0&&(playability==="OK"||Boolean(startValue))));
   const isLiveArchive=liveContent&&!isLive&&!isUpcoming&&(duration>0||hasEnd||playability==="LIVE_STREAM_OFFLINE");
   return {isLive,isUpcoming,isLiveArchive};
 }
@@ -3272,21 +3275,32 @@ async function hybridYoutubeInfo(request){
   if(!id||!/^[A-Za-z0-9_-]{6,20}$/.test(id))return json({error:"ID video YouTube tidak valid."},400);
   // Start the official YouTube player probe immediately. Public Piped/Invidious
   // directories can be slow or unavailable; they must not block Live detection.
-  const innerTubePromise=hybridInnerTubeGroup(id);
-  const [piped,inv]=await Promise.all([currentHybridPipedInstances(),currentHybridInvidiousInstances()]);
-  const [pipedProbe,invProbe,innerTube]=await Promise.all([
+  const [piped,inv,innerTube]=await Promise.all([
+    currentHybridPipedInstances(),
+    currentHybridInvidiousInstances(),
+    hybridInnerTubeGroup(id)
+  ]);
+  const innerTubeLive=innerTube.results.find(item=>item.isLive||item.isUpcoming);
+  if(innerTubeLive){
+    const formats=dedupeHybridFormats(innerTube.results.flatMap(result=>(result.formats||[]).map(format=>({...format,instance:format.instance||result.instance,provider:format.provider||result.provider}))));
+    const liveSource=innerTube.results.find(item=>item.isLive&&item.liveManifestUrl);
+    const liveManifestUrl=liveSource?.liveManifestUrl||innerTubeLive.liveManifestUrl||null;
+    return json({...innerTubeLive,videoId:id,isLive:Boolean(innerTubeLive.isLive),isUpcoming:Boolean(innerTubeLive.isUpcoming),isLiveArchive:false,liveStatus:innerTubeLive.isLive?"LIVE":"UPCOMING",liveManifestUrl,liveManifestAvailable:Boolean(liveManifestUrl||innerTube.results.some(item=>item.liveManifestAvailable)),liveEmbedUrl:"https://www.youtube-nocookie.com/embed/"+id,providerReady:true,formats:formats.map((format,index)=>({...format,id:"f"+index})),providers:innerTube.results.map(item=>({provider:item.provider,instance:item.instance,formatCount:item.formats?.length||0})),diagnostics:innerTube.diagnostics.slice(0,20)});
+  }
+  const [pipedProbe,invProbe]=await Promise.all([
     hybridProbeGroup(piped.slice(0,10),"/streams/"+encodeURIComponent(id),hybridFromPiped),
-    hybridProbeGroup(inv.slice(0,6),"/api/v1/videos/"+encodeURIComponent(id)+"?local=true",hybridFromInvidious),
-    innerTubePromise
+    hybridProbeGroup(inv.slice(0,6),"/api/v1/videos/"+encodeURIComponent(id)+"?local=true",hybridFromInvidious)
   ]);
   const available=[...innerTube.results,...pipedProbe.results,...invProbe.results];
   const diagnostics=[...innerTube.diagnostics,...pipedProbe.diagnostics,...invProbe.diagnostics];
   if(available.length){
+    const liveStateSource=available.find(item=>item.isLive||item.isUpcoming||item.isLiveArchive);
     const innerTubeState=available.find(item=>item.provider==="YouTube InnerTube"&&(item.isLive||item.isUpcoming||item.isLiveArchive))||available.find(item=>item.provider==="YouTube InnerTube");
-    const isLive=innerTubeState?Boolean(innerTubeState.isLive):available.some(item=>item.isLive);
-    const isUpcoming=innerTubeState?Boolean(innerTubeState.isUpcoming):available.some(item=>item.isUpcoming);
-    const isLiveArchive=innerTubeState?Boolean(innerTubeState.isLiveArchive):available.some(item=>item.isLiveArchive);
-    const primary=innerTubeState||available.find(item=>item.isLive||item.isUpcoming||item.isLiveArchive)||available.find(item=>(item.formats||[]).some(format=>format.mode==="video"&&!format.videoOnly))||available[0];
+    const stateSource=liveStateSource||innerTubeState||available[0];
+    const isLive=Boolean(stateSource?.isLive);
+    const isUpcoming=Boolean(stateSource?.isUpcoming);
+    const isLiveArchive=Boolean(stateSource?.isLiveArchive);
+    const primary=liveStateSource||innerTubeState||available.find(item=>(item.formats||[]).some(format=>format.mode==="video"&&!format.videoOnly))||available[0];
     const formats=dedupeHybridFormats(available.flatMap(result=>(result.formats||[]).map(format=>({...format,instance:format.instance||result.instance,provider:format.provider||result.provider}))));
     const liveSource=available.find(item=>item.isLive&&item.liveManifestUrl);
     const liveManifestUrl=liveSource?.liveManifestUrl||primary.liveManifestUrl||null;
