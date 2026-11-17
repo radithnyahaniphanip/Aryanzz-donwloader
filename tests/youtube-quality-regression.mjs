@@ -16,6 +16,11 @@ const activeLive = workerLiveState({ isLiveContent: true, lengthSeconds: 0 }, { 
 assert.equal(activeLive.isLive, true, "An active YouTube Live must be detected from the live broadcast state");
 const liveFromManifest = workerLiveState({ isLiveContent: true, lengthSeconds: 0 }, {}, { hlsManifestUrl: "https://manifest.googlevideo.com/live.m3u8" }, "OK");
 assert.equal(liveFromManifest.isLive, true, "A live-content video with an active HLS manifest must still be detected when isLiveNow is omitted");
+const activeLiveWithElapsedDuration = workerLiveState({ isLiveContent: true, lengthSeconds: 3720 }, {}, { hlsManifestUrl: "https://manifest.googlevideo.com/live.m3u8" }, "OK");
+assert.equal(activeLiveWithElapsedDuration.isLive, true, "An active Live with a non-zero elapsed duration and active HLS manifest must not be misclassified as an archive");
+assert.equal(activeLiveWithElapsedDuration.isLiveArchive, false, "An active HLS manifest must prevent false archive classification even when lengthSeconds is non-zero");
+const activeDashLiveWithElapsedDuration = workerLiveState({ isLiveContent: true, lengthSeconds: 1800 }, {}, { dashManifestUrl: "https://manifest.googlevideo.com/live.mpd" }, "OK");
+assert.equal(activeDashLiveWithElapsedDuration.isLive, true, "An active DASH manifest must also identify a live broadcast with elapsed duration");
 const scheduledLive = workerLiveState({ isLiveContent: true, lengthSeconds: 0 }, { isUpcoming: true }, {}, "LIVE_STREAM_OFFLINE");
 assert.equal(scheduledLive.isUpcoming, true, "Scheduled YouTube premieres/streams must remain upcoming rather than unsupported");
 const archivedLive = workerLiveState({ isLiveContent: true, lengthSeconds: 3600 }, {}, {}, "OK");
@@ -37,7 +42,9 @@ assert.equal(browserHeight({ itag: 571 }, null), 4320, "Browser fallback must re
 assert.match(worker, /!\[144,240,360,480,720,1080,1440,2160,4320\]\.includes\(height\)/, "Worker format parser must accept 4320p");
 assert.match(downloader, /!\[144,240,360,480,720,1080,1440,2160,4320\]\.includes\(height\)/, "Browser format parser must accept 4320p");
 assert.match(downloader, /\[4320,"4320p · 8K"\]/, "Quality menu must expose 8K only when available");
-assert.match(worker, /const innerTubePromise=hybridInnerTubeGroup\(id\)/, "Official YouTube player detection must start before slow public-instance probes finish");
+assert.match(worker, /const \[piped,inv,innerTube\]=await Promise\.all\(/, "Official YouTube player and community directories must be checked concurrently");
+assert.match(worker, /const innerTubeLive=innerTube\.results\.find\(item=>item\.isLive\|\|item\.isUpcoming\)/, "A confirmed Live/Upcoming state must be returned before slow community media probes");
+assert.match(worker, /const liveStateSource=available\.find\(item=>item\.isLive\|\|item\.isUpcoming\|\|item\.isLiveArchive\)/, "An explicit Live state from a community provider must not be overridden by non-live fallback metadata");
 assert.match(worker, /hybridProbeGroup\(piped\.slice\(0,10\)/, "Piped failover must use a bounded, responsive provider set");
 assert.match(worker, /hybridProbeGroup\(inv\.slice\(0,6\)/, "Invidious failover must use a bounded, responsive provider set");
 assert.match(worker, /attempt\?3000:5000/, "Public provider retries must have bounded timeouts so Live detection does not time out in the browser");
