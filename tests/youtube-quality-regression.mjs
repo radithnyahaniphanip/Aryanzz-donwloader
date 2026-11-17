@@ -64,7 +64,7 @@ const fallbackOrder = qualityOrder([
   { ...progressive1080, height: 1080, bitrate: 4_000_000 },
   { ...adaptive1440, height: 2160, bitrate: 9_000_000 }
 ], 1440);
-assert.equal(fallbackOrder[0].height, 2160, "When 2K is unavailable and fallback distances tie, prefer the higher source resolution");
+assert.equal(fallbackOrder[0].height, 2160, "When the requested resolution is unavailable, prefer an available higher source resolution over silently downgrading");
 const adaptive8k = { ...adaptive1440, height: 4320, bitrate: 40_000_000 };
 const selected8k = estimateQuality({ formats: [progressive1080, adaptive8k, audio], duration: 60 }, 4320);
 assert.equal(selected8k.actualHeight, 4320, "Selecting 8K must retain the actual 4320p stream");
