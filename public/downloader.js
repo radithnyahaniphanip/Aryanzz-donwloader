@@ -1105,7 +1105,7 @@ function socialNetworkPlan(selected=0){
           if(!candidateUrl||candidateUrl.origin!==location.origin||candidateUrl.pathname!=="/api/social-file")return {candidate,error:"Tautan unduhan tidak melewati pemeriksaan keamanan ARYANZZ."};
           const probeUrl=new URL(candidateUrl.href);probeUrl.searchParams.set("probe","1");
           try{
-            const probeResponse=await fetch(probeUrl.href,{cache:"no-store",credentials:"same-origin",signal:downloadTimeoutSignal(12000)});
+            const probeResponse=await fetch(probeUrl.href,{cache:"no-store",credentials:"same-origin",signal:downloadTimeoutSignal(9000)});
             const candidateCheck=await probeResponse.json().catch(()=>({}));
             if(probeResponse.ok&&candidateCheck.valid===true)return {candidate,candidateUrl,check:candidateCheck};
             return {candidate,error:String(candidateCheck.error||"File tidak lolos validasi (HTTP "+probeResponse.status+").").slice(0,180)};
