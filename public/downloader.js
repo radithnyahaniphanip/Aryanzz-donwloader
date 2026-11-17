@@ -2048,7 +2048,7 @@ function socialNetworkPlan(selected=0){
               const best=candidates.slice().sort((a,b)=>(a.videoOnly?1:0)-(b.videoOnly?1:0)||(Number(b.bitrate)||0)-(Number(a.bitrate)||0))[0];
               const estimate=best?estimateFormatBytes(best,info.duration):{bytes:0,exact:false};
               const size=estimate.bytes?" · "+(estimate.exact?"":"±")+formatDownloadSize(estimate.bytes):"";
-              return [value,value+"p · tersedia"+(best?.videoOnly?" · gabung audio":"")+size];
+              return [value,value+"p · tersedia"+size+(best?.videoOnly?" · gabung audio":"")];
             });
           qualityOptions.forEach(([value,label]) => {
             const option = make("option", "", label);
