@@ -3107,7 +3107,7 @@ function dedupeHybridFormats(formats){
 async function hybridFetchJson(url,parentSignal){
   let lastError=null;
   for(let attempt=0;attempt<2;attempt++){
-    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),attempt?6500:8000);
+    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),attempt?3000:5000);
     const abort=()=>controller.abort();
     if(parentSignal){if(parentSignal.aborted)controller.abort();else parentSignal.addEventListener("abort",abort,{once:true});}
     try{
@@ -3211,6 +3211,19 @@ const HYBRID_INNERTUBE_CLIENTS=[
   {name:"IOS",version:"20.10.4",header:"5",context:{clientName:"IOS",clientVersion:"20.10.4",deviceModel:"iPhone16,2",osName:"iPhone",osVersion:"18.0.1",hl:"en",gl:"US"},ua:"com.google.ios.youtube/20.10.4 (iPhone16,2; U; CPU iOS 18_0_1 like Mac OS X)"},
   {name:"TVHTML5",version:"7.20250612.16.00",header:"7",context:{clientName:"TVHTML5",clientVersion:"7.20250612.16.00",clientScreen:"TV",hl:"en",gl:"US"},ua:"Mozilla/5.0 (SMART-TV; LINUX; Tizen 8.0) AppleWebKit/537.36"}
 ];
+function hybridYouTubeLiveState(details={},liveDetails={},streaming={},playability=""){
+  const flag=value=>value===true||value===1||/^(?:true|1|yes)$/i.test(String(value??"").trim());
+  const duration=Number(details.lengthSeconds)||0;
+  const startValue=liveDetails.startTimestamp||liveDetails.startTime||liveDetails.start_time||"";
+  const startMs=Date.parse(startValue);
+  const hasEnd=Boolean(liveDetails.endTimestamp||liveDetails.endTime||liveDetails.end_time);
+  const hasManifest=Boolean(streaming.hlsManifestUrl||streaming.dashManifestUrl);
+  const liveContent=flag(details.isLiveContent)||flag(details.is_live_content)||flag(details.isLive);
+  const isUpcoming=flag(liveDetails.isUpcoming)||flag(liveDetails.is_upcoming)||(Number.isFinite(startMs)&&startMs>Date.now()&&!hasEnd)||(playability==="LIVE_STREAM_OFFLINE"&&Number.isFinite(startMs)&&startMs>Date.now()&&!hasEnd);
+  const isLive=!isUpcoming&&!hasEnd&&(flag(liveDetails.isLiveNow)||flag(liveDetails.is_live_now)||flag(details.isLive)||(liveContent&&duration<=0&&(hasManifest||playability==="OK"||Boolean(startValue))));
+  const isLiveArchive=liveContent&&!isLive&&!isUpcoming&&(duration>0||hasEnd||playability==="LIVE_STREAM_OFFLINE");
+  return {isLive,isUpcoming,isLiveArchive};
+}
 async function hybridInnerTubePlayer(videoId,client){
   const response=await fetch("https://www.youtube.com/youtubei/v1/player?prettyPrint=false",{
     method:"POST",
@@ -3222,9 +3235,8 @@ async function hybridInnerTubePlayer(videoId,client){
   if(!response.ok||!data)throw new Error("YouTube InnerTube "+client.name+" HTTP "+response.status);
   const details=data.videoDetails||{},micro=data.microformat?.playerMicroformatRenderer||{},liveDetails=micro.liveBroadcastDetails||{},streaming=data.streamingData||{};
   const playability=String(data.playabilityStatus?.status||"");
-  const isUpcoming=Boolean(liveDetails.isUpcoming||liveDetails.is_upcoming||(playability==="LIVE_STREAM_OFFLINE"&&liveDetails.startTimestamp&&!liveDetails.endTimestamp));
-  const isLive=Boolean(liveDetails.isLiveNow||liveDetails.is_live_now||details.isLive===true||(details.isLiveContent===true&&!liveDetails.endTimestamp&&!Number(details.lengthSeconds)&&Boolean(streaming.hlsManifestUrl)));
-  if(playability&&playability!=="OK"&&!(playability==="LIVE_STREAM_OFFLINE"&&isUpcoming))throw new Error("YouTube "+client.name+": "+playability+" "+String(data.playabilityStatus?.reason||"").slice(0,90));
+  const {isLive,isUpcoming,isLiveArchive}=hybridYouTubeLiveState(details,liveDetails,streaming,playability);
+  if(playability&&playability!=="OK"&&!(playability==="LIVE_STREAM_OFFLINE"&&(isUpcoming||isLiveArchive)))throw new Error("YouTube "+client.name+": "+playability+" "+String(data.playabilityStatus?.reason||"").slice(0,90));
   const progressive=(Array.isArray(streaming.formats)?streaming.formats:[])
     .map(item=>hybridVideoFormat(item,"https://www.youtube.com",true,false)).filter(Boolean);
   const adaptive=(Array.isArray(streaming.adaptiveFormats)?streaming.adaptiveFormats:[])
@@ -3232,13 +3244,12 @@ async function hybridInnerTubePlayer(videoId,client){
       ?hybridVideoFormat(item,"https://www.youtube.com",false,true)
       :hybridAudioFormat(item,"https://www.youtube.com")).filter(Boolean);
   const formats=dedupeHybridFormats([...progressive,...adaptive]);
-  const usable=formats.some(item=>item.mode==="video"&&["mp4","webm"].includes(item.ext)&&(!item.videoOnly||formats.some(audio=>audio.mode==="audio"&&(item.ext==="webm"?["webm","opus"].includes(audio.ext):audio.ext==="m4a"))));
-  if(!usable&&!isLive&&!isUpcoming)throw new Error("YouTube "+client.name+" tidak mengembalikan URL MP4/WebM langsung yang dapat dipakai.");
+  const usable=formats.some(item=>item.mode==="video"&&["mp4","webm"].includes(item.ext)&&(!item.videoOnly||formats.some(audio=>audio.mode==="audio"&&(item.ext==="webm"?["webm","opus","ogg"].includes(audio.ext):["m4a","aac","mp3"].includes(audio.ext)))));
+  if(!usable&&!isLive&&!isUpcoming&&!isLiveArchive)throw new Error("YouTube "+client.name+" tidak mengembalikan URL MP4/WebM langsung yang dapat dipakai.");
   const thumbs=Array.isArray(details.thumbnail?.thumbnails)?details.thumbnail.thumbnails:[];
   const thumbnail=thumbs.slice().sort((a,b)=>(Number(b.width)||0)-(Number(a.width)||0))[0]?.url||null;
-  const isLiveArchive=Boolean(details.isLiveContent&&!isLive&&!isUpcoming&&Number(details.lengthSeconds)>0);
   const liveManifest=hybridMediaUrl(streaming.hlsManifestUrl||"","https://www.youtube.com");
-  return {ok:true,providerReady:true,providerName:"Hybrid",provider:"YouTube InnerTube",instance:"https://www.youtube.com",videoId,title:String(details.title||"Video YouTube").slice(0,300),thumbnail,duration:Number(details.lengthSeconds)||null,uploader:String(details.author||"").slice(0,160),isLive,isUpcoming,isLiveArchive,liveStatus:isLive?"LIVE":isUpcoming?"UPCOMING":isLiveArchive?"ARCHIVE":null,liveManifestUrl:liveManifest?.href||null,liveManifestAvailable:Boolean(liveManifest||streaming.dashManifestUrl),liveEmbedUrl:"https://www.youtube-nocookie.com/embed/"+videoId,formats:formats.map((item,index)=>({...item,id:"f"+index,instance:"https://www.youtube.com",provider:"YouTube InnerTube"})),message:isLive?"Siaran langsung YouTube tersedia melalui pemutar resmi.":isUpcoming?"Siaran YouTube akan dimulai.":"Stream YouTube tersedia melalui jalur cadangan."};
+  return {ok:true,providerReady:true,providerName:"Hybrid",provider:"YouTube InnerTube",instance:"https://www.youtube.com",videoId,title:String(details.title||"Video YouTube").slice(0,300),thumbnail,duration:Number(details.lengthSeconds)||null,uploader:String(details.author||"").slice(0,160),isLive,isUpcoming,isLiveArchive,liveStatus:isLive?"LIVE":isUpcoming?"UPCOMING":isLiveArchive?"ARCHIVE":null,liveManifestUrl:liveManifest?.href||null,liveManifestAvailable:Boolean(liveManifest||streaming.dashManifestUrl),liveEmbedUrl:"https://www.youtube-nocookie.com/embed/"+videoId,formats:formats.map((item,index)=>({...item,id:"f"+index,instance:"https://www.youtube.com",provider:"YouTube InnerTube"})),message:isLive?"Siaran langsung YouTube terdeteksi.":isUpcoming?"Siaran YouTube akan dimulai.":isLiveArchive?"Arsip siaran YouTube terdeteksi.":"Stream YouTube tersedia melalui jalur cadangan."};
 }
 async function hybridInnerTubeGroup(videoId){
   const settled=await Promise.all(HYBRID_INNERTUBE_CLIENTS.map(async client=>{
@@ -3252,37 +3263,31 @@ async function hybridYoutubeInfo(request){
   if(!isYouTubeUrl(raw))return json({error:"URL YouTube tidak valid."},400);
   const id=youtubeVideoId(raw);
   if(!id||!/^[A-Za-z0-9_-]{6,20}$/.test(id))return json({error:"ID video YouTube tidak valid."},400);
+  // Start the official YouTube player probe immediately. Public Piped/Invidious
+  // directories can be slow or unavailable; they must not block Live detection.
+  const innerTubePromise=hybridInnerTubeGroup(id);
   const [piped,inv]=await Promise.all([currentHybridPipedInstances(),currentHybridInvidiousInstances()]);
-  const [pipedProbe,invProbe]=await Promise.all([
-    hybridProbeGroup(piped.slice(0,20),"/streams/"+encodeURIComponent(id),hybridFromPiped),
-    hybridProbeGroup(inv.slice(0,10),"/api/v1/videos/"+encodeURIComponent(id)+"?local=true",hybridFromInvidious)
+  const [pipedProbe,invProbe,innerTube]=await Promise.all([
+    hybridProbeGroup(piped.slice(0,10),"/streams/"+encodeURIComponent(id),hybridFromPiped),
+    hybridProbeGroup(inv.slice(0,6),"/api/v1/videos/"+encodeURIComponent(id)+"?local=true",hybridFromInvidious),
+    innerTubePromise
   ]);
-  const available=[...pipedProbe.results,...invProbe.results];
-  const diagnostics=[...pipedProbe.diagnostics,...invProbe.diagnostics];
-  const hasDirectProgressive=available.some(item=>(item.formats||[]).some(format=>format.mode==="video"&&["mp4","webm"].includes(format.ext)&&!format.videoOnly));
-  const maxCommunityHeight=Math.max(0,...available.flatMap(item=>(item.formats||[]).filter(format=>format.mode==="video").map(format=>Number(format.height)||0)));
-  const liveHint=available.some(item=>item.isLive||item.isUpcoming);
-  if(!hasDirectProgressive||maxCommunityHeight<4320||liveHint){
-    const innerTube=await hybridInnerTubeGroup(id);
-    available.push(...innerTube.results);
-    diagnostics.push(...innerTube.diagnostics);
-  }
+  const available=[...innerTube.results,...pipedProbe.results,...invProbe.results];
+  const diagnostics=[...innerTube.diagnostics,...pipedProbe.diagnostics,...invProbe.diagnostics];
   if(available.length){
-    const innerTubeState=available.find(item=>item.provider==="YouTube InnerTube");
+    const innerTubeState=available.find(item=>item.provider==="YouTube InnerTube"&&(item.isLive||item.isUpcoming||item.isLiveArchive))||available.find(item=>item.provider==="YouTube InnerTube");
     const isLive=innerTubeState?Boolean(innerTubeState.isLive):available.some(item=>item.isLive);
     const isUpcoming=innerTubeState?Boolean(innerTubeState.isUpcoming):available.some(item=>item.isUpcoming);
     const isLiveArchive=innerTubeState?Boolean(innerTubeState.isLiveArchive):available.some(item=>item.isLiveArchive);
-    const primary=innerTubeState||available.find(item=>item.isLive||item.isUpcoming)||available.find(item=>(item.formats||[]).some(format=>format.mode==="video"&&!format.videoOnly))||available[0];
+    const primary=innerTubeState||available.find(item=>item.isLive||item.isUpcoming||item.isLiveArchive)||available.find(item=>(item.formats||[]).some(format=>format.mode==="video"&&!format.videoOnly))||available[0];
     const formats=dedupeHybridFormats(available.flatMap(result=>(result.formats||[]).map(format=>({...format,instance:format.instance||result.instance,provider:format.provider||result.provider}))));
     const liveSource=available.find(item=>item.isLive&&item.liveManifestUrl);
     const liveManifestUrl=liveSource?.liveManifestUrl||primary.liveManifestUrl||null;
     return json({...primary,videoId:id,isLive,isUpcoming,isLiveArchive,liveStatus:isLive?"LIVE":isUpcoming?"UPCOMING":isLiveArchive?"ARCHIVE":null,liveManifestUrl,liveManifestAvailable:Boolean(liveManifestUrl||available.some(item=>item.liveManifestAvailable)),liveEmbedUrl:"https://www.youtube-nocookie.com/embed/"+id,providerReady:true,formats:formats.map((format,index)=>({...format,id:"f"+index})),providers:available.map(item=>({provider:item.provider,instance:item.instance,formatCount:item.formats?.length||0})),diagnostics:diagnostics.slice(0,20)});
   }
-  {
-    let preview={};
-    try{const u=new URL("https://www.youtube.com/oembed");u.searchParams.set("url",raw);u.searchParams.set("format","json");const res=await fetch(u.toString(),{headers:{accept:"application/json"},signal:AbortSignal.timeout(5000)});if(res.ok)preview=await res.json();}catch{}
-    return json({ok:true,providerReady:false,providerName:"Hybrid",provider:"Unavailable",videoId:id,liveEmbedUrl:"https://www.youtube-nocookie.com/embed/"+id,title:String(preview.title||"Video YouTube").slice(0,300),thumbnail:typeof preview.thumbnail_url==="string"?preview.thumbnail_url:null,formats:[],providerMessage:"Instance komunitas belum memberikan stream MP4 yang dapat digunakan. Link video tetap valid; coba lagi nanti atau gunakan file yang memang dapat diunduh dari pemiliknya.",diagnostics:diagnostics.slice(0,20)});
-  }
+  let preview={};
+  try{const u=new URL("https://www.youtube.com/oembed");u.searchParams.set("url",raw);u.searchParams.set("format","json");const res=await fetch(u.toString(),{headers:{accept:"application/json"},signal:AbortSignal.timeout(5000)});if(res.ok)preview=await res.json();}catch{}
+  return json({ok:true,providerReady:false,providerName:"Hybrid",provider:"Unavailable",videoId:id,liveEmbedUrl:"https://www.youtube-nocookie.com/embed/"+id,title:String(preview.title||"Video YouTube").slice(0,300),thumbnail:typeof preview.thumbnail_url==="string"?preview.thumbnail_url:null,formats:[],providerMessage:"YouTube mengenali ID video, tetapi provider publik belum mengembalikan stream yang bisa diunduh. Tautan tetap dikenali; coba ulangi atau tunggu arsip LIVE selesai diproses.",diagnostics:diagnostics.slice(0,20)});
 }
 function hybridFilename(title,ext){
   const clean=String(title||"aryanzz-youtube").replace(/[\/:*?"<>|\u0000-\u001f]/g," ").replace(/\s+/g," ").trim().slice(0,90)||"aryanzz-youtube";
