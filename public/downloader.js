@@ -92,26 +92,28 @@
   function youtubeQualityEstimate(info,height){
     const formats=Array.isArray(info?.formats)?info.formats:[];
     const wanted=Number(height)||480;
-    const qualityOrder=(a,b)=>{
-      const ah=Number(a.height)||0,bh=Number(b.height)||0;
-      const aBelow=ah>0&&ah<=wanted,bBelow=bh>0&&bh<=wanted;
-      if(aBelow!==bBelow)return aBelow?-1:1;
-      return aBelow?bh-ah:ah-bh;
+    const compatibleAudioFor=video=>{
+      const compatible=video.ext==="webm"?["webm","opus","ogg"]:["m4a","aac","mp3"];
+      return formats.filter(item=>item.mode==="audio"&&compatible.includes(String(item.ext||"").toLowerCase())&&(!video.instance||!item.instance||item.instance===video.instance)).sort((a,b)=>(Number(b.bitrate)||0)-(Number(a.bitrate)||0))[0]||null;
     };
-    const progressive=formats.filter(item=>item.mode==="video"&&["mp4","webm"].includes(item.ext)&&!item.videoOnly&&Number(item.height)>0).sort((a,b)=>Number(b.height)-Number(a.height)||((a.ext==="mp4"?0:1)-(b.ext==="mp4"?0:1))||Number(b.bitrate)-Number(a.bitrate));
-    const direct=progressive.find(item=>Number(item.height)===wanted)||progressive.slice().sort(qualityOrder)[0];
-    if(direct){
-      const size=estimateFormatBytes(direct,info.duration);
-      return {kind:"direct",actualHeight:Number(direct.height)||0,bytes:size.bytes,exact:size.exact,format:direct};
-    }
-    const adaptive=formats.filter(item=>item.mode==="video"&&["mp4","webm"].includes(item.ext)&&item.videoOnly&&Number(item.height)>0).sort((a,b)=>Number(b.height)-Number(a.height)||((a.ext==="mp4"?0:1)-(b.ext==="mp4"?0:1))||Number(b.bitrate)-Number(a.bitrate));
-    const selected=adaptive.find(item=>Number(item.height)===wanted)||adaptive.slice().sort(qualityOrder)[0];
+    const candidates=formats.filter(item=>item.mode==="video"&&["mp4","m4v","webm"].includes(String(item.ext||"").toLowerCase())&&Number(item.height)>0&&(!item.videoOnly||compatibleAudioFor(item)));
+    candidates.sort((a,b)=>{
+      const ah=Number(a.height)||0,bh=Number(b.height)||0;
+      if((ah===wanted)!==(bh===wanted))return ah===wanted?-1:1;
+      const aBelow=ah<wanted,bBelow=bh<wanted;
+      if(aBelow!==bBelow)return aBelow?-1:1;
+      if(ah!==bh)return aBelow?bh-ah:ah-bh;
+      if(Boolean(a.videoOnly)!==Boolean(b.videoOnly))return a.videoOnly?1:-1;
+      if((a.ext==="mp4"?0:1)!==(b.ext==="mp4"?0:1))return a.ext==="mp4"?-1:1;
+      return (Number(b.bitrate)||0)-(Number(a.bitrate)||0);
+    });
+    const selected=candidates[0];
     if(!selected)return null;
     const videoSize=estimateFormatBytes(selected,info.duration);
-    const compatibleAudio=selected.ext==="webm"?["webm","opus"]:["m4a"];
-    const audio=formats.filter(item=>item.mode==="audio"&&compatibleAudio.includes(item.ext)&&(!selected.instance||!item.instance||item.instance===selected.instance)).sort((a,b)=>(Number(b.bitrate)||0)-(Number(a.bitrate)||0))[0];
+    if(!selected.videoOnly)return {kind:"direct",actualHeight:Number(selected.height)||0,bytes:videoSize.bytes,exact:videoSize.exact,format:selected};
+    const audio=compatibleAudioFor(selected);
     const audioSize=audio?estimateFormatBytes(audio,info.duration):{bytes:0,exact:false};
-    return {kind:"adaptive",actualHeight:Number(selected.height)||0,bytes:videoSize.bytes&&audioSize.bytes?videoSize.bytes+audioSize.bytes:0,exact:videoSize.exact&&audioSize.exact,format:selected};
+    return {kind:"adaptive",actualHeight:Number(selected.height)||0,bytes:videoSize.bytes&&audioSize.bytes?videoSize.bytes+audioSize.bytes:0,exact:videoSize.exact&&audioSize.exact,format:selected,audioFormat:audio};
   }
   function formatDownloadEta(seconds){
     if(!Number.isFinite(seconds)||seconds<0)return "menghitung…";
@@ -785,7 +787,7 @@
       const exactAdaptive=selectProviderCandidates(adaptive.filter(item=>Number(item.height)===wanted).sort((a,b)=>Number(b.bitrate)-Number(a.bitrate)),3,4);
       const progressiveFallback=selectProviderCandidates(orderByRequestedQuality(progressive.filter(item=>Number(item.height)!==wanted)),2,4);
       const adaptiveFallback=selectProviderCandidates(orderByRequestedQuality(adaptive.filter(item=>Number(item.height)!==wanted)),2,4);
-      candidates=[...exactProgressive,...progressiveFallback,...exactAdaptive,...adaptiveFallback];
+      candidates=[...exactProgressive,...exactAdaptive,...progressiveFallback,...adaptiveFallback];
       if(candidates[0]?.videoOnly){
         progressText.textContent="Kualitas "+wanted+"p · menyiapkan satu file video otomatis.";
         progressMeta.textContent="ARYANZZ memilih MP4 bila tersedia; jika sumber 2K hanya menyediakan WebM, format WebM dipertahankan tanpa mengganti ekstensi.";
@@ -1211,7 +1213,7 @@ function socialNetworkPlan(selected=0){
       if(p)return Number(p[1]);
     }
     const itag=Number(url?.searchParams?.get("itag")||item?.itag);
-    return ({18:360,22:720,37:1080,59:480,78:480,82:360,83:480,84:720,85:1080,133:240,134:360,135:480,136:720,137:1080,160:144,264:1440,266:2160,271:1440,272:2160,298:720,299:1080,308:1440,313:2160,315:2160})[itag]||0;
+    return ({18:360,22:720,37:1080,59:480,78:480,82:360,83:480,84:720,85:1080,133:240,134:360,135:480,136:720,137:1080,160:144,264:1440,266:2160,271:1440,272:2160,298:720,299:1080,308:1440,313:2160,315:2160,337:2160,401:2160,402:4320,571:4320})[itag]||0;
   }
   function browserFormatSizeBytes(item){
     const parse=value=>{
@@ -1234,11 +1236,11 @@ function socialNetworkPlan(selected=0){
     const url=browserHybridMediaUrl(item?.url||item?.urlTemplate||"",providerInstance);
     const height=browserVideoHeight(item,url);
     const itag=Number(url?.searchParams?.get("itag")||item?.itag),declaredExt=String(item?.ext||"").toLowerCase();
-    const mp4=mime.includes("video/mp4")||mime.includes("video/x-m4v")||container.includes("mpeg_4")||container==="mp4"||container==="m4v"||declaredExt==="mp4"||String(url?.searchParams?.get("mime")||"").toLowerCase().includes("video/mp4")||(/\.mp4(?:$|[?#])/i.test(url?.pathname||""))||(progressiveSource&&[18,22,37,59,78,82,83,84,85,264,266].includes(itag));
-    const webm=mime.includes("video/webm")||container==="webm"||declaredExt==="webm"||(/\.webm(?:$|[?#])/i.test(url?.pathname||""));
+    const mp4=mime.includes("video/mp4")||mime.includes("video/x-m4v")||container.includes("mpeg_4")||container==="mp4"||container==="m4v"||declaredExt==="mp4"||String(url?.searchParams?.get("mime")||"").toLowerCase().includes("video/mp4")||(/\.mp4(?:$|[?#])/i.test(url?.pathname||""))||(progressiveSource&&[18,22,37,59,78,82,83,84,85,264,266,401,402].includes(itag));
+    const webm=mime.includes("video/webm")||container==="webm"||declaredExt==="webm"||(/\.webm(?:$|[?#])/i.test(url?.pathname||""))||(progressiveSource&&[337,571].includes(itag));
     const ext=mp4?"mp4":webm?"webm":"";
     const videoOnly=adaptiveSource||item?.videoOnly===true||item?.isVideoOnly===true||item?.video_only===true||item?.hasAudio===false||item?.has_audio===false;
-    if(!url||![144,240,360,480,720,1080,1440,2160].includes(height)||!ext)return null;
+    if(!url||![144,240,360,480,720,1080,1440,2160,4320].includes(height)||!ext)return null;
     return {mode:"video",height,quality:height+"p",ext,mimeType:ext==="webm"?"video/webm":"video/mp4",url:url.href,bitrate:Number(item.bitrate)||0,sizeBytes:browserFormatSizeBytes(item),progressive:!videoOnly,videoOnly};
   }
   function browserAudioFormat(item,providerInstance){
@@ -1454,6 +1456,9 @@ function socialNetworkPlan(selected=0){
           const image=make("img","");
           image.loading="lazy";image.decoding="async";image.src=previewUrl.href;image.alt=item.title||"Gambar "+(index+1);
           preview.append(image);
+          const dimensions=make("small","muted","Membaca resolusi asli…");
+          image.addEventListener("load",()=>{dimensions.textContent=image.naturalWidth+" × "+image.naturalHeight+" px · gambar asli";},{once:true});
+          image.addEventListener("error",()=>{dimensions.textContent="Resolusi asli tidak dapat dibaca dari provider.";},{once:true});
           const actions=make("div","aryanzz-inline-image-actions");
           const download=make("button","primary","↓ Unduh gambar");
           download.type="button";
@@ -1478,11 +1483,11 @@ function socialNetworkPlan(selected=0){
           });
           actions.append(download);
           if(item.sourceUrl){const source=make("a","tag","Sumber ↗");source.href=item.sourceUrl;source.target="_blank";source.rel="noopener noreferrer";actions.append(source);}
-          card.append(preview,actions);grid.append(card);
+          card.append(preview,dimensions,actions);grid.append(card);
         });
         if(grid.childElementCount){
           imageGallery=grid;
-          imageGalleryNote=make("small","muted",grid.childElementCount+" foto ditemukan · pilih foto untuk melihat atau mengunduh.");
+          imageGalleryNote=make("small","muted",grid.childElementCount+" foto ditemukan · resolusi asli dipertahankan tanpa menaikkan angka kualitas secara palsu.");
           imageGalleryAction=make("button","tag","▶ Buat video slideshow (tanpa audio sumber)");
           imageGalleryAction.type="button";
           imageGalleryAction.addEventListener("click",async()=>{
@@ -1831,7 +1836,7 @@ function socialNetworkPlan(selected=0){
       if(info.providerName==="Hybrid"||hasProviderDownloadFormats){
         const videoOption=mode.querySelector('option[value="video"]');
         const audioOption=mode.querySelector('option[value="audio"]');
-        const hasVideo=(info.formats||[]).some(item=>item.mode==="video"&&(hasProviderDownloadFormats?!!item.downloadUrl&&!item.videoOnly&&["mp4","m4v","webm"].includes(String(item.ext||"").toLowerCase()):true));
+        const hasVideo=(info.formats||[]).some(item=>item.mode==="video"&&(hasProviderDownloadFormats?!!item.downloadUrl&&["mp4","m4v","webm"].includes(String(item.ext||"").toLowerCase())&&(!item.videoOnly||(info.formats||[]).some(audio=>audio.mode==="audio"&&!!audio.downloadUrl&&(item.ext==="webm"?["webm","opus","ogg"].includes(String(audio.ext||"").toLowerCase()):["m4a","aac","mp3"].includes(String(audio.ext||"").toLowerCase()))&&(!item.instance||!audio.instance||item.instance===audio.instance))):true));
         const hasAudio=(info.formats||[]).some(item=>item.mode==="audio");
         if(videoOption)videoOption.disabled=!hasVideo;
         if(audioOption)audioOption.disabled=!hasAudio;
@@ -1851,7 +1856,9 @@ function socialNetworkPlan(selected=0){
       const outputNameWrap=make("div","ary-output-name-wrap");const outputName=make("input","field");outputName.id="aryOutputName";outputName.type="text";outputName.maxLength=90;outputName.value=info.title||"aryanzz-media";outputName.autocomplete="off";outputName.placeholder="Nama file hasil unduhan";outputName.spellcheck=false;outputNameWrap.append(outputName);
 
       const directMedia=!!info.extension&&!info.extractor;
-      const qualityFormats=hasProviderDownloadFormats?(info.formats||[]).filter(item=>item.mode==="video"&&item.downloadUrl&&!item.videoOnly&&["mp4","m4v","webm"].includes(String(item.ext||"").toLowerCase())):info.formats||[];
+      const providerAudioFormats=(info.formats||[]).filter(item=>item.mode==="audio"&&item.downloadUrl);
+      const hasCompatibleProviderAudio=item=>providerAudioFormats.some(audio=>(item.ext==="webm"?["webm","opus","ogg"]:["m4a","aac","mp3"]).includes(String(audio.ext||"").toLowerCase())&&(!item.instance||!audio.instance||item.instance===audio.instance));
+      const qualityFormats=hasProviderDownloadFormats?(info.formats||[]).filter(item=>item.mode==="video"&&item.downloadUrl&&["mp4","m4v","webm"].includes(String(item.ext||"").toLowerCase())&&(!item.videoOnly||hasCompatibleProviderAudio(item))):info.formats||[];
       const heights = Array.isArray(qualityFormats)
         ? [...new Set(qualityFormats.map(item => Number(typeof item === "number" ? item : item.height)).filter(n => Number.isFinite(n)&&n>=100&&n<=4320))].sort((a,b) => a-b)
         : [];
@@ -1876,10 +1883,10 @@ function socialNetworkPlan(selected=0){
             ?FORMATS.video.filter(item=>available.includes(Number(item[0]))).map(([value,label])=>[Number(value),label])
             :available.map(value=>{
               const candidates=(qualityFormats||[]).filter(item=>Number(item.height)===Number(value));
-              const best=candidates.slice().sort((a,b)=>(Number(b.bitrate)||0)-(Number(a.bitrate)||0))[0];
+              const best=candidates.slice().sort((a,b)=>(a.videoOnly?1:0)-(b.videoOnly?1:0)||(Number(b.bitrate)||0)-(Number(a.bitrate)||0))[0];
               const estimate=best?estimateFormatBytes(best,info.duration):{bytes:0,exact:false};
               const size=estimate.bytes?" · "+(estimate.exact?"":"±")+formatDownloadSize(estimate.bytes):"";
-              return [value,value+"p · tersedia"+size];
+              return [value,value+"p · tersedia"+(best?.videoOnly?" · gabung audio":"")+size];
             });
           qualityOptions.forEach(([value,label]) => {
             const option = make("option", "", label);
@@ -1913,7 +1920,7 @@ function socialNetworkPlan(selected=0){
           const best=candidates.slice().sort((a,b)=>(Number(b.bitrate)||0)-(Number(a.bitrate)||0))[0];
           const estimate=best?estimateFormatBytes(best,info.duration):{bytes:0,exact:false};
           const size=estimate.bytes?(estimate.exact?"Ukuran sumber: ":"Perkiraan ukuran: ±")+formatDownloadSize(estimate.bytes)+". ":"";
-          qualityHint.textContent="Resolusi yang tersedia dari sumber. "+size+"4K/8K hanya muncul jika provider benar-benar menyediakan stream tersebut.";
+          qualityHint.textContent=(best?.videoOnly?"Video "+height+"p dan audio terpisah akan digabung menjadi satu file. ":"Resolusi progresif asli dari sumber. ")+size+"4K/8K hanya muncul jika provider benar-benar menyediakan stream tersebut; tidak ada resolusi palsu.";
           return;
         }
         if(!estimate){qualityHint.textContent="Ukuran belum diberikan provider; ukuran asli akan terbaca saat stream diperiksa.";return;}
