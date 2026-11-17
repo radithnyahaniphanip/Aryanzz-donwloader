@@ -23,7 +23,11 @@
     const timeout=AbortSignal.timeout(ms),parent=activeDownloadController?.signal;
     return parent&&typeof AbortSignal.any==="function"?AbortSignal.any([parent,timeout]):parent||timeout;
   }
-  function stopYouTubeLiveMonitor(){\n    if(activeYouTubeLiveMonitor?.timer)clearTimeout(activeYouTubeLiveMonitor.timer);\n    activeYouTubeLiveMonitor=null;\n  }\n  const make = (tag, cls, text) => {
+  function stopYouTubeLiveMonitor(){
+    if(activeYouTubeLiveMonitor?.timer)clearTimeout(activeYouTubeLiveMonitor.timer);
+    activeYouTubeLiveMonitor=null;
+  }
+  const make = (tag, cls, text) => {
     const el = document.createElement(tag);
     if (cls) el.className = cls;
     if (text !== undefined) el.textContent = text;
@@ -1371,7 +1375,8 @@ function socialNetworkPlan(selected=0){
   }
   async function checkLink(url, button, options={}) {
     const fast=options.deep!==true;
-    stopYouTubeLiveMonitor();\n    const runId=++analysisRunId;
+    stopYouTubeLiveMonitor();
+    const runId=++analysisRunId;
     const out = $("downloadResult");
     out.hidden = false;
     out.replaceChildren();
