@@ -3268,8 +3268,11 @@ async function hybridYoutubeInfo(request){
     diagnostics.push(...innerTube.diagnostics);
   }
   if(available.length){
-    const isLive=available.some(item=>item.isLive),isUpcoming=available.some(item=>item.isUpcoming),isLiveArchive=available.some(item=>item.isLiveArchive);
-    const primary=available.find(item=>item.isLive||item.isUpcoming)||available.find(item=>(item.formats||[]).some(format=>format.mode==="video"&&!format.videoOnly))||available[0];
+    const innerTubeState=available.find(item=>item.provider==="YouTube InnerTube");
+    const isLive=innerTubeState?Boolean(innerTubeState.isLive):available.some(item=>item.isLive);
+    const isUpcoming=innerTubeState?Boolean(innerTubeState.isUpcoming):available.some(item=>item.isUpcoming);
+    const isLiveArchive=innerTubeState?Boolean(innerTubeState.isLiveArchive):available.some(item=>item.isLiveArchive);
+    const primary=innerTubeState||available.find(item=>item.isLive||item.isUpcoming)||available.find(item=>(item.formats||[]).some(format=>format.mode==="video"&&!format.videoOnly))||available[0];
     const formats=dedupeHybridFormats(available.flatMap(result=>(result.formats||[]).map(format=>({...format,instance:format.instance||result.instance,provider:format.provider||result.provider}))));
     const liveSource=available.find(item=>item.isLive&&item.liveManifestUrl);
     const liveManifestUrl=liveSource?.liveManifestUrl||primary.liveManifestUrl||null;
