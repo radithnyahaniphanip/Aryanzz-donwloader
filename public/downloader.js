@@ -1059,7 +1059,7 @@ function socialNetworkPlan(selected=0){
         await saveBrowserBlob(blob,filename,progressText.parentElement,"⬇ Unduh "+outputExt.toUpperCase()+" sekarang");
         bar.style.width="100%";bar.parentElement?.classList.remove("is-indeterminate");bar.parentElement?.setAttribute("aria-valuenow","100");
         progressText.textContent=outputExt.toUpperCase()+" "+(Number(videoItem.height)||quality||"asli")+"p siap ✓";
-        progressMeta.textContent="Video dan audio selesai digabung · resolusi video sumber tetap "+(Number(videoItem.height)||"asli")+"p · "+formatDownloadSize(blob.size)+".";
+        progressMeta.textContent="Video dan audio selesai digabung · Resolusi video sumber tetap "+(Number(videoItem.height)||"asli")+"p · "+formatDownloadSize(blob.size)+".";
         remember(info.url||"",filename,"video",Number(videoItem.height)||quality);
         return filename;
       }finally{
