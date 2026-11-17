@@ -1002,99 +1002,171 @@ function socialNetworkPlan(selected=0){
       return blob;
     }catch(error){for(const controller of controllers)controller.abort();throw error;}
   }
-    async function downloadFile(url, mode, quality, bar, progressText, info={}, requestedAudioFormat="mp3",progressMeta=null) {
-    const hasSocialDownloadFormats=Array.isArray(info.formats)&&info.formats.some(item=>item?.downloadUrl);
-    if(hasSocialDownloadFormats){
-      const all=(Array.isArray(info.formats)?info.formats:[]).filter(item=>item.mode===mode&&item.downloadUrl&&!(mode==="video"&&(item.videoOnly||!["mp4","m4v"].includes(String(item.ext||"").toLowerCase()))));
-      let orderedCandidates=[];
-      if(mode==="audio"){
-        orderedCandidates=[...all.filter(item=>item.ext===requestedAudioFormat),...all.filter(item=>item.ext!==requestedAudioFormat)];
-      }else{
-        const wanted=Number(quality)||0;
-        orderedCandidates=all.slice().sort((a,b)=>{
-          const ah=Number(a.height)||0,bh=Number(b.height)||0;
-          if(!ah&&bh)return 1;if(ah&&!bh)return -1;
-          const aBelow=ah>0&&ah<=wanted,bBelow=bh>0&&bh<=wanted;
-          if(aBelow!==bBelow)return aBelow?-1:1;
-          return aBelow?bh-ah:ah-bh;
-        });
-      }
-      const seenCandidates=new Set();
-      orderedCandidates=orderedCandidates.filter(item=>{
-        const key=String(item.downloadUrl||"")+"|"+String(item.mode||"");
-        if(!item.downloadUrl||seenCandidates.has(key))return false;
-        seenCandidates.add(key);return true;
-      }).slice(0,3);
-      if(!orderedCandidates.length)throw new Error(mode==="audio"?"Provider gratis tidak menyediakan audio yang dapat diunduh.":"Provider gratis tidak menyediakan MP4 lengkap dengan suara. Format selain MP4 tidak akan diberi ekstensi MP4 palsu. Coba tautan video publik lain.");
-      let selected=null,ready=null,check=null,lastProbeError="";
-      progressText.textContent="Memeriksa MP4 terbaik dan ukuran file…";
-      if(progressMeta)progressMeta.textContent="Memeriksa maksimal tiga jalur media secara bersamaan. Jalur yang lolos validasi dipilih otomatis.";
-      const probeResults=await Promise.all(orderedCandidates.map(async candidate=>{
-        const candidateUrl=safeUrl(candidate.downloadUrl);
-        if(!candidateUrl||candidateUrl.origin!==location.origin||candidateUrl.pathname!=="/api/social-file"){
-          return {candidate,error:"Tautan unduhan tidak melewati pemeriksaan keamanan ARYANZZ."};
-        }
-        const probeUrl=new URL(candidateUrl.href);probeUrl.searchParams.set("probe","1");
-        try{
-          const probeResponse=await fetch(probeUrl.href,{cache:"no-store",credentials:"same-origin",signal:downloadTimeoutSignal(9000)});
-          const candidateCheck=await probeResponse.json().catch(()=>({}));
-          if(probeResponse.ok&&candidateCheck.valid===true)return {candidate,candidateUrl,check:candidateCheck};
-          return {candidate,error:String(candidateCheck.error||"File tidak lolos validasi (HTTP "+probeResponse.status+").").slice(0,180)};
-        }catch(error){return {candidate,error:String(error?.message||error).slice(0,180)}}
-      }));
-      const selectedResult=probeResults.find(result=>result.check?.valid===true);
-      if(selectedResult){selected=selectedResult.candidate;ready=selectedResult.candidateUrl;check=selectedResult.check;}
-      else{
-        lastProbeError=probeResults.map(result=>result.error).filter(Boolean).slice(0,3).join(" | ");
-        throw new Error("Tidak ada format yang lolos validasi media. "+(lastProbeError||"Semua provider mengirim file yang tidak cocok."));
-      }
-      const size=Number(check.bytes)||Number(selected.filesize)||0;
-      const filenameBase=safeFilename(info.outputName||info.title||"aryanzz-media").replace(/\.[a-z0-9]{2,5}$/i,"");
-      const filename=filenameBase+"."+check.extension;
-      const downloadUrl=new URL(ready.href);downloadUrl.searchParams.set("filename",filenameBase);
-      if(size)downloadUrl.searchParams.set("expected",String(size));
-      const container=bar.parentElement?.parentElement;
-      const sizeLabel=size?" · "+formatDownloadSize(size):"";
-      if(!size||size>180*1024*1024||!check.rangeSupported){
-        addReadyDownloadLink(container,downloadUrl.href,filename,mode==="audio"?"Unduhan audio":"Unduhan video");
-        bar.style.width="100%";bar.parentElement?.classList.remove("is-indeterminate");bar.parentElement?.setAttribute("aria-valuenow","100");
-        progressText.textContent="Unduhan otomatis dimulai di Chrome · "+filename;
-        if(progressMeta)progressMeta.textContent=size>180*1024*1024?"File besar ditangani langsung oleh pengelola unduhan Chrome agar RAM HP tidak penuh.":"Chrome menerima file MP4 secara langsung tanpa tombol unduhan tambahan.";
-        remember(url,filename,mode,quality);
-        return filename;
-      }
-      const selectedProfile=Number(document.getElementById("aryDownloadSpeed")?.value)||0;
-      const networkPlan=socialNetworkPlan(selectedProfile);
-      progressText.textContent="Menyiapkan unduhan "+networkPlan.label+"…";
-      if(progressMeta)progressMeta.textContent="Jalur adaptif: "+networkPlan.lanes+" koneksi paralel · "+(networkPlan.downlink?networkPlan.downlink+" Mbps terdeteksi":"kecepatan jaringan akan diukur saat transfer")+".";
+    function providerAudioForVideo(videoItem,formats){
+      const compatible=videoItem.ext==="webm"?["webm","opus","ogg"]:["m4a","aac","mp3"];
+      return (formats||[]).filter(item=>item?.mode==="audio"&&item?.downloadUrl&&compatible.includes(String(item.ext||"").toLowerCase())&&(!videoItem.instance||!item.instance||item.instance===videoItem.instance)).sort((a,b)=>(Number(b.bitrate)||0)-(Number(a.bitrate)||0))[0]||null;
+    }
+    async function muxSocialVideo(videoItem,info,bar,progressText,progressMeta,quality){
+      const audioItem=providerAudioForVideo(videoItem,info.formats);
+      if(!audioItem)throw new Error("Provider memisahkan video "+videoItem.height+"p dari audio, tetapi tidak memberikan audio yang kompatibel.");
+      const budget=youtubeMuxMemoryBudget();
+      const readTrack=async(item,label)=>{
+        const target=safeUrl(item.downloadUrl);
+        if(!target||target.origin!==location.origin||target.pathname!=="/api/social-file")throw new Error("URL "+label+" tidak melewati proxy media ARYANZZ.");
+        const probeUrl=new URL(target.href);probeUrl.searchParams.set("probe","1");
+        const probeResponse=await fetch(probeUrl.href,{cache:"no-store",credentials:"same-origin",signal:downloadTimeoutSignal(20000)});
+        const check=await probeResponse.json().catch(()=>({}));
+        if(!probeResponse.ok||check.valid!==true)throw new Error(String(check.error||"Pemeriksaan "+label+" gagal (HTTP "+probeResponse.status+").").slice(0,180));
+        const expected=Number(check.bytes)||Number(item.filesize)||0;
+        if(expected>budget.maxTrack)throw new Error(label+" berukuran "+formatDownloadSize(expected)+" dan melewati batas aman memori perangkat.");
+        const response=await fetch(target.href,{cache:"no-store",credentials:"same-origin",signal:downloadTimeoutSignal(120000)});
+        if(!response.ok)throw new Error("Unduhan "+label+" gagal (HTTP "+response.status+").");
+        const mime=String(response.headers.get("content-type")||"").toLowerCase();
+        if(mime.startsWith("text/")||mime.includes("application/json")||mime.includes("application/xml"))throw new Error("Provider mengirim halaman error, bukan "+label+".");
+        const bytes=new Uint8Array(await response.arrayBuffer());
+        if(!bytes.byteLength)throw new Error(label+" kosong.");
+        if(bytes.byteLength>budget.maxTrack)throw new Error(label+" melewati batas aman memori perangkat.");
+        if(expected&&bytes.byteLength<expected)throw new Error(label+" terpotong: "+formatDownloadSize(bytes.byteLength)+" dari "+formatDownloadSize(expected)+".");
+        return bytes;
+      };
+      let ffmpeg=null,videoBytes=null,audioBytes=null;
+      const outputExt=String(videoItem.ext||"mp4").toLowerCase()==="webm"?"webm":"mp4";
+      const inputVideo="aryanzz-social-video."+outputExt,inputAudio="aryanzz-social-audio."+String(audioItem.ext||"m4a"),output="aryanzz-social-output."+outputExt;
       try{
-        const blob=await downloadSocialRanges(downloadUrl.href,size,filename,check.mimeType||selected.mimeType||"application/octet-stream",mode,networkPlan.lanes,bar,progressText,progressMeta,container);
-        if(progressMeta)progressMeta.textContent=formatDownloadSize(blob.size)+" selesai · "+networkPlan.label+" · "+networkPlan.lanes+" jalur.";
-        remember(url,filename,mode,quality);
-        return filename;
-      }catch(rangeError){
-        if(activeDownloadController?.signal.aborted)throw new Error("Unduhan dibatalkan.");
-        addReadyDownloadLink(container,downloadUrl.href,filename,mode==="audio"?"Unduhan audio":"Unduhan video");
+        progressText.textContent="Mengambil video "+(Number(videoItem.height)||quality||"asli")+"p dan audio…";
+        progressMeta.textContent="Resolusi asli dipertahankan. ARYANZZ akan menyatukan dua stream tanpa menurunkan resolusi video.";
+        [videoBytes,audioBytes]=await Promise.all([readTrack(videoItem,"video"),readTrack(audioItem,"audio")]);
+        if(videoBytes.byteLength+audioBytes.byteLength>budget.maxCombined)throw new Error("Gabungan media "+formatDownloadSize(videoBytes.byteLength+audioBytes.byteLength)+" melewati batas aman memori HP.");
+        ffmpeg=await loadBrowserFfmpeg(progressText,progressMeta,bar,"Video "+formatDownloadSize(videoBytes.byteLength)+" + audio "+formatDownloadSize(audioBytes.byteLength));
+        await ffmpeg.writeFile(inputVideo,videoBytes);
+        await ffmpeg.writeFile(inputAudio,audioBytes);
+        videoBytes=null;audioBytes=null;
+        progressText.textContent="Menyatukan video dan audio tanpa mengubah resolusi…";
+        let code=await ffmpeg.exec(["-i",inputVideo,"-i",inputAudio,"-map","0:v:0","-map","1:a:0","-c","copy",...(outputExt==="mp4"?["-movflags","+faststart"]:[]),"-shortest",output],300000);
+        if(code!==0&&outputExt==="mp4"){
+          try{await ffmpeg.deleteFile(output)}catch{}
+          code=await ffmpeg.exec(["-i",inputVideo,"-i",inputAudio,"-map","0:v:0","-map","1:a:0","-c:v","copy","-c:a","aac","-b:a","192k","-movflags","+faststart","-shortest",output],300000);
+        }
+        if(code!==0)throw new Error("FFmpeg tidak dapat menggabungkan track media (kode "+code+").");
+        const result=await ffmpeg.readFile(output);
+        if(!result||result.length<1024)throw new Error("Hasil gabungan media kosong atau tidak lengkap.");
+        const blob=new Blob([result],{type:outputExt==="webm"?"video/webm":"video/mp4"});
+        const filename=safeFilename((info.outputName||info.title||"aryanzz-media").replace(/\.(?:mp4|mp3|m4a|webm|mov)$/i,"")+"."+outputExt);
+        await saveBrowserBlob(blob,filename,progressText.parentElement,"⬇ Unduh "+outputExt.toUpperCase()+" sekarang");
         bar.style.width="100%";bar.parentElement?.classList.remove("is-indeterminate");bar.parentElement?.setAttribute("aria-valuenow","100");
-        progressText.textContent="Unduhan otomatis dimulai di Chrome · "+filename;
-        if(progressMeta)progressMeta.textContent="Mode transfer paralel tidak didukung sumber; Chrome mengambil file langsung tanpa tombol tambahan. "+String(rangeError?.message||rangeError).slice(0,100);
-        remember(url,filename,mode,quality);
+        progressText.textContent=outputExt.toUpperCase()+" "+(Number(videoItem.height)||quality||"asli")+"p siap ✓";
+        progressMeta.textContent="Video dan audio selesai digabung · resolusi video sumber tetap "+(Number(videoItem.height)||"asli")+"p · "+formatDownloadSize(blob.size)+".";
+        remember(info.url||"",filename,"video",Number(videoItem.height)||quality);
         return filename;
+      }finally{
+        videoBytes=null;audioBytes=null;
+        if(ffmpeg)for(const name of [inputVideo,inputAudio,output])try{await ffmpeg.deleteFile(name)}catch{}
       }
     }
-    let sourcePlatform="Direct Media URL";try{sourcePlatform=platformName(new URL(url));}catch{}
-    if(sourcePlatform!=="Direct Media URL")throw new Error("Provider "+sourcePlatform+" belum memberikan tautan file media yang valid. ARYANZZ menghentikan unduhan agar halaman atau respons JSON tidak tersimpan sebagai MP4.");
-    const sourceExt=/^[a-z0-9]{2,8}$/i.test(info.extension||"")?info.extension.toLowerCase():"";
-    const ext=sourceExt||(mode==="audio"?"mp3":"mp4");
-    const filename=safeFilename(info.outputName||info.filename||info.title||("aryanzz-"+(mode==="audio"?"audio":"video-"+quality+"p")+"."+ext));
-    const fileUrl="/api/direct-file?url="+encodeURIComponent(url);
-    addReadyDownloadLink(bar.parentElement?.parentElement,fileUrl,filename,"⬇ Unduh file sekarang");
-    bar.style.width="100%";bar.parentElement?.classList.remove("is-indeterminate");bar.parentElement?.setAttribute("aria-valuenow","100");
-    progressText.textContent="Unduhan otomatis dimulai di Chrome · "+filename;
-    if(progressMeta)progressMeta.textContent="Chrome menerima file secara langsung. Periksa notifikasi atau folder Downloads untuk melihat progresnya.";
-    remember(url,filename,mode,quality);
-    return filename;
-  }
+    async function downloadFile(url, mode, quality, bar, progressText, info={}, requestedAudioFormat="mp3",progressMeta=null) {
+      const hasSocialDownloadFormats=Array.isArray(info.formats)&&info.formats.some(item=>item?.downloadUrl);
+      if(hasSocialDownloadFormats){
+        const formats=Array.isArray(info.formats)?info.formats:[];
+        const all=mode==="video"
+          ?formats.filter(item=>item.mode==="video"&&item.downloadUrl&&["mp4","m4v","webm"].includes(String(item.ext||"").toLowerCase())&&(!item.videoOnly||providerAudioForVideo(item,formats)))
+          :formats.filter(item=>item.mode===mode&&item.downloadUrl);
+        let orderedCandidates=[];
+        if(mode==="audio"){
+          orderedCandidates=[...all.filter(item=>item.ext===requestedAudioFormat),...all.filter(item=>item.ext!==requestedAudioFormat)];
+        }else{
+          const wanted=Number(quality)||0;
+          orderedCandidates=all.slice().sort((a,b)=>{
+            const ah=Number(a.height)||0,bh=Number(b.height)||0;
+            if(wanted>0&&(ah===wanted)!==(bh===wanted))return ah===wanted?-1:1;
+            const aBelow=wanted>0&&ah>0&&ah<wanted,bBelow=wanted>0&&bh>0&&bh<wanted;
+            if(aBelow!==bBelow)return aBelow?-1:1;
+            if(wanted>0&&ah!==bh)return aBelow?bh-ah:ah-bh;
+            if(!wanted&&ah!==bh)return bh-ah;
+            if(Boolean(a.videoOnly)!==Boolean(b.videoOnly))return a.videoOnly?1:-1;
+            return (Number(b.bitrate)||0)-(Number(a.bitrate)||0);
+          });
+        }
+        const seenCandidates=new Set();
+        orderedCandidates=orderedCandidates.filter(item=>{
+          const key=String(item.downloadUrl||"")+"|"+String(item.mode||"");
+          if(!item.downloadUrl||seenCandidates.has(key))return false;
+          seenCandidates.add(key);return true;
+        }).slice(0,6);
+        if(!orderedCandidates.length)throw new Error(mode==="audio"?"Provider gratis tidak menyediakan audio yang dapat diunduh.":"Provider gratis tidak menyediakan video lengkap dengan suara yang kompatibel. Resolusi yang tidak tersedia tidak akan dibuat-buat.");
+        let lastMuxError="";
+        progressText.textContent="Memeriksa kualitas asli dan stream yang tersedia…";
+        if(progressMeta)progressMeta.textContent="ARYANZZ memeriksa resolusi, tanda tangan file, dan pasangan audio/video sebelum memilih unduhan.";
+        const probeResults=await Promise.all(orderedCandidates.map(async candidate=>{
+          const candidateUrl=safeUrl(candidate.downloadUrl);
+          if(!candidateUrl||candidateUrl.origin!==location.origin||candidateUrl.pathname!=="/api/social-file")return {candidate,error:"Tautan unduhan tidak melewati pemeriksaan keamanan ARYANZZ."};
+          const probeUrl=new URL(candidateUrl.href);probeUrl.searchParams.set("probe","1");
+          try{
+            const probeResponse=await fetch(probeUrl.href,{cache:"no-store",credentials:"same-origin",signal:downloadTimeoutSignal(12000)});
+            const candidateCheck=await probeResponse.json().catch(()=>({}));
+            if(probeResponse.ok&&candidateCheck.valid===true)return {candidate,candidateUrl,check:candidateCheck};
+            return {candidate,error:String(candidateCheck.error||"File tidak lolos validasi (HTTP "+probeResponse.status+").").slice(0,180)};
+          }catch(error){return {candidate,error:String(error?.message||error).slice(0,180)}}
+        }));
+        const validResults=probeResults.filter(result=>result.check?.valid===true);
+        let selectedResult=null;
+        for(const result of validResults){
+          if(mode==="video"&&result.candidate.videoOnly){
+            try{return await muxSocialVideo(result.candidate,info,bar,progressText,progressMeta,quality)}
+            catch(error){lastMuxError=String(error?.message||error).slice(0,200);continue;}
+          }
+          selectedResult=result;break;
+        }
+        if(!selectedResult){
+          const details=probeResults.map(result=>result.error).filter(Boolean).slice(0,3).join(" | ");
+          throw new Error("Tidak ada format yang lolos validasi media. "+(lastMuxError?lastMuxError+" · ":"")+(details||"Semua provider mengirim file yang tidak cocok."));
+        }
+        const selected=selectedResult.candidate,ready=selectedResult.candidateUrl,check=selectedResult.check;
+        const size=Number(check.bytes)||Number(selected.filesize)||0;
+        const filenameBase=safeFilename(info.outputName||info.title||"aryanzz-media").replace(/\.[a-z0-9]{2,5}$/i,"");
+        const filename=filenameBase+"."+check.extension;
+        const downloadUrl=new URL(ready.href);downloadUrl.searchParams.set("filename",filenameBase);
+        if(size)downloadUrl.searchParams.set("expected",String(size));
+        const container=bar.parentElement?.parentElement;
+        if(!size||size>180*1024*1024||!check.rangeSupported){
+          addReadyDownloadLink(container,downloadUrl.href,filename,mode==="audio"?"Unduhan audio":"Unduhan video");
+          bar.style.width="100%";bar.parentElement?.classList.remove("is-indeterminate");bar.parentElement?.setAttribute("aria-valuenow","100");
+          progressText.textContent="Unduhan otomatis dimulai di Chrome · "+filename;
+          if(progressMeta)progressMeta.textContent=size>180*1024*1024?"File besar ditangani langsung oleh pengelola unduhan Chrome agar RAM HP tidak penuh.":"Chrome menerima file media asli tanpa mengubah ekstensi atau resolusinya.";
+          remember(url,filename,mode,quality);
+          return filename;
+        }
+        const selectedProfile=Number(document.getElementById("aryDownloadSpeed")?.value)||0;
+        const networkPlan=socialNetworkPlan(selectedProfile);
+        progressText.textContent="Menyiapkan unduhan "+networkPlan.label+"…";
+        if(progressMeta)progressMeta.textContent="Jalur adaptif: "+networkPlan.lanes+" koneksi paralel · "+(networkPlan.downlink?networkPlan.downlink+" Mbps terdeteksi":"kecepatan jaringan akan diukur saat transfer")+".";
+        try{
+          const blob=await downloadSocialRanges(downloadUrl.href,size,filename,check.mimeType||selected.mimeType||"application/octet-stream",mode,networkPlan.lanes,bar,progressText,progressMeta,container);
+          if(progressMeta)progressMeta.textContent=formatDownloadSize(blob.size)+" selesai · "+networkPlan.label+" · "+networkPlan.lanes+" jalur.";
+          remember(url,filename,mode,quality);
+          return filename;
+        }catch(rangeError){
+          if(activeDownloadController?.signal.aborted)throw new Error("Unduhan dibatalkan.");
+          addReadyDownloadLink(container,downloadUrl.href,filename,mode==="audio"?"Unduhan audio":"Unduhan video");
+          bar.style.width="100%";bar.parentElement?.classList.remove("is-indeterminate");bar.parentElement?.setAttribute("aria-valuenow","100");
+          progressText.textContent="Unduhan otomatis dimulai di Chrome · "+filename;
+          if(progressMeta)progressMeta.textContent="Mode transfer paralel tidak didukung sumber; Chrome mengambil file langsung tanpa tombol tambahan. "+String(rangeError?.message||rangeError).slice(0,100);
+          remember(url,filename,mode,quality);
+          return filename;
+        }
+      }
+      let sourcePlatform="Direct Media URL";try{sourcePlatform=platformName(new URL(url));}catch{}
+      if(sourcePlatform!=="Direct Media URL")throw new Error("Provider "+sourcePlatform+" belum memberikan tautan file media yang valid. ARYANZZ menghentikan unduhan agar halaman atau respons JSON tidak tersimpan sebagai MP4.");
+      const sourceExt=/^[a-z0-9]{2,8}$/i.test(info.extension||"")?info.extension.toLowerCase():"";
+      const ext=sourceExt||(mode==="audio"?"mp3":"mp4");
+      const filename=safeFilename(info.outputName||info.filename||info.title||("aryanzz-"+(mode==="audio"?"audio":"video-"+quality+"p")+"."+ext));
+      const fileUrl="/api/direct-file?url="+encodeURIComponent(url);
+      addReadyDownloadLink(bar.parentElement?.parentElement,fileUrl,filename,"⬇ Unduh file sekarang");
+      bar.style.width="100%";bar.parentElement?.classList.remove("is-indeterminate");bar.parentElement?.setAttribute("aria-valuenow","100");
+      progressText.textContent="Unduhan otomatis dimulai di Chrome · "+filename;
+      if(progressMeta)progressMeta.textContent="Chrome menerima file secara langsung. Periksa notifikasi atau folder Downloads untuk melihat progresnya.";
+      remember(url,filename,mode,quality);
+      return filename;
+    }
   function showError(out, error, url) {
     out.hidden = false;
     out.replaceChildren();
