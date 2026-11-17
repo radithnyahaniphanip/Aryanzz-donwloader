@@ -54,7 +54,7 @@ assert.match(worker, /status===429\?120000/, "Rate-limited providers must receiv
 assert.match(worker, /attempt===0&&\[500,502,503,504\]\.includes\(status\)/, "Transient provider 5xx responses must be retried once");
 assert.match(worker, /liveManifestUrl:liveManifest\?\.href\|\|null/, "YouTube Live HLS manifest metadata must be preserved when safely available");
 assert.match(worker, /liveManifestUrl,liveManifestAvailable:/, "Merged YouTube provider results must retain Live manifest metadata");
-assert.match(downloader, /Siaran masih berlangsung\. ARYANZZ memakai pemutar resmi YouTube; file MP4 arsip baru bisa diproses setelah siaran selesai/, "An active Live stream must not be falsely presented as a completed downloadable MP4");
+assert.match(downloader, /Siaran masih berlangsung\. ARYANZZ tidak akan mengklaim file MP4 lengkap sebelum YouTube menyelesaikan arsipnya/, "An active Live stream must not be falsely presented as a completed downloadable MP4");
 
 assert.match(downloader, /image\.naturalWidth\+" × "\+image\.naturalHeight\+" px · gambar asli/, "Image results must show the actual source dimensions");
 assert.match(downloader, /resolusi asli dipertahankan tanpa menaikkan angka kualitas secara palsu/, "Image downloads must be described as original-quality downloads, not fake upscales");
