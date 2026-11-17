@@ -2054,16 +2054,16 @@ function extractTikTokPhotoProxyImages(text){
   }
   return images;
 }
-async function fetchTikTokPhotoEmbedProxy(canonicalUrl,timeoutMs=14000){
+async function fetchTikTokPhotoEmbedProxy(canonicalUrl,timeoutMs=22000){
   const itemId=extractTikTokItemId(canonicalUrl);
   if(!itemId)throw new Error("ID Photo Mode tidak tersedia untuk jalur proxy.");
   const target="https://www.tiktok.com/embed/v2/"+itemId;
   const encoded=encodeURIComponent(target);
-  const headers={"accept":"text/html,text/plain,*/*","x-return-format":"html","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"};
+  const headers={"accept":"text/plain, text/markdown, */*","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"};
   const jina=[
-    {name:"Jina Reader HTML",url:"https://r.jina.ai/http://www.tiktok.com/embed/v2/"+itemId,headers},
+    {name:"Jina Reader Markdown",url:"https://r.jina.ai/http://www.tiktok.com/embed/v2/"+itemId,headers},
     {name:"CORS.dev → Jina Reader",url:"https://proxy.cors.dev/https://r.jina.ai/http://www.tiktok.com/embed/v2/"+itemId,headers:{accept:"text/plain,text/html,*/*"}},
-    {name:"Jina Reader HTTPS",url:"https://r.jina.ai/https://www.tiktok.com/embed/v2/"+itemId,headers}
+    {name:"Jina Reader Markdown HTTPS",url:"https://r.jina.ai/https://www.tiktok.com/embed/v2/"+itemId,headers}
   ];
   const fallbacks=[
     {name:"AllOrigins",url:"https://api.allorigins.win/raw?url="+encoded,headers:{accept:"text/html,*/*"}},
@@ -2074,7 +2074,7 @@ async function fetchTikTokPhotoEmbedProxy(canonicalUrl,timeoutMs=14000){
   const readEndpoint=async endpoint=>{
     const remaining=deadline-Date.now();
     if(remaining<=0)throw new Error("Batas waktu provider habis.");
-    const response=await fetch(endpoint.url,{headers:endpoint.headers,redirect:"follow",cache:"no-store",signal:AbortSignal.timeout(Math.min(remaining,8000))});
+    const response=await fetch(endpoint.url,{headers:endpoint.headers,redirect:"follow",cache:"no-store",signal:AbortSignal.timeout(Math.min(remaining,18000))});
     if(!response.ok){await response.body?.cancel().catch(()=>{});throw new Error(endpoint.name+" HTTP "+response.status);}
     const body=(await response.text()).slice(0,5000000);
     const parsed=extractSocialImageCandidates(body,target,"tiktok").filter(item=>{try{return /photomode/i.test(new URL(item.url).pathname)}catch{return false}});
@@ -2536,7 +2536,7 @@ async function resolveSocialImagePost(rawUrl,requestUrl,options={}){
       if(isTikTokPhotoRoute){
         let page=null;
         try{
-          const proxyData=await fetchTikTokPhotoEmbedProxy(canonicalUrl,Number(options.proxyTimeoutMs)||13000);
+          const proxyData=await fetchTikTokPhotoEmbedProxy(canonicalUrl,Number(options.proxyTimeoutMs)||22000);
           providerTitle=providerTitle||proxyData.title;
           page={url:canonicalUrl,html:"",title:proxyData.title,images:proxyData.images};
           if(options.diagnostics)options.diagnostics.value={source:"TikTok Photo Mode",proxy:{ok:true,source:proxyData.source,imageCount:proxyData.images.length}};
