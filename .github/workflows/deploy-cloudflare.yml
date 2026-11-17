@@ -163,8 +163,7 @@ jobs:
           wrangler deploy --keep-vars 2>&1 | tee /tmp/aryanzz-wrangler-deploy.log
           VERSION_ID=$(grep -oE 'Current Version ID: [0-9a-f-]+' /tmp/aryanzz-wrangler-deploy.log | tail -n 1 | awk '{print $4}')
           test -n "$VERSION_ID" || { echo "::error::Wrangler did not report the newly uploaded Worker version ID."; exit 1; }
-          echo "Promoting Worker version $VERSION_ID to 100% production traffic."
-          wrangler versions deploy "$VERSION_ID@100%" --yes
+          echo "wrangler deploy has already activated Worker version $VERSION_ID on production traffic."
           wrangler deployments status
       - name: Deploy secondary ARYANZZ workers.dev endpoint
         env:
