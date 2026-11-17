@@ -1095,7 +1095,7 @@ function socialNetworkPlan(selected=0){
           const key=String(item.downloadUrl||"")+"|"+String(item.mode||"");
           if(!item.downloadUrl||seenCandidates.has(key))return false;
           seenCandidates.add(key);return true;
-        }).slice(0,6);
+        }).slice(0,3);
         if(!orderedCandidates.length)throw new Error(mode==="audio"?"Provider gratis tidak menyediakan audio yang dapat diunduh.":"Provider gratis tidak menyediakan video lengkap dengan suara yang kompatibel. Resolusi yang tidak tersedia tidak akan dibuat-buat.");
         let lastMuxError="";
         progressText.textContent="Memeriksa kualitas asli dan stream yang tersedia…";
