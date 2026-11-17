@@ -93,6 +93,24 @@
     const seconds=Number(durationSeconds)||0;
     return {bytes:bitsPerSecond>0&&seconds>0?Math.round(bitsPerSecond*seconds/8):0,exact:false};
   }
+  function youtubeCandidateQualityOrder(formats,wanted){
+    const target=Number(wanted)||480;
+    return (Array.isArray(formats)?formats:[]).slice().sort((a,b)=>{
+      const ah=Number(a.height)||0,bh=Number(b.height)||0;
+      const aExact=ah===target,bExact=bh===target;
+      if(aExact!==bExact)return aExact?-1:1;
+      if(!aExact){
+        const aAbove=ah>target,bAbove=bh>target;
+        if(aAbove!==bAbove)return aAbove?-1:1;
+        if(ah!==bh)return aAbove?ah-bh:bh-ah;
+      }
+      const bitrate=(Number(b.bitrate)||0)-(Number(a.bitrate)||0);
+      if(bitrate)return bitrate;
+      if(Boolean(a.videoOnly)!==Boolean(b.videoOnly))return a.videoOnly?1:-1;
+      if((a.ext==="mp4"?0:1)!==(b.ext==="mp4"?0:1))return a.ext==="mp4"?-1:1;
+      return 0;
+    });
+  }
   function youtubeQualityEstimate(info,height){
     const formats=Array.isArray(info?.formats)?info.formats:[];
     const wanted=Number(height)||480;
@@ -101,17 +119,7 @@
       return formats.filter(item=>item.mode==="audio"&&compatible.includes(String(item.ext||"").toLowerCase())&&(!video.instance||!item.instance||item.instance===video.instance)).sort((a,b)=>(Number(b.bitrate)||0)-(Number(a.bitrate)||0))[0]||null;
     };
     const candidates=formats.filter(item=>item.mode==="video"&&["mp4","m4v","webm"].includes(String(item.ext||"").toLowerCase())&&Number(item.height)>0&&(!item.videoOnly||compatibleAudioFor(item)));
-    candidates.sort((a,b)=>{
-      const ah=Number(a.height)||0,bh=Number(b.height)||0;
-      if((ah===wanted)!==(bh===wanted))return ah===wanted?-1:1;
-      const aBelow=ah<wanted,bBelow=bh<wanted;
-      if(aBelow!==bBelow)return aBelow?-1:1;
-      if(ah!==bh)return aBelow?bh-ah:ah-bh;
-      if(Boolean(a.videoOnly)!==Boolean(b.videoOnly))return a.videoOnly?1:-1;
-      if((a.ext==="mp4"?0:1)!==(b.ext==="mp4"?0:1))return a.ext==="mp4"?-1:1;
-      return (Number(b.bitrate)||0)-(Number(a.bitrate)||0);
-    });
-    const selected=candidates[0];
+    const selected=youtubeCandidateQualityOrder(candidates,wanted)[0];
     if(!selected)return null;
     const videoSize=estimateFormatBytes(selected,info.duration);
     if(!selected.videoOnly)return {kind:"direct",actualHeight:Number(selected.height)||0,bytes:videoSize.bytes,exact:videoSize.exact,format:selected};
@@ -782,16 +790,10 @@
       const videoFormats=all.filter(item=>["mp4","webm"].includes(item.ext)&&Number(item.height)>0);
       const progressive=videoFormats.filter(item=>!item.videoOnly).sort((a,b)=>(a.ext==="mp4"?0:1)-(b.ext==="mp4"?0:1));
       const adaptive=videoFormats.filter(item=>item.videoOnly).sort((a,b)=>(a.ext==="mp4"?0:1)-(b.ext==="mp4"?0:1));
-      const orderByRequestedQuality=formats=>{
-        const below=formats.filter(item=>Number(item.height)<=wanted).sort((a,b)=>Number(b.height)-Number(a.height)||Number(b.bitrate)-Number(a.bitrate));
-        const above=formats.filter(item=>Number(item.height)>wanted).sort((a,b)=>Number(a.height)-Number(b.height)||Number(b.bitrate)-Number(a.bitrate));
-        return [...below,...above];
-      };
-      const exactProgressive=selectProviderCandidates(progressive.filter(item=>Number(item.height)===wanted).sort((a,b)=>Number(b.bitrate)-Number(a.bitrate)),3,4);
-      const exactAdaptive=selectProviderCandidates(adaptive.filter(item=>Number(item.height)===wanted).sort((a,b)=>Number(b.bitrate)-Number(a.bitrate)),3,4);
-      const progressiveFallback=selectProviderCandidates(orderByRequestedQuality(progressive.filter(item=>Number(item.height)!==wanted)),2,4);
-      const adaptiveFallback=selectProviderCandidates(orderByRequestedQuality(adaptive.filter(item=>Number(item.height)!==wanted)),2,4);
-      candidates=[...exactProgressive,...exactAdaptive,...progressiveFallback,...adaptiveFallback];
+      // Exact requested resolution first; for fallbacks choose the nearest
+      // resolution and prefer the higher one on equal distance. Rank same-size
+      // streams by bitrate before preferring a simpler progressive file.
+      candidates=selectProviderCandidates(youtubeCandidateQualityOrder(videoFormats,wanted),2,8);
       if(candidates[0]?.videoOnly){
         progressText.textContent="Kualitas "+wanted+"p · menyiapkan satu file video otomatis.";
         progressMeta.textContent="ARYANZZ memilih MP4 bila tersedia; jika sumber 2K hanya menyediakan WebM, format WebM dipertahankan tanpa mengganti ekstensi.";
@@ -817,7 +819,7 @@
       progressMeta.textContent="Jika provider menolak stream (403/429), ARYANZZ otomatis beralih ke provider lain yang menyediakan format setara.";
       try{
         if(mode==="video"&&selected.videoOnly){
-          const compatibleAudio=selected.ext==="webm"?["webm","opus"]:["m4a"];
+          const compatibleAudio=selected.ext==="webm"?["webm","opus","ogg"]:["m4a","aac","mp3"];
           const audios=(info.formats||[]).filter(item=>item.mode==="audio"&&compatibleAudio.includes(item.ext)&&(!instance||!item.instance||item.instance===instance)).sort((a,b)=>Number(b.bitrate)-Number(a.bitrate));
           const audioItem=audios[0];
           if(!audioItem)throw new Error("Komponen media tidak lengkap pada provider ini.");
@@ -1367,7 +1369,7 @@ function socialNetworkPlan(selected=0){
     const response=await fetch(endpoint,{cache:"no-store",credentials:"same-origin",signal:downloadTimeoutSignal(timeoutMs)});
     const data=await response.json().catch(()=>({}));
     if(!response.ok)throw new Error(data.error||"Worker YouTube gagal memeriksa tautan (HTTP "+response.status+").");
-    if(data.isLive||data.isUpcoming)return {...data,videoId:data.videoId||match,liveEmbedUrl:"https://www.youtube-nocookie.com/embed/"+match};
+    if(data.isLive||data.isUpcoming||(data.isLiveArchive&&!(Array.isArray(data.formats)&&data.formats.length)))return {...data,videoId:data.videoId||match,liveEmbedUrl:"https://www.youtube-nocookie.com/embed/"+match};
     if(!data.providerReady||!Array.isArray(data.formats)||!data.formats.length){
       throw new Error(data.providerMessage||"YouTube mengenali tautan, tetapi belum menyediakan stream MP4/WebM yang dapat diunduh. Coba lagi nanti atau gunakan arsip siaran setelah diproses.");
     }
@@ -1422,7 +1424,7 @@ function socialNetworkPlan(selected=0){
         }
       }
       const host=url.hostname.toLowerCase();
-      const isYouTube=["youtube.com","www.youtube.com","m.youtube.com","music.youtube.com","youtu.be","www.youtu.be"].includes(host);
+      const isYouTube=["youtube.com","www.youtube.com","m.youtube.com","music.youtube.com","youtu.be","www.youtu.be","youtube-nocookie.com","www.youtube-nocookie.com"].includes(host);
       const isTikTokPlatform=selectedPlatform==="tiktok"||selectedPlatform==="tiktoklite";
       const isTikTokPhotoPost=isTikTokPlatform&&/\/photo\//i.test(url.pathname);
       const isTikTokShortLink=isTikTokPlatform&&/^(?:vt|vm)\.tiktok\.com$/i.test(host);
@@ -1502,11 +1504,13 @@ function socialNetworkPlan(selected=0){
       const imageItems=Array.isArray(imageData.images)?imageData.images.slice(0,35):[];
       const isTikTokResolvedPhotoPost=isTikTokPlatform&&/\/photo\//i.test(String(info?.canonicalUrl||""));
       const hasAnyFormat=Array.isArray(info.formats)&&info.formats.length>0;
-      if(isYouTube&&(info.isLive||info.isUpcoming)){
+      const archivePending=Boolean(info.isLiveArchive&&!hasVideoFormat);
+      if(isYouTube&&(info.isLive||info.isUpcoming||archivePending)){
         const videoId=String(info.videoId||"");
         box.replaceChildren();
-        box.append(make("b","youtube-title",info.title||"Siaran YouTube"));
-        box.append(make("small","muted",info.isLive?"● LIVE SEKARANG · PEMUTAR RESMI YOUTUBE":"◷ SIARAN AKAN DIMULAI · PEMUTAR RESMI YOUTUBE"));
+        box.append(make("b","youtube-title",info.title||(archivePending?"Arsip siaran YouTube":"Siaran YouTube")));
+        const stateLabel=info.isLive?"● LIVE SEKARANG · PEMUTAR RESMI YOUTUBE":info.isUpcoming?"◷ SIARAN AKAN DIMULAI · PEMUTAR RESMI YOUTUBE":"✓ LIVE SELESAI · ARSIP SEDANG DIPROSES";
+        box.append(make("small","muted",stateLabel));
         if(/^[A-Za-z0-9_-]{6,20}$/.test(videoId)){
           const wrap=make("div","youtube-embed-wrap"),frame=make("iframe","youtube-embed-frame");
           frame.src="https://www.youtube-nocookie.com/embed/"+videoId+"?rel=0&playsinline=1";
@@ -1515,17 +1519,22 @@ function socialNetworkPlan(selected=0){
           frame.allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share";
           frame.allowFullscreen=true;wrap.append(frame);box.append(wrap);
         }
-        box.append(make("p","warning",info.isLive?"Siaran masih berlangsung. ARYANZZ tidak akan mengklaim file MP4 lengkap sebelum YouTube menyelesaikan arsipnya. Gunakan pemutar resmi atau aktifkan pantauan sampai arsip siap.":"Siaran belum dimulai. Pemutar resmi YouTube akan menampilkan jadwal atau hitung mundur."));
-        if(info.isLive){
+        const stateMessage=info.isLive
+          ?"Siaran masih berlangsung. ARYANZZ mengenali tautan LIVE dan menampilkan pemutar resmi. File MP4 lengkap baru dapat dipilih setelah YouTube menerbitkan arsip siaran."
+          :info.isUpcoming
+            ?"Siaran belum dimulai. Pemutar resmi YouTube akan menampilkan jadwal atau hitung mundur."
+            :"Siaran LIVE sudah berakhir, tetapi YouTube belum menyediakan arsip/stream yang dapat diunduh. ARYANZZ akan memeriksa kembali sampai pilihan kualitas tersedia.";
+        box.append(make("p","warning",stateMessage));
+        if(info.isLive||archivePending){
           const monitorPanel=make("section","youtube-live-monitor");
-          const monitorTitle=make("b","","Unduh arsip setelah LIVE selesai");
-          const monitorNote=make("p","muted","ARYANZZ dapat memeriksa status siaran setiap 60 detik. Saat YouTube menerbitkan arsip dan stream tersedia, pilihan resolusi akan terbuka otomatis. Biarkan halaman ini tetap terbuka.");
+          const monitorTitle=make("b","",archivePending?"Menunggu arsip LIVE tersedia":"Unduh arsip setelah LIVE selesai");
+          const monitorNote=make("p","muted","ARYANZZ memeriksa status YouTube setiap 60 detik. Setelah arsip dan stream tersedia, pilihan resolusi asli akan terbuka otomatis. Biarkan halaman ini tetap terbuka.");
           const monitorActions=make("div","youtube-live-monitor-actions");
           const monitorButton=make("button","primary","Pantau hingga arsip siap");
           monitorButton.type="button";
           const stopButton=make("button","tag","Hentikan pantauan");
           stopButton.type="button";stopButton.hidden=true;
-          const monitorStatus=make("small","muted","Belum ada pantauan otomatis.");
+          const monitorStatus=make("small","muted",archivePending?"Arsip belum tersedia. Siap memeriksa ulang.":"Belum ada pantauan otomatis.");
           const stopCurrent=()=>{
             const current=activeYouTubeLiveMonitor;
             if(current?.timer)clearTimeout(current.timer);
@@ -1545,7 +1554,7 @@ function socialNetworkPlan(selected=0){
             monitorButton.disabled=true;
             monitorButton.textContent="Pantauan aktif";
             stopButton.hidden=false;
-            monitorStatus.textContent="Memeriksa status LIVE…";
+            monitorStatus.textContent="Memeriksa status YouTube…";
             const finish=message=>{
               if(monitor.timer)clearTimeout(monitor.timer);
               if(activeYouTubeLiveMonitor===monitor)activeYouTubeLiveMonitor=null;
@@ -1585,7 +1594,7 @@ function socialNetworkPlan(selected=0){
                 }else if(latest.isUpcoming){
                   monitorStatus.textContent="Siaran belum dimulai · status diperiksa kembali dalam 60 detik.";
                 }else if(latest.isLiveArchive||formats.length===0){
-                  monitorStatus.textContent="Siaran selesai atau terputus, tetapi arsip/stream belum siap dari YouTube. Menunggu dan mencoba lagi dalam 60 detik.";
+                  monitorStatus.textContent="Siaran sudah selesai, tetapi arsip/stream belum siap dari YouTube. Menunggu dan mencoba lagi dalam 60 detik.";
                 }else{
                   monitorStatus.textContent="Provider belum memastikan arsip selesai. Mencoba kembali dalam 60 detik.";
                 }
