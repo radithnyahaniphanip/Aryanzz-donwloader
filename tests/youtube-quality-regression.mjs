@@ -59,4 +59,13 @@ assert.match(downloader, /Siaran masih berlangsung\. ARYANZZ memakai pemutar res
 assert.match(downloader, /image\.naturalWidth\+" × "\+image\.naturalHeight\+" px · gambar asli/, "Image results must show the actual source dimensions");
 assert.match(downloader, /resolusi asli dipertahankan tanpa menaikkan angka kualitas secara palsu/, "Image downloads must be described as original-quality downloads, not fake upscales");
 
+
+assert.match(downloader, /activeYouTubeLiveMonitor=null/, "The downloader must track and cancel a running Live archive monitor");
+assert.match(downloader, /Pantau hingga arsip siap/, "An active YouTube Live link must offer archive monitoring");
+assert.match(downloader, /setTimeout\(poll,60000\)/, "Live archive checks must be rate-limited to one check per minute");
+assert.match(downloader, /checkLink\(url,button,\{deep:true\}\)/, "When the archive is ready, the downloader must reopen the normal quality selector");
+assert.match(downloader, /6\*60\*60\*1000/, "Automatic Live monitoring must stop after a bounded six-hour window");
+assert.match(downloader, /Biarkan halaman ini tetap terbuka/, "The UI must explain that monitoring runs in the open page");
+assert.match(downloader, /if\(latest\.isLive\)/, "Live monitoring must keep the active stream state separate from archive-ready state");
+
 console.log("YouTube quality, 8K, adaptive mux, provider retry, Live-state and image-resolution regression tests passed.");
