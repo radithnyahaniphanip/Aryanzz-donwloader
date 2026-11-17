@@ -100,9 +100,9 @@
       const aExact=ah===target,bExact=bh===target;
       if(aExact!==bExact)return aExact?-1:1;
       if(!aExact){
-        const distance=Math.abs(ah-target)-Math.abs(bh-target);
-        if(distance)return distance;
-        if(ah!==bh)return ah>bh?-1:1;
+        const aAbove=ah>target,bAbove=bh>target;
+        if(aAbove!==bAbove)return aAbove?-1:1;
+        if(ah!==bh)return aAbove?ah-bh:bh-ah;
       }
       const bitrate=(Number(b.bitrate)||0)-(Number(a.bitrate)||0);
       if(bitrate)return bitrate;
