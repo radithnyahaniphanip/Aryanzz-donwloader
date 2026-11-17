@@ -41,6 +41,7 @@ jobs:
           node --check tests/emote-studio-smoke.mjs
           node --check tests/facebook-offline-smoke.mjs
           node --check tests/release-smoke.mjs
+          node --check tests/youtube-quality-regression.mjs
           node --check tests/profile-motion-avatar-smoke.mjs
           node --check tests/auth-gate-smoke.mjs
           node --check tests/module-boundaries-smoke.mjs
