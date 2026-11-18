@@ -2309,12 +2309,12 @@ async function facebookPublicReaderMediaInfo(rawUrl,requestUrl,timeoutMs=9000){
 }
 async function resolveTikTokShortLinkViaReader(rawUrl,timeoutMs=4500){
   const input=safePublicMediaUrl(rawUrl);
-  if(!input||!/^(?:vt|vm)\\.tiktok\\.com$/i.test(input.hostname))throw new Error("Bukan tautan pendek TikTok.");
+  if(!input||!/^(?:vt|vm)\.tiktok\.com$/i.test(input.hostname))throw new Error("Bukan tautan pendek TikTok.");
   const readerUrl="https://r.jina.ai/http://"+input.host+input.pathname+input.search;
   const response=await fetch(readerUrl,{headers:{accept:"text/plain, text/markdown;q=0.9","user-agent":"Mozilla/5.0 (compatible; ARYANZZ/1.0; +https://aryanzz-donwloader.aryanz.workers.dev)"},signal:AbortSignal.timeout(timeoutMs),cache:"no-store"});
   const text=await response.text();
   if(!response.ok)throw new Error("TikTok redirect reader HTTP "+response.status);
-  const sourceMatch=text.match(/^\\s*URL Source:\\s*(https:\\/\\/[^\\s<>\\\"']+)/im);
+  const sourceMatch=text.match(/^\s*URL Source:\s*(https:\/\/[^\s<>\\"']+)/im);
   const candidates=[];
   if(sourceMatch?.[1])candidates.push(sourceMatch[1].replace(/&amp;/g,"&"));
   const extracted=extractTikTokCanonicalUrl(text,sourceMatch?.[1]||rawUrl);
@@ -2322,8 +2322,8 @@ async function resolveTikTokShortLinkViaReader(rawUrl,timeoutMs=4500){
   for(const candidate of candidates){
     const target=safePublicMediaUrl(candidate);
     if(!target||platformIdForUrl(target.href)!=="tiktok")continue;
-    if(/^(?:vt|vm)\\.tiktok\\.com$/i.test(target.hostname))continue;
-    if(!extractTikTokVideoId(target.href)&&!/^\\/(?:@[^/]+\\/)?photo\\/\\d{8,}/i.test(target.pathname))continue;
+    if(/^(?:vt|vm)\.tiktok\.com$/i.test(target.hostname))continue;
+    if(!extractTikTokVideoId(target.href)&&!/^\/(?:@[^/]+\/)?photo\/\d{8,}/i.test(target.pathname))continue;
     target.search="";target.hash="";
     return target.href;
   }
@@ -2335,23 +2335,23 @@ async function resolveSocialShortLink(rawUrl,key,timeoutMs=11000){
   // Threads /share/ URLs are share wrappers, not media posts. Resolve to a real /post/ URL first.
   if(key==="threads"){
     let shared;try{shared=new URL(canonical)}catch{return canonical}
-    if(/^\\/share\\/[^/]+\\/?$/i.test(shared.pathname)){
+    if(/^\/share\/[^/]+\/?$/i.test(shared.pathname)){
       try{
         const page=await fetchSocialPostHtml(shared.href,timeoutMs);
         const candidates=[page.url];
-        for(const match of String(page.html||"").matchAll(/<(?:link|meta)\\b[^>]*(?:rel=["']canonical["']|property=["']og:url["'])[^>]*>/gi)){
+        for(const match of String(page.html||"").matchAll(/<(?:link|meta)\b[^>]*(?:rel=["']canonical["']|property=["']og:url["'])[^>]*>/gi)){
           const tag=match[0];const raw=tag.match(/(?:href|content)=["']([^"']+)["']/i)?.[1];if(raw)candidates.push(raw.replace(/&amp;/g,"&"));
         }
         for(const raw of candidates){
           let target;try{target=new URL(raw,shared.href)}catch{continue}
-          if(platformIdForUrl(target.href)==="threads"&&/^\\/(?:@[^/]+\\/)?post\\/[^/]+\\/?$/i.test(target.pathname))return target.href;
+          if(platformIdForUrl(target.href)==="threads"&&/^\/(?:@[^/]+\/)?post\/[^/]+\/?$/i.test(target.pathname))return target.href;
         }
       }catch{}
     }
   }
   let input;try{input=new URL(canonical)}catch{return canonical}
   const host=input.hostname.toLowerCase();
-  const shortLink=(key==="tiktok"&&/^(?:vt|vm)\\.tiktok\\.com$/.test(host))
+  const shortLink=(key==="tiktok"&&/^(?:vt|vm)\.tiktok\.com$/.test(host))
     ||(key==="instagram"&&host==="instagr.am")
     ||(key==="pinterest"&&host==="pin.it");
   if(!shortLink)return canonical;
@@ -2360,8 +2360,8 @@ async function resolveSocialShortLink(rawUrl,key,timeoutMs=11000){
       const page=await fetchSocialPostHtml(canonical,timeoutMs);
       const target=extractTikTokCanonicalUrl(page.html,page.url)||canonicalSocialPostUrl(page.url,key);
       const parsed=safePublicMediaUrl(target);
-      if(!parsed||platformIdForUrl(parsed.href)!=="tiktok"||/^(?:vt|vm)\\.tiktok\\.com$/i.test(parsed.hostname))throw new Error("Redirect TikTok belum mencapai halaman postingan.");
-      if(!extractTikTokVideoId(parsed.href)&&!/^\\/(?:@[^/]+\\/)?photo\\/\\d{8,}/i.test(parsed.pathname))throw new Error("Halaman TikTok tidak memuat ID postingan.");
+      if(!parsed||platformIdForUrl(parsed.href)!=="tiktok"||/^(?:vt|vm)\.tiktok\.com$/i.test(parsed.hostname))throw new Error("Redirect TikTok belum mencapai halaman postingan.");
+      if(!extractTikTokVideoId(parsed.href)&&!/^\/(?:@[^/]+\/)?photo\/\d{8,}/i.test(parsed.pathname))throw new Error("Halaman TikTok tidak memuat ID postingan.");
       parsed.search="";parsed.hash="";
       return parsed.href;
     };
