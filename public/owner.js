@@ -6,7 +6,7 @@
   const PROFILE_KEY = "aryanzz.profile.info.v25";
   const DESIGN_KEY = "aryanzz.profile.design.v25";
   const DEFAULTS = {
-    whatsapp: "https://wa.me/6282110767071",
+    whatsapp: "https://wa.me/6283163637190",
     github: "https://github.com/radithnyahaniphanip",
     telegram: "",
     tiktok: "https://www.tiktok.com/@azazeuu?_r=1&_t=ZS-9B2FU0QemSi",
@@ -30,6 +30,12 @@
   }
   function linksRead() {
     const stored = safeRead(KEY, {});
+    const savedWhatsapp = validLink(stored.whatsapp);
+    // Migrate the previously configured owner number in existing browsers.
+    if (!savedWhatsapp || savedWhatsapp.includes("6282110767071")) {
+      stored.whatsapp = DEFAULTS.whatsapp;
+      try { localStorage.setItem(KEY, JSON.stringify(stored)); } catch {}
+    }
     return Object.fromEntries(Object.keys(DEFAULTS).map(key => [
       key, Object.prototype.hasOwnProperty.call(stored,key) ? validLink(stored[key]) : DEFAULTS[key]
     ]));
@@ -57,7 +63,7 @@
         card.rel = "noopener noreferrer";
         card.classList.remove("is-unset");
         card.setAttribute("aria-disabled", "false");
-        if (action) action.textContent = ({whatsapp:"Chat WhatsApp",github:"Kunjungi GitHub",telegram:"Buka Telegram",tiktok:"Follow di TikTok",youtube:"Kunjungi Kanal YouTube"})[key] || "Buka tautan";
+        if (action) action.textContent = ({whatsapp:"Chat · +62 831-6363-7190",github:"Kunjungi GitHub",telegram:"Buka Telegram",tiktok:"Follow di TikTok",youtube:"Kunjungi Kanal YouTube"})[key] || "Buka tautan";
       } else {
         card.removeAttribute("href");
         card.removeAttribute("target");
