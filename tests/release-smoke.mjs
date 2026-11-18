@@ -43,6 +43,7 @@ const workspaceHomeCss = read("../public/workspace-home.css");
 const workspaceToolsCss = read("../public/workspace-tools.css");
 const workspaceLibraryCss = read("../public/workspace-library.css");
 const workspaceNavigationCss = read("../public/workspace-navigation.css");
+const v1ExperienceCss = read("../public/v1-experience.css");
 const workspaceManifest = JSON.parse(read("../public/workspace-manifest.json"));
 const themeStudioJs = read("../public/theme-studio.js");
 const ownerCss = read("../public/owner.css");
@@ -412,6 +413,10 @@ const checks = [
   ["Retired developer account-ID shimmer styling is not required by the standard Profile", !html.includes('id="profileRandomId"') && !html.includes('id="profileCopyId"')],
   ["Developer Website title uses readable dark lettering on gold and restores its own shimmer and glow", ownerCss.includes("#owner.ary-owner-v2 #ownerDeveloperBadge.owner-developer-title") && ownerCss.includes("color:#2b1703!important") && ownerCss.includes("animation:developerBadgeShimmer") && ownerCss.includes("developerBadgeGlow") && ownerCss.includes("@media(prefers-reduced-motion:reduce)")],
   ["Home platform search has one compact heading with the 200-platform count aligned opposite Cari Platform and no duplicate input counter", html.includes('<div class="v736-platform-search-heading">') && html.includes('<label class="v736-platform-search-label" for="platformSearch">CARI PLATFORM</label>') && html.includes('<span class="v736-platform-total">200 PLATFORM</span>') && !html.includes('class="v80-platform-picker-head"') && !html.includes('class="v736-platform-search-count"') && unifiedCss.includes(".v736-platform-search-heading") && unifiedCss.includes(".v736-platform-total") && unifiedCss.includes("padding:11px 14px 11px 43px")],
+  ["Platform pager is visible above the grid, reports all 200 entries, and retries when the catalogue API fails", html.indexOf('id="platformPager"') < html.indexOf('<div class="v736-platforms" id="platformPicker"') && html.includes('id="platformPager" class="v736-platform-pager" aria-label="Navigasi 200 platform"') && searchJs.includes("platformPageSize=20") && searchJs.includes("Katalog 200 platform belum termuat.") && searchJs.includes("if(!platformCatalog.length){loadPlatformCatalog();return;}") && platformCatalog.includes("PLATFORM_CATALOG.length !== 200")],
+  ["Mobile platform count is forced to the right of Cari Platform on a single row", v1ExperienceCss.includes("flex-wrap:nowrap!important") && v1ExperienceCss.includes("width:auto!important;min-width:0!important;flex:1 1 auto!important") && v1ExperienceCss.includes("flex:0 0 auto!important")],
+  ["WhatsApp owner link updates to the new number and migrates previously saved legacy links", ownerJs.includes("https://wa.me/6283163637190") && ownerJs.includes("6282110767071") && ownerJs.includes("localStorage.setItem(KEY, JSON.stringify(stored))") && ownerJs.includes("+62 831-6363-7190")],
+  ["Buttons and platform tiles receive a click glow animation while respecting OS reduced-motion settings", workspaceNavigationJs.includes("pointerdown") && workspaceNavigationJs.includes("ary-click-fx") && v1ExperienceCss.includes("@keyframes aryTapPulse") && v1ExperienceCss.includes("body:not(.ary-motion-enabled) button.ary-click-fx") && v1ExperienceCss.includes("@media(prefers-reduced-motion:reduce)")],
 
 ];
 
