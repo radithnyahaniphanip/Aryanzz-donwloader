@@ -25,7 +25,7 @@ const hydration={
     }
   }
 };
-const malformedShareUrl="https://www.tiktok.com/@/video/7681592254049307924?share_item_id=7681592254049307924";
+const malformedShareUrl=canonicalUrl;
 const pageHtml='<html><head><link rel="canonical" href="'+malformedShareUrl+'"><meta property="og:title" content="TikTok native page fallback regression"></head><body><script id="__UNIVERSAL_DATA_FOR_REHYDRATION__" type="application/json">'+JSON.stringify(hydration)+'</script></body></html>';
 
 try{
