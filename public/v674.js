@@ -83,7 +83,7 @@ const setPlatform=(id,options={})=>{
  const modes=entry?.mediaModes||[];
  const searchMode=searchType?.value==="image"?"image":"video";
  const supportedCount=platformCatalog.filter(platform=>(platform.searchModes||[]).includes(searchMode)&&!platform.aliasOf).length;
- const name=selected==="all"?"Semua "+supportedCount+" platform "+(searchMode==="image"?"gambar":"video"):(platforms[selected]?.name||entry?.name||selected);
+ const name=selected==="all"?"Semua platform "+(searchMode==="image"?"gambar":"video"):(platforms[selected]?.name||entry?.name||selected);
  const guide=PLATFORM_GUIDES[selected]||{};
  if(linkLabel)linkLabel.textContent=selected==="all"?"TEMPEL TAUTAN MEDIA":"TEMPEL TAUTAN "+name.toUpperCase();
  if(linkInput){
@@ -146,8 +146,8 @@ function renderPlatformPage(nextPage){
  picker.replaceChildren();
  if(allPlatformButton){
   const supportedCount=platformCatalog.filter(platform=>(platform.searchModes||[]).includes(mode)&&!platform.aliasOf).length;
-  const allLabel=allPlatformButton.querySelector("span:last-child");if(allLabel)allLabel.textContent=activeMode==="link"?"Semua 200":"Semua "+(mode==="image"?"gambar":"video")+" · "+supportedCount;
-  allPlatformButton.title=activeMode==="link"?"Tempel tautan dari 200 platform. Sistem mendeteksi sumber berdasarkan URL.":"Cari di "+supportedCount+" platform dengan provider "+(mode==="image"?"gambar":"video")+" terverifikasi";
+  const allLabel=allPlatformButton.querySelector("span:last-child");if(allLabel)allLabel.textContent=activeMode==="link"?"Semua platform":"Semua "+(mode==="image"?"gambar":"video");
+  allPlatformButton.title=activeMode==="link"?"Tempel tautan media. Sistem mendeteksi sumber berdasarkan URL.":"Jelajahi dan cari media "+(mode==="image"?"gambar":"video")+" dari layanan yang didukung.";
   allPlatformButton.hidden=!!query||(activeMode!=="link"&&supportedCount===0);
   if(!query)picker.append(allPlatformButton);
  }
@@ -251,7 +251,7 @@ async function loadPlatformCatalog(){
   console.warn("ARYANZZ platform catalogue render:",error);
   try{renderPlatformPage(1)}catch(renderError){console.warn("ARYANZZ platform page render:",renderError);}
  }
- if(platformPageLabel&&source==="local"&&!platformPageLabel.textContent)platformPageLabel.textContent="200 platform siap";
+ if(platformPageLabel&&source==="local"&&!platformPageLabel.textContent)platformPageLabel.textContent="Daftar platform siap";
 }
 platformPrev?.addEventListener("click",()=>renderPlatformPage(platformPage-1));
 platformNext?.addEventListener("click",()=>{
@@ -388,10 +388,10 @@ searchController?.abort();searchController=new AbortController();currentPage=1;
 results.hidden=false;results.replaceChildren();
 const kind=["image","audio"].includes(searchType?.value)?searchType.value:"video";
 const supportedCount=platformCatalog.filter(platform=>(platform.searchModes||[]).includes(kind)&&!platform.aliasOf).length;
-const target=selected==="all"?{name:"Semua "+supportedCount+" platform "+(kind==="image"?"gambar":"video"),url:q=>"https://www.google.com/search?q="+encodeURIComponent(q)}:platforms[selected];
+const target=selected==="all"?{name:"Semua platform "+(kind==="image"?"gambar":"video"),url:q=>"https://www.google.com/search?q="+encodeURIComponent(q)}:platforms[selected];
 const loading=document.createElement("div");loading.className="v674-search-loading";loading.textContent=kind==="image"?"Mencari gambar dari "+target.name+"…":kind==="audio"?"Mencari musik dan video sumber untuk dibuat MP3 dari "+target.name+"…":selected==="all"?"Mencari judul satu per satu di semua platform video yang didukung…":"Mencari judul dari "+target.name+"…";results.append(loading);
 const btn=$("titleSearchBtn");if(btn){btn.disabled=true;btn.textContent="Mencari…"}
-if(help)help.textContent=selected==="all"?(kind==="image"?"Pencarian judul memeriksa provider gambar yang didukung.":"Pencarian judul mencari secara terpisah di "+supportedCount+" platform video. Hasil judul publik tetap ditampilkan; status unduhan diperiksa saat hasil dipilih."):kind==="image"?"Mode gambar: hasil gambar publik dari "+target.name+" akan diperiksa sebelum ditampilkan.":kind==="audio"?"Mode audio: hasil audio publik dari "+target.name+" akan diperiksa sebelum dibuat MP3.":"Mode video: hasil judul publik dari "+target.name+" tetap ditampilkan meski stream belum terverifikasi. Pemeriksaan unduhan berjalan saat hasil dipilih.";
+if(help)help.textContent=selected==="all"?(kind==="image"?"Pencarian judul memeriksa provider gambar yang didukung.":"Pencarian judul mencari di layanan video yang didukung. Hasil publik ditampilkan; status unduhan diperiksa saat hasil dipilih."):kind==="image"?"Mode gambar: hasil gambar publik dari "+target.name+" akan diperiksa sebelum ditampilkan.":kind==="audio"?"Mode audio: hasil audio publik dari "+target.name+" akan diperiksa sebelum dibuat MP3.":"Mode video: hasil judul publik dari "+target.name+" tetap ditampilkan meski stream belum terverifikasi. Pemeriksaan unduhan berjalan saat hasil dipilih.";
 try{
 const endpoint=kind==="image"?"/api/image/search":"/api/social/search";
 const options={method:"POST",headers:{"content-type":"application/json"},cache:"no-store"};
