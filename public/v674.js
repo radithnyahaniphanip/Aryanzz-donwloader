@@ -242,7 +242,7 @@ async function loadPlatformCatalog(){
  SEARCH_PLATFORM_DOMAINS=Object.fromEntries(platformCatalog.map(platform=>[platform.id,platform.domains||[]]));
  window.ARYANZZ_PLATFORM_CATALOG=platformCatalog;
  window.aryanzzPlatformForUrl=raw=>{
-  try{const host=new URL(raw).hostname.toLowerCase().replace(/^www\\./,"");const found=platformCatalog.find(platform=>(platform.domains||[]).some(domain=>host===domain||host.endsWith("."+domain)));return found?.aliasOf||found?.id||null}catch{return null}
+  try{const host=new URL(raw).hostname.toLowerCase().replace(/^www\./,"");const found=platformCatalog.find(platform=>(platform.domains||[]).some(domain=>host===domain||host.endsWith("."+domain)));return found?.aliasOf||found?.id||null}catch{return null}
  };
  window.aryanzzPlatformNameForId=id=>platforms[id]?.name||platformCatalog.find(platform=>platform.id===id)?.name||id;
  if(platformPager)platformPager.dataset.catalogSource=source;
