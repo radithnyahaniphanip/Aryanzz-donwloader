@@ -291,6 +291,7 @@ body{background-color:var(--ary-app-bg)}
 </style>
 <link rel="stylesheet" href="/brand-system.css?v=__ARYANZZ_VERSION__">
 <link rel="stylesheet" href="/v1-experience.css?v=__ARYANZZ_VERSION__">
+<link rel="stylesheet" href="/interaction-effects.css?v=20261118-1">
 </head><body class="ary-reduced-motion" data-motion="off" data-view="home">
 <div class="app-shell wrap">
 <section id="home" class="v674-home">
@@ -301,6 +302,11 @@ body{background-color:var(--ary-app-bg)}
 <div class="v674-mode-switch" role="tablist"><button id="downloadLinkMode" class="active" type="button" role="tab" aria-selected="true">↗ Tempel tautan</button><button id="downloadTitleMode" type="button" role="tab" aria-selected="false">⌕ Cari judul</button></div>
 <div class="v736-platform-search-heading"><label class="v736-platform-search-label" for="platformSearch">CARI PLATFORM</label><span class="v736-platform-total">200 PLATFORM</span></div>
 <div class="v736-platform-search-wrap"><span class="v736-platform-search-icon" aria-hidden="true">⌕</span><input class="field v736-platform-search" id="platformSearch" type="search" placeholder="Cari platform, misalnya Facebook..." autocomplete="off" spellcheck="false" aria-controls="platformPicker"><button class="ary-field-clear" type="button" data-clear-input="platformSearch" aria-label="Hapus pencarian platform" hidden>×</button></div>
+<div id="platformPager" class="v736-platform-pager" hidden role="group" aria-label="Navigasi halaman platform">
+ <button id="platformPrev" type="button" disabled aria-label="Halaman sebelumnya">← Sebelumnya</button>
+ <span id="platformPageLabel" role="status" aria-live="polite">Halaman 1 / 10 · 1–20 dari 200</span>
+ <button id="platformNext" type="button" aria-label="Halaman berikutnya">Berikutnya →</button>
+</div>
 <div class="v736-platforms" id="platformPicker" aria-label="Pilih platform media sosial">
 <button class="v736-platform active" type="button" data-platform="all" aria-pressed="true" aria-label="Semua 200 platform"><span class="v736-logo" aria-hidden="true">☷</span><span>Semua 200</span></button>
 <button class="v736-platform" type="button" data-platform="youtube" aria-pressed="false" aria-label="YouTube"><span class="v736-logo v736-youtube"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="1" y="4" width="22" height="16" rx="5" fill="currentColor"/><path d="M10 8.2 16 12l-6 3.8z" fill="#fff"/></svg></span><span>YouTube</span></button>
@@ -325,11 +331,7 @@ body{background-color:var(--ary-app-bg)}
 <button class="v736-platform" type="button" data-platform="wechat" aria-pressed="false" aria-label="WeChat"><span class="v736-logo v736-wechat"><b>●</b></span><span>WeChat</span></button>
 <button class="v736-platform" type="button" data-platform="kakaotalk" aria-pressed="false" aria-label="KakaoTalk"><span class="v736-logo v736-kakao"><b>●</b></span><span>KakaoTalk</span></button>
 </div>
-<div id="platformPager" class="v736-platform-pager" hidden>
- <button id="platformPrev" type="button" disabled>← Sebelumnya</button>
- <span id="platformPageLabel">Halaman 1 / 10 · 1–20 dari 200</span>
- <button id="platformNext" type="button">Berikutnya →</button>
-</div>
+
 
 <div id="linkModePanel"><label class="label" for="url">TEMPEL TAUTAN MEDIA</label><div class="inputrow v674-input-row"><input class="field" id="url" type="text" inputmode="url" placeholder="Tempel tautan video atau audio…" autocomplete="url" spellcheck="false"><button class="ary-field-clear" type="button" data-clear-input="url" aria-label="Hapus tautan" hidden>×</button><button class="primary" id="analyze">Periksa ↗</button></div><div class="format-strip v674-format-strip"><span>MP4</span><span>MP3</span><span>M4A</span><span>WAV</span></div></div>
 <div id="titleModePanel" hidden><label class="label" for="titleSearch">CARI VIDEO / GAMBAR</label><div class="v674-input-row v674-search-type-row"><select id="titleSearchType" class="field" aria-label="Jenis hasil pencarian"><option value="video">Video</option><option value="image">Gambar</option></select></div><div class="inputrow v674-input-row"><input class="field" id="titleSearch" type="search" placeholder="Contoh: DJ Alan Walker, Tabola Bale, gambar kucing…" autocomplete="off"><button class="primary" id="titleSearchBtn" type="button">Cari ⌕</button></div><p class="v674-title-help" id="titleSearchHelp">Pilih platform dan jenis hasil. Hasil hanya dari platform yang dipilih.</p><div class="v674-search-results" id="titleSearchResults" hidden aria-live="polite"></div></div>
@@ -1315,7 +1317,8 @@ let deferred=null;window.addEventListener('beforeinstallprompt',e=>{e.preventDef
 if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('/sw.js?v=__ARYANZZ_VERSION__',{updateViaCache:'none'}).catch(()=>{}));
 
 </script><script src="/link-bypass.js?v=94.0" defer></script><script src="/audio-studio.js?v=92.5" defer></script><script src="/media-studio.js?v=92.0" defer></script>
-<script src="/download-queue.js?v=92.0" defer></script><script src="/image-studio.js?v=81.4" defer></script><script src="/advanced.js?v=92.5" defer></script><script src="/v15.js?v=59.5" defer></script><script src="/v25.js?v=__ARYANZZ_VERSION__" defer></script><script src="/owner.js?v=__ARYANZZ_VERSION__" defer></script><script src="/network-mode.js?v=__ARYANZZ_VERSION__" defer></script><script src="/downloader.js?v=94.25.0&build=__ARYANZZ_VERSION__" defer></script><script src="/v59.js?v=59.5" defer></script><script src="/editor.js?v=65.0" defer></script><script src="/music-recognition.js?v=71.0" defer></script><script src="/v674.js?v=94.25.0" defer></script><script src="/v677.js?v=67.7" defer></script><script src="/v680.js?v=71.0" defer></script><script src="/theme-studio.js?v=__ARYANZZ_VERSION__" defer></script>
+<script src="/download-queue.js?v=92.0" defer></script><script src="/image-studio.js?v=81.4" defer></script><script src="/advanced.js?v=92.5" defer></script><script src="/v15.js?v=59.5" defer></script><script src="/v25.js?v=__ARYANZZ_VERSION__" defer></script><script src="/owner.js?v=__ARYANZZ_VERSION__" defer></script>
+<script src="/interaction-effects.js?v=20261118-1" defer></script><script src="/network-mode.js?v=__ARYANZZ_VERSION__" defer></script><script src="/downloader.js?v=94.25.0&build=__ARYANZZ_VERSION__" defer></script><script src="/v59.js?v=59.5" defer></script><script src="/editor.js?v=65.0" defer></script><script src="/music-recognition.js?v=71.0" defer></script><script src="/v674.js?v=94.25.0" defer></script><script src="/v677.js?v=67.7" defer></script><script src="/v680.js?v=71.0" defer></script><script src="/theme-studio.js?v=__ARYANZZ_VERSION__" defer></script>
 <script src="/stage1-tools-core.js?v=__ARYANZZ_VERSION__" defer></script><script src="/stage1-video-tools.js?v=__ARYANZZ_VERSION__" defer></script><script src="/stage1-image-tools.js?v=__ARYANZZ_VERSION__" defer></script><script src="/stage1-file-tools.js?v=__ARYANZZ_VERSION__" defer></script><script src="/stage1-dev-tools.js?v=__ARYANZZ_VERSION__" defer></script>
 <div id="aryAuthGate" class="ary-auth-gate" hidden role="dialog" aria-modal="true" aria-labelledby="aryAuthTitle">
  <div class="ary-auth-shell">
