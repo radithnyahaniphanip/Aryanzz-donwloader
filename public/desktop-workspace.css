@@ -290,6 +290,8 @@
   }
 }
 
+/* Legacy platform pagination is retired. The 200-platform catalogue is rendered in one view. */
+#home .v736-platform-pager,#home #platformPager,#home #platformPrev,#home #platformNext{display:none!important}
 /* Desktop toolbar: heading, search field and 200-platform count share one row. */
 @media (min-width: 900px) {
   #home .v674-download .v736-platform-search-heading {
