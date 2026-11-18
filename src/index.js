@@ -591,6 +591,9 @@ async function freePublicMediaInfo(rawUrl,requestUrl,options={}){
   const tikTokFallbackPromise=key==="tiktok"&&!isTikTokPhotoRoute
     ?tikwmFallbackMediaInfo(canonicalUrl,requestUrl,providerUrls.filter(value=>value!==canonicalUrl),{fast,timeoutMs:fast?4800:9000}).then(value=>({ok:true,value})).catch(error=>({ok:false,error}))
     :null;
+  const tikTokEmbedPromise=key==="tiktok"&&!isTikTokPhotoRoute&&fast
+    ?Promise.any([...new Set([rawUrl,canonicalUrl])].map(target=>fetchTikTokOEmbed(target,2200))).then(value=>({ok:true,value})).catch(error=>({ok:false,error}))
+    :null;
   if(key==="snackvideo"){
     try{return await snackVideoFallbackMediaInfo(canonicalUrl,requestUrl)}
     catch(error){return json({error:"SnackVideo belum dapat diproses melalui dua jalur publik yang diuji paralel: "+String(error?.message||error).slice(0,300)+". Pastikan tautan share video dapat dibuka tanpa login.",provider:"Concurrent public fallback cascade",fallbackTried:true},502)}
@@ -693,6 +696,29 @@ async function freePublicMediaInfo(rawUrl,requestUrl,options={}){
       return json({...fallback,fastResponse:fast,canonicalUrl:canonicalUrl!==rawUrl?canonicalUrl:undefined});
     }
     primaryError+="; TikTok fallback: "+String(fallbackResult?.error?.message||fallbackResult?.error||"Provider alternatif tidak mengembalikan media.").slice(0,900);
+  }
+  if(key==="tiktok"&&!isTikTokPhotoRoute&&fast){
+    const embedResult=await tikTokEmbedPromise;
+    if(embedResult?.ok){
+      const embed=embedResult.value;
+      return json({
+        ok:true,platform:"tiktok",title:embed.title||"Video TikTok",extractor:"TikTok Embed Player",
+        thumbnail:embed.thumbnail||null,duration:null,formats:[],embedUrl:embed.embedUrl,embedId:embed.id,
+        embedAuthor:embed.author||null,providerName:"TikTok Embed Player",providerReady:true,
+        directDownloadAvailable:false,fastResponse:true,
+        downloadMessage:"Player resmi TikTok tersedia, tetapi provider publik belum memberikan file MP4 langsung untuk tautan ini.",
+        canonicalUrl:canonicalUrl!==rawUrl?canonicalUrl:undefined,
+        diagnostics:primaryError.slice(0,900)
+      },200);
+    }
+    primaryError+="; TikTok quick embed: "+String(embedResult?.error?.message||embedResult?.error||"oEmbed tidak merespons").slice(0,160);
+    return json({
+      ok:false,platform:"tiktok",
+      error:"Link TikTok dikenali, tetapi TikTok atau provider publik belum mengirim stream dalam batas pemeriksaan cepat. Video mungkin dibatasi wilayah, umur, login, atau layanan sumber sedang gangguan. Gunakan pemeriksaan penuh untuk jalur yang lebih mendalam.",
+      errorType:"source_unavailable_or_restricted",provider:"Quick fallback cascade",fallbackTried:true,
+      fastResponse:true,diagnostics:primaryError.slice(0,1100),
+      canonicalUrl:canonicalUrl!==rawUrl?canonicalUrl:undefined
+    },502);
   }
   // Attempt TikTok's public item metadata and page extraction before generic scraping.
   // This path was implemented but not previously wired into the fallback cascade.
