@@ -366,19 +366,21 @@ async function platformMediaInfo(request){
   if(raw.length>3000)return json({error:"Tautan terlalu panjang."},400);
   let parsed;try{parsed=new URL(raw)}catch{return json({error:"Tautan tidak valid."},400)}
   if(!["http:","https:"].includes(parsed.protocol)||parsed.username||parsed.password||parsed.port)return json({error:"Gunakan tautan publik HTTP/HTTPS yang valid."},400);
-  const platformEntry=platformForHost(parsed.hostname);
+  let platformEntry=platformForHost(parsed.hostname);
+  // Keep short-link detection resilient even if a stale catalogue omits an alias.
+  if(!platformEntry&&/^(?:vt|vm)\.tiktok\.com$/i.test(parsed.hostname))platformEntry=PLATFORM_CATALOG_BY_ID.get("tiktok");
   if(parsed.protocol==="http:"&&platformEntry)parsed.protocol="https:";
-  if(!platformEntry)return json({ok:false,error:"GAGAL — domain tautan tidak dikenali sebagai platform yang didukung."},400);
+  if(!platformEntry)return json({ok:false,error:"Platform belum dikenali. ARYANZZ akan only reject the link after the server-side platform resolver also fails."},400);
   const key=platformEntry.providerKey;
   const expected=String(body?.expectedPlatform||"").toLowerCase();
-  if(!expected||expected==="all")return json({ok:false,error:"Pilih satu platform khusus. AI Search lintas platform tidak menggunakan endpoint unduhan ini."},400);
-  const expectedEntry=PLATFORM_CATALOG_BY_ID.get(expected);
+  const autoDetect=!expected||expected==="auto"||expected==="all";
+  const expectedEntry=autoDetect?platformEntry:PLATFORM_CATALOG_BY_ID.get(expected);
   if(key==="aio"){
-    if(!expectedEntry||expectedEntry.id!==platformEntry.id)return json({ok:false,error:"GAGAL — tautan "+platformEntry.name+" tidak sesuai dengan platform yang dipilih."},400);
+    if(!autoDetect&&(!expectedEntry||expectedEntry.id!==platformEntry.id))return json({ok:false,error:"GAGAL — tautan "+platformEntry.name+" tidak sesuai dengan platform yang dipilih."},400);
     return genericPublicPageMediaInfo(parsed.href,request.url,platformEntry,body?.fast===true?5200:11000);
   }
   const normalizedExpected=expectedEntry?.providerKey||({x:"twitter",twitter:"twitter",instagramlite:"instagram",facebooklite:"facebook",tiktoklite:"tiktok"})[expected]||expected;
-  if(normalizedExpected!==key)return json({ok:false,error:"GAGAL — tautan "+key+" ditolak karena endpoint ini khusus untuk "+normalizedExpected+"."},400);
+  if(!autoDetect&&normalizedExpected!==key)return json({ok:false,error:"GAGAL — tautan "+key+" ditolak karena endpoint ini khusus untuk "+normalizedExpected+"."},400);
   // Threads share URLs are multi-hop; always use the proven full extraction cascade.
   // The quick path routinely exits before the public post/embedding fallbacks finish.
   return freePublicMediaInfo(parsed.href,request.url,{fast:body?.fast===true&&key!=="threads"});
