@@ -245,3 +245,39 @@ html[data-ary-home-motion="off"] body #home .ary-brand-symbol{animation:none!imp
   outline:2px solid #a9efff!important;outline-offset:4px!important
 }
 #home>.v89-welcome #aryHeroReplay:disabled{cursor:default}
+
+
+/* ARYANZZ V1 · 2026-11-18: keep the platform count aligned and make pagination reachable. */
+#home .v736-platform-search-heading{
+  display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;
+  align-items:center!important;justify-content:space-between!important;
+  width:100%!important;gap:12px!important;
+}
+#home .v736-platform-search-label{
+  display:block!important;flex:1 1 auto!important;min-width:0!important;
+  margin:0!important;white-space:nowrap!important;
+}
+#home .v736-platform-total{
+  display:block!important;flex:0 0 auto!important;margin-left:auto!important;
+  text-align:right!important;white-space:nowrap!important;
+}
+#home .v736-platform-pager{
+  display:grid!important;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr)!important;
+  align-items:center!important;gap:8px!important;width:100%!important;
+  margin:2px 0 12px!important;padding:10px 0 0!important;
+}
+#home .v736-platform-pager[hidden]{display:none!important}
+#home .v736-platform-pager button{
+  min-height:42px!important;padding:9px 12px!important;border:1px solid rgba(132,119,255,.48)!important;
+  border-radius:12px!important;background:linear-gradient(135deg,rgba(91,72,193,.26),rgba(23,48,70,.92))!important;
+  color:#f5f5ff!important;font-size:11px!important;font-weight:850!important;
+  box-shadow:0 5px 18px rgba(63,66,160,.14)!important;
+}
+#home .v736-platform-pager button:last-child{justify-self:end}
+#home .v736-platform-pager button:disabled{opacity:.38!important;box-shadow:none!important}
+#home #platformPageLabel{font-size:10px!important;line-height:1.4!important;color:#c5c8df!important;text-align:center!important;white-space:nowrap!important}
+@media(max-width:420px){
+  #home .v736-platform-pager{grid-template-columns:minmax(0,1fr) auto minmax(0,1fr)!important;gap:5px!important}
+  #home .v736-platform-pager button{min-height:40px!important;padding:8px 6px!important;font-size:10px!important}
+  #home #platformPageLabel{font-size:9px!important}
+}
