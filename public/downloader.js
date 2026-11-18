@@ -1451,7 +1451,7 @@ function socialNetworkPlan(selected=0){
           try{return await requestImage(imageCheckTimeout)}
           catch(error){
             if(error?.name==="AbortError")return {ok:false,data:{error:"Pemeriksaan dibatalkan."}};
-            if(error?.name==="TimeoutError"&&(isTikTokPhotoPost||isTikTokShortLink)){
+            if(!fast&&error?.name==="TimeoutError"&&(isTikTokPhotoPost||isTikTokShortLink)){
               try{return await requestImage(22000)}
               catch(retryError){return {ok:false,data:{error:"Server sumber atau provider tidak merespons tepat waktu, bukan berarti sinyal HP lemah. Coba pemeriksaan lengkap atau ulangi nanti.",diagnostics:String(retryError?.message||retryError)}}}
             }
