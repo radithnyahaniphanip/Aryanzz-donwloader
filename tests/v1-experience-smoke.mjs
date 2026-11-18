@@ -5,6 +5,9 @@ const html=read("../public/index.html");
 const homeJs=read("../public/workspace-home.js");
 const searchJs=read("../public/v674.js");
 const profileJs=read("../public/v25.js");
+const ownerJs=read("../public/owner.js");
+const interactionJs=read("../public/interaction-effects.js");
+const interactionCss=read("../public/interaction-effects.css");
 const css=read("../public/v1-experience.css");
 const sw=read("../public/sw.js");
 const checks=[
@@ -22,7 +25,10 @@ const checks=[
   ["Embedded map is not fetched before consent and does not require a maps app",html.includes('id="deviceMapFrame"')&&!html.includes('id="deviceMapFrame" src=')&&profileJs.includes("https://www.openstreetmap.org/export/embed.html")&&profileJs.includes('frame.src=mapUrl.href')&&html.includes('id="deviceMapPanel"')],
   ["Previous coordinates require a separate map-display action and can be erased",profileJs.includes('showSaved?.addEventListener("click"')&&profileJs.includes('remove?.addEventListener("click"')&&profileJs.includes("localStorage.removeItem(LOCATION_KEY)")&&profileJs.includes('frame.removeAttribute("src")')],
   ["Map coordinates are checked and not sent to ARYANZZ's backend",profileJs.includes('Number(item.latitude)>=-90')&&profileJs.includes('Number(item.longitude)<=180')&&!profileJs.includes("fetch(\"/api/device/location")],
-  ["Final stylesheet is included in production and offline cache",html.includes('/v1-experience.css?v=__ARYANZZ_VERSION__')&&sw.includes('"/v1-experience.css?v=__ARYANZZ_VERSION__"')&&css.includes("@media(max-width:420px)")]
+  ["Final stylesheet is included in production and offline cache",html.includes('/v1-experience.css?v=__ARYANZZ_VERSION__')&&sw.includes('"/v1-experience.css?v=__ARYANZZ_VERSION__"')&&css.includes("@media(max-width:420px)")],
+  ["200-platform pager is placed above the grid, announced accessibly, and wired to Previous/Next",html.indexOf('id="platformPager"')<html.indexOf('id="platformPicker"')&&html.includes('role="group" aria-label="Navigasi halaman platform"')&&html.includes('id="platformPageLabel" role="status" aria-live="polite"')&&searchJs.includes("platformPageSize=20")&&searchJs.includes("platformPrev?.addEventListener(\"click\"")&&searchJs.includes("platformNext?.addEventListener(\"click\"")&&searchJs.includes("data.platforms.length!==200")&&css.includes('#home .v674-download[data-mode="link"] #platformPager:not([hidden])')&&css.includes("display:grid!important")],
+  ["WhatsApp owner contact defaults to the new number and migrates the legacy saved URL",ownerJs.includes('whatsapp: "https://wa.me/6283163637190"')&&ownerJs.includes('const LEGACY_WHATSAPP_DIGITS = "6282110767071"')&&ownerJs.includes("function migrateWhatsAppLink(raw)")&&ownerJs.includes('localStorage.setItem(KEY, JSON.stringify({ ...stored, whatsapp: links.whatsapp }))')],
+  ["Button and platform tap effects load from production assets and respect reduced motion",html.includes('/interaction-effects.js?v=20261118-1')&&html.includes('/interaction-effects.css?v=20261118-1')&&interactionJs.includes('document.addEventListener("pointerdown"')&&interactionJs.includes('ary-tap-feedback')&&interactionCss.includes("@keyframes aryTapFeedback")&&interactionCss.includes("@media(prefers-reduced-motion:reduce)")&&sw.includes('"/interaction-effects.js?v=20261118-1"')&&sw.includes('"/interaction-effects.css?v=20261118-1"')],
 ];
 for(const [label,ok] of checks){assert.ok(ok,label);console.log("✔ "+label);}
 console.log("ARYANZZ V1 Home + Device Studio six-package smoke checks passed.");
