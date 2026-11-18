@@ -214,7 +214,7 @@ const checks = [
   ["Worker health exposes V1 publicly and keeps a separate private buildId for automatic updates", worker.includes('version:"V1",publicVersion:"V1",buildId:env.ARYANZZ_BUILD_VERSION||BUILD_VERSION') && updateManager.includes('meta[name="aryanzz-build-id"]') && updateManager.includes("data?.buildId")],
   ["Homepage loads the shared V89 shell stylesheet with the current release cache key", html.includes("/v89.css?v=__ARYANZZ_VERSION__")],
   ["Every homepage JS and CSS asset is included in the active PWA shell cache", htmlAssetRefs.length>0 && htmlAssetRefs.every(ref=>sw.includes('"'+ref+'"'))],
-  ["PWA cache namespace is build-scoped and refreshed on each deployment", sw.includes('const CACHE="aryanzz-build-__ARYANZZ_VERSION__"')],
+  ["PWA cache namespace is build-scoped and refreshed on each deployment", sw.includes('const CACHE="aryanzz-build-__ARYANZZ_VERSION__-ui2303"')],
   ["PWA cache includes homepage, converter and Media Studio", sw.includes("/?v=__ARYANZZ_VERSION__") && sw.includes("/audio-studio.js?v=92.5") && sw.includes("/audio-studio.css?v=92.0") && sw.includes("/media-studio.js?v=92.0") && sw.includes("/media-studio.css?v=92.0")],
 
   ["Converter Pro includes optional audio trim controls", html.includes('id="audioStudioStart"') && html.includes('id="audioStudioEnd"') && converterJs.includes('ffmpegArgs.push("-t"')],
