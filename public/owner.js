@@ -30,9 +30,10 @@
   }
   function linksRead() {
     const stored = safeRead(KEY, {});
+    const hasSavedWhatsapp = Object.prototype.hasOwnProperty.call(stored, "whatsapp");
     const savedWhatsapp = validLink(stored.whatsapp);
-    // Migrate the previously configured owner number in existing browsers.
-    if (!savedWhatsapp || savedWhatsapp.includes("6282110767071")) {
+    // Replace only the known legacy number; preserve an intentionally cleared link.
+    if (hasSavedWhatsapp && savedWhatsapp.includes("6282110767071")) {
       stored.whatsapp = DEFAULTS.whatsapp;
       try { localStorage.setItem(KEY, JSON.stringify(stored)); } catch {}
     }
@@ -63,7 +64,11 @@
         card.rel = "noopener noreferrer";
         card.classList.remove("is-unset");
         card.setAttribute("aria-disabled", "false");
-        if (action) action.textContent = ({whatsapp:"Chat · +62 831-6363-7190",github:"Kunjungi GitHub",telegram:"Buka Telegram",tiktok:"Follow di TikTok",youtube:"Kunjungi Kanal YouTube"})[key] || "Buka tautan";
+        if (action) {
+          action.textContent = key === "whatsapp"
+            ? (href.includes("6283163637190") ? "Chat · +62 831-6363-7190" : "Chat WhatsApp")
+            : ({github:"Kunjungi GitHub",telegram:"Buka Telegram",tiktok:"Follow di TikTok",youtube:"Kunjungi Kanal YouTube"})[key] || "Buka tautan";
+        }
       } else {
         card.removeAttribute("href");
         card.removeAttribute("target");
