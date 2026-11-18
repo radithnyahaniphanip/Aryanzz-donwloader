@@ -139,24 +139,23 @@ function renderPlatformPage(nextPage){
   const exact=matches.filter(platform=>String(platform.name||"").normalize("NFKC").trim().toLocaleLowerCase("id-ID")===query);
   if(exact.length)matches=exact;
  }
- const totalPages=Math.max(1,Math.ceil(matches.length/platformPageSize));
- platformPage=Math.max(1,Math.min(totalPages,Number(nextPage)||1));
- const start=(platformPage-1)*platformPageSize;
- const visible=matches.slice(start,start+platformPageSize);
+ platformPage=1;
  picker.replaceChildren();
  if(allPlatformButton){
   const supportedCount=platformCatalog.filter(platform=>(platform.searchModes||[]).includes(mode)&&!platform.aliasOf).length;
-  const allLabel=allPlatformButton.querySelector("span:last-child");if(allLabel)allLabel.textContent=activeMode==="link"?"Semua 200":"Semua "+(mode==="image"?"gambar":"video")+" · "+supportedCount;
+  const allLabel=allPlatformButton.querySelector("span:last-child");
+  if(allLabel)allLabel.textContent=activeMode==="link"?"Semua 200":"Semua "+(mode==="image"?"gambar":"video")+" · "+supportedCount;
   allPlatformButton.title=activeMode==="link"?"Tempel tautan dari 200 platform. Sistem mendeteksi sumber berdasarkan URL.":"Cari di "+supportedCount+" platform dengan provider "+(mode==="image"?"gambar":"video")+" terverifikasi";
   allPlatformButton.hidden=!!query||(activeMode!=="link"&&supportedCount===0);
   if(!query)picker.append(allPlatformButton);
  }
- if(!visible.length){
+ if(!matches.length){
   const empty=document.createElement("p");empty.className="v736-platform-empty";empty.setAttribute("role","status");
   empty.textContent="Platform tidak ditemukan. Coba nama lain.";
   picker.append(empty);
  }
- for(const platform of visible){
+ let platformIndex=0;
+ for(const platform of matches){
   let button=platformTemplates.get(platform.id)?.cloneNode(true);
   if(!button){
    button=document.createElement("button");button.type="button";button.className="v736-platform";
@@ -169,7 +168,10 @@ function renderPlatformPage(nextPage){
    const label=document.createElement("span");label.textContent=platform.name;
    button.append(logo,label);
   }
-  button.dataset.platform=platform.id;button.setAttribute("aria-label",platform.name);button.title=platform.extractorStatus==="experimental"?platform.name+" · jalur auto-detect eksperimental, belum terverifikasi":"Jalur provider khusus";
+  button.dataset.platform=platform.id;
+  button.style.setProperty("--platform-index",String(platformIndex++));
+  button.setAttribute("aria-label",platform.name);
+  button.title=platform.extractorStatus==="experimental"?platform.name+" · jalur auto-detect eksperimental, belum terverifikasi":"Jalur provider khusus";
   const label=button.querySelector("span:last-child");if(label)label.textContent=platform.name;
   if(platform.aliasOf){
    const source=platformTemplates.get(platform.aliasOf)?.querySelector(".v736-logo");
@@ -190,74 +192,67 @@ function renderPlatformPage(nextPage){
   button.setAttribute("aria-pressed",String(button.dataset.platform===selected));
   picker.append(button);
  }
- if(platformPager)platformPager.hidden=matches.length<=platformPageSize;
+ if(platformPager)platformPager.hidden=true;
  if(platformPageLabel)platformPageLabel.textContent=query
   ?(matches.length?matches.length+" platform cocok untuk “"+String(platformSearch.value).trim()+"”":"Tidak ada platform yang cocok")
-  :matches.length?"Halaman "+platformPage+" / "+totalPages+" · "+(start+1)+"–"+(start+visible.length)+" dari "+matches.length:"Tidak ada provider "+(mode==="image"?"gambar":"video")+" terverifikasi di katalog ini";
- if(platformPrev){platformPrev.textContent="← Sebelumnya";platformPrev.disabled=platformPage<=1;}
- if(platformNext){platformNext.textContent="Berikutnya →";platformNext.disabled=platformPage>=totalPages;}
+  :matches.length?matches.length+" platform siap":"Tidak ada platform yang tersedia";
+ if(platformPrev)platformPrev.disabled=true;
+ if(platformNext)platformNext.disabled=true;
  if(platformPager)platformPager.setAttribute("aria-busy","false");
+ picker.classList.remove("v736-platforms-ready");
+ requestAnimationFrame(()=>picker.classList.add("v736-platforms-ready"));
 }
+
 async function loadPlatformCatalog(){
- const setBusy=busy=>{
-  if(platformPager){platformPager.hidden=false;platformPager.setAttribute("aria-busy",String(busy));}
-  if(platformPrev)platformPrev.disabled=busy;
-  if(platformNext){platformNext.disabled=busy;platformNext.textContent="Berikutnya →";}
+ const local=window.ARYANZZ_PLATFORM_CATALOG_FALLBACK;
+ const localReady=Array.isArray(local)&&local.length===200;
+ const applyCatalog=(catalog,source)=>{
+  if(!Array.isArray(catalog)||catalog.length!==200)return false;
+  platformCatalog=catalog;
+  for(const platform of platformCatalog){
+   if(!platforms[platform.id]){
+    const domains=platform.domains||[];
+    platforms[platform.id]={name:platform.name,url:q=>"https://www.google.com/search?q="+encodeURIComponent((domains.length?domains.map(domain=>"site:"+domain).join(" OR "):platform.name)+" "+q)};
+   }else platforms[platform.id].name=platform.name;
+  }
+  SEARCH_PLATFORM_DOMAINS=Object.fromEntries(platformCatalog.map(platform=>[platform.id,platform.domains||[]]));
+  window.ARYANZZ_PLATFORM_CATALOG=platformCatalog;
+  window.aryanzzPlatformForUrl=raw=>{
+   try{
+    const host=new URL(String(raw||"").trim()).hostname.toLowerCase().replace(/^www\./,"");
+    const found=platformCatalog.find(platform=>(platform.domains||[]).some(domain=>{
+     const root=String(domain||"").toLowerCase().replace(/^www\./,"");
+     return host===root||host.endsWith("."+root);
+    }));
+    return found?.aliasOf||found?.id||null;
+   }catch{return null}
+  };
+  window.aryanzzPlatformNameForId=id=>platforms[id]?.name||platformCatalog.find(platform=>platform.id===id)?.name||id;
+  if(platformPager)platformPager.dataset.catalogSource=source;
+  try{setPlatform(selected)}catch(error){console.warn("ARYANZZ platform catalogue render:",error);}
+  try{renderPlatformPage(1)}catch(error){console.warn("ARYANZZ platform catalogue page render:",error);}
+  return true;
  };
- setBusy(true);
- if(platformPageLabel)platformPageLabel.textContent="Menyiapkan katalog platform…";
- let catalog=null,apiError=null;
- for(let attempt=0;attempt<2&&!catalog;attempt++){
-  const controller=new AbortController();
-  const timeout=setTimeout(()=>controller.abort(),3200);
-  try{
-   const response=await fetch("/api/platform/status",{cache:"no-store",credentials:"same-origin",headers:{accept:"application/json"},signal:controller.signal});
-   const data=await response.json();
-   if(!response.ok||!Array.isArray(data.platforms)||data.platforms.length!==200)throw new Error("Respons katalog tidak lengkap.");
-   catalog=data.platforms;
-  }catch(error){apiError=error;}
-  finally{clearTimeout(timeout);}
-  if(!catalog&&attempt===0)await new Promise(resolve=>setTimeout(resolve,180));
+ if(localReady){
+  applyCatalog(local,"local");
+  if(platformPageLabel)platformPageLabel.textContent="200 platform siap";
+ }else if(platformPageLabel){
+  platformPageLabel.textContent="Menyiapkan katalog platform…";
  }
- let source="api";
- if(!catalog){
-  source="local";
-  catalog=window.ARYANZZ_PLATFORM_CATALOG_FALLBACK;
+ try{
+  const response=await fetch("/api/platform/status",{cache:"no-store",credentials:"same-origin",headers:{accept:"application/json"},signal:AbortSignal.timeout(7000)});
+  const data=await response.json();
+  if(response.ok&&Array.isArray(data.platforms)&&data.platforms.length===200){
+   applyCatalog(data.platforms,"api");
+   if(platformPageLabel)platformPageLabel.textContent="200 platform siap";
+  }else if(!localReady&&platformPageLabel){
+   platformPageLabel.textContent="Katalog platform siap digunakan";
+  }
+ }catch(error){
+  console.warn("ARYANZZ platform API refresh skipped:",error?.message||error);
+  if(!localReady&&platformPageLabel)platformPageLabel.textContent="Katalog platform tidak tersedia sementara";
  }
- if(!Array.isArray(catalog)||catalog.length!==200){
-  console.warn("ARYANZZ platform catalogue fallback unavailable:",apiError);
-  setBusy(false);
-  if(platformPageLabel)platformPageLabel.textContent="Platform utama tetap tersedia.";
-  if(platformPager)platformPager.hidden=true;
-  if(platformNext)platformNext.disabled=true;
-  return;
- }
- platformCatalog=catalog;
- for(const platform of platformCatalog){
-  if(!platforms[platform.id]){
-   const domains=platform.domains||[];
-   platforms[platform.id]={name:platform.name,url:q=>"https://www.google.com/search?q="+encodeURIComponent((domains.length?domains.map(domain=>"site:"+domain).join(" OR "):platform.name)+" "+q)};
-  }else platforms[platform.id].name=platform.name;
- }
- SEARCH_PLATFORM_DOMAINS=Object.fromEntries(platformCatalog.map(platform=>[platform.id,platform.domains||[]]));
- window.ARYANZZ_PLATFORM_CATALOG=platformCatalog;
- window.aryanzzPlatformForUrl=raw=>{
-  try{const host=new URL(raw).hostname.toLowerCase().replace(/^www\./,"");const found=platformCatalog.find(platform=>(platform.domains||[]).some(domain=>host===domain||host.endsWith("."+domain)));return found?.aliasOf||found?.id||null}catch{return null}
- };
- window.aryanzzPlatformNameForId=id=>platforms[id]?.name||platformCatalog.find(platform=>platform.id===id)?.name||id;
- if(platformPager)platformPager.dataset.catalogSource=source;
- setBusy(false);
- try{setPlatform(selected)}catch(error){
-  console.warn("ARYANZZ platform catalogue render:",error);
-  try{renderPlatformPage(1)}catch(renderError){console.warn("ARYANZZ platform page render:",renderError);}
- }
- if(platformPageLabel&&source==="local"&&!platformPageLabel.textContent)platformPageLabel.textContent="200 platform siap";
 }
-platformPrev?.addEventListener("click",()=>renderPlatformPage(platformPage-1));
-platformNext?.addEventListener("click",()=>{
- if(!platformCatalog.length)return;
- renderPlatformPage(platformPage+1);
-});
 platformSearch?.addEventListener("input",()=>renderPlatformPage(1));
 loadPlatformCatalog();
 function searchDomainsForPlatform(platform){
