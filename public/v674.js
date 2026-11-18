@@ -154,6 +154,7 @@ function renderPlatformPage(nextPage){
   empty.textContent="Platform tidak ditemukan. Coba nama lain.";
   picker.append(empty);
  }
+ let platformIndex=0;
  for(const platform of matches){
   let button=platformTemplates.get(platform.id)?.cloneNode(true);
   if(!button){
@@ -167,7 +168,7 @@ function renderPlatformPage(nextPage){
    const label=document.createElement("span");label.textContent=platform.name;
    button.append(logo,label);
   }
-  button.dataset.platform=platform.id;button.setAttribute("aria-label",platform.name);button.title=platform.extractorStatus==="experimental"?platform.name+" · jalur auto-detect eksperimental, belum terverifikasi":"Jalur provider khusus";
+  button.dataset.platform=platform.id;button.style.setProperty("--platform-index",String(platformIndex++));button.setAttribute("aria-label",platform.name);button.title=platform.extractorStatus==="experimental"?platform.name+" · jalur auto-detect eksperimental, belum terverifikasi":"Jalur provider khusus";
   const label=button.querySelector("span:last-child");if(label)label.textContent=platform.name;
   if(platform.aliasOf){
    const source=platformTemplates.get(platform.aliasOf)?.querySelector(".v736-logo");
