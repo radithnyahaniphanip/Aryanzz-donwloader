@@ -1350,23 +1350,18 @@ $('analyze').onclick=async()=>{
  const aliases={tiktoklite:"tiktok",instagramlite:"instagram",facebooklite:"facebook"};
  let normalizedChosen=aliases[chosen]||chosen;
  const isLinkMode=!$("linkModePanel")?.hidden;
- // In link mode, the URL is authoritative. Auto-correct the picker instead of rejecting
- // valid links because a stale selection or "All 200" state remained active.
- if(isLinkMode&&detected){
-  if(normalizedChosen!==detected){
-   const picker=document.getElementById("platformPicker");
-   const targetButton=picker?.querySelector('[data-platform="'+detected+'"]');
-   if(targetButton)targetButton.click();
-   else document.dispatchEvent(new CustomEvent("aryanzz:platform-autodetected",{detail:{platform:detected}}));
-   normalizedChosen=detected;
-  }
+ // The pasted URL is authoritative. A client-side miss must never stop a valid
+ // short link: the Worker performs a second platform-resolution pass.
+ if(isLinkMode&&detected&&normalizedChosen!==detected){
+  const targetButton=document.querySelector('#platformPicker [data-platform="'+detected+'"]');
+  if(targetButton)targetButton.click();
+  normalizedChosen=detected;
  }
- if(isLinkMode&&!detected){
-  const b=document.createElement("b"),p=document.createElement("p");
-  b.textContent="Platform belum dikenali";
-  p.className="warning";
-  p.textContent="Domain tautan belum dikenali oleh katalog ARYANZZ. Periksa tautan publik atau pilih platform yang sesuai. Tautan tidak akan dikirim ke extractor platform lain.";
-  out.append(b,p);return;
+ if(detected==="youtube"){showYouTubeDownloader(u);return}
+ if(detected){await showUniversalPlatformDownloader(u,detected);return}
+ if(isLinkMode&&API){
+  await showUniversalPlatformDownloader(u,null);
+  return;
  }
  const ext=extOf(u);
  if(detected==="youtube"){showYouTubeDownloader(u);return}
