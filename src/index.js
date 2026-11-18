@@ -580,7 +580,7 @@ async function freePublicMediaInfo(rawUrl,requestUrl,options={}){
     soundcloud:"SoundCloud diproses sebagai audio (MP3/M4A jika tersedia), bukan video MP4."
   };
   let canonicalUrl=rawUrl,resolutionError="";
-  try{canonicalUrl=await resolveSocialShortLink(rawUrl,key,fast?5200:(key==="tiktok"?8000:key==="facebook"?9500:11000))}
+  try{canonicalUrl=await resolveSocialShortLink(rawUrl,key,fast?3200:(key==="tiktok"?8000:key==="facebook"?9500:11000))}
   catch(error){
     resolutionError=String(error?.message||error).slice(0,180);
     if(key==="facebook"&&resolutionError==="facebook_login_required")
@@ -588,6 +588,9 @@ async function freePublicMediaInfo(rawUrl,requestUrl,options={}){
   }
   const isTikTokPhotoRoute=key==="tiktok"&&(()=>{try{return /\/photo\//i.test(new URL(canonicalUrl).pathname)}catch{return false}})();
   const providerUrls=key==="tiktok"?(isTikTokPhotoRoute?[canonicalUrl]:tikTokUrlCandidates(rawUrl,canonicalUrl)):[canonicalUrl];
+  const tikTokFallbackPromise=key==="tiktok"&&!isTikTokPhotoRoute
+    ?tikwmFallbackMediaInfo(canonicalUrl,requestUrl,providerUrls.filter(value=>value!==canonicalUrl),{fast,timeoutMs:fast?4800:9000}).then(value=>({ok:true,value})).catch(error=>({ok:false,error}))
+    :null;
   if(key==="snackvideo"){
     try{return await snackVideoFallbackMediaInfo(canonicalUrl,requestUrl)}
     catch(error){return json({error:"SnackVideo belum dapat diproses melalui dua jalur publik yang diuji paralel: "+String(error?.message||error).slice(0,300)+". Pastikan tautan share video dapat dibuka tanpa login.",provider:"Concurrent public fallback cascade",fallbackTried:true},502)}
@@ -635,11 +638,11 @@ async function freePublicMediaInfo(rawUrl,requestUrl,options={}){
         // Photo Mode needs strict media signature checks even on the quick path;
         // video/photo spoofing must never be traded for speed.
         if(key==="tiktok"&&fast&&isTikTokPhotoRoute)await verifyTikTokPhotoVideoFormats(normalized,canonicalUrl);
-        if(key==="tiktok"&&!fast){
-          if(!isTikTokPhotoRoute){
-            try{
-              const fallback=await tikwmFallbackMediaInfo(canonicalUrl,requestUrl,providerUrls.filter(value=>value!==canonicalUrl));
-              const seen=new Set(),combined=[];
+        if(key==="tiktok"&&!isTikTokPhotoRoute){
+          if(!fast&&tikTokFallbackPromise){
+            const fallbackResult=await tikTokFallbackPromise;
+            if(fallbackResult?.ok){
+              const fallback=fallbackResult.value,seen=new Set(),combined=[];
               for(const item of [...(fallback.formats||[]),...(normalized.formats||[])]){
                 const identity=String(item?.downloadUrl||item?.url||"")+"|"+String(item?.mode||"");
                 if(!item?.downloadUrl||seen.has(identity))continue;
@@ -650,10 +653,10 @@ async function freePublicMediaInfo(rawUrl,requestUrl,options={}){
               normalized.providerName=[fallback.providerName,normalized.providerName].filter(Boolean).join(" + ");
               normalized.title=normalized.title||fallback.title;
               normalized.duration=Number(normalized.duration)||Number(fallback.duration)||null;
-            }catch(error){normalized.fallbackDiagnostic=String(error?.message||error).slice(0,180)}
+            }else normalized.fallbackDiagnostic=String(fallbackResult?.error?.message||fallbackResult?.error||"Provider alternatif tidak mengembalikan hasil.").slice(0,180);
           }
           await verifyTikTokPhotoVideoFormats(normalized,canonicalUrl);
-          if(!isTikTokPhotoRoute)await enrichTikTokDuration(normalized,canonicalUrl);
+          if(!fast)await enrichTikTokDuration(normalized,canonicalUrl);
         }
         return json({...normalized,fastResponse:fast,canonicalUrl:canonicalUrl!==rawUrl?canonicalUrl:undefined});
       }
@@ -681,15 +684,15 @@ async function freePublicMediaInfo(rawUrl,requestUrl,options={}){
       return json({ok:true,platform:"tiktok",title:"TikTok Photo Mode",duration:null,formats:[],embedUrl:player.href,embedId:photoItemId,providerName:"TikTok Photo Mode · official embed",providerReady:true,directDownloadAvailable:false,downloadMessage:"Pemutar resmi TikTok tersedia. Provider publik belum memberikan foto asli atau stream MP4 yang lolos validasi.",canonicalUrl:canonicalUrl!==rawUrl?canonicalUrl:undefined,diagnostics:primaryError.slice(0,900)},200);
     }
   }
-  if(key==="tiktok"){
-    try{
-      const fallback=await tikwmFallbackMediaInfo(canonicalUrl,requestUrl,providerUrls.filter(value=>value!==canonicalUrl));
+  if(key==="tiktok"&&!isTikTokPhotoRoute){
+    const fallbackResult=await tikTokFallbackPromise;
+    if(fallbackResult?.ok){
+      const fallback=fallbackResult.value;
       await verifyTikTokPhotoVideoFormats(fallback,canonicalUrl);
-      await enrichTikTokDuration(fallback,canonicalUrl);
-      return json({...fallback,canonicalUrl:canonicalUrl!==rawUrl?canonicalUrl:undefined});
-    }catch(error){
-      primaryError+="; TikTok fallback: "+String(error?.message||error).slice(0,900);
+      if(!fast)await enrichTikTokDuration(fallback,canonicalUrl);
+      return json({...fallback,fastResponse:fast,canonicalUrl:canonicalUrl!==rawUrl?canonicalUrl:undefined});
     }
+    primaryError+="; TikTok fallback: "+String(fallbackResult?.error?.message||fallbackResult?.error||"Provider alternatif tidak mengembalikan media.").slice(0,900);
   }
   // Attempt TikTok's public item metadata and page extraction before generic scraping.
   // This path was implemented but not previously wired into the fallback cascade.
