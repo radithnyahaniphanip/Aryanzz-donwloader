@@ -122,7 +122,10 @@
     "js": [
       "/workspace-layout.js"
     ],
-    "purpose": "One-time DOM ownership and legacy-layout normalization only; no downloader, profile, owner or library feature logic."
+    "purpose": "Shared responsive shell: desktop/laptop left navigation, compact workspace width, desktop home composition, and responsive platform toolbar.",
+    "css": [
+      "/desktop-workspace.css"
+    ]
   },
   "featureModules": [
     {
