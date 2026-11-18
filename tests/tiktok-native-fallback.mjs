@@ -36,7 +36,7 @@ try{
     if(url.hostname==="vm.tiktok.com")
       return new Response("TikTok Site Maintenance",{status:503,headers:{"content-type":"text/plain"}});
     if(url.hostname==="r.jina.ai"&&url.pathname.includes("vm.tiktok.com/reader-regression/"))
-      return new Response("Title: TikTok public redirect reader regression\\nURL Source: "+canonicalUrl+"\\nMarkdown Content:\\nPublic TikTok post",{status:200,headers:{"content-type":"text/plain; charset=utf-8"}});
+      return new Response("Title: TikTok public redirect reader regression\nURL Source: "+canonicalUrl+"\nMarkdown Content:\nPublic TikTok post",{status:200,headers:{"content-type":"text/plain; charset=utf-8"}});
     if(url.hostname==="www.tiktok.com"&&(url.pathname==="/@givydev/video/7681592254049307924"||url.pathname==="/video/7681592254049307924"))
       return new Response(pageHtml,{status:200,headers:{"content-type":"text/html; charset=utf-8"}});
     if(url.hostname==="www.tiktok.com"&&url.pathname==="/oembed"){
