@@ -370,7 +370,7 @@ async function platformMediaInfo(request){
   // Keep short-link detection resilient even if a stale catalogue omits an alias.
   if(!platformEntry&&/^(?:vt|vm)\.tiktok\.com$/i.test(parsed.hostname))platformEntry=PLATFORM_CATALOG_BY_ID.get("tiktok");
   if(parsed.protocol==="http:"&&platformEntry)parsed.protocol="https:";
-  if(!platformEntry)return json({ok:false,error:"Platform belum dikenali. ARYANZZ akan only reject the link after the server-side platform resolver also fails."},400);
+  if(!platformEntry)return json({ok:false,error:"Platform belum dikenali setelah pemeriksaan server. Tautan belum dapat dipetakan ke provider yang didukung."},400);
   const key=platformEntry.providerKey;
   const expected=String(body?.expectedPlatform||"").toLowerCase();
   const autoDetect=!expected||expected==="auto"||expected==="all";
