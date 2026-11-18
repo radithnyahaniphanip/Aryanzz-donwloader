@@ -2,17 +2,17 @@ import assert from "node:assert/strict";
 import worker from "../src/index.js";
 
 const originalFetch=globalThis.fetch;
-const shortUrl="https://vt.tiktok.com/ZSPNASKHN/";
-const canonicalUrl="https://www.tiktok.com/video/1234567890123456789";
+const shortUrl="https://vt.tiktok.com/ZSpWr1b8a/";
+const canonicalUrl="https://www.tiktok.com/@givydev/video/7681592254049307924";
 const videoBytes=Uint8Array.from([0,0,0,24,102,116,121,112,105,115,111,109,0,0,2,0,105,115,111,109,105,115,111,50]);
 const hydration={
   __DEFAULT_SCOPE__:{
     "webapp.video-detail":{
       itemInfo:{
         itemStruct:{
-          id:"1234567890123456789",
+          id:"7681592254049307924",
           desc:"TikTok native page fallback regression",
-          author:{uniqueId:"demo"},
+          author:{uniqueId:"givydev"},
           video:{
             duration:14,
             playAddr:"https://cdn.example/tiktok-video.mp4",
@@ -25,13 +25,15 @@ const hydration={
     }
   }
 };
-const malformedShareUrl="https://www.tiktok.com/@/video/1234567890123456789?share_item_id=1234567890123456789";
+const malformedShareUrl="https://www.tiktok.com/@/video/7681592254049307924?share_item_id=7681592254049307924";
 const pageHtml='<html><head><link rel="canonical" href="'+malformedShareUrl+'"><meta property="og:title" content="TikTok native page fallback regression"></head><body><script id="__UNIVERSAL_DATA_FOR_REHYDRATION__" type="application/json">'+JSON.stringify(hydration)+'</script></body></html>';
 
 try{
   globalThis.fetch=async(input,init={})=>{
     const url=new URL(typeof input==="string"?input:input instanceof URL?input.href:input.url);
-    if(url.hostname==="vt.tiktok.com"||url.hostname==="www.tiktok.com"&&(url.pathname==="/video/1234567890123456789"||url.pathname==="/@/video/1234567890123456789"))
+    if(url.hostname==="vt.tiktok.com"&&url.pathname==="/ZSpWr1b8a/")
+      return new Response(null,{status:302,headers:{location:canonicalUrl}});
+    if(url.hostname==="www.tiktok.com"&&(url.pathname==="/@givydev/video/7681592254049307924"||url.pathname==="/video/7681592254049307924"))
       return new Response(pageHtml,{status:200,headers:{"content-type":"text/html; charset=utf-8"}});
     if(url.hostname==="www.tiktok.com"&&url.pathname==="/oembed"){
       const target=new URL(url.searchParams.get("url")||"https://www.tiktok.com/video/9876543210987654321");
@@ -45,7 +47,7 @@ try{
     }
     if(url.hostname==="www.tiktok.com"&&url.pathname==="/api/item/detail/"){
       const id=url.searchParams.get("itemId");
-      if(id==="1234567890123456789")return new Response(JSON.stringify({statusCode:10216,itemInfo:null}),{status:403,headers:{"content-type":"application/json"}});
+      if(id==="7681592254049307924")return new Response(JSON.stringify({statusCode:10216,itemInfo:null}),{status:403,headers:{"content-type":"application/json"}});
       if(id==="9876543210987654321")return new Response(JSON.stringify({statusCode:0,itemInfo:{itemStruct:{
         id,desc:"TikTok item detail API regression",author:{uniqueId:"demo"},
         video:{duration:9,playAddr:"https://cdn.example/tiktok-video-api.mp4",downloadAddr:"https://cdn.example/tiktok-video-api.mp4",bitrateInfo:[{GearName:"normal_480_0",Bitrate:500000,PlayAddr:{UrlList:["https://cdn.example/tiktok-video-api.mp4"]}}]}
