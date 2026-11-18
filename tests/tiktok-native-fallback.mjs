@@ -33,6 +33,10 @@ try{
     const url=new URL(typeof input==="string"?input:input instanceof URL?input.href:input.url);
     if(url.hostname==="vt.tiktok.com"&&url.pathname==="/ZSpWr1b8a/")
       return new Response(null,{status:302,headers:{location:canonicalUrl}});
+    if(url.hostname==="vm.tiktok.com")
+      return new Response("TikTok Site Maintenance",{status:503,headers:{"content-type":"text/plain"}});
+    if(url.hostname==="r.jina.ai"&&url.pathname.includes("vm.tiktok.com/reader-regression/"))
+      return new Response("Title: TikTok public redirect reader regression\\nURL Source: "+canonicalUrl+"\\nMarkdown Content:\\nPublic TikTok post",{status:200,headers:{"content-type":"text/plain; charset=utf-8"}});
     if(url.hostname==="www.tiktok.com"&&(url.pathname==="/@givydev/video/7681592254049307924"||url.pathname==="/video/7681592254049307924"))
       return new Response(pageHtml,{status:200,headers:{"content-type":"text/html; charset=utf-8"}});
     if(url.hostname==="www.tiktok.com"&&url.pathname==="/oembed"){
@@ -80,6 +84,15 @@ try{
   assert.equal(info.providerName,"TikTok public page fallback");
   assert.equal(info.title,"TikTok native page fallback regression");
   assert.equal(info.duration,14);
+  const readerResponse=await worker.fetch(new Request("https://aryanzz.example/api/platform/info",{
+    method:"POST",
+    headers:{"content-type":"application/json","cf-connecting-ip":"192.0.2.223"},
+    body:JSON.stringify({url:"https://vm.tiktok.com/reader-regression/",expectedPlatform:"tiktok"})
+  }),{});
+  assert.equal(readerResponse.status,200,"TikTok public-reader fallback should resolve a short link when TikTok returns maintenance errors");
+  const readerInfo=await readerResponse.json();
+  assert.equal(readerInfo.canonicalUrl,canonicalUrl,"public-reader redirect should recover the canonical TikTok post URL");
+  console.log("✔ TikTok short-link redirect and public-reader fallback resolve the exact user link format");
   assert.ok(info.formats.some(item=>item.mode==="video"&&item.ext==="mp4"&&item.height===720));
   const video=info.formats.find(item=>item.mode==="video");
   const probeUrl=new URL(video.downloadUrl);probeUrl.searchParams.set("probe","1");
