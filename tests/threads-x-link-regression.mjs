@@ -12,8 +12,8 @@ assert.equal(platformForHost("twitter.com")?.id,"x");
 assert.equal(platformForHost("fake-threads.com"),null,"Lookalike domains must not be accepted");
 const client=readFileSync(new URL("../public/downloader.js",import.meta.url),"utf8");
 assert.ok(client.includes('["threads.com","Threads"]'),"Client must recognize Threads .com");
-assert.ok(client.includes('slowSocialSource?(fast?10000:41000)'),"Social download timeout must cover backend fallback");
-assert.ok(client.includes('imageCheckTimeout=fast?9000'),"Photo timeout must cover share-link resolution");
+assert.ok(client.includes('slowSocialSource?(fast?28000:41000)'),"Social download timeout must cover backend fallback");
+assert.ok(client.includes('imageCheckTimeout=slowSocialSource?'),"Photo timeout must cover share-link resolution");
 
 const originalFetch=globalThis.fetch;
 const shares={
