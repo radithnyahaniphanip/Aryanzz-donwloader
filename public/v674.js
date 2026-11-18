@@ -194,11 +194,16 @@ function renderPlatformPage(nextPage){
  if(platformPageLabel)platformPageLabel.textContent=query
   ?(matches.length?matches.length+" platform cocok untuk “"+String(platformSearch.value).trim()+"”":"Tidak ada platform yang cocok")
   :matches.length?"Halaman "+platformPage+" / "+totalPages+" · "+(start+1)+"–"+(start+visible.length)+" dari "+matches.length:"Tidak ada provider "+(mode==="image"?"gambar":"video")+" terverifikasi di katalog ini";
- if(platformPrev)platformPrev.disabled=platformPage<=1;
- if(platformNext)platformNext.disabled=platformPage>=totalPages;
+ if(platformPrev){platformPrev.textContent="← Sebelumnya";platformPrev.disabled=platformPage<=1;}
+ if(platformNext){platformNext.textContent="Berikutnya →";platformNext.disabled=platformPage>=totalPages;}
+ if(platformPager)platformPager.setAttribute("aria-busy","false");
 }
 async function loadPlatformCatalog(){
  try{
+  if(platformPager){platformPager.hidden=false;platformPager.setAttribute("aria-busy","true");}
+  if(platformPageLabel)platformPageLabel.textContent="Memuat katalog 200 platform…";
+  if(platformPrev)platformPrev.disabled=true;
+  if(platformNext){platformNext.disabled=true;platformNext.textContent="Memuat…";}
   const response=await fetch("/api/platform/status",{cache:"no-store",headers:{accept:"application/json"}});
   const data=await response.json();
   if(!response.ok||!Array.isArray(data.platforms)||data.platforms.length!==200)throw new Error("Katalog platform belum lengkap.");
@@ -216,10 +221,19 @@ async function loadPlatformCatalog(){
   };
   window.aryanzzPlatformNameForId=id=>platforms[id]?.name||platformCatalog.find(platform=>platform.id===id)?.name||id;
   renderPlatformPage(1);setPlatform(selected);
- }catch(error){if(platformPager)platformPager.hidden=true;console.warn("ARYANZZ platform catalogue:",error)}
+ }catch(error){
+  if(platformPager){platformPager.hidden=false;platformPager.setAttribute("aria-busy","false");}
+  if(platformPageLabel)platformPageLabel.textContent="Katalog 200 platform belum termuat.";
+  if(platformPrev)platformPrev.disabled=true;
+  if(platformNext){platformNext.disabled=false;platformNext.textContent="Coba lagi ↻";}
+  console.warn("ARYANZZ platform catalogue:",error);
+ }
 }
 platformPrev?.addEventListener("click",()=>renderPlatformPage(platformPage-1));
-platformNext?.addEventListener("click",()=>renderPlatformPage(platformPage+1));
+platformNext?.addEventListener("click",()=>{
+ if(!platformCatalog.length){loadPlatformCatalog();return;}
+ renderPlatformPage(platformPage+1);
+});
 platformSearch?.addEventListener("input",()=>renderPlatformPage(1));
 loadPlatformCatalog();
 function searchDomainsForPlatform(platform){
