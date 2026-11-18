@@ -52,32 +52,6 @@ function showPanel(id){
  return panelId||"home";
 }
 window.aryanzzShowPanel=showPanel;
-
-// Small, delegated click feedback. It also covers platform tiles created after
-// the 200-item catalogue loads, without enabling continuous site-wide motion.
-function pulseInteractiveControl(target){
- if(!target||target.matches(":disabled")||target.getAttribute("aria-disabled")==="true")return;
- if(window.matchMedia?.("(prefers-reduced-motion: reduce)").matches)return;
- target.classList.remove("ary-click-fx");
- void target.offsetWidth;
- target.classList.add("ary-click-fx");
-}
-const interactiveSelector='button:not(:disabled),a[href],[role="button"]:not([aria-disabled="true"])';
-document.addEventListener("pointerdown",event=>{
- if(event.button!==0)return;
- const origin=event.target instanceof Element?event.target:null;
- const target=origin?.closest(interactiveSelector);
- if(target)pulseInteractiveControl(target);
-},true);
-document.addEventListener("click",event=>{
- if(event.detail!==0)return; // Keyboard and assistive-technology activation.
- const origin=event.target instanceof Element?event.target:null;
- const target=origin?.closest(interactiveSelector);
- if(target)pulseInteractiveControl(target);
-},true);
-document.addEventListener("animationend",event=>{
- if(event.animationName==="aryTapPulse")event.target.classList.remove("ary-click-fx");
-},true);
 document.addEventListener("click",event=>{
  const navButton=event.target.closest("[data-nav]");
  if(navButton&&nav.contains(navButton)){
