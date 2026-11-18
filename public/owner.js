@@ -6,7 +6,7 @@
   const PROFILE_KEY = "aryanzz.profile.info.v25";
   const DESIGN_KEY = "aryanzz.profile.design.v25";
   const DEFAULTS = {
-    whatsapp: "https://wa.me/6282110767071",
+    whatsapp: "https://wa.me/6283163637190",
     github: "https://github.com/radithnyahaniphanip",
     telegram: "",
     tiktok: "https://www.tiktok.com/@azazeuu?_r=1&_t=ZS-9B2FU0QemSi",
@@ -28,11 +28,35 @@
   function validImage(raw) {
     return typeof raw === "string" && /^data:image\/(?:jpeg|png|webp);base64,[a-z0-9+/=]+$/i.test(raw) ? raw : "";
   }
+  const LEGACY_WHATSAPP_DIGITS = "6282110767071";
+  function migrateWhatsAppLink(raw) {
+    const href = validLink(raw);
+    if (!href) return "";
+    try {
+      const url = new URL(href);
+      const host = url.hostname.toLowerCase().replace(/^www\./, "");
+      const pathDigits = url.pathname.replace(/\D/g, "");
+      const queryDigits = String(url.searchParams.get("phone") || "").replace(/\D/g, "");
+      if ((host === "wa.me" && pathDigits === LEGACY_WHATSAPP_DIGITS) ||
+          ((host === "api.whatsapp.com" || host === "web.whatsapp.com") && queryDigits === LEGACY_WHATSAPP_DIGITS)) {
+        return DEFAULTS.whatsapp;
+      }
+      return href;
+    } catch { return href; }
+  }
   function linksRead() {
     const stored = safeRead(KEY, {});
-    return Object.fromEntries(Object.keys(DEFAULTS).map(key => [
-      key, Object.prototype.hasOwnProperty.call(stored,key) ? validLink(stored[key]) : DEFAULTS[key]
+    const links = Object.fromEntries(Object.keys(DEFAULTS).map(key => [
+      key,
+      key === "whatsapp"
+        ? (Object.prototype.hasOwnProperty.call(stored,key) ? migrateWhatsAppLink(stored[key]) : DEFAULTS[key])
+        : (Object.prototype.hasOwnProperty.call(stored,key) ? validLink(stored[key]) : DEFAULTS[key])
     ]));
+    if (Object.prototype.hasOwnProperty.call(stored, "whatsapp") &&
+        links.whatsapp !== validLink(stored.whatsapp)) {
+      try { localStorage.setItem(KEY, JSON.stringify({ ...stored, whatsapp: links.whatsapp })); } catch {}
+    }
+    return links;
   }
   function renderLinks() {
     const links = linksRead();
@@ -106,6 +130,7 @@
       tiktok: $("ownerTiktokUrl")?.value.trim() || "",
       youtube: $("ownerYoutubeUrl")?.value.trim() || ""
     };
+    values.whatsapp = migrateWhatsAppLink(values.whatsapp) || values.whatsapp;
     for (const [key, value] of Object.entries(values)) {
       if (value && !validLink(value)) {
         const input = ({whatsapp:"ownerWhatsappUrl",github:"ownerGithubUrl",telegram:"ownerTelegramUrl",tiktok:"ownerTiktokUrl",youtube:"ownerYoutubeUrl"})[key];
