@@ -305,11 +305,7 @@ body{background-color:var(--ary-app-bg)}
 <div class="v736-platform-search-wrap"><span class="v736-platform-search-icon" aria-hidden="true">⌕</span><input class="field v736-platform-search" id="platformSearch" type="search" placeholder="Cari platform, misalnya Facebook..." autocomplete="off" spellcheck="false" aria-controls="platformPicker"><button class="ary-field-clear" type="button" data-clear-input="platformSearch" aria-label="Hapus pencarian platform" hidden>×</button></div>
 <span class="v736-platform-total">200 PLATFORM</span>
 </div>
-<div id="platformPager" class="v736-platform-pager" aria-label="Navigasi 200 platform" aria-busy="true">
- <button id="platformPrev" type="button" disabled>← Sebelumnya</button>
- <span id="platformPageLabel" role="status" aria-live="polite">Memuat 200 platform…</span>
- <button id="platformNext" type="button" disabled>Berikutnya →</button>
-</div>
+<div id="platformPageLabel" class="v736-platform-ready" role="status" aria-live="polite">200 platform siap</div>
 <div class="v736-platforms" id="platformPicker" aria-label="Pilih platform media sosial">
 <button class="v736-platform active" type="button" data-platform="all" aria-pressed="true" aria-label="Semua 200 platform"><span class="v736-logo" aria-hidden="true">☷</span><span>Semua 200</span></button>
 <button class="v736-platform" type="button" data-platform="youtube" aria-pressed="false" aria-label="YouTube"><span class="v736-logo v736-youtube"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="1" y="4" width="22" height="16" rx="5" fill="currentColor"/><path d="M10 8.2 16 12l-6 3.8z" fill="#fff"/></svg></span><span>YouTube</span></button>
@@ -1254,25 +1250,96 @@ function arySelectedPlatform(){const state=window.aryanzzSelectedPlatform?.();if
 function aryPlatformLabel(id){return window.aryanzzPlatformNameForId?.(id)||({youtube:"YouTube",tiktok:"TikTok",instagram:"Instagram",snackvideo:"SnackVideo",capcut:"CapCut",pinterest:"Pinterest",facebook:"Facebook",x:"X",reddit:"Reddit",vimeo:"Vimeo",threads:"Threads",soundcloud:"SoundCloud",snapchat:"Snapchat",idnapp:"IDN App",linkedin:"LinkedIn",wechat:"WeChat",kakaotalk:"KakaoTalk"})[id]||id}
 async function showUniversalPlatformDownloader(u,platform){
  const out=$("downloadResult");out.hidden=false;out.replaceChildren();
- const heading=document.createElement("b");heading.textContent=aryPlatformLabel(platform)+" terdeteksi";
- const status=document.createElement("p");status.className="muted";status.textContent="Memeriksa tautan dan format media yang benar-benar tersedia…";out.append(heading,status);
- try{
-  const response=await fetch(API+"/api/platform/info",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({url:u.href,expectedPlatform:platform})});
+ const heading=document.createElement("b");heading.textContent=(platform?aryPlatformLabel(platform):"Media")+" terdeteksi";
+ const status=document.createElement("p");status.className="muted";status.textContent="Periksa cepat · jalur 10 detik…";out.append(heading,status);
+ const progress=document.createElement("div");progress.className="ary-quick-progress";
+ const progressHead=document.createElement("div");progressHead.className="ary-quick-progress-head";
+ const progressLabel=document.createElement("span");progressLabel.textContent="Menganalisis sumber";
+ const progressValue=document.createElement("b");progressValue.textContent="0%";
+ const progressTrack=document.createElement("div");progressTrack.className="ary-quick-progress-track";
+ const progressBar=document.createElement("i");progressBar.style.width="0%";
+ progressHead.append(progressLabel,progressValue);progressTrack.append(progressBar);progress.append(progressHead,progressTrack);out.append(progress);
+ let timer=0,started=performance.now();
+ const tick=()=>{
+  const elapsed=performance.now()-started;
+  const pct=Math.min(88,Math.round((elapsed/9500)*88));
+  progressBar.style.width=pct+"%";progressValue.textContent=pct+"%";
+  if(pct<88)timer=requestAnimationFrame(tick);
+ };
+ timer=requestAnimationFrame(tick);
+ const renderData=data=>{
+  const resolved=String(data?.platform||platform||"").toLowerCase();
+  if(resolved){
+   heading.textContent=aryPlatformLabel(resolved)+" terdeteksi";
+   if(resolved!==platform){
+    const target=document.querySelector('#platformPicker [data-platform="'+resolved+'"]');
+    if(target)target.click();
+   }
+  }
+  progressBar.style.width="100%";progressValue.textContent="100%";
+  progressLabel.textContent="Sumber ditemukan";
+  status.className="muted";
+  status.textContent=(data.title||"Media ditemukan")+" · "+(data.formats?.length||0)+" format tersedia.";
+  if(data.thumbnail){
+   const img=document.createElement("img");img.src=data.thumbnail;img.alt="Thumbnail media";img.loading="lazy";
+   img.style.cssText="display:block;width:100%;max-width:420px;aspect-ratio:16/9;object-fit:cover;border-radius:14px;margin:12px 0";
+   out.append(img);
+  }
+  if(data.embedUrl){
+   const player=document.createElement("iframe");player.className="ary-quick-player";player.src=data.embedUrl;player.title="Pratinjau media";player.loading="lazy";player.allow="autoplay; fullscreen; picture-in-picture";player.allowFullscreen=true;
+   out.append(player);
+  }
+  if(Array.isArray(data.images)&&data.images.length){
+   const grid=document.createElement("div");grid.className="ary-quick-image-grid";
+   data.images.slice(0,24).forEach((item,index)=>{
+    const url=item?.downloadUrl||item?.url||item?.previewUrl;if(!url)return;
+    const card=document.createElement("a");card.className="ary-quick-image-card";card.href=url;card.target="_blank";card.rel="noopener noreferrer";
+    const img=document.createElement("img");img.src=item?.previewUrl||url;img.alt="Gambar "+(index+1);img.loading="lazy";card.append(img);grid.append(card);
+   });
+   if(grid.childElementCount)out.append(grid);
+  }
+  const formats=Array.isArray(data.formats)?data.formats:[];
+  if(formats.length){
+   const list=document.createElement("div");list.style.cssText="display:grid;gap:9px;margin-top:12px";
+   formats.forEach(format=>{
+    const row=document.createElement("div");row.className="result";row.style.cssText="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap";
+    const label=document.createElement("span");label.textContent=[format.mode==="audio"?"Audio":"Video",format.ext?.toUpperCase(),format.height?format.height+"p":"",format.label].filter(Boolean).join(" · ");
+    const link=document.createElement("a");link.className="primary";link.href=format.downloadUrl;link.textContent="Unduh";link.download=data.filename||"aryanzz-media";
+    row.append(label,link);list.append(row);
+   });
+   out.append(list);
+  }
+  if(!formats.length&&!data.embedUrl&&!data.images?.length){
+   throw new Error("Provider mengenali tautan, tetapi belum memberikan file media publik.");
+  }
+  if(resolved==="soundcloud"){
+   const note=document.createElement("p");note.className="muted";note.textContent="SoundCloud diproses sebagai audio. Format video tidak akan ditawarkan.";out.append(note);
+  }
+ };
+ const request=async fast=>{
+  const timeout=fast?9800:22000;
+  const response=await fetch(API+"/api/platform/info",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({url:u.href,expectedPlatform:platform||"auto",fast}),signal:AbortSignal.timeout(timeout)});
   const data=await response.json().catch(()=>({}));
-  if(!response.ok||!data.ok)throw new Error(data.error||"Tautan tidak dapat diproses.");
-  status.textContent=(data.title||"Media ditemukan")+" · "+aryPlatformLabel(data.platform||platform)+" · "+(data.formats?.length||0)+" format tersedia.";
-  if(data.thumbnail){const img=document.createElement("img");img.src=data.thumbnail;img.alt="Thumbnail media";img.loading="lazy";img.style.cssText="display:block;width:100%;max-width:420px;aspect-ratio:16/9;object-fit:cover;border-radius:12px;margin:10px 0";out.append(img)}
-  const list=document.createElement("div");list.style.cssText="display:grid;gap:9px;margin-top:12px";
-  (data.formats||[]).forEach(format=>{
-   const row=document.createElement("div");row.className="result";row.style.cssText="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap";
-   const label=document.createElement("span");label.textContent=[format.mode==="audio"?"Audio":"Video",format.ext?.toUpperCase(),format.height?format.height+"p":"",format.label].filter(Boolean).join(" · ");
-   const link=document.createElement("a");link.className="primary";link.href=format.downloadUrl;link.textContent="Unduh";link.download=data.filename||"aryanzz-media";
-   row.append(label,link);list.append(row);
-  });
-  if(!(data.formats||[]).length)throw new Error("Provider mengenali tautan, tetapi tidak menyediakan format video/audio yang bisa diunduh.");
-  out.append(list);
-  if(data.platform==="soundcloud"){const note=document.createElement("p");note.className="muted";note.textContent="SoundCloud diproses sebagai audio. Format video tidak akan ditawarkan.";out.append(note)}
- }catch(error){status.className="warning";status.textContent=error.message||"Gagal memeriksa tautan."}
+  if(!response.ok||data.ok===false)throw new Error(data.error||"Sumber belum mengirim media.");
+  return data;
+ };
+ try{
+  let data;
+  try{data=await request(true)}
+  catch(quickError){
+   progressLabel.textContent="Jalur cepat gagal · pindah ke jalur alternatif…";
+   status.textContent="Mencoba provider alternatif tanpa meminta kamu menekan tombol coba lagi.";
+   data=await request(false);
+  }
+  cancelAnimationFrame(timer);
+  renderData(data);
+ }catch(error){
+  cancelAnimationFrame(timer);
+  progressBar.style.width="100%";progressValue.textContent="100%";
+  progressLabel.textContent="Pemeriksaan selesai";
+  status.className="warning";
+  status.textContent="Semua jalur publik yang tersedia sudah dicoba. "+String(error?.message||"Media belum tersedia.").slice(0,260);
+ }
 }
 $('analyze').onclick=async()=>{
  const out=$('downloadResult');out.hidden=false;out.replaceChildren();
@@ -1283,23 +1350,18 @@ $('analyze').onclick=async()=>{
  const aliases={tiktoklite:"tiktok",instagramlite:"instagram",facebooklite:"facebook"};
  let normalizedChosen=aliases[chosen]||chosen;
  const isLinkMode=!$("linkModePanel")?.hidden;
- // In link mode, the URL is authoritative. Auto-correct the picker instead of rejecting
- // valid links because a stale selection or "All 200" state remained active.
- if(isLinkMode&&detected){
-  if(normalizedChosen!==detected){
-   const picker=document.getElementById("platformPicker");
-   const targetButton=picker?.querySelector('[data-platform="'+detected+'"]');
-   if(targetButton)targetButton.click();
-   else document.dispatchEvent(new CustomEvent("aryanzz:platform-autodetected",{detail:{platform:detected}}));
-   normalizedChosen=detected;
-  }
+ // The pasted URL is authoritative. A client-side miss must never stop a valid
+ // short link: the Worker performs a second platform-resolution pass.
+ if(isLinkMode&&detected&&normalizedChosen!==detected){
+  const targetButton=document.querySelector('#platformPicker [data-platform="'+detected+'"]');
+  if(targetButton)targetButton.click();
+  normalizedChosen=detected;
  }
- if(isLinkMode&&!detected){
-  const b=document.createElement("b"),p=document.createElement("p");
-  b.textContent="Platform belum dikenali";
-  p.className="warning";
-  p.textContent="Domain tautan belum dikenali oleh katalog ARYANZZ. Periksa tautan publik atau pilih platform yang sesuai. Tautan tidak akan dikirim ke extractor platform lain.";
-  out.append(b,p);return;
+ if(detected==="youtube"){showYouTubeDownloader(u);return}
+ if(detected){await showUniversalPlatformDownloader(u,detected);return}
+ if(isLinkMode&&API){
+  await showUniversalPlatformDownloader(u,null);
+  return;
  }
  const ext=extOf(u);
  if(detected==="youtube"){showYouTubeDownloader(u);return}

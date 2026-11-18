@@ -432,3 +432,132 @@
     transition: none !important;
   }
 }
+
+
+/* ARYANZZ V1 — platform catalogue polish: no pager/retry UI, aligned search, animated cards. */
+#home .v674-download .v736-platform-ready{
+  display:block!important;
+  min-height:18px!important;
+  margin:2px 0 12px!important;
+  color:#9ca8c3!important;
+  font-size:11px!important;
+  font-weight:800!important;
+  letter-spacing:.08em!important;
+  text-align:right!important;
+  animation:aryCatalogReady .65s cubic-bezier(.2,.8,.2,1) both!important;
+}
+#home .v674-download .v736-platform-ready[hidden]{display:none!important}
+#home .v674-download .v736-platforms.v736-platforms-ready > .v736-platform{
+  animation:aryPlatformCardIn .55s cubic-bezier(.2,.8,.2,1) both;
+  animation-delay:calc(min(var(--platform-index,0),24) * 18ms);
+}
+#home .v674-download .v736-platforms > .v736-platform{
+  transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease,background .18s ease!important;
+  will-change:transform;
+}
+#home .v674-download .v736-platforms > .v736-platform:hover{
+  transform:translateY(-3px) scale(1.015)!important;
+}
+#home .v674-download .v736-platforms > .v736-platform:active{
+  transform:translateY(1px) scale(.975)!important;
+}
+#home .v674-download .v736-platform-search-wrap .v736-platform-search{
+  transition:border-color .2s ease,box-shadow .2s ease,transform .2s ease!important;
+}
+#home .v674-download .v736-platform-search-wrap .v736-platform-search:focus{
+  transform:translateY(-1px)!important;
+  box-shadow:0 0 0 3px rgba(123,120,255,.13),0 12px 28px rgba(46,64,125,.18)!important;
+}
+#home .v674-download .v736-platform-search-label,
+#home .v674-download .v736-platform-total{
+  transition:transform .2s ease,color .2s ease!important;
+}
+#home .v674-download .v736-platform-search-heading:focus-within .v736-platform-search-label,
+#home .v674-download .v736-platform-search-heading:focus-within .v736-platform-total{
+  transform:translateY(-1px)!important;
+}
+@keyframes aryCatalogReady{
+  from{opacity:0;transform:translateY(7px);filter:blur(3px)}
+  to{opacity:1;transform:none;filter:none}
+}
+@keyframes aryPlatformCardIn{
+  from{opacity:0;transform:translateY(12px) scale(.97)}
+  to{opacity:1;transform:none}
+}
+
+@media (min-width:900px){
+  #home .v674-download .v736-platform-search-heading{
+    display:grid!important;
+    grid-template-columns:minmax(120px,.55fr) minmax(250px,420px) auto!important;
+    align-items:center!important;
+    gap:14px!important;
+    width:100%!important;
+  }
+  #home .v674-download .v736-platform-search-wrap{
+    width:100%!important;
+    margin:0!important;
+  }
+  #home .v674-download .v736-platform-search-heading .v736-platform-total{
+    text-align:right!important;
+  }
+}
+
+@media (max-width:899px){
+  #home .v674-download .v736-platform-search-heading{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr) auto!important;
+    grid-template-rows:auto auto!important;
+    align-items:center!important;
+    gap:9px 12px!important;
+    width:100%!important;
+    margin-top:18px!important;
+  }
+  #home .v674-download .v736-platform-search-label{
+    grid-column:1!important;
+    grid-row:1!important;
+    margin:0!important;
+  }
+  #home .v674-download .v736-platform-search-heading .v736-platform-total{
+    grid-column:2!important;
+    grid-row:1!important;
+    margin:0!important;
+    text-align:right!important;
+  }
+  /* The search control stays on the right and shares the same right edge as 200 PLATFORM. */
+  #home .v674-download .v736-platform-search-wrap{
+    grid-column:1 / -1!important;
+    grid-row:2!important;
+    width:min(82%,420px)!important;
+    margin:0 0 14px auto!important;
+  }
+  #home .v674-download .v736-platform-search-wrap .v736-platform-search{
+    width:100%!important;
+  }
+}
+@media (max-width:420px){
+  #home .v674-download .v736-platform-search-wrap{
+    width:min(88%,420px)!important;
+  }
+}
+@media (prefers-reduced-motion:reduce){
+  #home .v674-download .v736-platforms > .v736-platform,
+  #home .v674-download .v736-platform-ready{
+    animation:none!important;
+    transition:none!important;
+  }
+}
+
+
+/* Quick-check result UI */
+.ary-quick-progress{display:grid;gap:7px;margin:10px 0 13px;padding:10px 12px;border:1px solid rgba(126,154,210,.18);border-radius:13px;background:rgba(11,18,34,.58)}
+.ary-quick-progress-head{display:flex;align-items:center;justify-content:space-between;gap:10px;color:#9eabc4;font-size:11px}
+.ary-quick-progress-head b{color:#fff;font-variant-numeric:tabular-nums}
+.ary-quick-progress-track{height:7px;overflow:hidden;border-radius:999px;background:rgba(105,125,170,.14)}
+.ary-quick-progress-track i{display:block;width:0;height:100%;border-radius:inherit;background:linear-gradient(90deg,#8d70ff,#39d6e4);box-shadow:0 0 18px rgba(105,129,255,.35);transition:width .22s ease}
+.ary-quick-player{display:block;width:100%;max-width:420px;aspect-ratio:9/16;margin:12px auto;border:1px solid rgba(142,126,255,.3);border-radius:18px;background:#05060b;box-shadow:0 18px 45px rgba(0,0,0,.28)}
+.ary-quick-image-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:12px}
+.ary-quick-image-card{display:block;overflow:hidden;border:1px solid rgba(125,151,208,.18);border-radius:14px;background:#0a1020}
+.ary-quick-image-card img{display:block;width:100%;aspect-ratio:1/1;object-fit:cover;transition:transform .25s ease}
+.ary-quick-image-card:hover img{transform:scale(1.035)}
+@media(min-width:900px){.ary-quick-image-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media(prefers-reduced-motion:reduce){.ary-quick-progress-track i,.ary-quick-image-card img{transition:none!important}}
