@@ -5,6 +5,23 @@ function initSearch(){
 const a=$("downloadLinkMode"),b=$("downloadTitleMode"),x=$("linkModePanel"),y=$("titleModePanel"),picker=$("platformPicker");
 const results=$("titleSearchResults"),help=$("titleSearchHelp"),searchInput=$("titleSearch"),searchType=$("titleSearchType"),platformSearch=$("platformSearch");
 const linkInput=$("url"),linkLabel=$("linkModePanel")?.querySelector("label");
+const cleanupLegacyPlatformUi=()=>{
+  const root=$("platformPicker")?.closest(".v674-download")||$("platformPicker")?.parentElement;
+  if(!root)return;
+  root.querySelectorAll(".v736-platform-pager,#platformPager,#platformPrev,#platformNext").forEach(node=>node.remove());
+  root.querySelectorAll("button").forEach(button=>{
+    const text=String(button.textContent||"").trim().toLocaleLowerCase("id-ID");
+    if(text==="coba lagi ↻"||text==="coba lagi ⟳"||text==="coba lagi"||text==="‹ sebelumnya"||text==="← sebelumnya"||text==="berikutnya ›"||text==="berikutnya →"){
+      if(!button.closest("#downloadResult,#titleSearchResults"))button.remove();
+    }
+  });
+};
+cleanupLegacyPlatformUi();
+if(typeof MutationObserver==="function"){
+  const legacyObserver=new MutationObserver(()=>cleanupLegacyPlatformUi());
+  const root=$("platformPicker")?.closest(".v674-download");
+  if(root)legacyObserver.observe(root,{childList:true,subtree:true});
+}
 // Hanya sediakan pencarian Video dan Gambar; konversi MP4 ke MP3 berada di Pusat Alat.
 // All-platform mode searches the complete supported platform list.
 searchType?.querySelectorAll('option[value="audio"]').forEach(node=>node.remove());
@@ -207,6 +224,7 @@ async function loadPlatformCatalog(){
  const local=window.ARYANZZ_PLATFORM_CATALOG_FALLBACK;
  const localReady=Array.isArray(local)&&local.length===200;
  const applyCatalog=(catalog,source)=>{
+  cleanupLegacyPlatformUi();
   if(!Array.isArray(catalog)||catalog.length!==200)return false;
   platformCatalog=catalog;
   for(const platform of platformCatalog){
@@ -255,6 +273,7 @@ async function loadPlatformCatalog(){
 }
 platformSearch?.addEventListener("input",()=>renderPlatformPage(1));
 loadPlatformCatalog();
+cleanupLegacyPlatformUi();
 function searchDomainsForPlatform(platform){
  const key=SEARCH_PLATFORM_ALIASES[platform]||platform;
  if(key==="all"){
