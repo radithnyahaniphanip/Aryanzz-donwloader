@@ -1400,12 +1400,23 @@ function socialNetworkPlan(selected=0){
       const knownSocialHost=url.hostname.toLowerCase().replace(/^www\\./,"");
       const explicitPlatform=knownSocialHost==="threads.com"||knownSocialHost.endsWith(".threads.com")||knownSocialHost==="threads.net"||knownSocialHost.endsWith(".threads.net")?"threads"
         :knownSocialHost==="x.com"||knownSocialHost.endsWith(".x.com")||knownSocialHost==="twitter.com"||knownSocialHost.endsWith(".twitter.com")?"x":"";
-      const detectedKey=explicitPlatform||window.aryanzzPlatformForUrl?.(url.href)||(detectedPlatform==="Direct Media URL"?"":(detectedAliases[detectedPlatform.toLowerCase()]||detectedPlatform.toLowerCase()));
-      const detectedEntry=(window.ARYANZZ_PLATFORM_CATALOG||[]).find(platform=>platform.id===detectedKey);
+      let detectedKey=explicitPlatform||window.aryanzzPlatformForUrl?.(url.href)||(detectedPlatform==="Direct Media URL"?"":(detectedAliases[detectedPlatform.toLowerCase()]||detectedPlatform.toLowerCase()));
+      let detectedEntry=(window.ARYANZZ_PLATFORM_CATALOG||[]).find(platform=>platform.id===detectedKey);
+      // Server-first recovery: a valid public URL must not fail only because the browser catalog is stale or still loading.
+      if(!detectedKey||(!detectedEntry&&detectedKey!=="threads"&&detectedKey!=="x")){
+        try{
+          const probe=await postJson("/api/platform/info",{url:url.href,expectedPlatform:"auto",fast:true},12000);
+          const serverKey=String(probe?.platform||"").toLowerCase();
+          if(serverKey){
+            detectedKey=serverKey;
+            detectedEntry=(window.ARYANZZ_PLATFORM_CATALOG||[]).find(platform=>platform.id===serverKey)||{id:serverKey,name:serverKey};
+          }
+        }catch{}
+      }
       if(!detectedKey||(!detectedEntry&&detectedKey!=="threads"&&detectedKey!=="x")){
         const message=detectedPlatform==="Direct Media URL"
           ?"Tautan ini merupakan URL file langsung atau CDN yang belum terdaftar sebagai tautan postingan platform."
-          :"Domain tautan belum dikenali dalam katalog platform ARYANZZ.";
+          :"Platform belum terdeteksi di browser maupun katalog lokal. Pemeriksaan server sudah dicoba.";
         box.replaceChildren(make("b","","GAGAL — PLATFORM BELUM DIKENALI"),make("p","warning",message+" Gunakan tautan postingan publik dari platform yang didukung."));
         button.disabled=false;
         button.textContent=oldText;
