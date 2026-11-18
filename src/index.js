@@ -2317,7 +2317,7 @@ async function resolveTikTokShortLinkViaReader(rawUrl,timeoutMs=4500){
   const response=await fetch(readerUrl,{headers:{accept:"text/plain, text/markdown;q=0.9","user-agent":"Mozilla/5.0 (compatible; ARYANZZ/1.0; +https://aryanzz-donwloader.aryanz.workers.dev)"},signal:AbortSignal.timeout(timeoutMs),cache:"no-store"});
   const text=await response.text();
   if(!response.ok)throw new Error("TikTok redirect reader HTTP "+response.status);
-  const sourceMatch=text.match(/^\s*URL Source:\s*(https:\/\/[^\s<>\\"']+)/im);
+  const sourceMatch=text.match(/^\s*URL Source:\s*(https:\/\/[^\s]+)/im);
   const candidates=[];
   if(sourceMatch?.[1])candidates.push(sourceMatch[1].replace(/&amp;/g,"&"));
   const extracted=extractTikTokCanonicalUrl(text,sourceMatch?.[1]||rawUrl);
