@@ -281,3 +281,8 @@ html[data-ary-home-motion="off"] body #home .ary-brand-symbol{animation:none!imp
   #home .v736-platform-pager button{min-height:40px!important;padding:8px 6px!important;font-size:10px!important}
   #home #platformPageLabel{font-size:9px!important}
 }
+
+/* The previous release declared this pager as flex with a more specific selector.
+   Keep the three controls in a stable grid on both link and title modes. */
+#home .v674-download[data-mode="link"] #platformPager:not([hidden]),
+#home .v674-download[data-mode="title"] #platformPager:not([hidden]){display:grid!important}
