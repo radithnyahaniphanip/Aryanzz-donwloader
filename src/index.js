@@ -580,7 +580,7 @@ async function freePublicMediaInfo(rawUrl,requestUrl,options={}){
     soundcloud:"SoundCloud diproses sebagai audio (MP3/M4A jika tersedia), bukan video MP4."
   };
   let canonicalUrl=rawUrl,resolutionError="";
-  try{canonicalUrl=await resolveSocialShortLink(rawUrl,key,fast?5200:(key==="tiktok"?8000:key==="facebook"?9500:11000))}
+  try{canonicalUrl=await resolveSocialShortLink(rawUrl,key,fast?3200:(key==="tiktok"?8000:key==="facebook"?9500:11000))}
   catch(error){
     resolutionError=String(error?.message||error).slice(0,180);
     if(key==="facebook"&&resolutionError==="facebook_login_required")
@@ -588,6 +588,12 @@ async function freePublicMediaInfo(rawUrl,requestUrl,options={}){
   }
   const isTikTokPhotoRoute=key==="tiktok"&&(()=>{try{return /\/photo\//i.test(new URL(canonicalUrl).pathname)}catch{return false}})();
   const providerUrls=key==="tiktok"?(isTikTokPhotoRoute?[canonicalUrl]:tikTokUrlCandidates(rawUrl,canonicalUrl)):[canonicalUrl];
+  const tikTokFallbackPromise=key==="tiktok"&&!isTikTokPhotoRoute
+    ?tikwmFallbackMediaInfo(canonicalUrl,requestUrl,providerUrls.filter(value=>value!==canonicalUrl),{fast,timeoutMs:fast?4800:9000}).then(value=>({ok:true,value})).catch(error=>({ok:false,error}))
+    :null;
+  const tikTokEmbedPromise=key==="tiktok"&&!isTikTokPhotoRoute&&fast
+    ?Promise.any([...new Set([rawUrl,canonicalUrl])].map(target=>fetchTikTokOEmbed(target,2200))).then(value=>({ok:true,value})).catch(error=>({ok:false,error}))
+    :null;
   if(key==="snackvideo"){
     try{return await snackVideoFallbackMediaInfo(canonicalUrl,requestUrl)}
     catch(error){return json({error:"SnackVideo belum dapat diproses melalui dua jalur publik yang diuji paralel: "+String(error?.message||error).slice(0,300)+". Pastikan tautan share video dapat dibuka tanpa login.",provider:"Concurrent public fallback cascade",fallbackTried:true},502)}
@@ -635,11 +641,11 @@ async function freePublicMediaInfo(rawUrl,requestUrl,options={}){
         // Photo Mode needs strict media signature checks even on the quick path;
         // video/photo spoofing must never be traded for speed.
         if(key==="tiktok"&&fast&&isTikTokPhotoRoute)await verifyTikTokPhotoVideoFormats(normalized,canonicalUrl);
-        if(key==="tiktok"&&!fast){
-          if(!isTikTokPhotoRoute){
-            try{
-              const fallback=await tikwmFallbackMediaInfo(canonicalUrl,requestUrl,providerUrls.filter(value=>value!==canonicalUrl));
-              const seen=new Set(),combined=[];
+        if(key==="tiktok"&&!isTikTokPhotoRoute){
+          if(!fast&&tikTokFallbackPromise){
+            const fallbackResult=await tikTokFallbackPromise;
+            if(fallbackResult?.ok){
+              const fallback=fallbackResult.value,seen=new Set(),combined=[];
               for(const item of [...(fallback.formats||[]),...(normalized.formats||[])]){
                 const identity=String(item?.downloadUrl||item?.url||"")+"|"+String(item?.mode||"");
                 if(!item?.downloadUrl||seen.has(identity))continue;
@@ -650,10 +656,10 @@ async function freePublicMediaInfo(rawUrl,requestUrl,options={}){
               normalized.providerName=[fallback.providerName,normalized.providerName].filter(Boolean).join(" + ");
               normalized.title=normalized.title||fallback.title;
               normalized.duration=Number(normalized.duration)||Number(fallback.duration)||null;
-            }catch(error){normalized.fallbackDiagnostic=String(error?.message||error).slice(0,180)}
+            }else normalized.fallbackDiagnostic=String(fallbackResult?.error?.message||fallbackResult?.error||"Provider alternatif tidak mengembalikan hasil.").slice(0,180);
           }
           await verifyTikTokPhotoVideoFormats(normalized,canonicalUrl);
-          if(!isTikTokPhotoRoute)await enrichTikTokDuration(normalized,canonicalUrl);
+          if(!fast)await enrichTikTokDuration(normalized,canonicalUrl);
         }
         return json({...normalized,fastResponse:fast,canonicalUrl:canonicalUrl!==rawUrl?canonicalUrl:undefined});
       }
@@ -681,15 +687,38 @@ async function freePublicMediaInfo(rawUrl,requestUrl,options={}){
       return json({ok:true,platform:"tiktok",title:"TikTok Photo Mode",duration:null,formats:[],embedUrl:player.href,embedId:photoItemId,providerName:"TikTok Photo Mode · official embed",providerReady:true,directDownloadAvailable:false,downloadMessage:"Pemutar resmi TikTok tersedia. Provider publik belum memberikan foto asli atau stream MP4 yang lolos validasi.",canonicalUrl:canonicalUrl!==rawUrl?canonicalUrl:undefined,diagnostics:primaryError.slice(0,900)},200);
     }
   }
-  if(key==="tiktok"){
-    try{
-      const fallback=await tikwmFallbackMediaInfo(canonicalUrl,requestUrl,providerUrls.filter(value=>value!==canonicalUrl));
+  if(key==="tiktok"&&!isTikTokPhotoRoute){
+    const fallbackResult=await tikTokFallbackPromise;
+    if(fallbackResult?.ok){
+      const fallback=fallbackResult.value;
       await verifyTikTokPhotoVideoFormats(fallback,canonicalUrl);
-      await enrichTikTokDuration(fallback,canonicalUrl);
-      return json({...fallback,canonicalUrl:canonicalUrl!==rawUrl?canonicalUrl:undefined});
-    }catch(error){
-      primaryError+="; TikTok fallback: "+String(error?.message||error).slice(0,900);
+      if(!fast)await enrichTikTokDuration(fallback,canonicalUrl);
+      return json({...fallback,fastResponse:fast,canonicalUrl:canonicalUrl!==rawUrl?canonicalUrl:undefined});
     }
+    primaryError+="; TikTok fallback: "+String(fallbackResult?.error?.message||fallbackResult?.error||"Provider alternatif tidak mengembalikan media.").slice(0,900);
+  }
+  if(key==="tiktok"&&!isTikTokPhotoRoute&&fast){
+    const embedResult=await tikTokEmbedPromise;
+    if(embedResult?.ok){
+      const embed=embedResult.value;
+      return json({
+        ok:true,platform:"tiktok",title:embed.title||"Video TikTok",extractor:"TikTok Embed Player",
+        thumbnail:embed.thumbnail||null,duration:null,formats:[],embedUrl:embed.embedUrl,embedId:embed.id,
+        embedAuthor:embed.author||null,providerName:"TikTok Embed Player",providerReady:true,
+        directDownloadAvailable:false,fastResponse:true,
+        downloadMessage:"Player resmi TikTok tersedia, tetapi provider publik belum memberikan file MP4 langsung untuk tautan ini.",
+        canonicalUrl:canonicalUrl!==rawUrl?canonicalUrl:undefined,
+        diagnostics:primaryError.slice(0,900)
+      },200);
+    }
+    primaryError+="; TikTok quick embed: "+String(embedResult?.error?.message||embedResult?.error||"oEmbed tidak merespons").slice(0,160);
+    return json({
+      ok:false,platform:"tiktok",
+      error:"Link TikTok dikenali, tetapi TikTok atau provider publik belum mengirim stream dalam batas pemeriksaan cepat. Video mungkin dibatasi wilayah, umur, login, atau layanan sumber sedang gangguan. Gunakan pemeriksaan penuh untuk jalur yang lebih mendalam.",
+      errorType:"source_unavailable_or_restricted",provider:"Quick fallback cascade",fallbackTried:true,
+      fastResponse:true,diagnostics:primaryError.slice(0,1100),
+      canonicalUrl:canonicalUrl!==rawUrl?canonicalUrl:undefined
+    },502);
   }
   // Attempt TikTok's public item metadata and page extraction before generic scraping.
   // This path was implemented but not previously wired into the fallback cascade.
@@ -2307,6 +2336,28 @@ async function facebookPublicReaderMediaInfo(rawUrl,requestUrl,timeoutMs=9000){
     diagnostics:{source:page.source||"Facebook public page",imagesFound:imageCount}
   },502);
 }
+async function resolveTikTokShortLinkViaReader(rawUrl,timeoutMs=4500){
+  const input=safePublicMediaUrl(rawUrl);
+  if(!input||!/^(?:vt|vm)\.tiktok\.com$/i.test(input.hostname))throw new Error("Bukan tautan pendek TikTok.");
+  const readerUrl="https://r.jina.ai/http://"+input.host+input.pathname+input.search;
+  const response=await fetch(readerUrl,{headers:{accept:"text/plain, text/markdown;q=0.9","user-agent":"Mozilla/5.0 (compatible; ARYANZZ/1.0; +https://aryanzz-donwloader.aryanz.workers.dev)"},signal:AbortSignal.timeout(timeoutMs),cache:"no-store"});
+  const text=await response.text();
+  if(!response.ok)throw new Error("TikTok redirect reader HTTP "+response.status);
+  const sourceMatch=text.match(/^\s*URL Source:\s*(https:\/\/[^\s]+)/im);
+  const candidates=[];
+  if(sourceMatch?.[1])candidates.push(sourceMatch[1].replace(/&amp;/g,"&"));
+  const extracted=extractTikTokCanonicalUrl(text,sourceMatch?.[1]||rawUrl);
+  if(extracted)candidates.unshift(extracted);
+  for(const candidate of candidates){
+    const target=safePublicMediaUrl(candidate);
+    if(!target||platformIdForUrl(target.href)!=="tiktok")continue;
+    if(/^(?:vt|vm)\.tiktok\.com$/i.test(target.hostname))continue;
+    if(!extractTikTokVideoId(target.href)&&!/^\/(?:@[^/]+\/)?photo\/\d{8,}/i.test(target.pathname))continue;
+    target.search="";target.hash="";
+    return target.href;
+  }
+  throw new Error("Reader tidak menemukan URL postingan TikTok canonical.");
+}
 async function resolveSocialShortLink(rawUrl,key,timeoutMs=11000){
   const canonical=canonicalSocialPostUrl(rawUrl,key);
   if(key==="facebook")return resolveFacebookShareLink(canonical,timeoutMs);
@@ -2333,9 +2384,23 @@ async function resolveSocialShortLink(rawUrl,key,timeoutMs=11000){
     ||(key==="instagram"&&host==="instagr.am")
     ||(key==="pinterest"&&host==="pin.it");
   if(!shortLink)return canonical;
+  if(key==="tiktok"){
+    const direct=async()=>{
+      const page=await fetchSocialPostHtml(canonical,timeoutMs);
+      const target=extractTikTokCanonicalUrl(page.html,page.url)||canonicalSocialPostUrl(page.url,key);
+      const parsed=safePublicMediaUrl(target);
+      if(!parsed||platformIdForUrl(parsed.href)!=="tiktok"||/^(?:vt|vm)\.tiktok\.com$/i.test(parsed.hostname))throw new Error("Redirect TikTok belum mencapai halaman postingan.");
+      if(!extractTikTokVideoId(parsed.href)&&!/^\/(?:@[^/]+\/)?photo\/\d{8,}/i.test(parsed.pathname))throw new Error("Halaman TikTok tidak memuat ID postingan.");
+      parsed.search="";parsed.hash="";
+      return parsed.href;
+    };
+    try{
+      return await Promise.any([direct(),resolveTikTokShortLinkViaReader(canonical,Math.min(timeoutMs,5200))]);
+    }catch{return canonical;}
+  }
   try{
     const page=await fetchSocialPostHtml(canonical,timeoutMs);
-    const finalUrl=key==="tiktok"?(extractTikTokCanonicalUrl(page.html,page.url)||canonicalSocialPostUrl(page.url,key)):canonicalSocialPostUrl(page.url,key);
+    const finalUrl=canonicalSocialPostUrl(page.url,key);
     if(platformIdForUrl(finalUrl)===key)return finalUrl;
   }catch{}
   return canonical;
@@ -2414,20 +2479,23 @@ function normalizeTikTokFallbackPayload(data,rawUrl,requestUrl,providerName){
   normalized.author=data.author?.nickname||data.author?.username||data.author?.unique_id||data.author||null;
   return normalized;
 }
-async function tikwmFallbackMediaInfo(rawUrl,requestUrl,alternateUrls=[]){
+async function tikwmFallbackMediaInfo(rawUrl,requestUrl,alternateUrls=[],options={}){
+  const fast=options.fast===true;
+  const providerTimeout=fast?Math.max(1200,Math.min(5000,Number(options.timeoutMs)||4800)):9000;
   const urls=[...new Set([rawUrl,...alternateUrls].filter(value=>typeof value==="string"&&value.trim()))];
+  const targets=fast?urls.slice(0,2):urls;
   const errors=[];
   const providersFor=targetUrl=>[
     {name:"DrummerDuck",run:async()=>{
       const endpoint=new URL("https://download-tktk-video.drummerduck.com/api/extract");
       endpoint.searchParams.set("url",targetUrl);
-      const response=await fetch(endpoint.href,{headers:{accept:"application/json"},signal:AbortSignal.timeout(9000),cache:"no-store"});
+      const response=await fetch(endpoint.href,{headers:{accept:"application/json"},signal:AbortSignal.timeout(providerTimeout),cache:"no-store"});
       const payload=await response.json().catch(()=>null);
       if(!response.ok||payload?.ok!==true||!payload.data)throw new Error("DrummerDuck HTTP "+response.status+": "+String(payload?.error?.message||payload?.error||"no media data").slice(0,90));
       return payload.data;
     }},
     {name:"Seekubo",run:async()=>{
-      const response=await fetch("https://tk.seekubo.com/api/v2/parse",{method:"POST",headers:{"content-type":"application/json",accept:"application/json"},body:JSON.stringify({url:targetUrl}),signal:AbortSignal.timeout(9000),cache:"no-store"});
+      const response=await fetch("https://tk.seekubo.com/api/v2/parse",{method:"POST",headers:{"content-type":"application/json",accept:"application/json"},body:JSON.stringify({url:targetUrl}),signal:AbortSignal.timeout(providerTimeout),cache:"no-store"});
       const payload=await response.json().catch(()=>null);
       if(!response.ok||!payload?.success||!payload.data)throw new Error("Seekubo HTTP "+response.status+": "+String(payload?.error?.message||payload?.error?.code||"no data").slice(0,90));
       return payload.data;
@@ -2435,14 +2503,26 @@ async function tikwmFallbackMediaInfo(rawUrl,requestUrl,alternateUrls=[]){
     {name:"TDownV4",run:async()=>{
       const endpoint=new URL("https://tdownv4.sl-bjs.workers.dev/");
       endpoint.searchParams.set("down",targetUrl);
-      const response=await fetch(endpoint.href,{headers:{accept:"application/json"},signal:AbortSignal.timeout(9000),cache:"no-store"});
+      const response=await fetch(endpoint.href,{headers:{accept:"application/json"},signal:AbortSignal.timeout(providerTimeout),cache:"no-store"});
       const payload=await response.json().catch(()=>null);
       if(!response.ok||!payload||payload.content_type!=="video"||!payload.download_url)throw new Error("TDownV4 HTTP "+response.status+": "+String(payload?.error||"no video URL").slice(0,90));
       return payload;
     }},
-    {name:"TikWM",run:()=>fetchTikwmData(targetUrl,9000)}
+    {name:"TikWM",run:()=>fetchTikwmData(targetUrl,providerTimeout)}
   ];
-  const tasks=urls.flatMap(targetUrl=>providersFor(targetUrl).map(provider=>({targetUrl,...provider})));
+  const tasks=targets.flatMap(targetUrl=>providersFor(targetUrl).map(provider=>({targetUrl,...provider})));
+  if(fast){
+    const attempts=tasks.map(task=>task.run().then(value=>{
+      const normalized=normalizeTikTokFallbackPayload(value,task.targetUrl,requestUrl,task.name);
+      if(!normalized?.formats?.some(item=>item?.mode==="video"&&item?.downloadUrl))throw new Error(task.name+" tidak memberikan stream video.");
+      return normalized;
+    }).catch(error=>{
+      errors.push(task.name+" ("+new URL(task.targetUrl).hostname+"): "+String(error?.message||error).slice(0,100));
+      throw error;
+    }));
+    try{return await Promise.any(attempts)}
+    catch{throw new Error("Quick fallback: "+errors.slice(0,6).join("; ").slice(0,480)||"Semua provider TikTok alternatif tidak merespons.");}
+  }
   const results=await Promise.allSettled(tasks.map(task=>task.run()));
   for(let i=0;i<results.length;i++){
     const result=results[i],task=tasks[i];
@@ -2451,9 +2531,9 @@ async function tikwmFallbackMediaInfo(rawUrl,requestUrl,alternateUrls=[]){
     catch(error){errors.push(task.name+": "+String(error?.message||error).slice(0,95));}
   }
   const nativeErrors=[];
-  const nativeResults=await Promise.allSettled(urls.slice(0,2).map(targetUrl=>tikTokNativePageFallback(targetUrl,requestUrl,8000)));
+  const nativeResults=await Promise.allSettled(targets.slice(0,2).map(targetUrl=>tikTokNativePageFallback(targetUrl,requestUrl,8000)));
   for(let index=0;index<nativeResults.length;index++){
-    const result=nativeResults[index],targetUrl=urls[index];
+    const result=nativeResults[index],targetUrl=targets[index];
     if(result.status==="fulfilled"){await verifyTikTokPhotoVideoFormats(result.value,targetUrl);return result.value;}
     nativeErrors.push(new URL(targetUrl).hostname+": "+String(result.reason?.message||result.reason).slice(0,180));
   }

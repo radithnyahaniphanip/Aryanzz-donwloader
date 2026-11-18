@@ -1438,9 +1438,8 @@ function socialNetworkPlan(selected=0){
       const slowSocialSource=isThreadsPlatform||selectedPlatform==="x";
       // Share-link resolution and image extraction may require multiple upstream requests.
       // Do not cancel those requests earlier than the backend's own fallback budget.
-      const imageCheckTimeout=slowSocialSource?(fast?25000:38000)
-        :fast?((isTikTokPhotoPost||isTikTokShortLink)?16000:13000)
-        :((isTikTokPhotoPost||isTikTokShortLink)?34000:(isYouTubePhotoPost||isPhotoRoute||isSocialImagePostRoute)?20000:16000);
+      const imageCheckTimeout=fast?9000
+        :(slowSocialSource?38000:((isTikTokPhotoPost||isTikTokShortLink)?34000:(isYouTubePhotoPost||isPhotoRoute||isSocialImagePostRoute)?20000:16000));
       const imageExtractionPromise=shouldTryImageExtraction
         ?(async()=>{
           const endpoint="/api/image/extract?url="+encodeURIComponent(url.href);
@@ -1452,7 +1451,7 @@ function socialNetworkPlan(selected=0){
           try{return await requestImage(imageCheckTimeout)}
           catch(error){
             if(error?.name==="AbortError")return {ok:false,data:{error:"Pemeriksaan dibatalkan."}};
-            if(error?.name==="TimeoutError"&&(isTikTokPhotoPost||isTikTokShortLink)){
+            if(!fast&&error?.name==="TimeoutError"&&(isTikTokPhotoPost||isTikTokShortLink)){
               try{return await requestImage(22000)}
               catch(retryError){return {ok:false,data:{error:"Server sumber atau provider tidak merespons tepat waktu, bukan berarti sinyal HP lemah. Coba pemeriksaan lengkap atau ulangi nanti.",diagnostics:String(retryError?.message||retryError)}}}
             }
@@ -1463,7 +1462,7 @@ function socialNetworkPlan(selected=0){
       let info;
       try{
         info=isYouTube
-          ?await browserHybridYoutubeInfo(url.href,fast?12500:25000)
+          ?await browserHybridYoutubeInfo(url.href,fast?9000:25000)
           :isTikTokPhotoPost
             ?{ok:true,title:"TikTok Photo Mode",filename:"TikTok Photo Mode",type:"image",formats:[],extractor:"TikTok Photo Mode"}
             :isThreadsPlatform
@@ -1479,7 +1478,7 @@ function socialNetworkPlan(selected=0){
                   return data;
                 };
                 const provider=async()=>{
-                  const data=await postJson("/api/platform/info",{url:url.href,expectedPlatform:"threads",fast:false},65000);
+                  const data=await postJson("/api/platform/info",{url:url.href,expectedPlatform:"threads",fast},fast?9500:65000);
                   if(!Array.isArray(data.formats)||!data.formats.some(item=>item?.downloadUrl))throw new Error(String(data.error||"Threads provider: no public media"));
                   return data;
                 };
@@ -1489,7 +1488,7 @@ function socialNetworkPlan(selected=0){
                   return {ok:false,type:"image",title:"Threads",formats:[],error:"Belum ditemukan video/audio langsung. Memeriksa gambar Threads…",diagnostics:reasons};
                 }
               })()
-              :await postJson("/api/platform/info",{url:url.href,expectedPlatform:selectedPlatform,fast},slowSocialSource?(fast?28000:41000):(fast?20000:34000));
+              :await postJson("/api/platform/info",{url:url.href,expectedPlatform:selectedPlatform,fast},slowSocialSource?(fast?10000:41000):(fast?10000:34000));
       }catch(error){
         if(!shouldTryImageExtraction)throw error;
         info={ok:false,error:String(error?.message||error),title:"",formats:[],type:"image"};

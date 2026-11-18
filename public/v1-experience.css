@@ -301,3 +301,141 @@ body:not(.ary-motion-enabled) [role="button"].ary-click-fx{
   body:not(.ary-motion-enabled) a.ary-click-fx,
   body:not(.ary-motion-enabled) [role="button"].ary-click-fx{animation:none!important}
 }
+
+/* V1.0.2267 — deterministic desktop/mobile platform grid and tactile catalogue */
+#home .v674-download[data-mode="link"] #platformPicker.v736-platforms{
+  display:grid!important;
+  grid-auto-flow:row!important;
+  grid-template-columns:repeat(7,minmax(0,1fr))!important;
+  align-items:stretch!important;
+  justify-items:stretch!important;
+  gap:11px!important;
+  width:100%!important;
+  min-width:0!important;
+  max-width:100%!important;
+  overflow:visible!important;
+}
+#home .v674-download[data-mode="link"] #platformPicker.v736-platforms>.v736-platform{
+  display:flex!important;
+  position:relative!important;
+  flex-direction:column!important;
+  align-items:center!important;
+  justify-content:center!important;
+  width:100%!important;
+  min-width:0!important;
+  max-width:none!important;
+  min-height:104px!important;
+  padding:11px 7px!important;
+  gap:7px!important;
+  box-sizing:border-box!important;
+  white-space:normal!important;
+  text-align:center!important;
+  overflow:hidden!important;
+}
+#home .v674-download[data-mode="link"] #platformPicker.v736-platforms>.v736-platform>.v736-logo{
+  display:grid!important;
+  place-items:center!important;
+  flex:0 0 42px!important;
+  width:42px!important;
+  height:42px!important;
+  max-width:42px!important;
+  max-height:42px!important;
+  margin:0!important;
+}
+#home .v674-download[data-mode="link"] #platformPicker.v736-platforms>.v736-platform>.v736-logo svg,
+#home .v674-download[data-mode="link"] #platformPicker.v736-platforms>.v736-platform>.v736-logo img{
+  display:block!important;
+  width:28px!important;
+  height:28px!important;
+  max-width:28px!important;
+  max-height:28px!important;
+  object-fit:contain!important;
+}
+#home .v674-download[data-mode="link"] #platformPicker.v736-platforms>.v736-platform>span:last-of-type{
+  display:block!important;
+  width:100%!important;
+  max-width:100%!important;
+  min-width:0!important;
+  overflow-wrap:anywhere!important;
+  word-break:normal!important;
+  white-space:normal!important;
+  font-size:12px!important;
+  line-height:1.25!important;
+  text-align:center!important;
+}
+#home .v674-download[data-mode="link"] #platformPicker.v736-platforms>.v736-platform>.v736-platform-tier{
+  display:block!important;
+  max-width:100%!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+  white-space:nowrap!important;
+  font-size:8px!important;
+}
+#home .v674-download[data-mode="link"] #platformPicker.v736-platforms>[data-platform="all"]{
+  grid-column:1/-1!important;
+  flex-direction:row!important;
+  min-height:62px!important;
+  gap:12px!important;
+  padding:10px 16px!important;
+}
+#home .v674-download[data-mode="link"] #platformPicker.v736-platforms>[data-platform="all"]>.v736-logo{
+  flex-basis:38px!important;width:38px!important;height:38px!important;
+}
+#home .v674-download[data-mode="link"] #platformPicker.v736-platforms>.v736-platform:not([data-platform="all"]){
+  transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease,filter .18s ease!important;
+}
+#home .v674-download[data-mode="link"] #platformPicker.v736-platforms>.v736-platform:not([data-platform="all"]):hover{
+  transform:translateY(-3px)!important;
+  border-color:rgba(117,166,255,.72)!important;
+  box-shadow:0 8px 24px rgba(46,105,220,.16)!important;
+  filter:brightness(1.08)!important;
+}
+#home .v674-download[data-mode="link"] #platformPicker.v736-platforms>.v736-platform:active{
+  transform:scale(.965)!important;
+}
+#home .v674-download .v736-platform-search-heading{
+  display:flex!important;
+  flex-direction:row!important;
+  align-items:center!important;
+  justify-content:space-between!important;
+  gap:12px!important;
+  width:100%!important;
+}
+#home .v674-download .v736-platform-search-label{
+  animation:aryPlatformLabelGlow 3.8s ease-in-out infinite;
+}
+#home .v674-download .v736-platform-total{
+  animation:aryPlatformCountGlow 3.2s ease-in-out infinite;
+  font-variant-numeric:tabular-nums;
+}
+@keyframes aryPlatformLabelGlow{
+  0%,100%{opacity:.82;text-shadow:0 0 0 rgba(106,180,255,0)}
+  50%{opacity:1;text-shadow:0 0 12px rgba(106,180,255,.28)}
+}
+@keyframes aryPlatformCountGlow{
+  0%,100%{text-shadow:0 0 0 rgba(135,111,255,0);transform:translateY(0)}
+  50%{text-shadow:0 0 12px rgba(135,111,255,.42);transform:translateY(-1px)}
+}
+@media(min-width:1500px){
+  #home .v674-download[data-mode="link"] #platformPicker.v736-platforms{grid-template-columns:repeat(8,minmax(0,1fr))!important}
+}
+@media(min-width:600px) and (max-width:1023px){
+  #home .v674-download[data-mode="link"] #platformPicker.v736-platforms{grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:9px!important}
+}
+@media(max-width:599px){
+  #home .v674-download[data-mode="link"] #platformPicker.v736-platforms{grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:8px!important}
+  #home .v674-download[data-mode="link"] #platformPicker.v736-platforms>.v736-platform{min-height:86px!important;padding:8px 4px!important;gap:5px!important}
+  #home .v674-download[data-mode="link"] #platformPicker.v736-platforms>.v736-platform>.v736-logo{flex-basis:34px!important;width:34px!important;height:34px!important}
+  #home .v674-download[data-mode="link"] #platformPicker.v736-platforms>.v736-platform>.v736-logo svg,
+  #home .v674-download[data-mode="link"] #platformPicker.v736-platforms>.v736-platform>.v736-logo img{width:25px!important;height:25px!important}
+  #home .v674-download[data-mode="link"] #platformPicker.v736-platforms>.v736-platform>span:last-of-type{font-size:10px!important}
+  #home .v674-download[data-mode="link"] #platformPicker.v736-platforms>.v736-platform>.v736-platform-tier{font-size:7px!important}
+}
+@media(max-width:360px){
+  #home .v674-download[data-mode="link"] #platformPicker.v736-platforms{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+}
+@media(prefers-reduced-motion:reduce){
+  #home .v674-download .v736-platform-search-label,
+  #home .v674-download .v736-platform-total{animation:none!important}
+  #home .v674-download[data-mode="link"] #platformPicker.v736-platforms>.v736-platform{transition:none!important}
+}
