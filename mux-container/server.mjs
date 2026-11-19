@@ -55,11 +55,19 @@ export function validateMuxRequest(payload) {
   if (!/^[0-9a-f-]{36}$/i.test(String(payload.id || ""))) throw new Error("ID proses tidak valid.");
   const height = Number(payload.height);
   if (!ALLOWED_HEIGHTS.has(height)) throw new Error("Resolusi sumber tidak didukung.");
-  if (String(payload.videoExt || "").toLowerCase() !== "mp4" || String(payload.audioExt || "").toLowerCase() !== "m4a") throw new Error("Mesin mux hanya menerima pasangan MP4 + M4A.");
+  const videoExt = String(payload.videoExt || "").toLowerCase();
+  const audioExt = String(payload.audioExt || "").toLowerCase();
+  const mp4Pair = ["mp4", "m4v"].includes(videoExt) && ["m4a", "aac"].includes(audioExt);
+  const webmPair = videoExt === "webm" && ["webm", "opus"].includes(audioExt);
+  if (!mp4Pair && !webmPair) throw new Error("Format sumber tidak cocok. Gunakan MP4 + M4A/AAC atau WebM + Opus.");
+  const videoCodec = String(payload.videoCodec || "").toLowerCase();
+  const audioCodec = String(payload.audioCodec || "").toLowerCase();
+  if (videoCodec && !["h264", "hevc", "av1", "vp9"].includes(videoCodec)) throw new Error("Codec video tidak kompatibel dengan MP4.");
+  if (audioCodec && !["aac", "opus", "vorbis"].includes(audioCodec)) throw new Error("Codec audio tidak kompatibel dengan MP4.");
   const videoUrl = allowedMediaUrl(payload.videoUrl);
   const audioUrl = allowedMediaUrl(payload.audioUrl);
   const title = safeFilename(payload.title);
-  return { id: String(payload.id), videoUrl, audioUrl, title, height };
+  return { id: String(payload.id), videoUrl, audioUrl, title, height, videoExt, audioExt, videoCodec, audioCodec };
 }
 
 export function buildFfmpegArgs(payload) {
@@ -84,7 +92,7 @@ export function buildFfmpegArgs(payload) {
     "-map", "0:v:0",
     "-map", "1:a:0",
     "-c:v", "copy",
-    "-c:a", "copy",
+    ...(payload.audioCodec === "aac" ? ["-c:a", "copy"] : ["-c:a", "aac", "-b:a", "192k", "-ar", "48000"]),
     "-map_metadata", "-1",
     "-metadata", "title=" + payload.title.replace(/\.mp4$/i, ""),
     "-max_muxing_queue_size", "2048",
@@ -164,8 +172,13 @@ async function inspectMuxStreams(payload, spawnImpl) {
   const audio = (Array.isArray(audioData.streams) ? audioData.streams : []).find(item => item.codec_type === "audio");
   if (!video || !audio) throw new Error("Sumber tidak memiliki pasangan video dan audio lengkap.");
   const actualHeight = Number(video.height) || 0;
+  const videoCodec = String(video.codec_name || "").toLowerCase();
+  const audioCodec = String(audio.codec_name || "").toLowerCase();
   if (actualHeight !== payload.height) throw new Error("Resolusi sumber sebenarnya " + actualHeight + "p, bukan " + payload.height + "p. ARYANZZ menghentikan proses agar tidak memberi label kualitas palsu.");
-  return { ok: true, height: actualHeight, videoCodec: String(video.codec_name || ""), audioCodec: String(audio.codec_name || "") };
+  if (!["h264", "hevc", "av1", "vp9"].includes(videoCodec)) throw new Error("Codec video " + (videoCodec || "tidak diketahui") + " tidak dapat dimasukkan ke MP4 tanpa konversi video.");
+  const allowedAudio = ["m4a", "aac"].includes(payload.audioExt) ? ["aac"] : ["opus", "vorbis"];
+  if (!allowedAudio.includes(audioCodec)) throw new Error("Codec audio " + (audioCodec || "tidak diketahui") + " tidak cocok dengan format sumber yang dipilih.");
+  return { ok: true, height: actualHeight, videoCodec, audioCodec };
 }
 
 export function createMuxServer({ spawnImpl = spawn, probeImpl = inspectMuxStreams } = {}) {
@@ -195,6 +208,7 @@ export function createMuxServer({ spawnImpl = spawn, probeImpl = inspectMuxStrea
       payload = validateMuxRequest(await readJson(req));
       const pathId = url.pathname.split("/").pop();
       if (payload.id !== pathId) throw new Error("ID proses tidak cocok.");
+      if (!payload.videoCodec || !payload.audioCodec) throw new Error("Metadata codec sumber belum diverifikasi.");
     } catch (error) {
       return json(res, 400, { ok: false, error: String(error?.message || "Data mux tidak valid.").slice(0, 180) });
     }
