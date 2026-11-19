@@ -3344,7 +3344,7 @@ async function hybridYoutubeFile(request){
   }catch(e){return json({error:"Gagal mengambil stream dari instance komunitas: "+String(e.message||"network error").slice(0,160)},502)}
   if(!response||![200,206].includes(response.status)||!response.body)return json({error:"Stream tidak tersedia atau ditolak (HTTP "+(response?.status||502)+") dari "+current.hostname+" setelah "+profiles.length+" pola permintaan. Coba provider/instance lain."},502);
   const size=Number(response.headers.get("content-length")||0);
-  if(size>MAX_YOUTUBE_BYTES){await response.body.cancel();return json({error:"File melebihi batas 500 MB."},413)}
+  if(size>MAX_YOUTUBE_BYTES){await response.body.cancel();return json({error:"File melebihi batas aman 14 GB."},413)}
   if(probe){
     const contentType=String(response.headers.get("content-type")||"").toLowerCase();
     if(contentType.startsWith("text/")||contentType.includes("application/json")||contentType.includes("application/xml")){
