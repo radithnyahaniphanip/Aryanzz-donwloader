@@ -5,6 +5,7 @@ const read=path=>readFileSync(new URL(path,import.meta.url),"utf8");
 const downloader=read("../public/downloader.js");
 const worker=read("../src/index.js");
 const homeCss=read("../public/v1-experience.css");
+const muxServer=read("../mux-container/server.mjs");
 
 function functionSource(source,name,indent="  "){
   const pattern=new RegExp("(^|\\n)"+indent+"function "+name+"\\([^\\n]*\\)\\s*\\{[\\s\\S]*?\\n"+indent+"\\}","m");
@@ -17,6 +18,7 @@ const qualityOrder=new Function("return ("+functionSource(downloader,"youtubeCan
 const providerAudio=new Function("return ("+functionSource(downloader,"providerAudioForVideo")+");")();
 const hasCompatibleAudio=new Function("providerAudioForVideo","return ("+functionSource(downloader,"hasCompatibleAudio")+");")(providerAudio);
 const hasCompatibleProviderAudio=new Function("hasCompatibleAudio","return ("+functionSource(downloader,"hasCompatibleProviderAudio")+");")(hasCompatibleAudio);
+const socialVideoCandidates=new Function("youtubeCandidateQualityOrder","hasCompatibleProviderAudio","return ("+functionSource(downloader,"socialVideoCandidates")+");")(qualityOrder,hasCompatibleProviderAudio);
 const estimateFormatBytes=(item,duration)=>({
   bytes:Number(item.sizeBytes)||Math.round((Number(item.bitrate)||0)*(Number(duration)||0)/8),
   exact:Number(item.sizeBytes)>0
@@ -53,6 +55,16 @@ assert.equal(estimateQuality({formats:[adaptive1440],duration:60},1440),null,"Ad
 const publicVideo={mode:"video",ext:"mp4",height:1440,videoOnly:true,instance:"https://provider.example",bitrate:8_000_000,downloadUrl:"/api/social-file?video=1"};
 const publicAudio={mode:"audio",ext:"m4a",instance:"https://provider.example",bitrate:128_000,downloadUrl:"/api/social-file?audio=1"};
 assert.equal(hasCompatibleProviderAudio(publicVideo,[publicVideo,publicAudio]),true,"Social adaptive video should be selectable when a matching audio track exists");
+const publicWebm={mode:"video",ext:"webm",height:2160,videoOnly:true,instance:"https://provider.example",downloadUrl:"/api/social-file?webm=1"};
+const publicOpus={mode:"audio",ext:"opus",instance:"https://provider.example",downloadUrl:"/api/social-file?opus=1"};
+assert.equal(providerAudio(publicWebm,[publicWebm,publicOpus]).ext,"opus","WebM video should pair with a compatible Opus audio track.");
+const publicMov={mode:"video",ext:"mov",height:1080,videoOnly:false,downloadUrl:"/api/social-file?mov=1"};
+const publicAvi={mode:"video",ext:"avi",height:1440,videoOnly:false,downloadUrl:"/api/social-file?avi=1"};
+const publicFlv={mode:"video",ext:"flv",height:720,videoOnly:false,downloadUrl:"/api/social-file?flv=1"};
+const socialCandidates=socialVideoCandidates([publicMov,publicFlv,publicAvi],1440);
+assert.equal(socialCandidates[0].ext,"avi","An exact 1440p AVI source should remain selectable for MP4 conversion.");
+assert.ok(socialCandidates.some(item=>item.ext==="mov"),"MOV sources must not be discarded before MP4 conversion.");
+assert.ok(socialCandidates.some(item=>item.ext==="flv"),"FLV sources must not be discarded before MP4 conversion.");
 const publicEstimate=estimateProviderQuality({duration:60},1440,[publicVideo,publicAudio]);
 assert.equal(publicEstimate.kind,"adaptive");
 assert.equal(publicEstimate.actualHeight,1440);
@@ -60,6 +72,12 @@ assert.ok(publicEstimate.bytes>0,"Adaptive size estimate must include video and 
 
 assert.ok(downloader.includes("candidates=selectProviderCandidates(youtubeCandidateQualityOrder(exactFormats,wanted),2,8)"),"YouTube download must only attempt the resolution the user selected");
 assert.ok(downloader.includes("async function muxSocialVideo("),"Social providers need a real video/audio mux path for adaptive formats");
+assert.ok(downloader.includes("async function convertSocialVideoToMp4("),"Single-file MOV/WebM/AVI/FLV sources should be converted to a validated MP4.");
+assert.ok(downloader.includes("async function downloadSocialServerMux(")&&downloader.includes("/api/social/mux-ticket")&&downloader.includes("/api/social/mux?ticket="),"Social MP4 conversion should use an optional external FFmpeg server before browser-memory conversion.");
+assert.ok(downloader.includes("allowSilent=false")&&downloader.includes('"0:a:0"'),"Social MP4 conversion must not silently produce an audio-less file; only photo slideshows may opt into silent output.");
+assert.ok(downloader.includes("aryanzz-social-output.mp4"),"Adaptive social video and audio tracks should be packaged as MP4.");
+assert.ok(downloader.includes("socialVideoCandidates(all,Number(quality)||480)"),"Social video candidates must include supported non-MP4 source containers rather than rejecting them early.");
+assert.ok(downloader.includes("Video slideshow MP4 siap"),"Photo carousel slideshow should finish as MP4 even when MediaRecorder only supports WebM.");
 assert.ok(downloader.includes("hasCompatibleProviderAudio(item,info.formats)"),"Adaptive quality choices must be hidden unless a compatible audio track exists");
 assert.ok(downloader.includes("Resolusi video sumber tetap"),"Muxing must preserve and report the real source resolution");
 assert.ok(downloader.includes("returnOnly:true"),"Adaptive track downloads must support an intermediate mode without saving an incomplete file");
@@ -67,6 +85,15 @@ assert.ok(downloader.includes('[4320,"4320p · 8K"]'),"The quality menu must inc
 assert.ok(downloader.includes("2160,4320].includes(height)"),"Browser provider parser must accept 4320p");
 assert.ok(worker.includes("402:4320,571:4320"),"Worker must recognize YouTube 8K itags");
 assert.ok(worker.includes("2160,4320].includes(height)"),"Worker provider parser must accept 4320p");
+assert.ok(downloader.includes("downloadYoutubeServerMux"),"Adaptive MP4 streams should use the server-side streaming mux path before browser memory muxing.");
+assert.ok(downloader.includes("/api/youtube/hybrid/mux-ticket"),"The browser should request a signed mux ticket before starting a large MP4 download.");
+assert.ok(worker.includes("const MAX_YOUTUBE_BYTES=14*1024*1024*1024;"),"Direct YouTube MP4 streaming should allow files up to the configured 14 GB safety cap.");
+assert.ok(worker.includes("hybridYoutubeMuxTicket")&&worker.includes("hybridYoutubeMuxFile"),"The Worker should expose signed ticket and streaming mux endpoints.");
+assert.ok(worker.includes("serverMuxReady:!!(env.MEDIA_MUX_URL||env.YOUTUBE_MUX_URL)&&!!(env.MEDIA_MUX_TOKEN||env.YOUTUBE_MUX_TOKEN)"),"The API status should report whether the optional external media mux service is configured.");
+assert.ok(downloader.includes('videoExt==="webm"&&["webm","opus"].includes(audioExt)'),"High-resolution WebM video plus Opus audio should use the MP4 server mux path.");
+assert.ok(worker.includes('videoExt==="webm"&&["webm","opus"].includes(audioExt)'),"The Worker should accept compatible WebM plus Opus sources.");
+assert.ok(muxServer.includes('const audioCodecArgs = String(payload.audioCodec||"").toLowerCase()==="aac"')&&muxServer.includes('["-c:a","aac","-b:a","192k","-ar","48000"]'),"Non-AAC social audio should be converted to AAC while preserving compatible source video.");
+assert.ok(muxServer.includes('["h264","hevc","av1","vp9"]')&&muxServer.includes('"libx264"'),"The mux should copy compatible source video and only transcode unsupported video codecs without upscaling.");
 
 assert.ok(homeCss.includes("margin-bottom:26px!important"),"Paste-link mode must have clear space below the mode buttons");
 assert.ok(homeCss.includes("padding-top:8px!important"),"Platform search must have breathing room from the mode buttons");

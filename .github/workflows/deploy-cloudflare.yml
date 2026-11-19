@@ -31,6 +31,8 @@ jobs:
       - name: Check every loaded JavaScript asset
         run: |
           node --check src/index.js
+          node --check src/youtube-mux-worker.js
+          node --check mux-container/server.mjs
           node --check src/auth.js
           node --check public/guest-access.js
           node --check tests/guest-access-smoke.mjs
@@ -42,6 +44,7 @@ jobs:
           node --check tests/facebook-offline-smoke.mjs
           node --check tests/release-smoke.mjs
           node --check tests/youtube-quality-regression.mjs
+          node --check tests/youtube-mux-service-smoke.mjs
           node --check tests/profile-motion-avatar-smoke.mjs
           node --check tests/auth-gate-smoke.mjs
           node --check tests/module-boundaries-smoke.mjs
