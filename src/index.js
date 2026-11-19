@@ -3531,7 +3531,7 @@ async function hybridYoutubeMuxFile(request,env){
 const SOCIAL_MUX_MEDIA_ROOTS=[...HYBRID_MEDIA_ROOTS,"googlevideo.com","cdninstagram.com","fbcdn.net","fbsbx.com","tiktokcdn.com","tiktokcdn-us.com","tiktokcdn-eu.com","tiktokcdn.net","tiktokv.com","byteoversea.com","ibytedtos.com","bytecdn.cn","muscdn.com","musical.ly","twimg.com","redditmedia.com","redd.it","vimeocdn.com","vimeo.com","pinimg.com","kwai.net","snackvideo.com","threads.net","threads.com","capcut.com"];
 function socialMuxHostAllowed(url,env){
   const host=url.hostname.toLowerCase();
-  const extra=String(env?.MEDIA_MUX_ALLOWED_HOSTS||"").split(",").map(value=>value.trim().toLowerCase().replace(/^\\.+|\\.+$/g,"")).filter(Boolean);
+  const extra=String(env?.MEDIA_MUX_ALLOWED_HOSTS||"").split(",").map(value=>value.trim().toLowerCase().replace(/^\.+|\.+$/g,"")).filter(Boolean);
   return [...SOCIAL_MUX_MEDIA_ROOTS,...extra].some(root=>host===root||host.endsWith("."+root));
 }
 async function socialMuxTicket(request,env){
