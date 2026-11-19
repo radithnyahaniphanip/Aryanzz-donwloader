@@ -649,9 +649,9 @@
     try{
       const [videoProbe,audioProbe]=await Promise.all([probeYoutubeTrack(videoItem,info),probeYoutubeTrack(audioItem,info)]);
       const videoTotal=Number(videoProbe?.totalBytes)||0,audioTotal=Number(audioProbe?.totalBytes)||0;
-      if(videoTotal>maxTrack)throw new Error("Komponen video berukuran "+formatDownloadSize(videoTotal)+" dan melewati batas aman memori perangkat. Pilih kualitas lebih rendah.");
-      if(audioTotal>maxTrack)throw new Error("Komponen suara berukuran "+formatDownloadSize(audioTotal)+" dan melewati batas aman memori perangkat. Pilih kualitas lebih rendah.");
-      if(videoTotal&&audioTotal&&videoTotal+audioTotal>maxCombined)throw new Error("Gabungan media "+formatDownloadSize(videoTotal+audioTotal)+" melewati batas aman memori HP. ARYANZZ mencoba kualitas lebih rendah.");
+      if(videoTotal>maxTrack)throw new Error("Komponen video berukuran "+formatDownloadSize(videoTotal)+" dan terlalu besar untuk digabung di RAM HP. Mesin MP4 server 2K/4K/8K belum aktif; aktifkan layanan FFmpeg streaming agar kualitas asli dapat digabung tanpa membebani memori perangkat.");
+      if(audioTotal>maxTrack)throw new Error("Komponen suara berukuran "+formatDownloadSize(audioTotal)+" dan terlalu besar untuk digabung di RAM HP. Mesin MP4 server 2K/4K/8K belum aktif.");
+      if(videoTotal&&audioTotal&&videoTotal+audioTotal>maxCombined)throw new Error("Gabungan media "+formatDownloadSize(videoTotal+audioTotal)+" terlalu besar untuk RAM HP. Mesin MP4 server 2K/4K/8K belum aktif; unduhan dihentikan agar perangkat tidak kehabisan memori.");
       if(lowMemory&&(!videoTotal||!audioTotal)){
         const error=new Error("RAM perangkat terbatas dan provider tidak memberikan ukuran kedua komponen. ARYANZZ memilih file video langsung yang lebih aman.");
         error.code="FFMPEG_SKIPPED_LOW_MEMORY";
@@ -787,6 +787,7 @@
   }
   async function downloadYoutubeServerMux(url,videoItem,audioItem,info,bar,progressText,progressMeta){
     const height=Number(videoItem?.height)||0;
+    if(String(videoItem?.ext||"").toLowerCase()!=="mp4"||String(audioItem?.ext||"").toLowerCase()!=="m4a")return null;
     const filename=safeFilename((info.outputName||info.title||"aryanzz-youtube").replace(/\.(?:mp4|mp3|m4a|webm|mov)$/i,"")+".mp4");
     progressText.textContent="Memeriksa stream "+height+"p dan menyiapkan MP4 di server…";
     progressMeta.textContent="Video dan audio asli diperiksa terlebih dahulu. Penggabungan dilakukan tanpa memuat file multi-GB ke RAM HP.";
