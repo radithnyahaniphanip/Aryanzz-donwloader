@@ -6,9 +6,10 @@ keep_vars = true
 
 [[containers]]
 class_name = "YouTubeMuxContainer"
-image = "./mux-container/Dockerfile"
-instance_type = "standard-3"
-max_instances = 2
+scheduling_policy = "durable_object"
+
+[containers.images.base]
+dockerfile = "./mux-container/Dockerfile"
 
 [[durable_objects.bindings]]
 name = "YOUTUBE_MUX"
