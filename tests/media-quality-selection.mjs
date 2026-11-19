@@ -73,6 +73,8 @@ assert.ok(publicEstimate.bytes>0,"Adaptive size estimate must include video and 
 assert.ok(downloader.includes("candidates=selectProviderCandidates(youtubeCandidateQualityOrder(exactFormats,wanted),2,8)"),"YouTube download must only attempt the resolution the user selected");
 assert.ok(downloader.includes("async function muxSocialVideo("),"Social providers need a real video/audio mux path for adaptive formats");
 assert.ok(downloader.includes("async function convertSocialVideoToMp4("),"Single-file MOV/WebM/AVI/FLV sources should be converted to a validated MP4.");
+assert.ok(downloader.includes("async function downloadSocialServerMux(")&&downloader.includes("/api/social/mux-ticket")&&downloader.includes("/api/social/mux?ticket="),"Social MP4 conversion should use an optional external FFmpeg server before browser-memory conversion.");
+assert.ok(downloader.includes("allowSilent=false")&&downloader.includes('"0:a:0"'),"Social MP4 conversion must not silently produce an audio-less file; only photo slideshows may opt into silent output.");
 assert.ok(downloader.includes("aryanzz-social-output.mp4"),"Adaptive social video and audio tracks should be packaged as MP4.");
 assert.ok(downloader.includes("socialVideoCandidates(all,Number(quality)||480)"),"Social video candidates must include supported non-MP4 source containers rather than rejecting them early.");
 assert.ok(downloader.includes("Video slideshow MP4 siap"),"Photo carousel slideshow should finish as MP4 even when MediaRecorder only supports WebM.");
