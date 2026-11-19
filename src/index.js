@@ -3528,10 +3528,11 @@ async function hybridYoutubeMuxFile(request,env){
   headers.delete("content-length");
   return new Response(upstream.body,{status:200,headers});
 }
-const SOCIAL_MUX_MEDIA_ROOTS=[...HYBRID_MEDIA_ROOTS,"googlevideo.com","cdninstagram.com","fbcdn.net","fbsbx.com","tiktokcdn.com","tiktokv.com","byteoversea.com","ibytedtos.com","twimg.com","redditmedia.com","redd.it","vimeocdn.com","vimeo.com","pinimg.com","kwai.net","snackvideo.com","threads.net","threads.com","capcut.com"];
-function socialMuxHostAllowed(url){
+const SOCIAL_MUX_MEDIA_ROOTS=[...HYBRID_MEDIA_ROOTS,"googlevideo.com","cdninstagram.com","fbcdn.net","fbsbx.com","tiktokcdn.com","tiktokcdn-us.com","tiktokcdn-eu.com","tiktokcdn.net","tiktokv.com","byteoversea.com","ibytedtos.com","bytecdn.cn","muscdn.com","musical.ly","twimg.com","redditmedia.com","redd.it","vimeocdn.com","vimeo.com","pinimg.com","kwai.net","snackvideo.com","threads.net","threads.com","capcut.com"];
+function socialMuxHostAllowed(url,env){
   const host=url.hostname.toLowerCase();
-  return SOCIAL_MUX_MEDIA_ROOTS.some(root=>host===root||host.endsWith("."+root));
+  const extra=String(env?.MEDIA_MUX_ALLOWED_HOSTS||"").split(",").map(value=>value.trim().toLowerCase().replace(/^\\.+|\\.+$/g,"")).filter(Boolean);
+  return [...SOCIAL_MUX_MEDIA_ROOTS,...extra].some(root=>host===root||host.endsWith("."+root));
 }
 async function socialMuxTicket(request,env){
   const secret=String(env?.MEDIA_MUX_TOKEN||env?.YOUTUBE_MUX_TOKEN||""),serviceOrigin=youtubeMuxServiceOrigin(env);
@@ -3541,7 +3542,7 @@ async function socialMuxTicket(request,env){
   const video=safePublicMediaUrl(data?.videoUrl||"");
   const audio=data?.audioUrl?safePublicMediaUrl(data.audioUrl):null;
   if(!source||!isPlatformLink(source.href))return json({ok:false,error:"Tautan sumber platform tidak valid."},400);
-  if(!video||!socialMuxHostAllowed(video)||data?.audioUrl&&(!audio||!socialMuxHostAllowed(audio)))return json({ok:false,error:"CDN sumber belum termasuk daftar host FFmpeg yang diizinkan. Host tambahan dapat dikonfigurasi pada server."},422);
+  if(!video||!socialMuxHostAllowed(video,env)||data?.audioUrl&&(!audio||!socialMuxHostAllowed(audio,env)))return json({ok:false,error:"CDN sumber belum termasuk daftar host FFmpeg yang diizinkan. Host tambahan dapat dikonfigurasi pada server."},422);
   const videoExt=String(data?.videoExt||"").toLowerCase(),audioExt=String(data?.audioExt||"").toLowerCase();
   if(!["mp4","m4v","webm","mov","avi","3gp","flv","mkv","ts","mpg","mpeg","wmv"].includes(videoExt))return json({ok:false,error:"Format video sumber belum didukung mesin MP4."},422);
   if(audio&& !["m4a","aac","mp3","opus","ogg","wav","flac","webm"].includes(audioExt))return json({ok:false,error:"Format audio sumber belum didukung mesin MP4."},422);
@@ -3579,7 +3580,7 @@ async function socialMuxFile(request,env){
   if(!payload||payload.v!==1||!/^([0-9a-f-]{36})$/i.test(String(payload.id||"")))return json({ok:false,error:"Tiket mux tidak valid."},403);
   if(Number(payload.expiresAt)<Date.now())return json({ok:false,error:"Tiket mux sudah kedaluwarsa. Periksa tautan sekali lagi."},410);
   const video=safePublicMediaUrl(payload.videoUrl||""),audio=payload.audioUrl?safePublicMediaUrl(payload.audioUrl):null;
-  if(!video||!socialMuxHostAllowed(video)||payload.audioUrl&&(!audio||!socialMuxHostAllowed(audio)))return json({ok:false,error:"CDN sumber pada tiket tidak diizinkan."},422);
+  if(!video||!socialMuxHostAllowed(video,env)||payload.audioUrl&&(!audio||!socialMuxHostAllowed(audio,env)))return json({ok:false,error:"CDN sumber pada tiket tidak diizinkan."},422);
   if(!Number.isInteger(Number(payload.height))||Number(payload.height)<144||Number(payload.height)>4320||!payload.videoCodec||!payload.audioCodec)return json({ok:false,error:"Metadata mux pada tiket tidak valid."},422);
   const endpoint=new URL("/mux/"+payload.id,origin);
   let upstream;
