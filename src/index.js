@@ -134,7 +134,7 @@ function freeProviderMediaInfo(data,rawUrl,requestUrl){
     if(!audio&&!video)return null;
     const finalExt=ext||(audio?"mp3":"mp4");
     const rawQuality=item?.height??item?.quality??item?.resolution??item?.qualityLabel??label;
-    const qualityMatch=String(rawQuality||"").match(/(?:^|\D)(144|240|360|480|540|576|720|900|960|1080|1440|2160)\s*p?/i)||String(label).match(/(144|240|360|480|540|576|720|900|960|1080|1440|2160)p/i);
+    const qualityMatch=String(rawQuality||"").match(/(?:^|\D)(144|240|360|480|540|576|720|900|960|1080|1440|2160|4320)\s*p?/i)||String(label).match(/(144|240|360|480|540|576|720|900|960|1080|1440|2160|4320)p/i);
     const height=Number(rawQuality)>0?Number(rawQuality):Number(qualityMatch?.[1]||0);
     const videoOnly=video&&(item?.videoOnly===true||item?.video_only===true||item?.hasAudio===false||item?.has_audio===false||item?.audio===false);
     const filenameBase=title.replace(/\.[a-z0-9]{2,5}$/i,"").replace(/[^a-zA-Z0-9._-]/g,"_").slice(0,90)||"aryanzz-media";
@@ -448,7 +448,7 @@ async function snackVideoFallbackMediaInfo(rawUrl,requestUrl){
       const thumbnail=String(root.thumbnail||root.cover||"");
       const duration=Number(root.duration||0)||null;
       const quality=String(root.quality||root.resolution||"MP4");
-      const media=[{type:"video",kind:"video",label:quality+" MP4",url:videoUrl,height:Number(String(quality).match(/(144|240|360|480|540|576|720|900|960|1080|1440|2160)/)?.[1]||0)||undefined}];
+      const media=[{type:"video",kind:"video",label:quality+" MP4",url:videoUrl,height:Number(String(quality).match(/(144|240|360|480|540|576|720|900|960|1080|1440|2160|4320)/)?.[1]||0)||undefined}];
       const normalized=freeProviderMediaInfo({normalized:{title,thumbnail,duration,media}},rawUrl,requestUrl);
       if(!normalized)throw new Error("Stream Tioo tidak lolos validasi media.");
       normalized.providerName="Tioo SnackVideo fallback";
@@ -1927,7 +1927,7 @@ function extractTikTokPublicPageInfo(html,pageUrl,rawUrl,requestUrl){
     const variants=video.bitrateInfo||video.bitrate_info||[];
     if(Array.isArray(variants))for(const variant of variants.slice().sort((a,b)=>Number(b?.Bitrate||b?.bitrate||0)-Number(a?.Bitrate||a?.bitrate||0))){
       const quality=String(variant?.GearName||variant?.gear_name||variant?.quality||variant?.QualityType||"");
-      const height=Number(quality.match(/(144|240|360|480|540|576|720|900|960|1080|1440|2160)/)?.[1]||variant?.height||0);
+      const height=Number(quality.match(/(144|240|360|480|540|576|720|900|960|1080|1440|2160|4320)/)?.[1]||variant?.height||0);
       add(variant?.PlayAddr||variant?.playAddr||variant?.play_addr||variant?.UrlList||variant?.url_list,"stream "+(quality||"variant"),height);
     }
     add(video.downloadAddr||video.download_addr,"download");
@@ -2385,7 +2385,7 @@ function normalizeTikTokFallbackPayload(data,rawUrl,requestUrl,providerName){
       const video=groupType==="video"||variantType==="video"||mime.startsWith("video/")||videoExts.has(ext)||(!audio&&!/image|photo|picture/.test(groupType+" "+variantType));
       if(!audio&&!video)continue;
       const quality=String(variant?.quality||variant?.label||variant?.container||"MP4");
-      add(variant?.url||variant?.download_url||variant?.downloadUrl,quality,audio?"audio":"video",ext||(audio?"mp3":"mp4"),mime||(audio?"audio/mpeg":"video/mp4"),Number(variant?.height)||Number(quality.match(/(144|240|360|480|540|576|720|900|960|1080|1440|2160)p?/i)?.[1]||0),variant);
+      add(variant?.url||variant?.download_url||variant?.downloadUrl,quality,audio?"audio":"video",ext||(audio?"mp3":"mp4"),mime||(audio?"audio/mpeg":"video/mp4"),Number(variant?.height)||Number(quality.match(/(144|240|360|480|540|576|720|900|960|1080|1440|2160|4320)p?/i)?.[1]||0),variant);
     }
   }
   for(const item of downloads){
@@ -2395,7 +2395,7 @@ function normalizeTikTokFallbackPayload(data,rawUrl,requestUrl,providerName){
     if(/image|photo|picture/.test(type)||mime.startsWith("image/")||imageExts.has(ext))continue;
     const audio=ext==="mp3"||audioExts.has(ext)||mime.startsWith("audio/")||/mp3|audio/.test(type);
     const quality=String(item?.quality||item?.label||type||ext||"MP4");
-    const height=Number(quality.match(/(144|240|360|480|540|576|720|900|960|1080|1440|2160)p?/i)?.[1]||0);
+    const height=Number(quality.match(/(144|240|360|480|540|576|720|900|960|1080|1440|2160|4320)p?/i)?.[1]||0);
     add(item?.url||item?.download_url||item?.downloadUrl,quality,audio?"audio":"video",ext||(audio?"mp3":"mp4"),mime||(audio?"audio/mpeg":"video/mp4"),height,item);
   }
   add(data?.hdplay,"MP4 HD tanpa watermark","video","mp4","video/mp4");
@@ -3066,7 +3066,7 @@ function hybridVideoHeight(item,url){
     const p=label.match(/(?:^|\D)(\d{3,4})\s*p(?:\D|$)/i);if(p)return Number(p[1]);
   }
   const itag=Number(url?.searchParams?.get("itag")||item?.itag);
-  return ({18:360,22:720,37:1080,59:480,78:480,82:360,83:480,84:720,85:1080,133:240,134:360,135:480,136:720,137:1080,160:144,264:1440,266:2160,271:1440,272:2160,298:720,299:1080,308:1440,313:2160,315:2160})[itag]||0;
+  return ({18:360,22:720,37:1080,59:480,78:480,82:360,83:480,84:720,85:1080,133:240,134:360,135:480,136:720,137:1080,160:144,264:1440,266:2160,271:1440,272:2160,298:720,299:1080,308:1440,313:2160,315:2160,402:4320,571:4320})[itag]||0;
 }
 function hybridFormatSizeBytes(item){
   const parse=value=>{
@@ -3091,7 +3091,7 @@ function hybridVideoFormat(item,instance,progressiveSource=false,adaptiveSource=
   const webm=mime.includes("video/webm")||container==="webm"||declaredExt==="webm"||(/\.webm(?:$|[?#])/i.test(url?.pathname||""));
   const ext=mp4?"mp4":webm?"webm":"";
   const videoOnly=adaptiveSource||item?.videoOnly===true||item?.isVideoOnly===true||item?.video_only===true||item?.hasAudio===false||item?.has_audio===false;
-  if(!url||![144,240,360,480,720,1080,1440,2160].includes(height)||!ext)return null;
+  if(!url||![144,240,360,480,720,1080,1440,2160,4320].includes(height)||!ext)return null;
   return {mode:"video",height,quality:height+"p",ext,mimeType:ext==="webm"?"video/webm":"video/mp4",url:url.toString(),bitrate:Number(item.bitrate)||0,sizeBytes:hybridFormatSizeBytes(item),videoOnly};
 }
 function hybridAudioFormat(item,instance){
