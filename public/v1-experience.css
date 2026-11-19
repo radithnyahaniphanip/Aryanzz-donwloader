@@ -9,7 +9,9 @@
 #home .v674-download[data-mode="link"] #linkModePanel{display:block!important;margin-top:16px}
 #home .v674-download[data-mode="title"] #linkModePanel{display:none!important}
 #home .v674-download[data-mode="title"] .v736-platform-search-heading{margin-top:18px!important}
-#home .v674-download[data-mode="link"] .v674-mode-switch{margin-bottom:0!important}
+#home .v674-download .v736-platform-search-heading{margin-top:0!important;padding-top:8px!important}
+#home .v674-download .v736-platform-search-wrap{margin-bottom:18px!important}
+#home .v674-download[data-mode="link"] .v674-mode-switch{margin-bottom:26px!important}
 #home .v674-download .v674-mode-switch button{transition:background-color .2s ease,border-color .2s ease,color .2s ease!important}
 #home .v674-download .v674-mode-switch button:focus-visible,
 #home .v674-download .primary:focus-visible{outline:2px solid #8ae5f5;outline-offset:3px}
