@@ -118,7 +118,7 @@ function json(res, status, body) {
 }
 
 export function buildFfprobeArgs(payload) {
-  const headers = "Referer: https://www.youtube.com/\\r\\nOrigin: https://www.youtube.com\\r\\n";
+  const headers = "Referer: https://www.youtube.com/\r\nOrigin: https://www.youtube.com\r\n";
   const input = url => ["-user_agent", USER_AGENT, "-headers", headers, "-rw_timeout", "30000000", "-i", url];
   return ["-v", "error", ...input(payload.videoUrl), ...input(payload.audioUrl), "-show_entries", "stream=codec_type,height,codec_name", "-of", "json"];
 }
@@ -164,7 +164,7 @@ export function createMuxServer({ spawnImpl = spawn, probeImpl = inspectMuxStrea
     if (req.method === "GET" && url.pathname === "/health") {
       return json(res, 200, { ok: true, service: "aryanzz-youtube-mp4-mux", ffmpeg: true });
     }
-    if (req.method === "POST" && /^\\/probe\\/[0-9a-f-]{36}$/i.test(url.pathname)) {
+    if (req.method === "POST" && /^\/probe\/[0-9a-f-]{36}$/i.test(url.pathname)) {
       let payload;
       try {
         payload = validateMuxRequest(await readJson(req));
