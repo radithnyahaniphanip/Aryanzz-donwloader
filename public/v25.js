@@ -513,3 +513,58 @@
   }
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init,{once:true});else init();
 })();
+
+/* Profile image editor (YouTube-style): drag to position, pinch/slider/wheel to zoom, fixed frame per image type. */
+(()=>{"use strict";
+const CFG={
+ profilePhoto:{ar:1,w:520,h:520,round:true,title:"Atur foto profil",hint:"Geser foto agar pas di lingkaran, lalu zoom sesuai selera."},
+ profileBanner:{ar:1500/520,w:1500,h:520,round:false,title:"Atur banner",hint:"Geser dan zoom agar banner pas dengan bingkai tampilan profil."}
+};
+const CSS=".ary-crop{position:fixed;inset:0;z-index:2147483000;display:grid;place-items:center;padding:16px;background:rgba(4,8,16,.78);backdrop-filter:blur(8px);animation:aryCropIn .2s ease}@keyframes aryCropIn{from{opacity:0}}.ary-crop-card{width:min(100%,620px);max-height:96vh;overflow:auto;padding:18px;border:1px solid rgba(150,170,255,.25);border-radius:22px;background:linear-gradient(170deg,#16233b,#0c1424);color:#eaf1fb;box-shadow:0 30px 80px rgba(0,0,0,.6);font-family:inherit}.ary-crop-card h3{margin:0 0 4px;font-size:18px}.ary-crop-card p{margin:0 0 14px;color:#9fb0c7;font-size:12px;line-height:1.5}.ary-crop-stage{position:relative;margin:0 auto;overflow:hidden;border-radius:14px;background:#081426;touch-action:none;cursor:grab;user-select:none}.ary-crop-stage:active{cursor:grabbing}.ary-crop-stage canvas{display:block;width:100%;height:100%}.ary-crop-mask{position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 0 2px rgba(255,255,255,.75);background:linear-gradient(90deg,transparent 33.2%,rgba(255,255,255,.22) 33.3%,transparent 33.5%,transparent 66.5%,rgba(255,255,255,.22) 66.6%,transparent 66.8%),linear-gradient(0deg,transparent 33.2%,rgba(255,255,255,.22) 33.3%,transparent 33.5%,transparent 66.5%,rgba(255,255,255,.22) 66.6%,transparent 66.8%)}.ary-crop-stage.round .ary-crop-mask{border-radius:50%;box-shadow:0 0 0 999px rgba(5,10,20,.6),inset 0 0 0 2px rgba(255,255,255,.85);background:none}.ary-crop-zoom{display:flex;align-items:center;gap:12px;margin:16px auto 4px;max-width:420px;color:#b7c6dc;font-size:18px}.ary-crop-zoom input{flex:1;accent-color:#7c6cff}.ary-crop-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:16px}.ary-crop-actions button{min-height:42px;padding:0 18px;border:1px solid rgba(150,170,255,.28);border-radius:12px;background:#15233a;color:#e6effb;font:inherit;font-size:13px;font-weight:800;cursor:pointer}.ary-crop-actions .primary{border:0;background:linear-gradient(135deg,#7c6cff,#3b82f6);color:#fff;box-shadow:0 8px 22px rgba(99,102,241,.45)}";
+function openCrop(input,file,cfg){
+ const prevFocus=document.activeElement,url=URL.createObjectURL(file),img=new Image();
+ img.onerror=()=>{URL.revokeObjectURL(url);release(input,file)};
+ img.onload=()=>{
+  const iw=img.naturalWidth,ih=img.naturalHeight;if(!iw||!ih){release(input,file);return}
+  if(!document.getElementById("aryCropCss")){const st=document.createElement("style");st.id="aryCropCss";st.textContent=CSS;document.head.append(st)}
+  const fw=cfg.round?Math.min(innerWidth-64,340):Math.min(innerWidth-68,560),fh=Math.round(fw/cfg.ar),dpr=Math.min(devicePixelRatio||1,2);
+  const base=Math.max(fw/iw,fh/ih);let zoom=1,ox=0,oy=0;
+  const wrap=document.createElement("div");wrap.className="ary-crop";wrap.setAttribute("role","dialog");wrap.setAttribute("aria-modal","true");wrap.setAttribute("aria-label",cfg.title);
+  wrap.innerHTML='<div class="ary-crop-card"><h3></h3><p></p><div class="ary-crop-stage'+(cfg.round?" round":"")+'"><canvas></canvas><div class="ary-crop-mask"></div></div><div class="ary-crop-zoom"><span aria-hidden="true">−</span><input type="range" min="1" max="4" step="0.01" value="1" aria-label="Zoom"><span aria-hidden="true">+</span></div><div class="ary-crop-actions"><button type="button" data-a="cancel">Batal</button><button type="button" data-a="reset">Reset</button><button type="button" data-a="save" class="primary">Simpan</button></div></div>';
+  wrap.querySelector("h3").textContent=cfg.title;wrap.querySelector("p").textContent=cfg.hint;
+  const stage=wrap.querySelector(".ary-crop-stage"),cv=wrap.querySelector("canvas"),slider=wrap.querySelector("input");
+  stage.style.width=fw+"px";stage.style.height=fh+"px";cv.width=Math.round(fw*dpr);cv.height=Math.round(fh*dpr);
+  function fit(){const s=base*zoom,mx=Math.max(0,(iw*s-fw)/2),my=Math.max(0,(ih*s-fh)/2);ox=Math.min(mx,Math.max(-mx,ox));oy=Math.min(my,Math.max(-my,oy))}
+  function paint(ctx,k){const s=base*zoom*k;ctx.drawImage(img,fw*k/2-iw*s/2+ox*k,fh*k/2-ih*s/2+oy*k,iw*s,ih*s)}
+  function draw(){const c=cv.getContext("2d");c.setTransform(dpr,0,0,dpr,0,0);c.fillStyle="#081426";c.fillRect(0,0,fw,fh);fit();paint(c,1);slider.value=String(zoom)}
+  function setZoom(z){zoom=Math.min(4,Math.max(1,z));draw()}
+  const pts=new Map();let last=0;
+  const dist=()=>{const a=[...pts.values()];return Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y)};
+  stage.addEventListener("pointerdown",e=>{stage.setPointerCapture(e.pointerId);pts.set(e.pointerId,{x:e.clientX,y:e.clientY});last=pts.size===2?dist():0});
+  stage.addEventListener("pointermove",e=>{const p=pts.get(e.pointerId);if(!p)return;if(pts.size===1){ox+=e.clientX-p.x;oy+=e.clientY-p.y}p.x=e.clientX;p.y=e.clientY;if(pts.size===2){const d=dist();if(last)zoom=Math.min(4,Math.max(1,zoom*d/last));last=d}draw()});
+  const up=e=>{pts.delete(e.pointerId);last=0};stage.addEventListener("pointerup",up);stage.addEventListener("pointercancel",up);
+  stage.addEventListener("wheel",e=>{e.preventDefault();setZoom(zoom*(e.deltaY<0?1.07:.93))},{passive:false});
+  slider.addEventListener("input",()=>setZoom(Number(slider.value)));
+  function close(){document.removeEventListener("keydown",onKey,true);wrap.remove();URL.revokeObjectURL(url);document.documentElement.style.removeProperty("overflow");prevFocus?.focus?.()}
+  function onKey(e){if(e.key==="Escape"){e.stopPropagation();cancel()}}
+  function cancel(){close();input.value=""}
+  function save(){
+   const out=document.createElement("canvas");out.width=cfg.w;out.height=cfg.h;const k=cfg.w/fw;const c=out.getContext("2d");c.imageSmoothingQuality="high";paint(c,k);
+   out.toBlob(blob=>{close();if(!blob){release(input,file);return}release(input,new File([blob],"profil-crop.jpg",{type:"image/jpeg"}))},"image/jpeg",.92);
+  }
+  wrap.addEventListener("click",e=>{const a=e.target.closest("[data-a]")?.dataset.a;if(a==="cancel")cancel();else if(a==="reset"){zoom=1;ox=0;oy=0;draw()}else if(a==="save")save();else if(e.target===wrap)cancel()});
+  document.addEventListener("keydown",onKey,true);document.documentElement.style.overflow="hidden";document.body.append(wrap);draw();wrap.querySelector('[data-a="save"]').focus();
+ };
+ img.src=url;
+}
+/* Hand the (cropped) file back to the original upload handler. */
+function release(input,file){
+ try{const dt=new DataTransfer();dt.items.add(file);input.files=dt.files}catch(_){}
+ input.dataset.cropDone="1";input.dispatchEvent(new Event("change",{bubbles:true}));delete input.dataset.cropDone;
+}
+document.addEventListener("change",e=>{
+ const input=e.target,cfg=input&&CFG[input.id],file=input?.files?.[0];
+ if(!cfg||input.dataset.cropDone||!file||!/^image\//.test(file.type)||file.type==="image/gif")return;
+ e.stopImmediatePropagation();openCrop(input,file,cfg);
+},true);
+})();
