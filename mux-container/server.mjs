@@ -117,12 +117,62 @@ function json(res, status, body) {
   res.end(data);
 }
 
-export function createMuxServer({ spawnImpl = spawn } = {}) {
+export function buildFfprobeArgs(payload) {
+  const headers = "Referer: https://www.youtube.com/\\r\\nOrigin: https://www.youtube.com\\r\\n";
+  const input = url => ["-user_agent", USER_AGENT, "-headers", headers, "-rw_timeout", "30000000", "-i", url];
+  return ["-v", "error", ...input(payload.videoUrl), ...input(payload.audioUrl), "-show_entries", "stream=codec_type,height,codec_name", "-of", "json"];
+}
+
+function inspectMuxStreams(payload, spawnImpl) {
+  return new Promise((resolve, reject) => {
+    let child;
+    try {
+      child = spawnImpl("ffprobe", buildFfprobeArgs(payload), { stdio: ["ignore", "pipe", "pipe"], windowsHide: true });
+    } catch (error) {
+      reject(new Error("FFprobe tidak dapat dijalankan: " + String(error?.message || error).slice(0, 120)));
+      return;
+    }
+    let stdout = "", stderr = "";
+    child.stdout?.on("data", chunk => { stdout = (stdout + chunk.toString("utf8")).slice(-64000); });
+    child.stderr?.on("data", chunk => { stderr = (stderr + chunk.toString("utf8")).slice(-4000); });
+    child.on("error", error => reject(new Error("FFprobe gagal: " + String(error?.message || error).slice(0, 140))));
+    child.on("close", code => {
+      if (code !== 0) {
+        reject(new Error("Stream video/audio tidak lolos pemeriksaan FFprobe. " + (stderr.trim().slice(-240) || "Provider menolak stream.")));
+        return;
+      }
+      try {
+        const data = JSON.parse(stdout || "{}");
+        const streams = Array.isArray(data.streams) ? data.streams : [];
+        const video = streams.find(item => item.codec_type === "video");
+        const audio = streams.find(item => item.codec_type === "audio");
+        if (!video || !audio) throw new Error("Sumber tidak memiliki pasangan video dan audio lengkap.");
+        const actualHeight = Number(video.height) || 0;
+        if (actualHeight !== payload.height) throw new Error("Resolusi sumber sebenarnya " + actualHeight + "p, bukan " + payload.height + "p. ARYANZZ menghentikan proses agar tidak memberi label kualitas palsu.");
+        resolve({ ok: true, height: actualHeight, videoCodec: String(video.codec_name || ""), audioCodec: String(audio.codec_name || "") });
+      } catch (error) {
+        reject(error);
+      }
+    });
+  });
+}
+
+export function createMuxServer({ spawnImpl = spawn, probeImpl = inspectMuxStreams } = {}) {
   let activeJobs = 0;
   return http.createServer(async (req, res) => {
     const url = new URL(req.url || "/", "http://container");
     if (req.method === "GET" && url.pathname === "/health") {
       return json(res, 200, { ok: true, service: "aryanzz-youtube-mp4-mux", ffmpeg: true });
+    }
+    if (req.method === "POST" && /^\\/probe\\/[0-9a-f-]{36}$/i.test(url.pathname)) {
+      let payload;
+      try {
+        payload = validateMuxRequest(await readJson(req));
+        if (payload.id !== url.pathname.split("/").pop()) throw new Error("ID proses tidak cocok.");
+        return json(res, 200, await probeImpl(payload, spawnImpl));
+      } catch (error) {
+        return json(res, 422, { ok: false, error: String(error?.message || "Stream tidak lolos pemeriksaan.").slice(0, 300) });
+      }
     }
     if (req.method !== "POST" || !/^\/mux\/[0-9a-f-]{36}$/i.test(url.pathname)) {
       return json(res, 404, { ok: false, error: "Endpoint tidak ditemukan." });
@@ -183,7 +233,7 @@ export function createMuxServer({ spawnImpl = spawn } = {}) {
         responseStarted = true;
         res.writeHead(200, headers);
       }
-      if (!res.destroyed) res.write(chunk);
+      if (!res.destroyed && !res.write(chunk)) child.stdout.pause();
     });
     child.on("error", error => {
       if (!responseStarted) json(res, 502, { ok: false, error: "FFmpeg gagal dimulai: " + String(error?.message || error).slice(0, 140) });
@@ -203,6 +253,7 @@ export function createMuxServer({ spawnImpl = spawn } = {}) {
       }
       cleanup();
     });
+    res.on("drain", () => child?.stdout?.resume());
     res.on("close", () => {
       if (!finished && child && child.exitCode === null && !child.killed) child.kill("SIGTERM");
       cleanup();
