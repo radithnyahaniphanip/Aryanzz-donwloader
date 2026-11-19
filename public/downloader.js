@@ -785,6 +785,39 @@
     const uniqueProviders=[...new Map(providers.filter(item=>item?.instance).map(item=>[item.instance,item])).values()];
     return {...data,...previousInfo,providerName:"Hybrid",providerReady:true,formats,providers:uniqueProviders,diagnostics:[...(data.diagnostics||[]),...(previousInfo.diagnostics||[])].slice(0,20)};
   }
+  async function downloadYoutubeServerMux(url,videoItem,audioItem,info,bar,progressText,progressMeta){
+    const height=Number(videoItem?.height)||0;
+    const filename=safeFilename((info.outputName||info.title||"aryanzz-youtube").replace(/\.(?:mp4|mp3|m4a|webm|mov)$/i,"")+".mp4");
+    progressText.textContent="Memeriksa stream "+height+"p dan menyiapkan MP4 di server…";
+    progressMeta.textContent="Video dan audio asli diperiksa terlebih dahulu. Penggabungan dilakukan tanpa memuat file multi-GB ke RAM HP.";
+    bar.parentElement?.classList.add("is-indeterminate");
+    const response=await fetch("/api/youtube/hybrid/mux-ticket",{
+      method:"POST",
+      headers:{"content-type":"application/json","accept":"application/json"},
+      body:JSON.stringify({
+        videoUrl:videoItem.url,
+        audioUrl:audioItem.url,
+        videoInstance:videoItem.instance||info.instance||"",
+        audioInstance:audioItem.instance||info.instance||"",
+        videoExt:videoItem.ext,
+        audioExt:audioItem.ext,
+        title:info.outputName||info.title||"aryanzz-youtube",
+        height
+      }),
+      cache:"no-store",
+      signal:downloadTimeoutSignal(90000)
+    });
+    const data=await response.json().catch(()=>({}));
+    if(response.status===503&&data.code==="YOUTUBE_MUX_NOT_CONFIGURED")return null;
+    if(!response.ok||!data.ok||!data.ticket)throw new Error(data.error||"Mesin server belum dapat menyiapkan MP4.");
+    const target="/api/youtube/hybrid/mux?ticket="+encodeURIComponent(data.ticket);
+    addReadyDownloadLink(progressText.parentElement,target,filename,"⬇ Unduh MP4 "+height+"p sekarang");
+    bar.parentElement?.classList.add("is-indeterminate");
+    progressText.textContent="MP4 "+height+"p · unduhan server dimulai…";
+    progressMeta.textContent="Stream video dan audio asli digabung tanpa re-encode. Chrome akan menampilkan progres unduhan dan menyimpan satu file MP4.";
+    remember(url,filename,"video",height);
+    return filename;
+  }
   async function downloadYouTube(url,mode,quality,bar,progressText,progressMeta,info={},audioFormat="m4a",speed=3,retryState={refreshed:false,attempted:[]}){
     if(info.providerName!=="Hybrid"||!info.providerReady)throw new Error("Tidak ada stream gratis yang tersedia dari instance komunitas saat ini.");
     const attempted=new Set(Array.isArray(retryState.attempted)?retryState.attempted:[]);
@@ -838,6 +871,8 @@
         if(mode==="video"&&selected.videoOnly){
           const audioItem=providerAudioForVideo(selected,info.formats);
           if(!audioItem)throw new Error("Komponen media tidak lengkap pada provider ini.");
+          const serverMux=await downloadYoutubeServerMux(url,selected,audioItem,{...info,url},bar,progressText,progressMeta);
+          if(serverMux)return serverMux;
           return await muxYoutubeMp4(selected,audioItem,{...info,url},bar,progressText,progressMeta,speed);
         }
         return await downloadYoutubeProgressiveCandidate(url,mode,selected,info,bar,progressText,progressMeta,quality);
