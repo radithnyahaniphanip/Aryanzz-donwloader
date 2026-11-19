@@ -87,7 +87,7 @@ assert.ok(downloader.includes("downloadYoutubeServerMux"),"Adaptive MP4 streams 
 assert.ok(downloader.includes("/api/youtube/hybrid/mux-ticket"),"The browser should request a signed mux ticket before starting a large MP4 download.");
 assert.ok(worker.includes("const MAX_YOUTUBE_BYTES=14*1024*1024*1024;"),"Direct YouTube MP4 streaming should allow files up to the configured 14 GB safety cap.");
 assert.ok(worker.includes("hybridYoutubeMuxTicket")&&worker.includes("hybridYoutubeMuxFile"),"The Worker should expose signed ticket and streaming mux endpoints.");
-assert.ok(worker.includes("serverMuxReady:!!env.YOUTUBE_MUX_URL&&!!env.YOUTUBE_MUX_TOKEN"),"YouTube status should report whether the high-resolution mux service is configured.");
+assert.ok(worker.includes("serverMuxReady:!!(env.MEDIA_MUX_URL||env.YOUTUBE_MUX_URL)&&!!(env.MEDIA_MUX_TOKEN||env.YOUTUBE_MUX_TOKEN)"),"The API status should report whether the optional external media mux service is configured.");
 assert.ok(downloader.includes('videoExt==="webm"&&["webm","opus"].includes(audioExt)'),"High-resolution WebM video plus Opus audio should use the MP4 server mux path.");
 assert.ok(worker.includes('videoExt==="webm"&&["webm","opus"].includes(audioExt)'),"The Worker should accept compatible WebM plus Opus sources.");
 assert.ok(muxServer.includes('const audioCodecArgs = String(payload.audioCodec||"").toLowerCase()==="aac"')&&muxServer.includes('["-c:a","aac","-b:a","192k","-ar","48000"]'),"Non-AAC social audio should be converted to AAC while preserving compatible source video.");
