@@ -1,4 +1,0 @@
-{$MUX_DOMAIN} {
-  encode zstd gzip
-  reverse_proxy media-mux:8080
-}

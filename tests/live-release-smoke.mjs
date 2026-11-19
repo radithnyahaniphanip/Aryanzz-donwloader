@@ -170,22 +170,12 @@ assert.equal(workspaceManifestResponse.status,200,"Workspace ownership manifest 
 const workspaceManifest=await workspaceManifestResponse.json();
 assert.equal(workspaceManifest.release?.publicVersion,"V1","Live workspace manifest must identify the public V1 release");
 for(const key of ["home","tools","library","owner","profile","navigation"])assert.ok(workspaceManifest.workspaces?.[key]?.root,"Workspace manifest kehilangan pemilik: "+key);
-let sw="",swReady=false,lastSwNamespace="belum tersedia",lastSwStatus=0;
-for(let attempt=0;attempt<20;attempt++){
-  try{
-    const swResponse=await request("/sw.js?release-check="+encodeURIComponent(version+"-"+attempt));
-    lastSwStatus=swResponse.status;
-    if(swResponse.ok){
-      sw=await swResponse.text();
-      lastSwNamespace=sw.match(/const CACHE=["']([^"']+)/)?.[1]||"namespace tidak ditemukan";
-      if(sw.includes("aryanzz-build-"+version)){swReady=true;break;}
-    }else lastSwNamespace="HTTP "+swResponse.status;
-  }catch(error){lastSwNamespace=String(error.message||error);}
-  await new Promise(resolve=>setTimeout(resolve,1500));
-}
-assert.ok(swReady,"Service worker belum mengikuti build "+version+" setelah menunggu propagasi; namespace terakhir: "+lastSwNamespace+"; HTTP "+lastSwStatus);
-assert.ok(sw.includes("/speed-test.js?v="+version),"Service worker belum mencache controller Speed Test dengan versi terbaru: "+lastSwNamespace);
-assert.ok(sw.includes("/link-bypass.js?v="+version),"Service worker belum mencache Link Bypass dengan versi terbaru: "+lastSwNamespace);
+const swResponse=await request("/sw.js");
+assert.equal(swResponse.status,200,"Service worker tidak tersedia");
+const sw=await swResponse.text();
+assert.ok(sw.includes("aryanzz-build-"+version),"Namespace cache PWA tidak mengikuti versi build");
+assert.ok(sw.includes("/speed-test.js?v="+version),"Service worker belum mencache controller Speed Test dengan versi terbaru");
+assert.ok(sw.includes("/link-bypass.js?v="+version),"Service worker belum mencache Link Bypass dengan versi terbaru");
 for(const asset of ["workspace-home.css","workspace-tools.css","workspace-library.css","workspace-navigation.css","workspace-home.js","workspace-layout.js","workspace-library.js","workspace-tools.js","workspace-navigation.js","workspace-manifest.json"])assert.ok(sw.includes("/"+asset+"?v="+version),"Service worker belum mencache modul workspace: "+asset);
 console.log("✔ Cloudflare Worker health matches expected build: "+version);
 console.log("✔ release.json, PWA manifest, homepage, JS/CSS assets and service-worker cache all match "+version);

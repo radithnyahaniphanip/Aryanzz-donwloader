@@ -6,7 +6,7 @@
 @media(min-width:700px){.v674-platform-result-list{grid-template-columns:repeat(2,minmax(0,1fr))}}
 
 
-/* ARYANZZ title-search mobile repair — append guard and spacing */
+/* ARYANZZ Smart Search mobile repair — append guard and spacing */
 #titleModePanel{display:grid;gap:12px;min-width:0}
 #titleModePanel[hidden]{display:none!important}
 #titleModePanel .v674-search-type-row{margin:0;min-width:0}
@@ -27,7 +27,7 @@
 @media(max-width:380px){#titleModePanel .inputrow.v674-input-row{grid-template-columns:minmax(0,1fr) 76px;gap:6px}#titleModePanel .inputrow.v674-input-row .primary{font-size:12px}}
 
 
-/* ARYANZZ title-search V94.12.2 — unified three-column result grid */
+/* ARYANZZ Smart Search V94.12.2 — unified three-column result grid */
 #titleSearchResults.v674-search-results{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;align-items:stretch;width:100%;min-width:0;margin-top:14px;overflow:visible}
 #titleSearchResults[hidden]{display:none!important}
 #titleSearchResults>.v674-search-loading,#titleSearchResults>.v674-search-empty,#titleSearchResults>.v674-title-help,#titleSearchResults>.v674-pagination,#titleSearchResults>.v674-image-results{grid-column:1/-1;min-width:0}

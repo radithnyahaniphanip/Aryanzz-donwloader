@@ -117,8 +117,6 @@ function freeProviderMediaInfo(data,rawUrl,requestUrl){
   const title=String(normalized?.title||rawResult.title||rawResult.caption||"Media siap diunduh").slice(0,300);
   const mimeExtensions={
     "video/mp4":"mp4","video/webm":"webm","video/quicktime":"mov","video/x-msvideo":"avi",
-    "video/3gpp":"3gp","video/x-flv":"flv","video/x-matroska":"mkv","video/mp2t":"ts",
-    "video/mpeg":"mpeg","video/x-ms-wmv":"wmv",
     "audio/mpeg":"mp3","audio/mp4":"m4a","audio/aac":"aac","audio/ogg":"ogg","audio/wav":"wav","audio/flac":"flac"
   };
   const formats=mediaItems.map(item=>{
@@ -128,16 +126,13 @@ function freeProviderMediaInfo(data,rawUrl,requestUrl){
     const mime=String(item?.mimeType||item?.mime_type||item?.mimetype||item?.contentType||item?.content_type||"").split(";")[0].trim().toLowerCase();
     const pathExt=(mediaUrl.pathname.match(/\.([a-z0-9]{2,5})$/i)?.[1]||"").toLowerCase();
     const declaredExt=String(item?.ext||item?.extension||item?.fileExtension||"").replace(/^\./,"").toLowerCase();
-    const videoExtensions=["mp4","webm","mov","m4v","avi","3gp","flv","mkv","ts","mpg","mpeg","wmv"];
-    const audioExtensions=["mp3","m4a","aac","opus","ogg","wav","flac"];
-    const ext=mimeExtensions[mime]||(videoExtensions.includes(pathExt)||audioExtensions.includes(pathExt)?pathExt:"")||(videoExtensions.includes(declaredExt)||audioExtensions.includes(declaredExt)?declaredExt:"")||(/mp3/i.test(label)?"mp3":/m4a/i.test(label)?"m4a":/webm/i.test(label)?"webm":/mp4/i.test(label+" "+kind)?"mp4":"");
+    const ext=mimeExtensions[mime]||(["mp4","webm","mov","m4v","avi","3gp","mp3","m4a","aac","opus","ogg","wav","flac"].includes(pathExt)?pathExt:"")||(["mp4","webm","mov","m4v","avi","3gp","mp3","m4a","aac","opus","ogg","wav","flac"].includes(declaredExt)?declaredExt:"")||(/mp3/i.test(label)?"mp3":/m4a/i.test(label)?"m4a":/webm/i.test(label)?"webm":/mp4|video/i.test(label+ " "+kind)?"mp4":"");
     const image=mime.startsWith("image/")||/image|photo|picture|thumbnail|cover/.test(kind+" "+label)||["jpg","jpeg","png","gif","webp","avif","bmp"].includes(pathExt)||["jpg","jpeg","png","gif","webp","avif","bmp"].includes(declaredExt);
     if(image)return null;
-    const audio=mime.startsWith("audio/")||/audio|mp3|m4a|aac|opus|flac/.test(kind+" "+label)||audioExtensions.includes(ext);
-    const video=mime.startsWith("video/")||/video/.test(kind+" "+label)||videoExtensions.includes(ext);
+    const audio=mime.startsWith("audio/")||/audio|mp3|m4a|aac|opus|flac/.test(kind+" "+label)||["mp3","m4a","aac","opus","ogg","wav","flac"].includes(ext);
+    const video=mime.startsWith("video/")||/video/.test(kind+" "+label)||["mp4","webm","mov","m4v","avi","3gp"].includes(ext);
     if(!audio&&!video)return null;
-    const finalExt=ext||(audio?"mp3":"");
-    if(!finalExt)return null;
+    const finalExt=ext||(audio?"mp3":"mp4");
     const rawQuality=item?.height??item?.quality??item?.resolution??item?.qualityLabel??label;
     const qualityMatch=String(rawQuality||"").match(/(?:^|\D)(144|240|360|480|540|576|720|900|960|1080|1440|2160|4320)\s*p?/i)||String(label).match(/(144|240|360|480|540|576|720|900|960|1080|1440|2160|4320)p/i);
     const height=Number(rawQuality)>0?Number(rawQuality):Number(qualityMatch?.[1]||0);
@@ -159,7 +154,7 @@ function freeProviderMediaInfo(data,rawUrl,requestUrl){
   if(!formats.length)return null;
   formats.sort((a,b)=>a.mode===b.mode?(b.height-a.height):a.mode==="video"?-1:1);
   const platformKey=platformIdForUrl(rawUrl)||freePlatformKey(rawUrl);
-  const mp4Formats=formats.filter(item=>item.mode==="video"&&["mp4","m4v","webm","mov","avi","3gp","flv","mkv","ts","mpg","mpeg","wmv"].includes(item.ext));
+  const mp4Formats=formats.filter(item=>item.mode==="video"&&!item.videoOnly&&["mp4","m4v"].includes(item.ext));
   return {ok:true,providerName:"Public API",providerReady:true,provider:"Free public provider",platform:platformKey,title,filename:title,duration,thumbnail,width,height,aspectRatio:width&&height?width/height:null,type:formats.some(x=>x.mode==="video")?"video":"audio",formats,capabilities:{linkAccepted:true,preview:formats.some(item=>item.mode==="video"||item.mode==="audio"),mp4:mp4Formats.length>0,audio:formats.some(item=>item.mode==="audio"),mp4Qualities:[...new Set(mp4Formats.map(item=>item.height).filter(Boolean))]}};
 }
 
@@ -409,11 +404,11 @@ async function snackVideoNativePageFallback(rawUrl,requestUrl,timeoutMs=8500){
     if(typeof value!=="string"||!value.trim())return;
     let candidate=value.trim().replaceAll("\\/","/").replaceAll("&amp;","&").replaceAll("\\u0026","&");
     if(candidate.startsWith("//"))candidate="https:"+candidate;
-    if(safePublicMediaUrl(candidate)&&/\.(?:mp4|webm|mov|m4v|avi|3gp|flv|mkv|ts|mpg|mpeg|wmv)(?:[?#]|$)/i.test(candidate))candidates.push(candidate);
+    if(safePublicMediaUrl(candidate)&&/\.(?:mp4|m3u8)(?:[?#]|$)/i.test(candidate))candidates.push(candidate);
   };
   const keyPattern=/"(?:playUrl|play_url|videoUrl|video_url|mainMvUrl|main_mv_url|downloadUrl|download_url)"\s*:\s*"([^"]{12,2000})"/gi;
   for(const match of decoded.matchAll(keyPattern))add(match[1]);
-  const mediaPattern=/https?:\/\/[^"'\\\s<>]{8,2500}?(?:kwai\.net|snackvideo|kwai-cdn)[^"'\\\s<>]{0,1500}?\.(?:mp4|webm|mov|m4v|avi|3gp|flv|mkv|ts|mpg|mpeg|wmv)(?:\?[^"'\\\s<>]*)?/gi;
+  const mediaPattern=/https?:\/\/[^"'\\\s<>]{8,2500}?(?:kwai\.net|snackvideo|kwai-cdn)[^"'\\\s<>]{0,1500}?\.(?:mp4|m3u8)(?:\?[^"'\\\s<>]*)?/gi;
   for(const match of decoded.matchAll(mediaPattern))add(match[0]);
   const titleMatch=decoded.match(/<title[^>]*>([^<]{1,300})<\/title>/i);
   const ogTitle=decoded.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']{1,300})["']/i);
@@ -426,7 +421,7 @@ async function snackVideoNativePageFallback(rawUrl,requestUrl,timeoutMs=8500){
   if(duration&&/(?:durationMs|duration_ms)/i.test(durationMatch?.[0]||""))duration/=1000;
   if(duration&&duration>86400)duration/=1000;
   const unique=[...new Set(candidates)];
-  if(!unique.length)throw new Error("Halaman publik berhasil dibuka, tetapi URL file video langsung tidak ditemukan pada HTML.");
+  if(!unique.length)throw new Error("Halaman publik berhasil dibuka, tetapi URL stream MP4 tidak ditemukan pada HTML.");
   const media=unique.slice(0,12).map((url,index)=>({type:"video",kind:"video",label:"MP4"+(index?" alternatif "+(index+1):""),url}));
   const normalized=freeProviderMediaInfo({normalized:{title,thumbnail,duration,media}},rawUrl,requestUrl);
   if(!normalized)throw new Error("Stream dari halaman SnackVideo tidak lolos validasi media.");
@@ -453,7 +448,7 @@ async function snackVideoFallbackMediaInfo(rawUrl,requestUrl){
       const thumbnail=String(root.thumbnail||root.cover||"");
       const duration=Number(root.duration||0)||null;
       const quality=String(root.quality||root.resolution||"MP4");
-      const media=[{type:"video",kind:"video",label:quality+" MP4",url:videoUrl,height:Number(String(quality).match(/(144|240|360|480|540|576|720|900|960|1080|1440|2160|4320)/)?.[1]||0)||undefined}];
+      const media=[{type:"video",kind:"video",label:quality+" MP4",url:videoUrl,height:Number(String(quality).match(/(144|240|360|480|540|576|720|900|960|1080|1440|2160)/)?.[1]||0)||undefined}];
       const normalized=freeProviderMediaInfo({normalized:{title,thumbnail,duration,media}},rawUrl,requestUrl);
       if(!normalized)throw new Error("Stream Tioo tidak lolos validasi media.");
       normalized.providerName="Tioo SnackVideo fallback";
@@ -585,7 +580,7 @@ async function freePublicMediaInfo(rawUrl,requestUrl,options={}){
     soundcloud:"SoundCloud diproses sebagai audio (MP3/M4A jika tersedia), bukan video MP4."
   };
   let canonicalUrl=rawUrl,resolutionError="";
-  try{canonicalUrl=await resolveSocialShortLink(rawUrl,key,fast?5200:(key==="tiktok"?8000:key==="facebook"?9500:11000))}
+  try{canonicalUrl=await resolveSocialShortLink(rawUrl,key,fast?3200:(key==="tiktok"?8000:key==="facebook"?9500:11000))}
   catch(error){
     resolutionError=String(error?.message||error).slice(0,180);
     if(key==="facebook"&&resolutionError==="facebook_login_required")
@@ -593,6 +588,12 @@ async function freePublicMediaInfo(rawUrl,requestUrl,options={}){
   }
   const isTikTokPhotoRoute=key==="tiktok"&&(()=>{try{return /\/photo\//i.test(new URL(canonicalUrl).pathname)}catch{return false}})();
   const providerUrls=key==="tiktok"?(isTikTokPhotoRoute?[canonicalUrl]:tikTokUrlCandidates(rawUrl,canonicalUrl)):[canonicalUrl];
+  const tikTokFallbackPromise=key==="tiktok"&&!isTikTokPhotoRoute
+    ?tikwmFallbackMediaInfo(canonicalUrl,requestUrl,providerUrls.filter(value=>value!==canonicalUrl),{fast,timeoutMs:fast?4800:9000}).then(value=>({ok:true,value})).catch(error=>({ok:false,error}))
+    :null;
+  const tikTokEmbedPromise=key==="tiktok"&&!isTikTokPhotoRoute&&fast
+    ?Promise.any([...new Set([rawUrl,canonicalUrl])].map(target=>fetchTikTokOEmbed(target,2200))).then(value=>({ok:true,value})).catch(error=>({ok:false,error}))
+    :null;
   if(key==="snackvideo"){
     try{return await snackVideoFallbackMediaInfo(canonicalUrl,requestUrl)}
     catch(error){return json({error:"SnackVideo belum dapat diproses melalui dua jalur publik yang diuji paralel: "+String(error?.message||error).slice(0,300)+". Pastikan tautan share video dapat dibuka tanpa login.",provider:"Concurrent public fallback cascade",fallbackTried:true},502)}
@@ -640,11 +641,11 @@ async function freePublicMediaInfo(rawUrl,requestUrl,options={}){
         // Photo Mode needs strict media signature checks even on the quick path;
         // video/photo spoofing must never be traded for speed.
         if(key==="tiktok"&&fast&&isTikTokPhotoRoute)await verifyTikTokPhotoVideoFormats(normalized,canonicalUrl);
-        if(key==="tiktok"&&!fast){
-          if(!isTikTokPhotoRoute){
-            try{
-              const fallback=await tikwmFallbackMediaInfo(canonicalUrl,requestUrl,providerUrls.filter(value=>value!==canonicalUrl));
-              const seen=new Set(),combined=[];
+        if(key==="tiktok"&&!isTikTokPhotoRoute){
+          if(!fast&&tikTokFallbackPromise){
+            const fallbackResult=await tikTokFallbackPromise;
+            if(fallbackResult?.ok){
+              const fallback=fallbackResult.value,seen=new Set(),combined=[];
               for(const item of [...(fallback.formats||[]),...(normalized.formats||[])]){
                 const identity=String(item?.downloadUrl||item?.url||"")+"|"+String(item?.mode||"");
                 if(!item?.downloadUrl||seen.has(identity))continue;
@@ -655,10 +656,10 @@ async function freePublicMediaInfo(rawUrl,requestUrl,options={}){
               normalized.providerName=[fallback.providerName,normalized.providerName].filter(Boolean).join(" + ");
               normalized.title=normalized.title||fallback.title;
               normalized.duration=Number(normalized.duration)||Number(fallback.duration)||null;
-            }catch(error){normalized.fallbackDiagnostic=String(error?.message||error).slice(0,180)}
+            }else normalized.fallbackDiagnostic=String(fallbackResult?.error?.message||fallbackResult?.error||"Provider alternatif tidak mengembalikan hasil.").slice(0,180);
           }
           await verifyTikTokPhotoVideoFormats(normalized,canonicalUrl);
-          if(!isTikTokPhotoRoute)await enrichTikTokDuration(normalized,canonicalUrl);
+          if(!fast)await enrichTikTokDuration(normalized,canonicalUrl);
         }
         return json({...normalized,fastResponse:fast,canonicalUrl:canonicalUrl!==rawUrl?canonicalUrl:undefined});
       }
@@ -686,15 +687,38 @@ async function freePublicMediaInfo(rawUrl,requestUrl,options={}){
       return json({ok:true,platform:"tiktok",title:"TikTok Photo Mode",duration:null,formats:[],embedUrl:player.href,embedId:photoItemId,providerName:"TikTok Photo Mode · official embed",providerReady:true,directDownloadAvailable:false,downloadMessage:"Pemutar resmi TikTok tersedia. Provider publik belum memberikan foto asli atau stream MP4 yang lolos validasi.",canonicalUrl:canonicalUrl!==rawUrl?canonicalUrl:undefined,diagnostics:primaryError.slice(0,900)},200);
     }
   }
-  if(key==="tiktok"){
-    try{
-      const fallback=await tikwmFallbackMediaInfo(canonicalUrl,requestUrl,providerUrls.filter(value=>value!==canonicalUrl));
+  if(key==="tiktok"&&!isTikTokPhotoRoute){
+    const fallbackResult=await tikTokFallbackPromise;
+    if(fallbackResult?.ok){
+      const fallback=fallbackResult.value;
       await verifyTikTokPhotoVideoFormats(fallback,canonicalUrl);
-      await enrichTikTokDuration(fallback,canonicalUrl);
-      return json({...fallback,canonicalUrl:canonicalUrl!==rawUrl?canonicalUrl:undefined});
-    }catch(error){
-      primaryError+="; TikTok fallback: "+String(error?.message||error).slice(0,900);
+      if(!fast)await enrichTikTokDuration(fallback,canonicalUrl);
+      return json({...fallback,fastResponse:fast,canonicalUrl:canonicalUrl!==rawUrl?canonicalUrl:undefined});
     }
+    primaryError+="; TikTok fallback: "+String(fallbackResult?.error?.message||fallbackResult?.error||"Provider alternatif tidak mengembalikan media.").slice(0,900);
+  }
+  if(key==="tiktok"&&!isTikTokPhotoRoute&&fast){
+    const embedResult=await tikTokEmbedPromise;
+    if(embedResult?.ok){
+      const embed=embedResult.value;
+      return json({
+        ok:true,platform:"tiktok",title:embed.title||"Video TikTok",extractor:"TikTok Embed Player",
+        thumbnail:embed.thumbnail||null,duration:null,formats:[],embedUrl:embed.embedUrl,embedId:embed.id,
+        embedAuthor:embed.author||null,providerName:"TikTok Embed Player",providerReady:true,
+        directDownloadAvailable:false,fastResponse:true,
+        downloadMessage:"Player resmi TikTok tersedia, tetapi provider publik belum memberikan file MP4 langsung untuk tautan ini.",
+        canonicalUrl:canonicalUrl!==rawUrl?canonicalUrl:undefined,
+        diagnostics:primaryError.slice(0,900)
+      },200);
+    }
+    primaryError+="; TikTok quick embed: "+String(embedResult?.error?.message||embedResult?.error||"oEmbed tidak merespons").slice(0,160);
+    return json({
+      ok:false,platform:"tiktok",
+      error:"Link TikTok dikenali, tetapi TikTok atau provider publik belum mengirim stream dalam batas pemeriksaan cepat. Video mungkin dibatasi wilayah, umur, login, atau layanan sumber sedang gangguan. Gunakan pemeriksaan penuh untuk jalur yang lebih mendalam.",
+      errorType:"source_unavailable_or_restricted",provider:"Quick fallback cascade",fallbackTried:true,
+      fastResponse:true,diagnostics:primaryError.slice(0,1100),
+      canonicalUrl:canonicalUrl!==rawUrl?canonicalUrl:undefined
+    },502);
   }
   // Attempt TikTok's public item metadata and page extraction before generic scraping.
   // This path was implemented but not previously wired into the fallback cascade.
@@ -804,21 +828,12 @@ function mediaAsciiAt(bytes,offset,value){
 }
 function detectSocialMediaSignature(bytes,mode){
   const limit=Math.min(bytes.length,65536);
-  for(let i=0;i<=limit-12;i++){
-    if(mediaAsciiAt(bytes,i,"ftyp")){
-      const brand=String.fromCharCode(...bytes.subarray(i+4,i+8));
-      return mode==="audio"?{mime:"audio/mp4",ext:"m4a",mode:"audio"}:brand==="qt  "?{mime:"video/quicktime",ext:"mov",mode:"video"}:{mime:"video/mp4",ext:"mp4",mode:"video"};
-    }
+  for(let i=0;i<=limit-4;i++){
+    if(mediaAsciiAt(bytes,i,"ftyp"))return mode==="audio"?{mime:"audio/mp4",ext:"m4a",mode:"audio"}:{mime:"video/mp4",ext:"mp4",mode:"video"};
   }
-  if(bytes.length>=4&&bytes[0]===0x1a&&bytes[1]===0x45&&bytes[2]===0xdf&&bytes[3]===0xa3){
-    const header=new TextDecoder().decode(bytes.subarray(0,Math.min(bytes.length,65536)));
-    return /matroska/i.test(header)?{mime:"video/x-matroska",ext:"mkv",mode:"video"}:{mime:"video/webm",ext:"webm",mode:"video"};
-  }
+  if(bytes.length>=4&&bytes[0]===0x1a&&bytes[1]===0x45&&bytes[2]===0xdf&&bytes[3]===0xa3)return {mime:"video/webm",ext:"webm",mode:"video"};
   if(bytes.length>=12&&mediaAsciiAt(bytes,0,"RIFF")&&mediaAsciiAt(bytes,8,"AVI "))return {mime:"video/x-msvideo",ext:"avi",mode:"video"};
   if(bytes.length>=3&&mediaAsciiAt(bytes,0,"FLV"))return {mime:"video/x-flv",ext:"flv",mode:"video"};
-  if(bytes.length>=377&&bytes[0]===0x47&&bytes[188]===0x47&&bytes[376]===0x47)return {mime:"video/mp2t",ext:"ts",mode:"video"};
-  if(bytes.length>=4&&bytes[0]===0x00&&bytes[1]===0x00&&bytes[2]===0x01&&bytes[3]===0xba)return {mime:"video/mpeg",ext:"mpg",mode:"video"};
-  if(bytes.length>=16&&bytes[0]===0x30&&bytes[1]===0x26&&bytes[2]===0xb2&&bytes[3]===0x75)return {mime:"video/x-ms-wmv",ext:"wmv",mode:"video"};
   if(bytes.length>=4&&mediaAsciiAt(bytes,0,"OggS"))return mode==="audio"?{mime:"audio/ogg",ext:"ogg",mode:"audio"}:null;
   if(bytes.length>=4&&mediaAsciiAt(bytes,0,"fLaC"))return {mime:"audio/flac",ext:"flac",mode:"audio"};
   if(bytes.length>=12&&mediaAsciiAt(bytes,0,"RIFF")&&mediaAsciiAt(bytes,8,"WAVE"))return {mime:"audio/wav",ext:"wav",mode:"audio"};
@@ -845,13 +860,12 @@ async function fetchSocialUpstream(mediaUrl,sourceUrl,rangeHeader,options={}){
   ];
   const uniqueProfiles=profiles.filter((profile,index,array)=>array.findIndex(item=>JSON.stringify(item.headers)===JSON.stringify(profile.headers))===index);
   const diagnostics=[];
-  const headerTimeout=options.preview?30000:7500;
   const attempt=async(profile,requestedRange)=>{
     let current=mediaUrl;
     for(let hop=0;hop<6;hop++){
       const headers={...baseHeaders,...profile.headers};
       if(requestedRange)headers.range=requestedRange;
-      const response=await fetchSocialHeaders(current.href,{method:"GET",headers,redirect:"manual",cache:"no-store"},headerTimeout);
+      const response=await fetchSocialHeaders(current.href,{method:"GET",headers,redirect:"manual",cache:"no-store"},7500);
       if([301,302,303,307,308].includes(response.status)){
         const location=response.headers.get("location");
         if(!location){await response.body?.cancel().catch(()=>{});throw new Error("CDN media mengirim pengalihan tanpa alamat tujuan.");}
@@ -887,12 +901,12 @@ async function readSocialChunk(reader,idleMs=60000){
   try{
     return await Promise.race([
       reader.read(),
-      new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error("Stream tidak mengirim data selama "+Math.round(idleMs/1000)+" detik. Proses dihentikan karena sumber tidak mengirim data.")),idleMs);})
+      new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error("Stream tidak mengirim data selama 60 detik. Unduhan dihentikan agar tidak menggantung.")),idleMs);})
     ]);
   }finally{if(timer)clearTimeout(timer);}
 }
 function socialMimeForExtension(ext,mode){
-  const map={mp4:"video/mp4",webm:"video/webm",mov:"video/quicktime",m4v:"video/mp4",avi:"video/x-msvideo","3gp":"video/3gpp",flv:"video/x-flv",mkv:"video/x-matroska",ts:"video/mp2t",mpg:"video/mpeg",mpeg:"video/mpeg",wmv:"video/x-ms-wmv",mp3:"audio/mpeg",m4a:"audio/mp4",aac:"audio/aac",opus:"audio/ogg",ogg:"audio/ogg",wav:"audio/wav",flac:"audio/flac"};
+  const map={mp4:"video/mp4",webm:"video/webm",mov:"video/quicktime",m4v:"video/mp4",avi:"video/x-msvideo","3gp":"video/3gpp",mp3:"audio/mpeg",m4a:"audio/mp4",aac:"audio/aac",opus:"audio/ogg",ogg:"audio/ogg",wav:"audio/wav",flac:"audio/flac"};
   const mime=map[ext]||"";
   return mime&&mime.startsWith(mode==="audio"?"audio/":"video/")?{mime,ext,mode}:null;
 }
@@ -901,13 +915,13 @@ async function socialMediaFile(request){
   const mediaUrl=safePublicMediaUrl(raw);
   if(!mediaUrl)return json({error:"Alamat media tidak valid atau tidak aman."},400);
   if(!isPlatformLink(source))return json({error:"Tautan sumber platform tidak valid."},400);
-  if(!["mp4","webm","mov","m4v","avi","3gp","flv","mkv","ts","mpg","mpeg","wmv","mp3","m4a","aac","opus","ogg","wav","flac"].includes(requestedExt))return json({error:"Ekstensi media tidak didukung."},400);
+  if(!["mp4","webm","mov","m4v","avi","3gp","mp3","m4a","aac","opus","ogg","wav","flac"].includes(requestedExt))return json({error:"Ekstensi media tidak didukung."},400);
   const browserRange=request.headers.get("range");
   const rangeToRequest=browserRange||(probe&&probeMode!=="full"?"bytes=0-65535":null);
   const expectedHint=Math.floor(Number(u.searchParams.get("expected"))||0);
   if(expectedHint<0||expectedHint>500*1024*1024)return json({error:"Ukuran file yang diminta tidak valid."},400);
   let upstream=null,lastError="",lastStatus=0;
-  try{upstream=await fetchSocialUpstream(mediaUrl,source,rangeToRequest,{allowFullFallback:probe&&probeMode!=="full",preview});}catch(error){lastError=String(error?.message||error).slice(0,420);}
+  try{upstream=await fetchSocialUpstream(mediaUrl,source,rangeToRequest,{allowFullFallback:probe&&probeMode!=="full"});}catch(error){lastError=String(error?.message||error).slice(0,420);}
   if(!upstream||![200,206].includes(upstream.status)||!upstream.body){
     if(upstream?.body)await upstream.body.cancel().catch(()=>{});
     const fallback=new URL("/api/fetch-media",FREE_MEDIA_API);
@@ -918,7 +932,7 @@ async function socialMediaFile(request){
       const fallbackHeaders={accept:"*/*","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0.0.0 Safari/537.36"};
       if(fallbackRange)fallbackHeaders.range=fallbackRange;
       try{
-        const response=await fetchSocialHeaders(fallback.href,{headers:fallbackHeaders,cache:"no-store"},preview?30000:7500);
+        const response=await fetchSocialHeaders(fallback.href,{headers:fallbackHeaders,cache:"no-store"},7500);
         const contentType=String(response.headers.get("content-type")||"").split(";")[0].trim().toLowerCase();
         const validPartial=response.status!==206||!!String(response.headers.get("content-range")||"").match(/^bytes\s+\d+-\d+\/\d+$/i);
         if([200,206].includes(response.status)&&response.body&&!/^(text\/|application\/(?:json|xml|x-mpegurl))/i.test(contentType)&&validPartial&&(response.status!==206||fallbackRange)){
@@ -939,11 +953,11 @@ async function socialMediaFile(request){
     await upstream.body.cancel().catch(()=>{});
     return json({error:"Provider mengirim halaman error atau daftar putar, bukan file video/audio."},502);
   }
-  const reader=upstream.body.getReader(),parts=[],prefixTarget=preview?16:65536,previewIdleMs=preview?5*60*1000:60000;
+  const reader=upstream.body.getReader(),parts=[];
   let prefixLength=0,finished=false;
   try{
-    while(prefixLength<prefixTarget){
-      const part=await readSocialChunk(reader,previewIdleMs);
+    while(prefixLength<65536){
+      const part=await readSocialChunk(reader);
       if(part.done){finished=true;break;}
       parts.push(part.value);prefixLength+=part.value.byteLength;
     }
@@ -965,7 +979,6 @@ async function socialMediaFile(request){
     if(rangeStart===0&&prefixLength>=8){
       const signature=detectSocialMediaSignature(prefix,mode);
       detected=signature&&signature.mode===mode?signature:null;
-      if(!signature)detected=socialMimeForExtension(requestedExt,mode);
     }
   }else if(rangeStart===0||!responseIsPartial)detected=detectSocialMediaSignature(prefix,mode);
   else if(responseIsPartial)detected=socialMimeForExtension(requestedExt,mode);
@@ -999,7 +1012,7 @@ async function socialMediaFile(request){
         controller.close();return;
       }
       try{
-        const part=await readSocialChunk(reader,previewIdleMs);
+        const part=await readSocialChunk(reader);
         if(part.done){
           finished=true;
           if(expectedBytes&&received!==expectedBytes){controller.error(new Error("Unduhan terputus: diterima "+received+" dari "+expectedBytes+" byte."));return;}
@@ -1941,7 +1954,7 @@ function extractTikTokPublicPageInfo(html,pageUrl,rawUrl,requestUrl){
     const variants=video.bitrateInfo||video.bitrate_info||[];
     if(Array.isArray(variants))for(const variant of variants.slice().sort((a,b)=>Number(b?.Bitrate||b?.bitrate||0)-Number(a?.Bitrate||a?.bitrate||0))){
       const quality=String(variant?.GearName||variant?.gear_name||variant?.quality||variant?.QualityType||"");
-      const height=Number(quality.match(/(144|240|360|480|540|576|720|900|960|1080|1440|2160|4320)/)?.[1]||variant?.height||0);
+      const height=Number(quality.match(/(144|240|360|480|540|576|720|900|960|1080|1440|2160)/)?.[1]||variant?.height||0);
       add(variant?.PlayAddr||variant?.playAddr||variant?.play_addr||variant?.UrlList||variant?.url_list,"stream "+(quality||"variant"),height);
     }
     add(video.downloadAddr||video.download_addr,"download");
@@ -2070,16 +2083,18 @@ function extractTikTokPhotoProxyImages(text){
   }
   return images;
 }
-async function fetchTikTokPhotoEmbedProxy(canonicalUrl,timeoutMs=14000){
+async function fetchTikTokPhotoEmbedProxy(canonicalUrl,timeoutMs=22000){
   const itemId=extractTikTokItemId(canonicalUrl);
   if(!itemId)throw new Error("ID Photo Mode tidak tersedia untuk jalur proxy.");
   const target="https://www.tiktok.com/embed/v2/"+itemId;
   const encoded=encodeURIComponent(target);
-  const headers={"accept":"text/html,text/plain,*/*","x-return-format":"html","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"};
+  const headers={"accept":"text/plain, text/markdown, */*","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"};
   const jina=[
-    {name:"Jina Reader HTML",url:"https://r.jina.ai/http://www.tiktok.com/embed/v2/"+itemId,headers},
-    {name:"CORS.dev → Jina Reader",url:"https://proxy.cors.dev/https://r.jina.ai/http://www.tiktok.com/embed/v2/"+itemId,headers:{accept:"text/plain,text/html,*/*"}},
-    {name:"Jina Reader HTTPS",url:"https://r.jina.ai/https://www.tiktok.com/embed/v2/"+itemId,headers}
+    // Live production diagnostics show HTTPS Markdown is the responsive Jina route;
+    // try it first so a slow HTTP route cannot consume the whole gallery budget.
+    {name:"Jina Reader Markdown HTTPS",url:"https://r.jina.ai/https://www.tiktok.com/embed/v2/"+itemId,headers},
+    {name:"Jina Reader Markdown HTTP",url:"https://r.jina.ai/http://www.tiktok.com/embed/v2/"+itemId,headers},
+    {name:"CORS.dev → Jina Reader",url:"https://proxy.cors.dev/https://r.jina.ai/https://www.tiktok.com/embed/v2/"+itemId,headers:{accept:"text/plain, text/markdown, */*"}}
   ];
   const fallbacks=[
     {name:"AllOrigins",url:"https://api.allorigins.win/raw?url="+encoded,headers:{accept:"text/html,*/*"}},
@@ -2090,7 +2105,7 @@ async function fetchTikTokPhotoEmbedProxy(canonicalUrl,timeoutMs=14000){
   const readEndpoint=async endpoint=>{
     const remaining=deadline-Date.now();
     if(remaining<=0)throw new Error("Batas waktu provider habis.");
-    const response=await fetch(endpoint.url,{headers:endpoint.headers,redirect:"follow",cache:"no-store",signal:AbortSignal.timeout(Math.min(remaining,8000))});
+    const response=await fetch(endpoint.url,{headers:endpoint.headers,redirect:"follow",cache:"no-store",signal:AbortSignal.timeout(Math.min(remaining,18000))});
     if(!response.ok){await response.body?.cancel().catch(()=>{});throw new Error(endpoint.name+" HTTP "+response.status);}
     const body=(await response.text()).slice(0,5000000);
     const parsed=extractSocialImageCandidates(body,target,"tiktok").filter(item=>{try{return /photomode/i.test(new URL(item.url).pathname)}catch{return false}});
@@ -2321,6 +2336,28 @@ async function facebookPublicReaderMediaInfo(rawUrl,requestUrl,timeoutMs=9000){
     diagnostics:{source:page.source||"Facebook public page",imagesFound:imageCount}
   },502);
 }
+async function resolveTikTokShortLinkViaReader(rawUrl,timeoutMs=4500){
+  const input=safePublicMediaUrl(rawUrl);
+  if(!input||!/^(?:vt|vm)\.tiktok\.com$/i.test(input.hostname))throw new Error("Bukan tautan pendek TikTok.");
+  const readerUrl="https://r.jina.ai/http://"+input.host+input.pathname+input.search;
+  const response=await fetch(readerUrl,{headers:{accept:"text/plain, text/markdown;q=0.9","user-agent":"Mozilla/5.0 (compatible; ARYANZZ/1.0; +https://aryanzz-donwloader.aryanz.workers.dev)"},signal:AbortSignal.timeout(timeoutMs),cache:"no-store"});
+  const text=await response.text();
+  if(!response.ok)throw new Error("TikTok redirect reader HTTP "+response.status);
+  const sourceMatch=text.match(/^\s*URL Source:\s*(https:\/\/[^\s]+)/im);
+  const candidates=[];
+  if(sourceMatch?.[1])candidates.push(sourceMatch[1].replace(/&amp;/g,"&"));
+  const extracted=extractTikTokCanonicalUrl(text,sourceMatch?.[1]||rawUrl);
+  if(extracted)candidates.unshift(extracted);
+  for(const candidate of candidates){
+    const target=safePublicMediaUrl(candidate);
+    if(!target||platformIdForUrl(target.href)!=="tiktok")continue;
+    if(/^(?:vt|vm)\.tiktok\.com$/i.test(target.hostname))continue;
+    if(!extractTikTokVideoId(target.href)&&!/^\/(?:@[^/]+\/)?photo\/\d{8,}/i.test(target.pathname))continue;
+    target.search="";target.hash="";
+    return target.href;
+  }
+  throw new Error("Reader tidak menemukan URL postingan TikTok canonical.");
+}
 async function resolveSocialShortLink(rawUrl,key,timeoutMs=11000){
   const canonical=canonicalSocialPostUrl(rawUrl,key);
   if(key==="facebook")return resolveFacebookShareLink(canonical,timeoutMs);
@@ -2347,9 +2384,23 @@ async function resolveSocialShortLink(rawUrl,key,timeoutMs=11000){
     ||(key==="instagram"&&host==="instagr.am")
     ||(key==="pinterest"&&host==="pin.it");
   if(!shortLink)return canonical;
+  if(key==="tiktok"){
+    const direct=async()=>{
+      const page=await fetchSocialPostHtml(canonical,timeoutMs);
+      const target=extractTikTokCanonicalUrl(page.html,page.url)||canonicalSocialPostUrl(page.url,key);
+      const parsed=safePublicMediaUrl(target);
+      if(!parsed||platformIdForUrl(parsed.href)!=="tiktok"||/^(?:vt|vm)\.tiktok\.com$/i.test(parsed.hostname))throw new Error("Redirect TikTok belum mencapai halaman postingan.");
+      if(!extractTikTokVideoId(parsed.href)&&!/^\/(?:@[^/]+\/)?photo\/\d{8,}/i.test(parsed.pathname))throw new Error("Halaman TikTok tidak memuat ID postingan.");
+      parsed.search="";parsed.hash="";
+      return parsed.href;
+    };
+    try{
+      return await Promise.any([direct(),resolveTikTokShortLinkViaReader(canonical,Math.min(timeoutMs,5200))]);
+    }catch{return canonical;}
+  }
   try{
     const page=await fetchSocialPostHtml(canonical,timeoutMs);
-    const finalUrl=key==="tiktok"?(extractTikTokCanonicalUrl(page.html,page.url)||canonicalSocialPostUrl(page.url,key)):canonicalSocialPostUrl(page.url,key);
+    const finalUrl=canonicalSocialPostUrl(page.url,key);
     if(platformIdForUrl(finalUrl)===key)return finalUrl;
   }catch{}
   return canonical;
@@ -2367,11 +2418,11 @@ async function fetchTikwmData(rawUrl,timeoutMs=10000){
 function normalizeTikTokFallbackPayload(data,rawUrl,requestUrl,providerName){
   const media=[],seen=new Set();
   const imageExts=new Set(["jpg","jpeg","png","gif","webp","avif","bmp"]);
-  const videoExts=new Set(["mp4","m4v","mov","webm","mkv","avi","3gp","flv","ts","mpg","mpeg","wmv"]);
+  const videoExts=new Set(["mp4","m4v","mov","webm","mkv","3gp"]);
   const audioExts=new Set(["mp3","m4a","aac","opus","ogg","wav","flac"]);
   const add=(url,label,type,ext,mimeType,height=0,descriptor={})=>{
     if(typeof url!=="string"||!url.trim()||seen.has(url))return;
-    const safe=safePublicMediaUrl(url);if(!safe||/\.(?:m3u8?|mpd)(?:[?#]|$)/i.test(safe.pathname+safe.search))return;
+    const safe=safePublicMediaUrl(url);if(!safe)return;
     const mime=String(mimeType||descriptor?.mime_type||descriptor?.mime||descriptor?.content_type||descriptor?.contentType||"").split(";")[0].trim().toLowerCase();
     const pathExt=(safe.pathname.match(/\.([a-z0-9]{2,5})$/i)?.[1]||"").toLowerCase();
     const declaredExt=String(ext||descriptor?.ext||descriptor?.extension||"").replace(/^\./,"").toLowerCase();
@@ -2399,7 +2450,7 @@ function normalizeTikTokFallbackPayload(data,rawUrl,requestUrl,providerName){
       const video=groupType==="video"||variantType==="video"||mime.startsWith("video/")||videoExts.has(ext)||(!audio&&!/image|photo|picture/.test(groupType+" "+variantType));
       if(!audio&&!video)continue;
       const quality=String(variant?.quality||variant?.label||variant?.container||"MP4");
-      add(variant?.url||variant?.download_url||variant?.downloadUrl,quality,audio?"audio":"video",ext||(audio?"mp3":"mp4"),mime||(audio?"audio/mpeg":"video/mp4"),Number(variant?.height)||Number(quality.match(/(144|240|360|480|540|576|720|900|960|1080|1440|2160|4320)p?/i)?.[1]||0),variant);
+      add(variant?.url||variant?.download_url||variant?.downloadUrl,quality,audio?"audio":"video",ext||(audio?"mp3":"mp4"),mime||(audio?"audio/mpeg":"video/mp4"),Number(variant?.height)||Number(quality.match(/(144|240|360|480|540|576|720|900|960|1080|1440|2160)p?/i)?.[1]||0),variant);
     }
   }
   for(const item of downloads){
@@ -2409,7 +2460,7 @@ function normalizeTikTokFallbackPayload(data,rawUrl,requestUrl,providerName){
     if(/image|photo|picture/.test(type)||mime.startsWith("image/")||imageExts.has(ext))continue;
     const audio=ext==="mp3"||audioExts.has(ext)||mime.startsWith("audio/")||/mp3|audio/.test(type);
     const quality=String(item?.quality||item?.label||type||ext||"MP4");
-    const height=Number(quality.match(/(144|240|360|480|540|576|720|900|960|1080|1440|2160|4320)p?/i)?.[1]||0);
+    const height=Number(quality.match(/(144|240|360|480|540|576|720|900|960|1080|1440|2160)p?/i)?.[1]||0);
     add(item?.url||item?.download_url||item?.downloadUrl,quality,audio?"audio":"video",ext||(audio?"mp3":"mp4"),mime||(audio?"audio/mpeg":"video/mp4"),height,item);
   }
   add(data?.hdplay,"MP4 HD tanpa watermark","video","mp4","video/mp4");
@@ -2428,20 +2479,23 @@ function normalizeTikTokFallbackPayload(data,rawUrl,requestUrl,providerName){
   normalized.author=data.author?.nickname||data.author?.username||data.author?.unique_id||data.author||null;
   return normalized;
 }
-async function tikwmFallbackMediaInfo(rawUrl,requestUrl,alternateUrls=[]){
+async function tikwmFallbackMediaInfo(rawUrl,requestUrl,alternateUrls=[],options={}){
+  const fast=options.fast===true;
+  const providerTimeout=fast?Math.max(1200,Math.min(5000,Number(options.timeoutMs)||4800)):9000;
   const urls=[...new Set([rawUrl,...alternateUrls].filter(value=>typeof value==="string"&&value.trim()))];
+  const targets=fast?urls.slice(0,2):urls;
   const errors=[];
   const providersFor=targetUrl=>[
     {name:"DrummerDuck",run:async()=>{
       const endpoint=new URL("https://download-tktk-video.drummerduck.com/api/extract");
       endpoint.searchParams.set("url",targetUrl);
-      const response=await fetch(endpoint.href,{headers:{accept:"application/json"},signal:AbortSignal.timeout(9000),cache:"no-store"});
+      const response=await fetch(endpoint.href,{headers:{accept:"application/json"},signal:AbortSignal.timeout(providerTimeout),cache:"no-store"});
       const payload=await response.json().catch(()=>null);
       if(!response.ok||payload?.ok!==true||!payload.data)throw new Error("DrummerDuck HTTP "+response.status+": "+String(payload?.error?.message||payload?.error||"no media data").slice(0,90));
       return payload.data;
     }},
     {name:"Seekubo",run:async()=>{
-      const response=await fetch("https://tk.seekubo.com/api/v2/parse",{method:"POST",headers:{"content-type":"application/json",accept:"application/json"},body:JSON.stringify({url:targetUrl}),signal:AbortSignal.timeout(9000),cache:"no-store"});
+      const response=await fetch("https://tk.seekubo.com/api/v2/parse",{method:"POST",headers:{"content-type":"application/json",accept:"application/json"},body:JSON.stringify({url:targetUrl}),signal:AbortSignal.timeout(providerTimeout),cache:"no-store"});
       const payload=await response.json().catch(()=>null);
       if(!response.ok||!payload?.success||!payload.data)throw new Error("Seekubo HTTP "+response.status+": "+String(payload?.error?.message||payload?.error?.code||"no data").slice(0,90));
       return payload.data;
@@ -2449,14 +2503,26 @@ async function tikwmFallbackMediaInfo(rawUrl,requestUrl,alternateUrls=[]){
     {name:"TDownV4",run:async()=>{
       const endpoint=new URL("https://tdownv4.sl-bjs.workers.dev/");
       endpoint.searchParams.set("down",targetUrl);
-      const response=await fetch(endpoint.href,{headers:{accept:"application/json"},signal:AbortSignal.timeout(9000),cache:"no-store"});
+      const response=await fetch(endpoint.href,{headers:{accept:"application/json"},signal:AbortSignal.timeout(providerTimeout),cache:"no-store"});
       const payload=await response.json().catch(()=>null);
       if(!response.ok||!payload||payload.content_type!=="video"||!payload.download_url)throw new Error("TDownV4 HTTP "+response.status+": "+String(payload?.error||"no video URL").slice(0,90));
       return payload;
     }},
-    {name:"TikWM",run:()=>fetchTikwmData(targetUrl,9000)}
+    {name:"TikWM",run:()=>fetchTikwmData(targetUrl,providerTimeout)}
   ];
-  const tasks=urls.flatMap(targetUrl=>providersFor(targetUrl).map(provider=>({targetUrl,...provider})));
+  const tasks=targets.flatMap(targetUrl=>providersFor(targetUrl).map(provider=>({targetUrl,...provider})));
+  if(fast){
+    const attempts=tasks.map(task=>task.run().then(value=>{
+      const normalized=normalizeTikTokFallbackPayload(value,task.targetUrl,requestUrl,task.name);
+      if(!normalized?.formats?.some(item=>item?.mode==="video"&&item?.downloadUrl))throw new Error(task.name+" tidak memberikan stream video.");
+      return normalized;
+    }).catch(error=>{
+      errors.push(task.name+" ("+new URL(task.targetUrl).hostname+"): "+String(error?.message||error).slice(0,100));
+      throw error;
+    }));
+    try{return await Promise.any(attempts)}
+    catch{throw new Error("Quick fallback: "+errors.slice(0,6).join("; ").slice(0,480)||"Semua provider TikTok alternatif tidak merespons.");}
+  }
   const results=await Promise.allSettled(tasks.map(task=>task.run()));
   for(let i=0;i<results.length;i++){
     const result=results[i],task=tasks[i];
@@ -2465,9 +2531,9 @@ async function tikwmFallbackMediaInfo(rawUrl,requestUrl,alternateUrls=[]){
     catch(error){errors.push(task.name+": "+String(error?.message||error).slice(0,95));}
   }
   const nativeErrors=[];
-  const nativeResults=await Promise.allSettled(urls.slice(0,2).map(targetUrl=>tikTokNativePageFallback(targetUrl,requestUrl,8000)));
+  const nativeResults=await Promise.allSettled(targets.slice(0,2).map(targetUrl=>tikTokNativePageFallback(targetUrl,requestUrl,8000)));
   for(let index=0;index<nativeResults.length;index++){
-    const result=nativeResults[index],targetUrl=urls[index];
+    const result=nativeResults[index],targetUrl=targets[index];
     if(result.status==="fulfilled"){await verifyTikTokPhotoVideoFormats(result.value,targetUrl);return result.value;}
     nativeErrors.push(new URL(targetUrl).hostname+": "+String(result.reason?.message||result.reason).slice(0,180));
   }
@@ -2552,7 +2618,7 @@ async function resolveSocialImagePost(rawUrl,requestUrl,options={}){
       if(isTikTokPhotoRoute){
         let page=null;
         try{
-          const proxyData=await fetchTikTokPhotoEmbedProxy(canonicalUrl,Number(options.proxyTimeoutMs)||13000);
+          const proxyData=await fetchTikTokPhotoEmbedProxy(canonicalUrl,Number(options.proxyTimeoutMs)||22000);
           providerTitle=providerTitle||proxyData.title;
           page={url:canonicalUrl,html:"",title:proxyData.title,images:proxyData.images};
           if(options.diagnostics)options.diagnostics.value={source:"TikTok Photo Mode",proxy:{ok:true,source:proxyData.source,imageCount:proxyData.images.length}};
@@ -3030,7 +3096,7 @@ async function download(request){
 }
 
 const AUDD_MAX_BYTES=10*1024*1024;
-const MAX_YOUTUBE_BYTES=14*1024*1024*1024;
+const MAX_YOUTUBE_BYTES=500*1024*1024;
 const MUSIC_RATE_BUCKETS=new Map();
 function isYouTubeUrl(raw){
   try{const u=new URL(raw),h=u.hostname.toLowerCase();return ["http:","https:"].includes(u.protocol)&&["youtube.com","www.youtube.com","m.youtube.com","music.youtube.com","youtu.be","www.youtu.be","youtube-nocookie.com","www.youtube-nocookie.com"].includes(h);}catch{return false;}
@@ -3045,7 +3111,14 @@ const PIPED_PUBLIC_INSTANCES=[
 const INVIDIOUS_PUBLIC_INSTANCES=["https://inv.nadeko.net","https://invidious.nerdvpn.de","https://invidious.tiekoetter.com"];
 const HYBRID_MEDIA_ROOTS=["kavin.rocks","leptons.xyz","nosebs.ru","privacy.com.de","adminforge.de","piped.yt","drgns.space","owo.si","ducks.party","codespace.cz","reallyaweso.me","private.coffee","darkness.services","orangenet.cc"];
 function youtubeVideoId(raw){
-  try{const u=new URL(raw),h=u.hostname.toLowerCase();if(h==="youtu.be"||h==="www.youtu.be")return u.pathname.split("/").filter(Boolean)[0]||null;const v=u.searchParams.get("v");if(v)return v;return u.pathname.match(/^\/(?:shorts|embed|live|v)\/([A-Za-z0-9_-]{6,20})/)?.[1]||null;}catch{return null;}
+  try{
+    const u=new URL(raw),host=u.hostname.toLowerCase();
+    if(host==="youtu.be"||host==="www.youtu.be")return u.pathname.split("/").filter(Boolean)[0]||null;
+    const queryId=u.searchParams.get("v");
+    if(queryId)return queryId;
+    const pathMatch=u.pathname.match(/^\/(?:shorts|embed|live|v)\/([A-Za-z0-9_-]{6,20})(?:\/|$)/);
+    return pathMatch?.[1]||null;
+  }catch{return null;}
 }
 function hybridProviderRoot(host){
   const labels=String(host||"").toLowerCase().split(".").filter(Boolean);
@@ -3080,7 +3153,7 @@ function hybridVideoHeight(item,url){
     const p=label.match(/(?:^|\D)(\d{3,4})\s*p(?:\D|$)/i);if(p)return Number(p[1]);
   }
   const itag=Number(url?.searchParams?.get("itag")||item?.itag);
-  return ({18:360,22:720,37:1080,59:480,78:480,82:360,83:480,84:720,85:1080,133:240,134:360,135:480,136:720,137:1080,160:144,264:1440,266:2160,271:1440,272:2160,298:720,299:1080,308:1440,313:2160,315:2160,402:4320,571:4320})[itag]||0;
+  return ({18:360,22:720,37:1080,59:480,78:480,82:360,83:480,84:720,85:1080,133:240,134:360,135:480,136:720,137:1080,160:144,264:1440,266:2160,271:1440,272:2160,298:720,299:1080,308:1440,313:2160,315:2160,337:2160,401:2160,402:4320,571:4320})[itag]||0;
 }
 function hybridFormatSizeBytes(item){
   const parse=value=>{
@@ -3101,8 +3174,8 @@ function hybridVideoFormat(item,instance,progressiveSource=false,adaptiveSource=
   const mime=String(item?.mimeType||item?.type||item?.mime_type||item?.mime||"").toLowerCase(),container=String(item?.format||item?.container||item?.ext||"").toLowerCase();
   const url=hybridMediaUrl(item?.url||item?.urlTemplate||"",instance),height=hybridVideoHeight(item,url);
   const itag=Number(url?.searchParams?.get("itag")||item?.itag),declaredExt=String(item?.ext||"").toLowerCase();
-  const mp4=mime.includes("video/mp4")||mime.includes("video/x-m4v")||container.includes("mpeg_4")||container==="mp4"||container==="m4v"||declaredExt==="mp4"||String(url?.searchParams?.get("mime")||"").toLowerCase().includes("video/mp4")||(/\.mp4(?:$|[?#])/i.test(url?.pathname||""))||(progressiveSource&&[18,22,37,59,78,82,83,84,85,264,266].includes(itag));
-  const webm=mime.includes("video/webm")||container==="webm"||declaredExt==="webm"||(/\.webm(?:$|[?#])/i.test(url?.pathname||""));
+  const mp4=mime.includes("video/mp4")||mime.includes("video/x-m4v")||container.includes("mpeg_4")||container==="mp4"||container==="m4v"||declaredExt==="mp4"||String(url?.searchParams?.get("mime")||"").toLowerCase().includes("video/mp4")||(/\.mp4(?:$|[?#])/i.test(url?.pathname||""))||(progressiveSource&&[18,22,37,59,78,82,83,84,85,264,266,401,402].includes(itag));
+  const webm=mime.includes("video/webm")||container==="webm"||declaredExt==="webm"||(/\.webm(?:$|[?#])/i.test(url?.pathname||""))||(progressiveSource&&[337,571].includes(itag));
   const ext=mp4?"mp4":webm?"webm":"";
   const videoOnly=adaptiveSource||item?.videoOnly===true||item?.isVideoOnly===true||item?.video_only===true||item?.hasAudio===false||item?.has_audio===false;
   if(!url||![144,240,360,480,720,1080,1440,2160,4320].includes(height)||!ext)return null;
@@ -3119,15 +3192,27 @@ function dedupeHybridFormats(formats){
   const seen=new Set();return formats.filter(f=>{const key=f.mode+":"+f.height+":"+f.ext+":"+(f.videoOnly?"video-only":"muxed")+":"+(f.instance||"")+":"+f.url.split("?")[0];if(seen.has(key))return false;seen.add(key);return true;}).sort((a,b)=>a.mode===b.mode?(a.mode==="video"?a.height-b.height:b.bitrate-a.bitrate):a.mode==="video"?-1:1);
 }
 async function hybridFetchJson(url,parentSignal){
-  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),8000);
-  const abort=()=>controller.abort();
-  if(parentSignal){if(parentSignal.aborted)controller.abort();else parentSignal.addEventListener("abort",abort,{once:true});}
-  try{
-    const response=await fetch(url,{headers:{accept:"application/json","user-agent":"ARYANZZ/73.6 (public-instance failover)"},signal:controller.signal,cache:"no-store"});
-    if(!response.ok)throw new Error("HTTP "+response.status);
-    if(!(response.headers.get("content-type")||"").toLowerCase().includes("json"))throw new Error("Respons bukan JSON");
-    return await response.json();
-  }finally{clearTimeout(timer);parentSignal?.removeEventListener("abort",abort);}
+  let lastError=null;
+  for(let attempt=0;attempt<2;attempt++){
+    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),attempt?3000:5000);
+    const abort=()=>controller.abort();
+    if(parentSignal){if(parentSignal.aborted)controller.abort();else parentSignal.addEventListener("abort",abort,{once:true});}
+    try{
+      const response=await fetch(url,{headers:{accept:"application/json","user-agent":"ARYANZZ/73.6 (public-instance failover)"},signal:controller.signal,cache:"no-store"});
+      if(!response.ok){
+        const status=response.status;await response.body?.cancel().catch(()=>{});
+        if(attempt===0&&[500,502,503,504].includes(status)){await new Promise(resolve=>setTimeout(resolve,300));continue;}
+        throw new Error("HTTP "+status);
+      }
+      if(!(response.headers.get("content-type")||"").toLowerCase().includes("json"))throw new Error("Respons bukan JSON");
+      return await response.json();
+    }catch(error){
+      lastError=error;
+      if(parentSignal?.aborted||attempt>0||/HTTP (?:403|404|429)/.test(String(error?.message||error)))throw error;
+      await new Promise(resolve=>setTimeout(resolve,250));
+    }finally{clearTimeout(timer);parentSignal?.removeEventListener("abort",abort);}
+  }
+  throw lastError||new Error("Provider tidak merespons.");
 }
 let hybridPipedRegistryCache=null,hybridPipedRegistryAt=0;
 let hybridInvidiousRegistryCache=null,hybridInvidiousRegistryAt=0;
@@ -3161,16 +3246,32 @@ async function currentHybridInvidiousInstances(){
   hybridInvidiousRegistryAt=Date.now();
   return hybridInvidiousRegistryCache.slice();
 }
+const HYBRID_PROVIDER_HEALTH=new Map();
 async function hybridProbeGroup(instances,pathFor,parser){
-  const provider=parser===hybridFromPiped?"Piped":"Invidious";
-  const settled=await Promise.all(instances.map(async instance=>{
+  const provider=parser===hybridFromPiped?"Piped":"Invidious",now=Date.now();
+  const ordered=instances.slice().sort((a,b)=>{
+    const ah=HYBRID_PROVIDER_HEALTH.get(a)||{},bh=HYBRID_PROVIDER_HEALTH.get(b)||{};
+    const ac=Number(ah.cooldownUntil)||0,bc=Number(bh.cooldownUntil)||0;
+    if((ac>now)!==(bc>now))return ac>now?1:-1;
+    return (Number(bh.lastSuccess)||0)-(Number(ah.lastSuccess)||0);
+  });
+  const ready=ordered.filter(instance=>(Number(HYBRID_PROVIDER_HEALTH.get(instance)?.cooldownUntil)||0)<=now);
+  const candidates=ready.length?ready:ordered;
+  const settled=await Promise.all(candidates.map(async instance=>{
     try{
       const data=await hybridFetchJson(instance+pathFor);
       const result=parser(data,instance);
       if(!result)throw new Error("Metadata tidak memuat stream MP4 yang didukung.");
+      HYBRID_PROVIDER_HEALTH.set(instance,{lastSuccess:Date.now(),cooldownUntil:0,failures:0});
       return {ok:true,result};
     }catch(error){
-      return {ok:false,diagnostic:{provider,instance,error:String(error?.message||"permintaan gagal").slice(0,150)}};
+      const message=String(error?.message||"permintaan gagal").slice(0,150);
+      const status=Number(message.match(/HTTP (\d{3})/i)?.[1])||0;
+      const previous=HYBRID_PROVIDER_HEALTH.get(instance)||{};
+      const failures=Math.min(5,(Number(previous.failures)||0)+1);
+      const cooldown=status===429?120000:status===403?180000:status>=500?45000:/timeout|abort|network|fetch/i.test(message)?60000:30000;
+      HYBRID_PROVIDER_HEALTH.set(instance,{lastSuccess:Number(previous.lastSuccess)||0,cooldownUntil:Date.now()+Math.min(300000,cooldown*Math.min(2,failures)),failures});
+      return {ok:false,diagnostic:{provider,instance,error:message}};
     }
   }));
   return {results:settled.filter(item=>item.ok).map(item=>item.result),diagnostics:settled.filter(item=>!item.ok).map(item=>item.diagnostic)};
@@ -3197,6 +3298,22 @@ const HYBRID_INNERTUBE_CLIENTS=[
   {name:"IOS",version:"20.10.4",header:"5",context:{clientName:"IOS",clientVersion:"20.10.4",deviceModel:"iPhone16,2",osName:"iPhone",osVersion:"18.0.1",hl:"en",gl:"US"},ua:"com.google.ios.youtube/20.10.4 (iPhone16,2; U; CPU iOS 18_0_1 like Mac OS X)"},
   {name:"TVHTML5",version:"7.20250612.16.00",header:"7",context:{clientName:"TVHTML5",clientVersion:"7.20250612.16.00",clientScreen:"TV",hl:"en",gl:"US"},ua:"Mozilla/5.0 (SMART-TV; LINUX; Tizen 8.0) AppleWebKit/537.36"}
 ];
+function hybridYouTubeLiveState(details={},liveDetails={},streaming={},playability=""){
+  const flag=value=>value===true||value===1||/^(?:true|1|yes)$/i.test(String(value??"").trim());
+  const duration=Number(details.lengthSeconds)||0;
+  const startValue=liveDetails.startTimestamp||liveDetails.startTime||liveDetails.start_time||"";
+  const startMs=Date.parse(startValue);
+  const hasEnd=Boolean(liveDetails.endTimestamp||liveDetails.endTime||liveDetails.end_time);
+  const hasManifest=Boolean(streaming.hlsManifestUrl||streaming.dashManifestUrl);
+  const liveContent=flag(details.isLiveContent)||flag(details.is_live_content)||flag(details.isLive);
+  const isUpcoming=flag(liveDetails.isUpcoming)||flag(liveDetails.is_upcoming)||(Number.isFinite(startMs)&&startMs>Date.now()&&!hasEnd)||(playability==="LIVE_STREAM_OFFLINE"&&Number.isFinite(startMs)&&startMs>Date.now()&&!hasEnd);
+  // YouTube can expose an elapsed lengthSeconds while a broadcast is still live.
+  // An active HLS/DASH manifest plus live-content metadata is stronger evidence
+  // than duration alone; do not misclassify that stream as a finished archive.
+  const isLive=!isUpcoming&&!hasEnd&&(flag(liveDetails.isLiveNow)||flag(liveDetails.is_live_now)||flag(details.isLive)||(liveContent&&hasManifest&&(playability==="OK"||!playability))||(liveContent&&duration<=0&&(playability==="OK"||Boolean(startValue))));
+  const isLiveArchive=liveContent&&!isLive&&!isUpcoming&&(duration>0||hasEnd||playability==="LIVE_STREAM_OFFLINE");
+  return {isLive,isUpcoming,isLiveArchive};
+}
 async function hybridInnerTubePlayer(videoId,client){
   const response=await fetch("https://www.youtube.com/youtubei/v1/player?prettyPrint=false",{
     method:"POST",
@@ -3208,9 +3325,8 @@ async function hybridInnerTubePlayer(videoId,client){
   if(!response.ok||!data)throw new Error("YouTube InnerTube "+client.name+" HTTP "+response.status);
   const details=data.videoDetails||{},micro=data.microformat?.playerMicroformatRenderer||{},liveDetails=micro.liveBroadcastDetails||{},streaming=data.streamingData||{};
   const playability=String(data.playabilityStatus?.status||"");
-  const isUpcoming=Boolean(liveDetails.isUpcoming||liveDetails.is_upcoming||(playability==="LIVE_STREAM_OFFLINE"&&liveDetails.startTimestamp&&!liveDetails.endTimestamp));
-  const isLive=Boolean(liveDetails.isLiveNow||liveDetails.is_live_now||details.isLive===true||(details.isLiveContent===true&&!liveDetails.endTimestamp&&!Number(details.lengthSeconds)&&Boolean(streaming.hlsManifestUrl)));
-  if(playability&&playability!=="OK"&&!(playability==="LIVE_STREAM_OFFLINE"&&isUpcoming))throw new Error("YouTube "+client.name+": "+playability+" "+String(data.playabilityStatus?.reason||"").slice(0,90));
+  const {isLive,isUpcoming,isLiveArchive}=hybridYouTubeLiveState(details,liveDetails,streaming,playability);
+  if(playability&&playability!=="OK"&&!(playability==="LIVE_STREAM_OFFLINE"&&(isUpcoming||isLiveArchive)))throw new Error("YouTube "+client.name+": "+playability+" "+String(data.playabilityStatus?.reason||"").slice(0,90));
   const progressive=(Array.isArray(streaming.formats)?streaming.formats:[])
     .map(item=>hybridVideoFormat(item,"https://www.youtube.com",true,false)).filter(Boolean);
   const adaptive=(Array.isArray(streaming.adaptiveFormats)?streaming.adaptiveFormats:[])
@@ -3218,12 +3334,12 @@ async function hybridInnerTubePlayer(videoId,client){
       ?hybridVideoFormat(item,"https://www.youtube.com",false,true)
       :hybridAudioFormat(item,"https://www.youtube.com")).filter(Boolean);
   const formats=dedupeHybridFormats([...progressive,...adaptive]);
-  const usable=formats.some(item=>item.mode==="video"&&["mp4","webm"].includes(item.ext)&&(!item.videoOnly||formats.some(audio=>audio.mode==="audio"&&(item.ext==="webm"?["webm","opus"].includes(audio.ext):audio.ext==="m4a"))));
-  if(!usable&&!isLive&&!isUpcoming)throw new Error("YouTube "+client.name+" tidak mengembalikan URL MP4/WebM langsung yang dapat dipakai.");
+  const usable=formats.some(item=>item.mode==="video"&&["mp4","webm"].includes(item.ext)&&(!item.videoOnly||formats.some(audio=>audio.mode==="audio"&&(item.ext==="webm"?["webm","opus","ogg"].includes(audio.ext):["m4a","aac","mp3"].includes(audio.ext)))));
+  if(!usable&&!isLive&&!isUpcoming&&!isLiveArchive)throw new Error("YouTube "+client.name+" tidak mengembalikan URL MP4/WebM langsung yang dapat dipakai.");
   const thumbs=Array.isArray(details.thumbnail?.thumbnails)?details.thumbnail.thumbnails:[];
   const thumbnail=thumbs.slice().sort((a,b)=>(Number(b.width)||0)-(Number(a.width)||0))[0]?.url||null;
-  const isLiveArchive=Boolean(details.isLiveContent&&!isLive&&!isUpcoming&&Number(details.lengthSeconds)>0);
-  return {ok:true,providerReady:true,providerName:"Hybrid",provider:"YouTube InnerTube",instance:"https://www.youtube.com",videoId,title:String(details.title||"Video YouTube").slice(0,300),thumbnail,duration:Number(details.lengthSeconds)||null,uploader:String(details.author||"").slice(0,160),isLive,isUpcoming,isLiveArchive,liveStatus:isLive?"LIVE":isUpcoming?"UPCOMING":isLiveArchive?"ARCHIVE":null,liveManifestAvailable:Boolean(streaming.hlsManifestUrl||streaming.dashManifestUrl),liveEmbedUrl:"https://www.youtube-nocookie.com/embed/"+videoId,formats:formats.map((item,index)=>({...item,id:"f"+index,instance:"https://www.youtube.com",provider:"YouTube InnerTube"})),message:isLive?"Siaran langsung YouTube tersedia melalui pemutar resmi.":isUpcoming?"Siaran YouTube akan dimulai.":"Stream YouTube tersedia melalui jalur cadangan."};
+  const liveManifest=hybridMediaUrl(streaming.hlsManifestUrl||"","https://www.youtube.com");
+  return {ok:true,providerReady:true,providerName:"Hybrid",provider:"YouTube InnerTube",instance:"https://www.youtube.com",videoId,title:String(details.title||"Video YouTube").slice(0,300),thumbnail,duration:Number(details.lengthSeconds)||null,uploader:String(details.author||"").slice(0,160),isLive,isUpcoming,isLiveArchive,liveStatus:isLive?"LIVE":isUpcoming?"UPCOMING":isLiveArchive?"ARCHIVE":null,liveManifestUrl:liveManifest?.href||null,liveManifestAvailable:Boolean(liveManifest||streaming.dashManifestUrl),liveEmbedUrl:"https://www.youtube-nocookie.com/embed/"+videoId,formats:formats.map((item,index)=>({...item,id:"f"+index,instance:"https://www.youtube.com",provider:"YouTube InnerTube"})),message:isLive?"Siaran langsung YouTube terdeteksi.":isUpcoming?"Siaran YouTube akan dimulai.":isLiveArchive?"Arsip siaran YouTube terdeteksi.":"Stream YouTube tersedia melalui jalur cadangan."};
 }
 async function hybridInnerTubeGroup(videoId){
   const settled=await Promise.all(HYBRID_INNERTUBE_CLIENTS.map(async client=>{
@@ -3237,32 +3353,42 @@ async function hybridYoutubeInfo(request){
   if(!isYouTubeUrl(raw))return json({error:"URL YouTube tidak valid."},400);
   const id=youtubeVideoId(raw);
   if(!id||!/^[A-Za-z0-9_-]{6,20}$/.test(id))return json({error:"ID video YouTube tidak valid."},400);
-  const [piped,inv]=await Promise.all([currentHybridPipedInstances(),currentHybridInvidiousInstances()]);
-  const [pipedProbe,invProbe]=await Promise.all([
-    hybridProbeGroup(piped.slice(0,20),"/streams/"+encodeURIComponent(id),hybridFromPiped),
-    hybridProbeGroup(inv.slice(0,10),"/api/v1/videos/"+encodeURIComponent(id)+"?local=true",hybridFromInvidious)
+  // Start the official YouTube player probe immediately. Public Piped/Invidious
+  // directories can be slow or unavailable; they must not block Live detection.
+  const [piped,inv,innerTube]=await Promise.all([
+    currentHybridPipedInstances(),
+    currentHybridInvidiousInstances(),
+    hybridInnerTubeGroup(id)
   ]);
-  const available=[...pipedProbe.results,...invProbe.results];
-  const diagnostics=[...pipedProbe.diagnostics,...invProbe.diagnostics];
-  const hasDirectProgressive=available.some(item=>(item.formats||[]).some(format=>format.mode==="video"&&["mp4","webm"].includes(format.ext)&&!format.videoOnly));
-  const maxCommunityHeight=Math.max(0,...available.flatMap(item=>(item.formats||[]).filter(format=>format.mode==="video").map(format=>Number(format.height)||0)));
-  const liveHint=available.some(item=>item.isLive||item.isUpcoming);
-  if(!hasDirectProgressive||maxCommunityHeight<1440||liveHint){
-    const innerTube=await hybridInnerTubeGroup(id);
-    available.push(...innerTube.results);
-    diagnostics.push(...innerTube.diagnostics);
+  const innerTubeLive=innerTube.results.find(item=>item.isLive||item.isUpcoming);
+  if(innerTubeLive){
+    const formats=dedupeHybridFormats(innerTube.results.flatMap(result=>(result.formats||[]).map(format=>({...format,instance:format.instance||result.instance,provider:format.provider||result.provider}))));
+    const liveSource=innerTube.results.find(item=>item.isLive&&item.liveManifestUrl);
+    const liveManifestUrl=liveSource?.liveManifestUrl||innerTubeLive.liveManifestUrl||null;
+    return json({...innerTubeLive,videoId:id,isLive:Boolean(innerTubeLive.isLive),isUpcoming:Boolean(innerTubeLive.isUpcoming),isLiveArchive:false,liveStatus:innerTubeLive.isLive?"LIVE":"UPCOMING",liveManifestUrl,liveManifestAvailable:Boolean(liveManifestUrl||innerTube.results.some(item=>item.liveManifestAvailable)),liveEmbedUrl:"https://www.youtube-nocookie.com/embed/"+id,providerReady:true,formats:formats.map((format,index)=>({...format,id:"f"+index})),providers:innerTube.results.map(item=>({provider:item.provider,instance:item.instance,formatCount:item.formats?.length||0})),diagnostics:innerTube.diagnostics.slice(0,20)});
   }
+  const [pipedProbe,invProbe]=await Promise.all([
+    hybridProbeGroup(piped.slice(0,10),"/streams/"+encodeURIComponent(id),hybridFromPiped),
+    hybridProbeGroup(inv.slice(0,6),"/api/v1/videos/"+encodeURIComponent(id)+"?local=true",hybridFromInvidious)
+  ]);
+  const available=[...innerTube.results,...pipedProbe.results,...invProbe.results];
+  const diagnostics=[...innerTube.diagnostics,...pipedProbe.diagnostics,...invProbe.diagnostics];
   if(available.length){
-    const isLive=available.some(item=>item.isLive),isUpcoming=available.some(item=>item.isUpcoming),isLiveArchive=available.some(item=>item.isLiveArchive);
-    const primary=available.find(item=>item.isLive||item.isUpcoming)||available.find(item=>(item.formats||[]).some(format=>format.mode==="video"&&!format.videoOnly))||available[0];
+    const liveStateSource=available.find(item=>item.isLive||item.isUpcoming||item.isLiveArchive);
+    const innerTubeState=available.find(item=>item.provider==="YouTube InnerTube"&&(item.isLive||item.isUpcoming||item.isLiveArchive))||available.find(item=>item.provider==="YouTube InnerTube");
+    const stateSource=liveStateSource||innerTubeState||available[0];
+    const isLive=Boolean(stateSource?.isLive);
+    const isUpcoming=Boolean(stateSource?.isUpcoming);
+    const isLiveArchive=Boolean(stateSource?.isLiveArchive);
+    const primary=liveStateSource||innerTubeState||available.find(item=>(item.formats||[]).some(format=>format.mode==="video"&&!format.videoOnly))||available[0];
     const formats=dedupeHybridFormats(available.flatMap(result=>(result.formats||[]).map(format=>({...format,instance:format.instance||result.instance,provider:format.provider||result.provider}))));
-    return json({...primary,videoId:id,isLive,isUpcoming,isLiveArchive,liveStatus:isLive?"LIVE":isUpcoming?"UPCOMING":isLiveArchive?"ARCHIVE":null,liveEmbedUrl:"https://www.youtube-nocookie.com/embed/"+id,providerReady:true,formats:formats.map((format,index)=>({...format,id:"f"+index})),providers:available.map(item=>({provider:item.provider,instance:item.instance,formatCount:item.formats?.length||0})),diagnostics:diagnostics.slice(0,20)});
+    const liveSource=available.find(item=>item.isLive&&item.liveManifestUrl);
+    const liveManifestUrl=liveSource?.liveManifestUrl||primary.liveManifestUrl||null;
+    return json({...primary,videoId:id,isLive,isUpcoming,isLiveArchive,liveStatus:isLive?"LIVE":isUpcoming?"UPCOMING":isLiveArchive?"ARCHIVE":null,liveManifestUrl,liveManifestAvailable:Boolean(liveManifestUrl||available.some(item=>item.liveManifestAvailable)),liveEmbedUrl:"https://www.youtube-nocookie.com/embed/"+id,providerReady:true,formats:formats.map((format,index)=>({...format,id:"f"+index})),providers:available.map(item=>({provider:item.provider,instance:item.instance,formatCount:item.formats?.length||0})),diagnostics:diagnostics.slice(0,20)});
   }
-  {
-    let preview={};
-    try{const u=new URL("https://www.youtube.com/oembed");u.searchParams.set("url",raw);u.searchParams.set("format","json");const res=await fetch(u.toString(),{headers:{accept:"application/json"},signal:AbortSignal.timeout(5000)});if(res.ok)preview=await res.json();}catch{}
-    return json({ok:true,providerReady:false,providerName:"Hybrid",provider:"Unavailable",videoId:id,liveEmbedUrl:"https://www.youtube-nocookie.com/embed/"+id,title:String(preview.title||"Video YouTube").slice(0,300),thumbnail:typeof preview.thumbnail_url==="string"?preview.thumbnail_url:null,formats:[],providerMessage:"Instance komunitas belum memberikan stream MP4 yang dapat digunakan. Link video tetap valid; coba lagi nanti atau gunakan file yang memang dapat diunduh dari pemiliknya.",diagnostics:diagnostics.slice(0,20)});
-  }
+  let preview={};
+  try{const u=new URL("https://www.youtube.com/oembed");u.searchParams.set("url",raw);u.searchParams.set("format","json");const res=await fetch(u.toString(),{headers:{accept:"application/json"},signal:AbortSignal.timeout(5000)});if(res.ok)preview=await res.json();}catch{}
+  return json({ok:true,providerReady:false,providerName:"Hybrid",provider:"Unavailable",videoId:id,liveEmbedUrl:"https://www.youtube-nocookie.com/embed/"+id,title:String(preview.title||"Video YouTube").slice(0,300),thumbnail:typeof preview.thumbnail_url==="string"?preview.thumbnail_url:null,formats:[],providerMessage:"YouTube mengenali ID video, tetapi provider publik belum mengembalikan stream yang bisa diunduh. Tautan tetap dikenali; coba ulangi atau tunggu arsip LIVE selesai diproses.",diagnostics:diagnostics.slice(0,20)});
 }
 function hybridFilename(title,ext){
   const clean=String(title||"aryanzz-youtube").replace(/[\/:*?"<>|\u0000-\u001f]/g," ").replace(/\s+/g," ").trim().slice(0,90)||"aryanzz-youtube";
@@ -3358,7 +3484,7 @@ async function hybridYoutubeFile(request){
   }catch(e){return json({error:"Gagal mengambil stream dari instance komunitas: "+String(e.message||"network error").slice(0,160)},502)}
   if(!response||![200,206].includes(response.status)||!response.body)return json({error:"Stream tidak tersedia atau ditolak (HTTP "+(response?.status||502)+") dari "+current.hostname+" setelah "+profiles.length+" pola permintaan. Coba provider/instance lain."},502);
   const size=Number(response.headers.get("content-length")||0);
-  if(size>MAX_YOUTUBE_BYTES){await response.body.cancel();return json({error:"File melebihi batas aman 14 GB."},413)}
+  if(size>MAX_YOUTUBE_BYTES){await response.body.cancel();return json({error:"File melebihi batas 500 MB."},413)}
   if(probe){
     const contentType=String(response.headers.get("content-type")||"").toLowerCase();
     if(contentType.startsWith("text/")||contentType.includes("application/json")||contentType.includes("application/xml")){
@@ -3389,226 +3515,11 @@ async function hybridYoutubeFile(request){
   let received=0;
   const limited=response.body.pipeThrough(new TransformStream({transform(chunk,controller){
     received+=chunk.byteLength;
-    if(received>MAX_YOUTUBE_BYTES){controller.error(new Error("File melebihi batas aman 14 GB."));return;}
+    if(received>MAX_YOUTUBE_BYTES){controller.error(new Error("File melebihi batas 500 MB."));return;}
     controller.enqueue(chunk);
   }}));
   return new Response(limited,{status:response.status,headers});
 }
-function muxBase64UrlEncode(bytes){
-  let binary="";
-  for(let i=0;i<bytes.length;i++)binary+=String.fromCharCode(bytes[i]);
-  return btoa(binary).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
-}
-function muxBase64UrlDecode(value){
-  const normalized=String(value||"").replace(/-/g,"+").replace(/_/g,"/");
-  const padded=normalized+"=".repeat((4-normalized.length%4)%4);
-  const binary=atob(padded),bytes=new Uint8Array(binary.length);
-  for(let i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);
-  return bytes;
-}
-async function signYoutubeMuxTicket(payload,secret){
-  const encoded=muxBase64UrlEncode(new TextEncoder().encode(JSON.stringify(payload)));
-  const key=await crypto.subtle.importKey("raw",new TextEncoder().encode(secret),{name:"HMAC",hash:"SHA-256"},false,["sign"]);
-  const signature=new Uint8Array(await crypto.subtle.sign("HMAC",key,new TextEncoder().encode(encoded)));
-  return encoded+"."+muxBase64UrlEncode(signature);
-}
-async function verifyYoutubeMuxTicket(ticket,secret){
-  const parts=String(ticket||"").split(".");
-  if(parts.length!==2||!parts[0]||!parts[1])return null;
-  try{
-    const key=await crypto.subtle.importKey("raw",new TextEncoder().encode(secret),{name:"HMAC",hash:"SHA-256"},false,["verify"]);
-    const valid=await crypto.subtle.verify("HMAC",key,muxBase64UrlDecode(parts[1]),new TextEncoder().encode(parts[0]));
-    if(!valid)return null;
-    const payload=JSON.parse(new TextDecoder().decode(muxBase64UrlDecode(parts[0])));
-    return payload&&typeof payload==="object"&&!Array.isArray(payload)?payload:null;
-  }catch{return null}
-}
-async function trustedHybridInstanceOrigin(raw){
-  if(!raw)return null;
-  try{
-    const candidate=new URL(raw);
-    if(candidate.protocol!=="https:"||candidate.username||candidate.password||candidate.port||candidate.pathname!=="/"||candidate.search||candidate.hash)return null;
-    const staticInstances=[...PIPED_PUBLIC_INSTANCES,...INVIDIOUS_PUBLIC_INSTANCES];
-    let known=staticInstances.some(value=>{try{return new URL(value).origin===candidate.origin}catch{return false}});
-    if(!known){
-      const [piped,invidious]=await Promise.all([currentHybridPipedInstances(),currentHybridInvidiousInstances()]);
-      known=[...piped,...invidious].some(value=>{try{return new URL(value).origin===candidate.origin}catch{return false}});
-    }
-    return known?candidate.origin:null;
-  }catch{return null}
-}
-function youtubeMuxServiceOrigin(env){
-  try{
-    const value=new URL(String(env?.MEDIA_MUX_URL||env?.YOUTUBE_MUX_URL||""));
-    if(value.protocol!=="https:"||value.username||value.password||value.port||value.pathname!=="/"||value.search||value.hash)return null;
-    return value.origin;
-  }catch{return null}
-}
-async function hybridYoutubeMuxTicket(request,env){
-  const secret=String(env?.MEDIA_MUX_TOKEN||env?.YOUTUBE_MUX_TOKEN||""),serviceOrigin=youtubeMuxServiceOrigin(env);
-  if(!secret||!serviceOrigin)return json({ok:false,code:"YOUTUBE_MUX_NOT_CONFIGURED",error:"Mesin server MP4 resolusi tinggi belum diaktifkan. Penggabungan 2K/4K/8K membutuhkan layanan FFmpeg streaming."},503);
-  let data;
-  try{data=await request.json()}catch{return json({ok:false,error:"Data pilihan MP4 tidak valid."},400)}
-  const height=Number(data?.height);
-  if(![144,240,360,480,720,1080,1440,2160,4320].includes(height))return json({ok:false,error:"Resolusi sumber tidak didukung."},422);
-  const videoExt=String(data?.videoExt||"").toLowerCase(),audioExt=String(data?.audioExt||"").toLowerCase();
-  const mp4Pair=["mp4","m4v"].includes(videoExt)&&["m4a","aac"].includes(audioExt);
-  const webmPair=videoExt==="webm"&&["webm","opus"].includes(audioExt);
-  if(!mp4Pair&&!webmPair)return json({ok:false,error:"Sumber harus berupa MP4 + M4A/AAC atau WebM + Opus agar bisa digabung menjadi MP4."},422);
-  const videoInstance=await trustedHybridInstanceOrigin(data?.videoInstance);
-  const audioInstance=await trustedHybridInstanceOrigin(data?.audioInstance);
-  const video=hybridMediaUrl(data?.videoUrl,videoInstance);
-  const audio=hybridMediaUrl(data?.audioUrl,audioInstance);
-  if(!video||!audio)return json({ok:false,error:"Stream video/audio tidak berasal dari sumber YouTube yang diizinkan."},400);
-  const videoHost=video.hostname.toLowerCase(),audioHost=audio.hostname.toLowerCase();
-  const mediaHostAllowed=host=>host==="googlevideo.com"||host.endsWith(".googlevideo.com");
-  if(!mediaHostAllowed(videoHost)||!mediaHostAllowed(audioHost))return json({ok:false,error:"Provider ini belum didukung oleh mesin mux MP4 resolusi tinggi."},422);
-  const now=Date.now(),id=crypto.randomUUID();
-  const title=hybridFilename(String(data?.title||"ARYANZZ YouTube"),"mp4");
-  const payload={v:1,id,videoUrl:video.href,audioUrl:audio.href,title,height,videoExt,audioExt,videoInstance:videoInstance||null,audioInstance:audioInstance||null,issuedAt:now,expiresAt:now+30*60*1000};
-  let probeResponse,probeData;
-  try{
-    probeResponse=await fetch(new URL("/probe/"+id,serviceOrigin).href,{
-      method:"POST",
-      headers:{"authorization":"Bearer "+secret,"content-type":"application/json","accept":"application/json"},
-      body:JSON.stringify(payload),
-      signal:request.signal,
-      cache:"no-store"
-    });
-    probeData=await probeResponse.json().catch(()=>({}));
-  }catch(error){
-    return json({ok:false,error:"Pemeriksaan stream MP4 server gagal: "+String(error?.message||"network error").slice(0,140)},502);
-  }
-  if(!probeResponse.ok||!probeData.ok)return json({ok:false,error:probeData.error||"Stream tidak lolos pemeriksaan FFprobe."},probeResponse.status||422);
-  if(Number(probeData.height)!==height)return json({ok:false,error:"Resolusi sumber tidak cocok dengan pilihan "+height+"p."},422);
-  payload.videoCodec=String(probeData.videoCodec||"").toLowerCase();
-  payload.audioCodec=String(probeData.audioCodec||"").toLowerCase();
-  if(!payload.videoCodec||!payload.audioCodec)return json({ok:false,error:"Codec sumber belum dapat diverifikasi."},422);
-  const ticket=await signYoutubeMuxTicket(payload,secret);
-  return json({ok:true,ticket,filename:title,height,expiresAt:payload.expiresAt,mode:payload.audioCodec==="aac"?"server-stream-copy":"server-video-copy-audio-aac",videoCodec:payload.videoCodec,audioCodec:payload.audioCodec,audioTranscoded:payload.audioCodec!=="aac"});
-}
-async function hybridYoutubeMuxFile(request,env){
-  const secret=String(env?.MEDIA_MUX_TOKEN||env?.YOUTUBE_MUX_TOKEN||""),origin=youtubeMuxServiceOrigin(env);
-  if(!secret||!origin)return json({ok:false,code:"YOUTUBE_MUX_NOT_CONFIGURED",error:"Mesin server MP4 resolusi tinggi belum diaktifkan."},503);
-  const ticket=new URL(request.url).searchParams.get("ticket")||"";
-  const payload=await verifyYoutubeMuxTicket(ticket,secret);
-  if(!payload||payload.v!==1||!/^([0-9a-f-]{36})$/i.test(String(payload.id||"")))return json({ok:false,error:"Tiket unduhan tidak valid."},403);
-  if(Number(payload.expiresAt)<Date.now())return json({ok:false,error:"Tiket unduhan sudah kedaluwarsa. Periksa tautan sekali lagi."},410);
-  const height=Number(payload.height);
-  if(![144,240,360,480,720,1080,1440,2160,4320].includes(height))return json({ok:false,error:"Resolusi pada tiket tidak valid."},422);
-  const video=hybridMediaUrl(payload.videoUrl,await trustedHybridInstanceOrigin(payload.videoInstance));
-  const audio=hybridMediaUrl(payload.audioUrl,await trustedHybridInstanceOrigin(payload.audioInstance));
-  if(!video||!audio)return json({ok:false,error:"Alamat stream pada tiket sudah tidak valid."},422);
-  const endpoint=new URL("/mux/"+payload.id,origin);
-  let upstream;
-  try{
-    upstream=await fetch(endpoint.href,{
-      method:"POST",
-      headers:{"authorization":"Bearer "+secret,"content-type":"application/json","accept":"video/mp4, application/json"},
-      body:JSON.stringify({...payload,videoUrl:video.href,audioUrl:audio.href}),
-      signal:request.signal,
-      cache:"no-store"
-    });
-  }catch(error){
-    return json({ok:false,error:"Mesin mux server tidak dapat dijangkau: "+String(error?.message||"network error").slice(0,140)},502);
-  }
-  if(!upstream.ok){
-    const text=await upstream.text().catch(()=>"");
-    let detail=text;
-    try{detail=JSON.parse(text)?.error||text}catch{}
-    return json({ok:false,error:String(detail||"Mesin mux gagal memproses video.").slice(0,300)},upstream.status);
-  }
-  const headers=new Headers(upstream.headers);
-  headers.set("content-type","video/mp4");
-  headers.set("content-disposition","attachment; filename*=UTF-8''"+encodeURIComponent(payload.title));
-  headers.set("cache-control","no-store, no-cache, must-revalidate");
-  headers.set("x-content-type-options","nosniff");
-  headers.set("x-aryanzz-source-height",String(height));
-  headers.set("x-aryanzz-mux-mode","stream-copy");
-  headers.delete("content-length");
-  return new Response(upstream.body,{status:200,headers});
-}
-const SOCIAL_MUX_MEDIA_ROOTS=[...HYBRID_MEDIA_ROOTS,"googlevideo.com","cdninstagram.com","fbcdn.net","fbsbx.com","tiktokcdn.com","tiktokcdn-us.com","tiktokcdn-eu.com","tiktokcdn.net","tiktokv.com","byteoversea.com","ibytedtos.com","bytecdn.cn","muscdn.com","musical.ly","twimg.com","redditmedia.com","redd.it","vimeocdn.com","vimeo.com","pinimg.com","kwai.net","snackvideo.com","threads.net","threads.com","capcut.com"];
-function socialMuxHostAllowed(url,env){
-  const host=url.hostname.toLowerCase();
-  const extra=String(env?.MEDIA_MUX_ALLOWED_HOSTS||"").split(",").map(value=>value.trim().toLowerCase().replace(/^\.+|\.+$/g,"")).filter(Boolean);
-  return [...SOCIAL_MUX_MEDIA_ROOTS,...extra].some(root=>host===root||host.endsWith("."+root));
-}
-async function socialMuxTicket(request,env){
-  const secret=String(env?.MEDIA_MUX_TOKEN||env?.YOUTUBE_MUX_TOKEN||""),serviceOrigin=youtubeMuxServiceOrigin(env);
-  if(!secret||!serviceOrigin)return json({ok:false,code:"MEDIA_MUX_NOT_CONFIGURED",error:"Mesin FFmpeg server belum dikonfigurasi. File besar dapat diproses melalui VPS/Node.js terpisah; tidak wajib memakai Cloudflare Containers."},503);
-  let data;try{data=await request.json()}catch{return json({ok:false,error:"Data mux media tidak valid."},400)}
-  const source=safePublicMediaUrl(data?.sourceUrl||"");
-  const video=safePublicMediaUrl(data?.videoUrl||"");
-  const audio=data?.audioUrl?safePublicMediaUrl(data.audioUrl):null;
-  if(!source||!isPlatformLink(source.href))return json({ok:false,error:"Tautan sumber platform tidak valid."},400);
-  if(!video||!socialMuxHostAllowed(video,env)||data?.audioUrl&&(!audio||!socialMuxHostAllowed(audio,env)))return json({ok:false,error:"CDN sumber belum termasuk daftar host FFmpeg yang diizinkan. Host tambahan dapat dikonfigurasi pada server."},422);
-  const videoExt=String(data?.videoExt||"").toLowerCase(),audioExt=String(data?.audioExt||"").toLowerCase();
-  if(!["mp4","m4v","webm","mov","avi","3gp","flv","mkv","ts","mpg","mpeg","wmv"].includes(videoExt))return json({ok:false,error:"Format video sumber belum didukung mesin MP4."},422);
-  if(audio&& !["m4a","aac","mp3","opus","ogg","wav","flac","webm"].includes(audioExt))return json({ok:false,error:"Format audio sumber belum didukung mesin MP4."},422);
-  if(!audio&&audioExt)return json({ok:false,error:"Ekstensi audio tidak cocok dengan URL audio."},422);
-  const requestedHeight=Number(data?.height)||0;
-  if(requestedHeight&&(!Number.isInteger(requestedHeight)||requestedHeight<144||requestedHeight>4320))return json({ok:false,error:"Resolusi sumber tidak didukung."},422);
-  const now=Date.now(),id=crypto.randomUUID();
-  const title=hybridFilename(String(data?.title||"ARYANZZ Media"),"mp4");
-  const payload={v:1,id,videoUrl:video.href,audioUrl:audio?.href||null,title,height:requestedHeight,videoExt,audioExt:audio?audioExt:"",referer:source.origin+"/",issuedAt:now,expiresAt:now+30*60*1000};
-  let probeResponse,probeData;
-  try{
-    probeResponse=await fetch(new URL("/probe/"+id,serviceOrigin).href,{
-      method:"POST",
-      headers:{"authorization":"Bearer "+secret,"content-type":"application/json","accept":"application/json"},
-      body:JSON.stringify(payload),
-      signal:request.signal,
-      cache:"no-store"
-    });
-    probeData=await probeResponse.json().catch(()=>({}));
-  }catch(error){return json({ok:false,error:"Pemeriksaan media pada FFmpeg server gagal: "+String(error?.message||"network error").slice(0,160)},502)}
-  if(!probeResponse.ok||!probeData.ok)return json({ok:false,error:probeData.error||"Stream publik tidak lolos pemeriksaan FFprobe."},probeResponse.status||422);
-  if(requestedHeight&&Number(probeData.height)!==requestedHeight)return json({ok:false,error:"Resolusi sumber sebenarnya "+Number(probeData.height)+"p, bukan "+requestedHeight+"p."},422);
-  payload.height=Number(probeData.height)||0;
-  payload.videoCodec=String(probeData.videoCodec||"").toLowerCase();
-  payload.audioCodec=String(probeData.audioCodec||"").toLowerCase();
-  if(!payload.height||!payload.videoCodec||(audio&&!payload.audioCodec))return json({ok:false,error:"Metadata resolusi dan codec belum dapat diverifikasi."},422);
-  const ticket=await signYoutubeMuxTicket(payload,secret);
-  return json({ok:true,ticket,filename:title,height:payload.height,expiresAt:payload.expiresAt,mode:["h264","hevc","av1","vp9"].includes(payload.videoCodec)?"server-video-copy":"server-video-transcode",videoCodec:payload.videoCodec,audioCodec:payload.audioCodec,hasAudio:!!payload.audioCodec,audioTranscoded:!!payload.audioCodec&&payload.audioCodec!=="aac"});
-}
-async function socialMuxFile(request,env){
-  const secret=String(env?.MEDIA_MUX_TOKEN||env?.YOUTUBE_MUX_TOKEN||""),origin=youtubeMuxServiceOrigin(env);
-  if(!secret||!origin)return json({ok:false,code:"MEDIA_MUX_NOT_CONFIGURED",error:"Mesin FFmpeg server belum dikonfigurasi."},503);
-  const ticket=new URL(request.url).searchParams.get("ticket")||"";
-  const payload=await verifyYoutubeMuxTicket(ticket,secret);
-  if(!payload||payload.v!==1||!/^([0-9a-f-]{36})$/i.test(String(payload.id||"")))return json({ok:false,error:"Tiket mux tidak valid."},403);
-  if(Number(payload.expiresAt)<Date.now())return json({ok:false,error:"Tiket mux sudah kedaluwarsa. Periksa tautan sekali lagi."},410);
-  const video=safePublicMediaUrl(payload.videoUrl||""),audio=payload.audioUrl?safePublicMediaUrl(payload.audioUrl):null;
-  if(!video||!socialMuxHostAllowed(video,env)||payload.audioUrl&&(!audio||!socialMuxHostAllowed(audio,env)))return json({ok:false,error:"CDN sumber pada tiket tidak diizinkan."},422);
-  if(!Number.isInteger(Number(payload.height))||Number(payload.height)<144||Number(payload.height)>4320||!payload.videoCodec||(payload.audioUrl&&!payload.audioCodec))return json({ok:false,error:"Metadata mux pada tiket tidak valid."},422);
-  const endpoint=new URL("/mux/"+payload.id,origin);
-  let upstream;
-  try{
-    upstream=await fetch(endpoint.href,{
-      method:"POST",
-      headers:{"authorization":"Bearer "+secret,"content-type":"application/json","accept":"video/mp4, application/json"},
-      body:JSON.stringify(payload),
-      signal:request.signal,
-      cache:"no-store"
-    });
-  }catch(error){return json({ok:false,error:"Mesin FFmpeg server tidak dapat dijangkau: "+String(error?.message||"network error").slice(0,160)},502)}
-  if(!upstream.ok){
-    const text=await upstream.text().catch(()=>"");let detail=text;
-    try{detail=JSON.parse(text)?.error||text}catch{}
-    return json({ok:false,error:String(detail||"Mesin FFmpeg gagal memproses MP4.").slice(0,300)},upstream.status);
-  }
-  const headers=new Headers(upstream.headers);
-  headers.set("content-type","video/mp4");
-  headers.set("content-disposition","attachment; filename*=UTF-8''"+encodeURIComponent(payload.title));
-  headers.set("cache-control","no-store, no-cache, must-revalidate");
-  headers.set("x-content-type-options","nosniff");
-  headers.set("x-aryanzz-source-height",String(payload.height));
-  headers.set("x-aryanzz-mux-mode","universal-ffmpeg");
-  headers.delete("content-length");
-  return new Response(upstream.body,{status:200,headers});
-}
-
 function hybridThumbnailHostAllowed(url,instanceOrigin){
   const host=url.hostname.toLowerCase();
   const youtubeImage=host==="i.ytimg.com"||host==="img.youtube.com"||host==="yt3.ggpht.com"||host==="yt4.ggpht.com"||host.endsWith(".ytimg.com")||host.endsWith(".googleusercontent.com");
@@ -4190,12 +4101,8 @@ const workerHandler = {async fetch(request,env){
   if(url.pathname==="/api/image/file"&&request.method==="GET")return imageFile(request);
   if(url.pathname==="/api/music/recognize"&&request.method==="POST")return recognizeMusic(request,env);
   if(url.pathname==="/api/platform/status"&&request.method==="GET")return platformStatus(env);
-  if(url.pathname==="/api/youtube/status"&&request.method==="GET")return json({ok:true,service:"ARYANZZ YouTube Backend",youtubeDownloader:true,provider:"Dynamic Piped + Invidious hybrid",paidProvider:false,cobalt:false,supportedAudio:["M4A","MP3","WEBM","OPUS"],supportedVideo:["144","240","360","480","720","1080","1440","2160","4320"],largeFileStreaming:true,serverMuxReady:!!(env.MEDIA_MUX_URL||env.YOUTUBE_MUX_URL)&&!!(env.MEDIA_MUX_TOKEN||env.YOUTUBE_MUX_TOKEN)});
+  if(url.pathname==="/api/youtube/status"&&request.method==="GET")return json({ok:true,service:"ARYANZZ YouTube Backend",youtubeDownloader:true,provider:"Dynamic Piped + Invidious hybrid",paidProvider:false,cobalt:false,supportedAudio:["M4A","MP3","WEBM","OPUS"],supportedVideo:["360","480","720","1080","1440","2160","4320"]});
   if(url.pathname==="/api/youtube/hybrid/info"&&request.method==="GET")return hybridYoutubeInfo(request);
-  if(url.pathname==="/api/youtube/hybrid/mux-ticket"&&request.method==="POST")return hybridYoutubeMuxTicket(request,env);
-  if(url.pathname==="/api/youtube/hybrid/mux"&&request.method==="GET")return hybridYoutubeMuxFile(request,env);
-  if(url.pathname==="/api/social/mux-ticket"&&request.method==="POST")return socialMuxTicket(request,env);
-  if(url.pathname==="/api/social/mux"&&request.method==="GET")return socialMuxFile(request,env);
   if(url.pathname==="/api/youtube/hybrid/validate"&&request.method==="GET")return hybridYoutubeValidate(request);
    if(url.pathname==="/api/youtube/hybrid/file"&&request.method==="GET")return hybridYoutubeFile(request);
    if(url.pathname==="/api/youtube/hybrid/thumbnail"&&request.method==="GET")return hybridYoutubeThumbnail(request);
@@ -4235,10 +4142,6 @@ const workerHandler = {async fetch(request,env){
 const SECURITY_BUCKETS=new Map();
 const SECURITY_EVENTS={blockedOrigin:0,rateLimited:0,oversizedRequest:0,blockedMethod:0};
 const SECURITY_LIMITS=[
-  {match:/^\/api\/youtube\/hybrid\/mux-ticket$/,limit:6},
-  {match:/^\/api\/youtube\/hybrid\/mux$/,limit:6},
-  {match:/^\/api\/social\/mux-ticket$/,limit:6},
-  {match:/^\/api\/social\/mux$/,limit:6},
   {match:/^\/api\/(?:social\/search|social\/image-search|image\/search|search)$/,limit:30},
   {match:/^\/api\/(?:social-file|image\/file|social-image-file|direct-file)$/,limit:90},
   {match:/^\/api\//,limit:90}

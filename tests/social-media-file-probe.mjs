@@ -6,20 +6,20 @@ const source="https://www.tiktok.com/video/1234567890123456789";
 const media="https://cdn.example/clip.mp4";
 const mp4=Uint8Array.from([0,0,0,24,0x66,0x74,0x79,0x70,0x69,0x73,0x6f,0x6d,0,0,0,0]);
 const mp4Response=(status=200,headers={})=>new Response(mp4,{status,headers:{"content-type":"video/mp4","content-length":String(mp4.byteLength),...headers}});
-const buildUrl=(probe,ext="mp4",mediaUrl="https://cdn.example/clip.mp4")=>{
+const buildUrl=probe=>{
   const url=new URL("https://aryanzz.example/api/social-file");
-  url.searchParams.set("url",mediaUrl);
+  url.searchParams.set("url",media);
   url.searchParams.set("source",source);
   url.searchParams.set("mode","video");
-  url.searchParams.set("ext",ext);
+  url.searchParams.set("ext","mp4");
   url.searchParams.set("filename","probe-regression");
   url.searchParams.set("probe",probe);
   return url.href;
 };
-const run=async(probe,mock,ext="mp4",mediaUrl="https://cdn.example/clip.mp4")=>{
+const run=async(probe,mock)=>{
   globalThis.fetch=mock;
   try{
-    const response=await worker.fetch(new Request(buildUrl(probe,ext,mediaUrl)),{});
+    const response=await worker.fetch(new Request(buildUrl(probe)),{});
     const data=await response.json().catch(()=>null);
     return {response,data};
   }finally{globalThis.fetch=originalFetch;}
@@ -64,22 +64,7 @@ try{
   assert.ok(headerAttempts.includes("https://www.tiktok.com/"),"the source-referer profile must be attempted first");
   assert.ok(headerAttempts.includes("https://cdn.example/"),"the CDN-referer fallback profile must be attempted");
 
-  const probeSignature=async(ext,bytes,expectedMime,expectedExt)=>{
-    const body=Uint8Array.from(bytes);
-    const result=await run("1",async()=>new Response(body,{status:200,headers:{"content-type":expectedMime,"content-length":String(body.byteLength)}}),ext,"https://cdn.example/sample."+ext);
-    assert.equal(result.response.status,200,ext+" source container should pass signature preflight");
-    assert.equal(result.data?.valid,true,ext+" source container should be recognized as real video");
-    assert.equal(result.data?.extension,expectedExt,ext+" should be reported using its verified container");
-    assert.equal(result.data?.mimeType,expectedMime,ext+" should return the correct MIME type");
-  };
-  await probeSignature("mov",[0,0,0,24,0x66,0x74,0x79,0x70,0x71,0x74,0x20,0x20,0,0,0,0],"video/quicktime","mov");
-  await probeSignature("avi",[0x52,0x49,0x46,0x46,0,0,0,0,0x41,0x56,0x49,0x20],"video/x-msvideo","avi");
-  await probeSignature("webm",[0x1a,0x45,0xdf,0xa3,0x42,0x82,0x84,0x77,0x65,0x62,0x6d],"video/webm","webm");
-  await probeSignature("mkv",[0x1a,0x45,0xdf,0xa3,0x42,0x82,0x88,0x6d,0x61,0x74,0x72,0x6f,0x73,0x6b,0x61],"video/x-matroska","mkv");
-  await probeSignature("flv",[0x46,0x4c,0x56,1,1,0,0,0,9,0,0,0,0],"video/x-flv","flv");
-  const transportStream=new Uint8Array(377);transportStream[0]=0x47;transportStream[188]=0x47;transportStream[376]=0x47;
-  await probeSignature("ts",transportStream,"video/mp2t","ts");
-  console.log("ARYANZZ social media file preflight and multi-container signature tests passed.");
+  console.log("ARYANZZ social media file preflight and alternate upstream retry tests passed.");
 }finally{
   globalThis.fetch=originalFetch;
 }

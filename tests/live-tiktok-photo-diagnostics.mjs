@@ -75,15 +75,14 @@ await probe("post-item-list",postList.href,{"referer":canonicalUrl});
 await probe("oembed", "https://www.tiktok.com/oembed?url="+encodeURIComponent(canonicalUrl));
 await probe("photo-page",canonicalUrl,{"referer":"https://www.tiktok.com/"});
 await probe("embed-v2","https://www.tiktok.com/embed/v2/"+itemId);
-await probe("jina-embed-v2-http","https://r.jina.ai/http://www.tiktok.com/embed/v2/"+itemId);
-await probe("jina-embed-v2-https","https://r.jina.ai/https://www.tiktok.com/embed/v2/"+itemId);
-await probe("jina-embed-v2-html","https://r.jina.ai/http://www.tiktok.com/embed/v2/"+itemId,{"x-return-format":"html"});
+await probe("jina-embed-v2-markdown-https","https://r.jina.ai/https://www.tiktok.com/embed/v2/"+itemId);
+await probe("jina-embed-v2-markdown-http","https://r.jina.ai/http://www.tiktok.com/embed/v2/"+itemId);
 await probe("allorigins-embed","https://api.allorigins.win/raw?url="+encodeURIComponent("https://www.tiktok.com/embed/v2/"+itemId));
 await probe("codetabs-embed","https://api.codetabs.com/v1/proxy?quest="+encodeURIComponent("https://www.tiktok.com/embed/v2/"+itemId));
 await probe("corsproxy-embed","https://corsproxy.io/?url="+encodeURIComponent("https://www.tiktok.com/embed/v2/"+itemId));
 try{
-  const jinaUrl="https://r.jina.ai/http://www.tiktok.com/embed/v2/"+itemId;
-  const jinaResponse=await fetch(jinaUrl,{headers:{...headers,"x-return-format":"html"},redirect:"follow",cache:"no-store",signal:AbortSignal.timeout(18000)});
+  const jinaUrl="https://r.jina.ai/https://www.tiktok.com/embed/v2/"+itemId;
+  const jinaResponse=await fetch(jinaUrl,{headers:{...headers,accept:"text/plain, text/markdown, */*"},redirect:"follow",cache:"no-store",signal:AbortSignal.timeout(18000)});
   const jinaText=await jinaResponse.text();
   const candidateUrls=[...jinaText.matchAll(/https?:\/\/[^\s"'<>\\)]+/g)].map(match=>match[0].replace(/[),.;\]}]+$/g,""));
   const photoUrl=candidateUrls.find(value=>{
