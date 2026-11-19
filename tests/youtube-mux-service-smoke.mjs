@@ -33,10 +33,11 @@ assert.equal(ffmpegArgs[ffmpegArgs.indexOf("-c:a") + 1], "copy");
 assert.ok(ffmpegArgs.includes("+frag_keyframe+empty_moov+default_base_moof"));
 assert.equal(ffmpegArgs.at(-1), "pipe:1");
 assert.ok(!ffmpegArgs.includes("libx264"), "Mux must copy source streams, not re-encode or upscale.");
-const ffprobeArgs = buildFfprobeArgs(valid);
-assert.ok(ffprobeArgs.includes("stream=codec_type,height,codec_name"));
-assert.ok(ffprobeArgs.includes(valid.videoUrl));
-assert.ok(ffprobeArgs.includes(valid.audioUrl));
+const ffprobeVideoArgs = buildFfprobeArgs(valid.videoUrl);
+const ffprobeAudioArgs = buildFfprobeArgs(valid.audioUrl);
+assert.ok(ffprobeVideoArgs.includes("stream=codec_type,height,codec_name"));
+assert.ok(ffprobeVideoArgs.includes(valid.videoUrl));
+assert.ok(ffprobeAudioArgs.includes(valid.audioUrl));
 
 function fakeSpawn(command, args) {
   assert.equal(command, "ffmpeg");
