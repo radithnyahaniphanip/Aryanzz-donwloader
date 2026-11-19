@@ -16,7 +16,9 @@ const payload = {
   title: "ARYANZZ 8K test.mp4",
   height: 4320,
   videoExt: "mp4",
-  audioExt: "m4a"
+  audioExt: "m4a",
+  videoCodec: "av1",
+  audioCodec: "aac"
 };
 
 const valid = validateMuxRequest(payload);
@@ -25,7 +27,19 @@ assert.equal(valid.title, "ARYANZZ 8K test.mp4");
 assert.throws(() => validateMuxRequest({ ...payload, videoUrl: "http://127.0.0.1/private.mp4" }), /HTTPS/);
 assert.throws(() => validateMuxRequest({ ...payload, videoUrl: "https://example.com/video.mp4" }), /diizinkan/);
 assert.throws(() => validateMuxRequest({ ...payload, height: 1081 }), /Resolusi/);
-assert.throws(() => validateMuxRequest({ ...payload, audioExt: "opus" }), /MP4 \+ M4A/);
+assert.throws(() => validateMuxRequest({ ...payload, videoExt: "webm", audioExt: "m4a" }), /Format sumber tidak cocok/);
+const webmPayload = validateMuxRequest({
+  ...payload,
+  videoExt: "webm",
+  audioExt: "opus",
+  videoCodec: "vp9",
+  audioCodec: "opus"
+});
+const webmArgs = buildFfmpegArgs(webmPayload);
+assert.equal(webmArgs[webmArgs.indexOf("-c:v") + 1], "copy");
+assert.equal(webmArgs[webmArgs.indexOf("-c:a") + 1], "aac");
+assert.ok(webmArgs.includes("192k"), "Opus audio should be converted to AAC for MP4 output.");
+assert.equal(webmArgs.at(-1), "pipe:1");
 
 const ffmpegArgs = buildFfmpegArgs(valid);
 assert.equal(ffmpegArgs[ffmpegArgs.indexOf("-c:v") + 1], "copy");
