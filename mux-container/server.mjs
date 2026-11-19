@@ -55,7 +55,7 @@ export function validateMuxRequest(payload) {
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) throw new Error("Data mux tidak valid.");
   if (!/^[0-9a-f-]{36}$/i.test(String(payload.id || ""))) throw new Error("ID proses tidak valid.");
   const height = Number(payload.height) || 0;
-  if (height !== 0 && !ALLOWED_HEIGHTS.has(height)) throw new Error("Resolusi sumber tidak didukung.");
+  if (height !== 0 && (!Number.isInteger(height) || height < 144 || height > 4320)) throw new Error("Resolusi sumber tidak didukung.");
   const videoExt = String(payload.videoExt || "").toLowerCase();
   const audioExt = String(payload.audioExt || "").toLowerCase();
   if (!ALLOWED_VIDEO_EXTS.has(videoExt)) throw new Error("Format video sumber belum didukung untuk MP4.");
@@ -173,7 +173,7 @@ async function inspectMuxStreams(payload, spawnImpl) {
   const actualHeight = Number(video.height) || 0;
   const videoCodec = String(video.codec_name || "").toLowerCase();
   const audioCodec = String(audio.codec_name || "").toLowerCase();
-  if (!ALLOWED_HEIGHTS.has(actualHeight)) throw new Error("Resolusi sumber " + actualHeight + "p belum didukung oleh mesin MP4.");
+  if (!Number.isInteger(actualHeight) || actualHeight < 144 || actualHeight > 4320) throw new Error("Resolusi sumber " + actualHeight + "p belum didukung oleh mesin MP4.");
   if (payload.height && actualHeight !== payload.height) throw new Error("Resolusi sumber sebenarnya " + actualHeight + "p, bukan " + payload.height + "p. ARYANZZ menghentikan proses agar tidak memberi label kualitas palsu.");
   if (!["h264","hevc","av1","vp9","vp8","mpeg4","mpeg2video","mpeg1video","h263","mjpeg","prores","theora","wmv3","vc1","flv1"].includes(videoCodec)) throw new Error("Codec video " + (videoCodec || "tidak diketahui") + " belum didukung oleh FFmpeg.");
   if (!["aac","opus","vorbis","mp3","mp2","ac3","eac3","flac","pcm_s16le","alac","wma","wmav1","wmav2"].includes(audioCodec)) throw new Error("Codec audio " + (audioCodec || "tidak diketahui") + " belum didukung oleh FFmpeg.");
