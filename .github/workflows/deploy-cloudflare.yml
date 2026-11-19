@@ -156,6 +156,23 @@ jobs:
               echo "::notice::Worker setting $name is not supplied; any existing Cloudflare value is left unchanged."
             fi
           done
+      - name: Sync optional external FFmpeg mux host
+        env:
+          MEDIA_MUX_URL: ${{ secrets.MEDIA_MUX_URL }}
+          MEDIA_MUX_TOKEN: ${{ secrets.MEDIA_MUX_TOKEN }}
+          MEDIA_MUX_ALLOWED_HOSTS: ${{ vars.MEDIA_MUX_ALLOWED_HOSTS }}
+        run: |
+          set -euo pipefail
+          if [ -n "$MEDIA_MUX_URL" ] && [ -n "$MEDIA_MUX_TOKEN" ]; then
+            printf '%s' "$MEDIA_MUX_URL" | wrangler secret put MEDIA_MUX_URL
+            printf '%s' "$MEDIA_MUX_TOKEN" | wrangler secret put MEDIA_MUX_TOKEN
+            if [ -n "$MEDIA_MUX_ALLOWED_HOSTS" ]; then
+              printf '%s' "$MEDIA_MUX_ALLOWED_HOSTS" | wrangler secret put MEDIA_MUX_ALLOWED_HOSTS
+            fi
+            echo "External FFmpeg mux host settings synced to the Worker."
+          else
+            echo "::notice::MEDIA_MUX_URL/MEDIA_MUX_TOKEN are not both configured; any existing mux settings are preserved."
+          fi
       - name: Deploy Worker and static assets
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
