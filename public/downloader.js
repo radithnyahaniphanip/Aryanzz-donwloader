@@ -1297,7 +1297,7 @@ function socialNetworkPlan(selected=0){
       addReadyDownloadLink(container,target,filename,"⬇ Unduh MP4 "+(Number(data.height)||"asli")+"p sekarang");
       bar.parentElement?.classList.add("is-indeterminate");
       progressText.textContent="MP4 server siap · "+(Number(data.height)||"resolusi sumber")+"p ✓";
-      if(progressMeta)progressMeta.textContent=data.audioTranscoded?"Audio sedang disesuaikan ke AAC; video sumber dipertahankan. Ketuk tombol unduh untuk menerima satu file MP4.":"Video dan audio sumber telah lolos pemeriksaan. Ketuk tombol unduh untuk menerima satu file MP4.";
+      if(progressMeta)progressMeta.textContent=!data.hasAudio?"Sumber memang tidak memiliki track audio; video dikemas sebagai MP4 tanpa menambahkan suara palsu. Ketuk tombol unduh untuk menerima file.":data.audioTranscoded?"Audio sedang disesuaikan ke AAC; video sumber dipertahankan. Ketuk tombol unduh untuk menerima satu file MP4.":"Video dan audio sumber telah lolos pemeriksaan. Ketuk tombol unduh untuk menerima satu file MP4.";
       remember(sourceUrl||info.url||"",filename,"video",Number(data.height)||videoItem?.height||0);
       return filename;
     }catch(error){
