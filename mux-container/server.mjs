@@ -118,17 +118,24 @@ function json(res, status, body) {
   res.end(data);
 }
 
-export function buildFfprobeArgs(payload) {
-  const headers = "Referer: https://www.youtube.com/\r\nOrigin: https://www.youtube.com\r\n";
-  const input = url => ["-user_agent", USER_AGENT, "-headers", headers, "-rw_timeout", "30000000", "-i", url];
-  return ["-v", "error", ...input(payload.videoUrl), ...input(payload.audioUrl), "-show_entries", "stream=codec_type,height,codec_name", "-of", "json"];
+export function buildFfprobeArgs(streamUrl) {
+  const headers = "Referer: https://www.youtube.com/\\r\\nOrigin: https://www.youtube.com\\r\\n";
+  return [
+    "-v", "error",
+    "-user_agent", USER_AGENT,
+    "-headers", headers,
+    "-rw_timeout", "30000000",
+    "-show_entries", "stream=codec_type,height,codec_name",
+    "-of", "json",
+    "-i", streamUrl
+  ];
 }
 
-function inspectMuxStreams(payload, spawnImpl) {
+function probeSingleStream(streamUrl, spawnImpl) {
   return new Promise((resolve, reject) => {
     let child;
     try {
-      child = spawnImpl("ffprobe", buildFfprobeArgs(payload), { stdio: ["ignore", "pipe", "pipe"], windowsHide: true });
+      child = spawnImpl("ffprobe", buildFfprobeArgs(streamUrl), { stdio: ["ignore", "pipe", "pipe"], windowsHide: true });
     } catch (error) {
       reject(new Error("FFprobe tidak dapat dijalankan: " + String(error?.message || error).slice(0, 120)));
       return;
@@ -139,23 +146,26 @@ function inspectMuxStreams(payload, spawnImpl) {
     child.on("error", error => reject(new Error("FFprobe gagal: " + String(error?.message || error).slice(0, 140))));
     child.on("close", code => {
       if (code !== 0) {
-        reject(new Error("Stream video/audio tidak lolos pemeriksaan FFprobe. " + (stderr.trim().slice(-240) || "Provider menolak stream.")));
+        reject(new Error("Stream tidak lolos pemeriksaan FFprobe. " + (stderr.trim().slice(-240) || "Provider menolak stream.")));
         return;
       }
-      try {
-        const data = JSON.parse(stdout || "{}");
-        const streams = Array.isArray(data.streams) ? data.streams : [];
-        const video = streams.find(item => item.codec_type === "video");
-        const audio = streams.find(item => item.codec_type === "audio");
-        if (!video || !audio) throw new Error("Sumber tidak memiliki pasangan video dan audio lengkap.");
-        const actualHeight = Number(video.height) || 0;
-        if (actualHeight !== payload.height) throw new Error("Resolusi sumber sebenarnya " + actualHeight + "p, bukan " + payload.height + "p. ARYANZZ menghentikan proses agar tidak memberi label kualitas palsu.");
-        resolve({ ok: true, height: actualHeight, videoCodec: String(video.codec_name || ""), audioCodec: String(audio.codec_name || "") });
-      } catch (error) {
-        reject(error);
-      }
+      try { resolve(JSON.parse(stdout || "{}")); }
+      catch { reject(new Error("Metadata stream dari FFprobe tidak valid.")); }
     });
   });
+}
+
+async function inspectMuxStreams(payload, spawnImpl) {
+  const [videoData, audioData] = await Promise.all([
+    probeSingleStream(payload.videoUrl, spawnImpl),
+    probeSingleStream(payload.audioUrl, spawnImpl)
+  ]);
+  const video = (Array.isArray(videoData.streams) ? videoData.streams : []).find(item => item.codec_type === "video");
+  const audio = (Array.isArray(audioData.streams) ? audioData.streams : []).find(item => item.codec_type === "audio");
+  if (!video || !audio) throw new Error("Sumber tidak memiliki pasangan video dan audio lengkap.");
+  const actualHeight = Number(video.height) || 0;
+  if (actualHeight !== payload.height) throw new Error("Resolusi sumber sebenarnya " + actualHeight + "p, bukan " + payload.height + "p. ARYANZZ menghentikan proses agar tidak memberi label kualitas palsu.");
+  return { ok: true, height: actualHeight, videoCodec: String(video.codec_name || ""), audioCodec: String(audio.codec_name || "") };
 }
 
 export function createMuxServer({ spawnImpl = spawn, probeImpl = inspectMuxStreams } = {}) {
