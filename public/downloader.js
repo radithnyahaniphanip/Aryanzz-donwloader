@@ -318,7 +318,7 @@
       }else{
         await inspectMp4Blob(videoBlob);
       }
-      const safeTitle=String(title||"aryanzz-photo-slideshow").replace(/[\\:*?"<>|]+/g," ").replace(/\\//g," ").trim().slice(0,70)||"aryanzz-photo-slideshow";
+      const safeTitle=String(title||"aryanzz-photo-slideshow").replace(/[\\:*?"<>|]+/g," ").replace(/\//g," ").trim().slice(0,70)||"aryanzz-photo-slideshow";
       await saveBrowserBlob(videoBlob,safeTitle+"-slideshow.mp4",container,"⬇ Simpan video slideshow MP4");
       if(button){button.textContent="Video slideshow MP4 siap ✓";button.disabled=true;}
       return {mime:"video/mp4",extension,size:videoBlob.size};
