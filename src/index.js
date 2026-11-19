@@ -3547,7 +3547,7 @@ async function socialMuxTicket(request,env){
   if(audio&& !["m4a","aac","mp3","opus","ogg","wav","flac","webm"].includes(audioExt))return json({ok:false,error:"Format audio sumber belum didukung mesin MP4."},422);
   if(!audio&&audioExt)return json({ok:false,error:"Ekstensi audio tidak cocok dengan URL audio."},422);
   const requestedHeight=Number(data?.height)||0;
-  if(requestedHeight&&! [144,240,360,480,720,1080,1440,2160,4320].includes(requestedHeight))return json({ok:false,error:"Resolusi sumber tidak didukung."},422);
+  if(requestedHeight&&(!Number.isInteger(requestedHeight)||requestedHeight<144||requestedHeight>4320))return json({ok:false,error:"Resolusi sumber tidak didukung."},422);
   const now=Date.now(),id=crypto.randomUUID();
   const title=hybridFilename(String(data?.title||"ARYANZZ Media"),"mp4");
   const payload={v:1,id,videoUrl:video.href,audioUrl:audio?.href||null,title,height:requestedHeight,videoExt,audioExt:audio?audioExt:"",referer:source.origin+"/",issuedAt:now,expiresAt:now+30*60*1000};
@@ -3580,7 +3580,7 @@ async function socialMuxFile(request,env){
   if(Number(payload.expiresAt)<Date.now())return json({ok:false,error:"Tiket mux sudah kedaluwarsa. Periksa tautan sekali lagi."},410);
   const video=safePublicMediaUrl(payload.videoUrl||""),audio=payload.audioUrl?safePublicMediaUrl(payload.audioUrl):null;
   if(!video||!socialMuxHostAllowed(video)||payload.audioUrl&&(!audio||!socialMuxHostAllowed(audio)))return json({ok:false,error:"CDN sumber pada tiket tidak diizinkan."},422);
-  if(![144,240,360,480,720,1080,1440,2160,4320].includes(Number(payload.height))||!payload.videoCodec||!payload.audioCodec)return json({ok:false,error:"Metadata mux pada tiket tidak valid."},422);
+  if(!Number.isInteger(Number(payload.height))||Number(payload.height)<144||Number(payload.height)>4320||!payload.videoCodec||!payload.audioCodec)return json({ok:false,error:"Metadata mux pada tiket tidak valid."},422);
   const endpoint=new URL("/mux/"+payload.id,origin);
   let upstream;
   try{
