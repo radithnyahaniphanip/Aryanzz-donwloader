@@ -119,7 +119,7 @@ function json(res, status, body) {
 }
 
 export function buildFfprobeArgs(streamUrl) {
-  const headers = "Referer: https://www.youtube.com/\\r\\nOrigin: https://www.youtube.com\\r\\n";
+  const headers = "Referer: https://www.youtube.com/\r\nOrigin: https://www.youtube.com\r\n";
   return [
     "-v", "error",
     "-user_agent", USER_AGENT,
