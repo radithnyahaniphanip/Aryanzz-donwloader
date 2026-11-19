@@ -3431,23 +3431,39 @@ function youtubeMuxServiceOrigin(env){
   }catch{return null}
 }
 async function hybridYoutubeMuxTicket(request,env){
-  const secret=String(env?.YOUTUBE_MUX_TOKEN||"");
-  if(!secret||!youtubeMuxServiceOrigin(env))return json({ok:false,code:"YOUTUBE_MUX_NOT_CONFIGURED",error:"Mesin server MP4 resolusi tinggi belum diaktifkan. Penggabungan 2K/4K/8K membutuhkan layanan FFmpeg streaming."},503);
+  const secret=String(env?.YOUTUBE_MUX_TOKEN||""),serviceOrigin=youtubeMuxServiceOrigin(env);
+  if(!secret||!serviceOrigin)return json({ok:false,code:"YOUTUBE_MUX_NOT_CONFIGURED",error:"Mesin server MP4 resolusi tinggi belum diaktifkan. Penggabungan 2K/4K/8K membutuhkan layanan FFmpeg streaming."},503);
   let data;
   try{data=await request.json()}catch{return json({ok:false,error:"Data pilihan MP4 tidak valid."},400)}
   const height=Number(data?.height);
   if(![144,240,360,480,720,1080,1440,2160,4320].includes(height))return json({ok:false,error:"Resolusi sumber tidak didukung."},422);
+  if(String(data?.videoExt||"").toLowerCase()!=="mp4"||String(data?.audioExt||"").toLowerCase()!=="m4a")return json({ok:false,error:"Mesin server saat ini hanya menerima pasangan stream MP4 + M4A YouTube."},422);
   const videoInstance=await trustedHybridInstanceOrigin(data?.videoInstance);
   const audioInstance=await trustedHybridInstanceOrigin(data?.audioInstance);
   const video=hybridMediaUrl(data?.videoUrl,videoInstance);
   const audio=hybridMediaUrl(data?.audioUrl,audioInstance);
   if(!video||!audio)return json({ok:false,error:"Stream video/audio tidak berasal dari sumber YouTube yang diizinkan."},400);
   const videoHost=video.hostname.toLowerCase(),audioHost=audio.hostname.toLowerCase();
-  const mediaHostAllowed=host=>host==="googlevideo.com"||host.endsWith(".googlevideo.com")||HYBRID_MEDIA_ROOTS.some(root=>host===root||host.endsWith("."+root));
+  const mediaHostAllowed=host=>host==="googlevideo.com"||host.endsWith(".googlevideo.com");
   if(!mediaHostAllowed(videoHost)||!mediaHostAllowed(audioHost))return json({ok:false,error:"Provider ini belum didukung oleh mesin mux MP4 resolusi tinggi."},422);
   const now=Date.now(),id=crypto.randomUUID();
   const title=hybridFilename(String(data?.title||"ARYANZZ YouTube"),"mp4");
-  const payload={v:1,id,videoUrl:video.href,audioUrl:audio.href,title,height,videoInstance:videoInstance||null,audioInstance:audioInstance||null,issuedAt:now,expiresAt:now+30*60*1000};
+  const payload={v:1,id,videoUrl:video.href,audioUrl:audio.href,title,height,videoExt:"mp4",audioExt:"m4a",videoInstance:videoInstance||null,audioInstance:audioInstance||null,issuedAt:now,expiresAt:now+30*60*1000};
+  let probeResponse,probeData;
+  try{
+    probeResponse=await fetch(new URL("/probe/"+id,serviceOrigin).href,{
+      method:"POST",
+      headers:{"authorization":"Bearer "+secret,"content-type":"application/json","accept":"application/json"},
+      body:JSON.stringify(payload),
+      signal:request.signal,
+      cache:"no-store"
+    });
+    probeData=await probeResponse.json().catch(()=>({}));
+  }catch(error){
+    return json({ok:false,error:"Pemeriksaan stream MP4 server gagal: "+String(error?.message||"network error").slice(0,140)},502);
+  }
+  if(!probeResponse.ok||!probeData.ok)return json({ok:false,error:probeData.error||"Stream tidak lolos pemeriksaan FFprobe."},probeResponse.status||422);
+  if(Number(probeData.height)!==height)return json({ok:false,error:"Resolusi sumber tidak cocok dengan pilihan "+height+"p."},422);
   const ticket=await signYoutubeMuxTicket(payload,secret);
   return json({ok:true,ticket,filename:title,height,expiresAt:payload.expiresAt,mode:"server-stream-copy"});
 }
