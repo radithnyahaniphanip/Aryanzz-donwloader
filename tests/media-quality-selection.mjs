@@ -5,6 +5,7 @@ const read=path=>readFileSync(new URL(path,import.meta.url),"utf8");
 const downloader=read("../public/downloader.js");
 const worker=read("../src/index.js");
 const homeCss=read("../public/v1-experience.css");
+const muxServer=read("../mux-container/server.mjs");
 
 function functionSource(source,name,indent="  "){
   const pattern=new RegExp("(^|\\n)"+indent+"function "+name+"\\([^\\n]*\\)\\s*\\{[\\s\\S]*?\\n"+indent+"\\}","m");
@@ -72,6 +73,10 @@ assert.ok(downloader.includes("/api/youtube/hybrid/mux-ticket"),"The browser sho
 assert.ok(worker.includes("const MAX_YOUTUBE_BYTES=14*1024*1024*1024;"),"Direct YouTube MP4 streaming should allow files up to the configured 14 GB safety cap.");
 assert.ok(worker.includes("hybridYoutubeMuxTicket")&&worker.includes("hybridYoutubeMuxFile"),"The Worker should expose signed ticket and streaming mux endpoints.");
 assert.ok(worker.includes("serverMuxReady:!!env.YOUTUBE_MUX_URL&&!!env.YOUTUBE_MUX_TOKEN"),"YouTube status should report whether the high-resolution mux service is configured.");
+assert.ok(downloader.includes('videoExt==="webm"&&["webm","opus"].includes(audioExt)'),"High-resolution WebM video plus Opus audio should use the MP4 server mux path.");
+assert.ok(worker.includes('videoExt==="webm"&&["webm","opus"].includes(audioExt)'),"The Worker should accept compatible WebM plus Opus sources.");
+assert.ok(muxServer.includes('payload.audioCodec === "aac" ? ["-c:a", "copy"] : ["-c:a", "aac", "-b:a", "192k"'),"WebM audio should be converted to AAC while preserving the original video stream.");
+assert.ok(muxServer.includes('["h264", "hevc", "av1", "vp9"]'),"The mux should validate native video codecs rather than upscale or re-encode the picture.");
 
 assert.ok(homeCss.includes("margin-bottom:26px!important"),"Paste-link mode must have clear space below the mode buttons");
 assert.ok(homeCss.includes("padding-top:8px!important"),"Platform search must have breathing room from the mode buttons");
