@@ -1007,7 +1007,7 @@ function socialNetworkPlan(selected=0){
       const error=new Error("Sumber mengirim halaman atau data teks, bukan file media.");error.code="MEDIA_VALIDATION_FAILED";throw error;
     }
     const headerTotal=Number(response.headers.get("content-length")||0),total=headerTotal||Number(expectedSize)||0;
-    const verifyTotal=headerTotal>0||options.verifyExpectedSize===true;
+    const verifyTotal=headerTotal>0||(options.verifyExpectedSize===true&&Number(expectedSize)>0);
     const tooLarge=()=>{const error=new Error("File melewati batas buffer aman "+formatDownloadSize(maxBytes)+"; transfer diteruskan ke Chrome agar RAM perangkat tidak penuh.");error.code="DOWNLOAD_STREAM_TOO_LARGE";return error;};
     if(total>maxBytes){await response.body?.cancel().catch(()=>{});throw tooLarge();}
     const startedAt=Date.now(),reader=response.body?.getReader();
@@ -1037,7 +1037,7 @@ function socialNetworkPlan(selected=0){
       blob=new Blob(chunks,{type:finalMime});
     }
     if(!blob||!blob.size)throw new Error("File hasil unduhan kosong.");
-    const finalMime=String(blob.type||mime||responseMime||"").toLowerCase();
+    const finalMime=String((blob.type&&blob.type!=="application/octet-stream"?blob.type:mime||responseMime)||"").toLowerCase();
     if(mode==="video"&&["video/mp4","video/quicktime"].includes(finalMime)){
       progressText.textContent="Memeriksa struktur video…";
       if(progressMeta)progressMeta.textContent="Transfer selesai · memvalidasi file "+formatDownloadSize(blob.size)+".";
