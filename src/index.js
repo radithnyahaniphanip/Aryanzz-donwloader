@@ -3439,13 +3439,13 @@ async function trustedHybridInstanceOrigin(raw){
 }
 function youtubeMuxServiceOrigin(env){
   try{
-    const value=new URL(String(env?.YOUTUBE_MUX_URL||""));
-    if(value.protocol!=="https:"||value.username||value.password||value.port||value.pathname!=="/"||value.search||value.hash||value.hostname!=="aryanzz-youtube-mux.aryanz.workers.dev")return null;
+    const value=new URL(String(env?.MEDIA_MUX_URL||env?.YOUTUBE_MUX_URL||""));
+    if(value.protocol!=="https:"||value.username||value.password||value.port||value.pathname!=="/"||value.search||value.hash)return null;
     return value.origin;
   }catch{return null}
 }
 async function hybridYoutubeMuxTicket(request,env){
-  const secret=String(env?.YOUTUBE_MUX_TOKEN||""),serviceOrigin=youtubeMuxServiceOrigin(env);
+  const secret=String(env?.MEDIA_MUX_TOKEN||env?.YOUTUBE_MUX_TOKEN||""),serviceOrigin=youtubeMuxServiceOrigin(env);
   if(!secret||!serviceOrigin)return json({ok:false,code:"YOUTUBE_MUX_NOT_CONFIGURED",error:"Mesin server MP4 resolusi tinggi belum diaktifkan. Penggabungan 2K/4K/8K membutuhkan layanan FFmpeg streaming."},503);
   let data;
   try{data=await request.json()}catch{return json({ok:false,error:"Data pilihan MP4 tidak valid."},400)}
@@ -3488,7 +3488,7 @@ async function hybridYoutubeMuxTicket(request,env){
   return json({ok:true,ticket,filename:title,height,expiresAt:payload.expiresAt,mode:payload.audioCodec==="aac"?"server-stream-copy":"server-video-copy-audio-aac",videoCodec:payload.videoCodec,audioCodec:payload.audioCodec,audioTranscoded:payload.audioCodec!=="aac"});
 }
 async function hybridYoutubeMuxFile(request,env){
-  const secret=String(env?.YOUTUBE_MUX_TOKEN||""),origin=youtubeMuxServiceOrigin(env);
+  const secret=String(env?.MEDIA_MUX_TOKEN||env?.YOUTUBE_MUX_TOKEN||""),origin=youtubeMuxServiceOrigin(env);
   if(!secret||!origin)return json({ok:false,code:"YOUTUBE_MUX_NOT_CONFIGURED",error:"Mesin server MP4 resolusi tinggi belum diaktifkan."},503);
   const ticket=new URL(request.url).searchParams.get("ticket")||"";
   const payload=await verifyYoutubeMuxTicket(ticket,secret);
@@ -3528,6 +3528,86 @@ async function hybridYoutubeMuxFile(request,env){
   headers.delete("content-length");
   return new Response(upstream.body,{status:200,headers});
 }
+const SOCIAL_MUX_MEDIA_ROOTS=[...HYBRID_MEDIA_ROOTS,"googlevideo.com","cdninstagram.com","fbcdn.net","fbsbx.com","tiktokcdn.com","tiktokv.com","byteoversea.com","ibytedtos.com","twimg.com","redditmedia.com","redd.it","vimeocdn.com","vimeo.com","pinimg.com","kwai.net","snackvideo.com","threads.net","threads.com","capcut.com"];
+function socialMuxHostAllowed(url){
+  const host=url.hostname.toLowerCase();
+  return SOCIAL_MUX_MEDIA_ROOTS.some(root=>host===root||host.endsWith("."+root));
+}
+async function socialMuxTicket(request,env){
+  const secret=String(env?.MEDIA_MUX_TOKEN||env?.YOUTUBE_MUX_TOKEN||""),serviceOrigin=youtubeMuxServiceOrigin(env);
+  if(!secret||!serviceOrigin)return json({ok:false,code:"MEDIA_MUX_NOT_CONFIGURED",error:"Mesin FFmpeg server belum dikonfigurasi. File besar dapat diproses melalui VPS/Node.js terpisah; tidak wajib memakai Cloudflare Containers."},503);
+  let data;try{data=await request.json()}catch{return json({ok:false,error:"Data mux media tidak valid."},400)}
+  const source=safePublicMediaUrl(data?.sourceUrl||"");
+  const video=safePublicMediaUrl(data?.videoUrl||"");
+  const audio=data?.audioUrl?safePublicMediaUrl(data.audioUrl):null;
+  if(!source||!isPlatformLink(source.href))return json({ok:false,error:"Tautan sumber platform tidak valid."},400);
+  if(!video||!socialMuxHostAllowed(video)||data?.audioUrl&&(!audio||!socialMuxHostAllowed(audio)))return json({ok:false,error:"CDN sumber belum termasuk daftar host FFmpeg yang diizinkan. Host tambahan dapat dikonfigurasi pada server."},422);
+  const videoExt=String(data?.videoExt||"").toLowerCase(),audioExt=String(data?.audioExt||"").toLowerCase();
+  if(!["mp4","m4v","webm","mov","avi","3gp","flv","mkv","ts","mpg","mpeg","wmv"].includes(videoExt))return json({ok:false,error:"Format video sumber belum didukung mesin MP4."},422);
+  if(audio&& !["m4a","aac","mp3","opus","ogg","wav","flac","webm"].includes(audioExt))return json({ok:false,error:"Format audio sumber belum didukung mesin MP4."},422);
+  if(!audio&&audioExt)return json({ok:false,error:"Ekstensi audio tidak cocok dengan URL audio."},422);
+  const requestedHeight=Number(data?.height)||0;
+  if(requestedHeight&&! [144,240,360,480,720,1080,1440,2160,4320].includes(requestedHeight))return json({ok:false,error:"Resolusi sumber tidak didukung."},422);
+  const now=Date.now(),id=crypto.randomUUID();
+  const title=hybridFilename(String(data?.title||"ARYANZZ Media"),"mp4");
+  const payload={v:1,id,videoUrl:video.href,audioUrl:audio?.href||null,title,height:requestedHeight,videoExt,audioExt:audio?audioExt:"",referer:source.origin+"/",issuedAt:now,expiresAt:now+30*60*1000};
+  let probeResponse,probeData;
+  try{
+    probeResponse=await fetch(new URL("/probe/"+id,serviceOrigin).href,{
+      method:"POST",
+      headers:{"authorization":"Bearer "+secret,"content-type":"application/json","accept":"application/json"},
+      body:JSON.stringify(payload),
+      signal:request.signal,
+      cache:"no-store"
+    });
+    probeData=await probeResponse.json().catch(()=>({}));
+  }catch(error){return json({ok:false,error:"Pemeriksaan media pada FFmpeg server gagal: "+String(error?.message||"network error").slice(0,160)},502)}
+  if(!probeResponse.ok||!probeData.ok)return json({ok:false,error:probeData.error||"Stream publik tidak lolos pemeriksaan FFprobe."},probeResponse.status||422);
+  if(requestedHeight&&Number(probeData.height)!==requestedHeight)return json({ok:false,error:"Resolusi sumber sebenarnya "+Number(probeData.height)+"p, bukan "+requestedHeight+"p."},422);
+  payload.height=Number(probeData.height)||0;
+  payload.videoCodec=String(probeData.videoCodec||"").toLowerCase();
+  payload.audioCodec=String(probeData.audioCodec||"").toLowerCase();
+  if(!payload.height||!payload.videoCodec||!payload.audioCodec)return json({ok:false,error:"Metadata resolusi dan codec belum dapat diverifikasi."},422);
+  const ticket=await signYoutubeMuxTicket(payload,secret);
+  return json({ok:true,ticket,filename:title,height:payload.height,expiresAt:payload.expiresAt,mode:payload.videoCodec==="h264"||payload.videoCodec==="hevc"||payload.videoCodec==="av1"||payload.videoCodec==="vp9"?"server-video-copy":"server-video-transcode",videoCodec:payload.videoCodec,audioCodec:payload.audioCodec,audioTranscoded:payload.audioCodec!=="aac"});
+}
+async function socialMuxFile(request,env){
+  const secret=String(env?.MEDIA_MUX_TOKEN||env?.YOUTUBE_MUX_TOKEN||""),origin=youtubeMuxServiceOrigin(env);
+  if(!secret||!origin)return json({ok:false,code:"MEDIA_MUX_NOT_CONFIGURED",error:"Mesin FFmpeg server belum dikonfigurasi."},503);
+  const ticket=new URL(request.url).searchParams.get("ticket")||"";
+  const payload=await verifyYoutubeMuxTicket(ticket,secret);
+  if(!payload||payload.v!==1||!/^([0-9a-f-]{36})$/i.test(String(payload.id||"")))return json({ok:false,error:"Tiket mux tidak valid."},403);
+  if(Number(payload.expiresAt)<Date.now())return json({ok:false,error:"Tiket mux sudah kedaluwarsa. Periksa tautan sekali lagi."},410);
+  const video=safePublicMediaUrl(payload.videoUrl||""),audio=payload.audioUrl?safePublicMediaUrl(payload.audioUrl):null;
+  if(!video||!socialMuxHostAllowed(video)||payload.audioUrl&&(!audio||!socialMuxHostAllowed(audio)))return json({ok:false,error:"CDN sumber pada tiket tidak diizinkan."},422);
+  if(![144,240,360,480,720,1080,1440,2160,4320].includes(Number(payload.height))||!payload.videoCodec||!payload.audioCodec)return json({ok:false,error:"Metadata mux pada tiket tidak valid."},422);
+  const endpoint=new URL("/mux/"+payload.id,origin);
+  let upstream;
+  try{
+    upstream=await fetch(endpoint.href,{
+      method:"POST",
+      headers:{"authorization":"Bearer "+secret,"content-type":"application/json","accept":"video/mp4, application/json"},
+      body:JSON.stringify(payload),
+      signal:request.signal,
+      cache:"no-store"
+    });
+  }catch(error){return json({ok:false,error:"Mesin FFmpeg server tidak dapat dijangkau: "+String(error?.message||"network error").slice(0,160)},502)}
+  if(!upstream.ok){
+    const text=await upstream.text().catch(()=>"");let detail=text;
+    try{detail=JSON.parse(text)?.error||text}catch{}
+    return json({ok:false,error:String(detail||"Mesin FFmpeg gagal memproses MP4.").slice(0,300)},upstream.status);
+  }
+  const headers=new Headers(upstream.headers);
+  headers.set("content-type","video/mp4");
+  headers.set("content-disposition","attachment; filename*=UTF-8''"+encodeURIComponent(payload.title));
+  headers.set("cache-control","no-store, no-cache, must-revalidate");
+  headers.set("x-content-type-options","nosniff");
+  headers.set("x-aryanzz-source-height",String(payload.height));
+  headers.set("x-aryanzz-mux-mode","universal-ffmpeg");
+  headers.delete("content-length");
+  return new Response(upstream.body,{status:200,headers});
+}
+
 function hybridThumbnailHostAllowed(url,instanceOrigin){
   const host=url.hostname.toLowerCase();
   const youtubeImage=host==="i.ytimg.com"||host==="img.youtube.com"||host==="yt3.ggpht.com"||host==="yt4.ggpht.com"||host.endsWith(".ytimg.com")||host.endsWith(".googleusercontent.com");
@@ -4109,10 +4189,12 @@ const workerHandler = {async fetch(request,env){
   if(url.pathname==="/api/image/file"&&request.method==="GET")return imageFile(request);
   if(url.pathname==="/api/music/recognize"&&request.method==="POST")return recognizeMusic(request,env);
   if(url.pathname==="/api/platform/status"&&request.method==="GET")return platformStatus(env);
-  if(url.pathname==="/api/youtube/status"&&request.method==="GET")return json({ok:true,service:"ARYANZZ YouTube Backend",youtubeDownloader:true,provider:"Dynamic Piped + Invidious hybrid",paidProvider:false,cobalt:false,supportedAudio:["M4A","MP3","WEBM","OPUS"],supportedVideo:["144","240","360","480","720","1080","1440","2160","4320"],largeFileStreaming:true,serverMuxReady:!!env.YOUTUBE_MUX_URL&&!!env.YOUTUBE_MUX_TOKEN});
+  if(url.pathname==="/api/youtube/status"&&request.method==="GET")return json({ok:true,service:"ARYANZZ YouTube Backend",youtubeDownloader:true,provider:"Dynamic Piped + Invidious hybrid",paidProvider:false,cobalt:false,supportedAudio:["M4A","MP3","WEBM","OPUS"],supportedVideo:["144","240","360","480","720","1080","1440","2160","4320"],largeFileStreaming:true,serverMuxReady:!!(env.MEDIA_MUX_URL||env.YOUTUBE_MUX_URL)&&!!(env.MEDIA_MUX_TOKEN||env.YOUTUBE_MUX_TOKEN)});
   if(url.pathname==="/api/youtube/hybrid/info"&&request.method==="GET")return hybridYoutubeInfo(request);
   if(url.pathname==="/api/youtube/hybrid/mux-ticket"&&request.method==="POST")return hybridYoutubeMuxTicket(request,env);
   if(url.pathname==="/api/youtube/hybrid/mux"&&request.method==="GET")return hybridYoutubeMuxFile(request,env);
+  if(url.pathname==="/api/social/mux-ticket"&&request.method==="POST")return socialMuxTicket(request,env);
+  if(url.pathname==="/api/social/mux"&&request.method==="GET")return socialMuxFile(request,env);
   if(url.pathname==="/api/youtube/hybrid/validate"&&request.method==="GET")return hybridYoutubeValidate(request);
    if(url.pathname==="/api/youtube/hybrid/file"&&request.method==="GET")return hybridYoutubeFile(request);
    if(url.pathname==="/api/youtube/hybrid/thumbnail"&&request.method==="GET")return hybridYoutubeThumbnail(request);
@@ -4154,6 +4236,8 @@ const SECURITY_EVENTS={blockedOrigin:0,rateLimited:0,oversizedRequest:0,blockedM
 const SECURITY_LIMITS=[
   {match:/^\/api\/youtube\/hybrid\/mux-ticket$/,limit:6},
   {match:/^\/api\/youtube\/hybrid\/mux$/,limit:6},
+  {match:/^\/api\/social\/mux-ticket$/,limit:6},
+  {match:/^\/api\/social\/mux$/,limit:6},
   {match:/^\/api\/(?:social\/search|social\/image-search|image\/search|search)$/,limit:30},
   {match:/^\/api\/(?:social-file|image\/file|social-image-file|direct-file)$/,limit:90},
   {match:/^\/api\//,limit:90}
