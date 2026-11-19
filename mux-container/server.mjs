@@ -180,12 +180,18 @@ async function inspectMuxStreams(payload, spawnImpl) {
   return { ok: true, height: actualHeight, videoCodec, audioCodec };
 }
 
-export function createMuxServer({ spawnImpl = spawn, probeImpl = inspectMuxStreams } = {}) {
+export function createMuxServer({ spawnImpl = spawn, probeImpl = inspectMuxStreams, token = process.env.MUX_TOKEN } = {}) {
   let activeJobs = 0;
   return http.createServer(async (req, res) => {
     const url = new URL(req.url || "/", "http://container");
     if (req.method === "GET" && url.pathname === "/health") {
-      return json(res, 200, { ok: true, service: "aryanzz-universal-mp4-mux", ffmpeg: true });
+      return json(res, 200, { ok: true, service: "aryanzz-universal-mp4-mux", ffmpeg: true, authConfigured: Boolean(token) });
+    }
+    if (url.pathname === "/probe/" + url.pathname.split("/").pop() || url.pathname.startsWith("/probe/") || url.pathname.startsWith("/mux/")) {
+      const expected = String(token || "");
+      const supplied = String(req.headers.authorization || "");
+      if (!expected) return json(res, 503, { ok: false, error: "MUX_TOKEN belum dikonfigurasi pada server." });
+      if (supplied !== "Bearer " + expected) return json(res, 401, { ok: false, error: "Token mux tidak valid." });
     }
     if (req.method === "POST" && /^\/probe\/[0-9a-f-]{36}$/i.test(url.pathname)) {
       let payload;
