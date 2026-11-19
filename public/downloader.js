@@ -787,8 +787,11 @@
   }
   async function downloadYoutubeServerMux(url,videoItem,audioItem,info,bar,progressText,progressMeta){
     const height=Number(videoItem?.height)||0;
-    if(String(videoItem?.ext||"").toLowerCase()!=="mp4"||String(audioItem?.ext||"").toLowerCase()!=="m4a")return null;
-    try{if(!/\.googlevideo\.com$/i.test(new URL(videoItem.url).hostname)||!/\.googlevideo\.com$/i.test(new URL(audioItem.url).hostname))return null}catch{return null}
+    const videoExt=String(videoItem?.ext||"").toLowerCase(),audioExt=String(audioItem?.ext||"").toLowerCase();
+    const mp4Pair=["mp4","m4v"].includes(videoExt)&&["m4a","aac"].includes(audioExt);
+    const webmPair=videoExt==="webm"&&["webm","opus"].includes(audioExt);
+    if(!mp4Pair&&!webmPair)return null;
+    try{if(!/(?:^|\\.)googlevideo\\.com$/i.test(new URL(videoItem.url).hostname)||!/(?:^|\\.)googlevideo\\.com$/i.test(new URL(audioItem.url).hostname))return null}catch{return null}
     const filename=safeFilename((info.outputName||info.title||"aryanzz-youtube").replace(/\.(?:mp4|mp3|m4a|webm|mov)$/i,"")+".mp4");
     progressText.textContent="Memeriksa stream "+height+"p dan menyiapkan MP4 di server…";
     progressMeta.textContent="Video dan audio asli diperiksa terlebih dahulu. Penggabungan dilakukan tanpa memuat file multi-GB ke RAM HP.";
@@ -816,7 +819,7 @@
     addReadyDownloadLink(progressText.parentElement,target,filename,"⬇ Unduh MP4 "+height+"p sekarang");
     bar.parentElement?.classList.add("is-indeterminate");
     progressText.textContent="MP4 "+height+"p · unduhan server dimulai…";
-    progressMeta.textContent="Stream video dan audio asli digabung tanpa re-encode. Chrome akan menampilkan progres unduhan dan menyimpan satu file MP4.";
+    progressMeta.textContent=data.audioTranscoded?"Video sumber dipertahankan tanpa re-encode; audio dikonversi ke AAC agar hasil tetap MP4. Chrome akan mengunduh satu file.":"Stream video dan audio asli digabung tanpa re-encode. Chrome akan mengunduh satu file MP4.";
     remember(url,filename,"video",height);
     return filename;
   }
