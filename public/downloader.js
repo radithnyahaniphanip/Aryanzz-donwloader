@@ -788,6 +788,7 @@
   async function downloadYoutubeServerMux(url,videoItem,audioItem,info,bar,progressText,progressMeta){
     const height=Number(videoItem?.height)||0;
     if(String(videoItem?.ext||"").toLowerCase()!=="mp4"||String(audioItem?.ext||"").toLowerCase()!=="m4a")return null;
+    try{if(!/\\.googlevideo\\.com$/i.test(new URL(videoItem.url).hostname)||!/\\.googlevideo\\.com$/i.test(new URL(audioItem.url).hostname))return null}catch{return null}
     const filename=safeFilename((info.outputName||info.title||"aryanzz-youtube").replace(/\.(?:mp4|mp3|m4a|webm|mov)$/i,"")+".mp4");
     progressText.textContent="Memeriksa stream "+height+"p dan menyiapkan MP4 di server…";
     progressMeta.textContent="Video dan audio asli diperiksa terlebih dahulu. Penggabungan dilakukan tanpa memuat file multi-GB ke RAM HP.";
