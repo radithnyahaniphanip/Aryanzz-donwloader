@@ -409,11 +409,11 @@ async function snackVideoNativePageFallback(rawUrl,requestUrl,timeoutMs=8500){
     if(typeof value!=="string"||!value.trim())return;
     let candidate=value.trim().replaceAll("\\/","/").replaceAll("&amp;","&").replaceAll("\\u0026","&");
     if(candidate.startsWith("//"))candidate="https:"+candidate;
-    if(safePublicMediaUrl(candidate)&&/\.(?:mp4|m3u8)(?:[?#]|$)/i.test(candidate))candidates.push(candidate);
+    if(safePublicMediaUrl(candidate)&&/\.(?:mp4|webm|mov|m4v|avi|3gp|flv|mkv|ts|mpg|mpeg|wmv)(?:[?#]|$)/i.test(candidate))candidates.push(candidate);
   };
   const keyPattern=/"(?:playUrl|play_url|videoUrl|video_url|mainMvUrl|main_mv_url|downloadUrl|download_url)"\s*:\s*"([^"]{12,2000})"/gi;
   for(const match of decoded.matchAll(keyPattern))add(match[1]);
-  const mediaPattern=/https?:\/\/[^"'\\\s<>]{8,2500}?(?:kwai\.net|snackvideo|kwai-cdn)[^"'\\\s<>]{0,1500}?\.(?:mp4|m3u8)(?:\?[^"'\\\s<>]*)?/gi;
+  const mediaPattern=/https?:\/\/[^"'\\\s<>]{8,2500}?(?:kwai\.net|snackvideo|kwai-cdn)[^"'\\\s<>]{0,1500}?\.(?:mp4|webm|mov|m4v|avi|3gp|flv|mkv|ts|mpg|mpeg|wmv)(?:\?[^"'\\\s<>]*)?/gi;
   for(const match of decoded.matchAll(mediaPattern))add(match[0]);
   const titleMatch=decoded.match(/<title[^>]*>([^<]{1,300})<\/title>/i);
   const ogTitle=decoded.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']{1,300})["']/i);
@@ -426,7 +426,7 @@ async function snackVideoNativePageFallback(rawUrl,requestUrl,timeoutMs=8500){
   if(duration&&/(?:durationMs|duration_ms)/i.test(durationMatch?.[0]||""))duration/=1000;
   if(duration&&duration>86400)duration/=1000;
   const unique=[...new Set(candidates)];
-  if(!unique.length)throw new Error("Halaman publik berhasil dibuka, tetapi URL stream MP4 tidak ditemukan pada HTML.");
+  if(!unique.length)throw new Error("Halaman publik berhasil dibuka, tetapi URL file video langsung tidak ditemukan pada HTML.");
   const media=unique.slice(0,12).map((url,index)=>({type:"video",kind:"video",label:"MP4"+(index?" alternatif "+(index+1):""),url}));
   const normalized=freeProviderMediaInfo({normalized:{title,thumbnail,duration,media}},rawUrl,requestUrl);
   if(!normalized)throw new Error("Stream dari halaman SnackVideo tidak lolos validasi media.");
@@ -2367,11 +2367,11 @@ async function fetchTikwmData(rawUrl,timeoutMs=10000){
 function normalizeTikTokFallbackPayload(data,rawUrl,requestUrl,providerName){
   const media=[],seen=new Set();
   const imageExts=new Set(["jpg","jpeg","png","gif","webp","avif","bmp"]);
-  const videoExts=new Set(["mp4","m4v","mov","webm","mkv","3gp"]);
+  const videoExts=new Set(["mp4","m4v","mov","webm","mkv","avi","3gp","flv","ts","mpg","mpeg","wmv"]);
   const audioExts=new Set(["mp3","m4a","aac","opus","ogg","wav","flac"]);
   const add=(url,label,type,ext,mimeType,height=0,descriptor={})=>{
     if(typeof url!=="string"||!url.trim()||seen.has(url))return;
-    const safe=safePublicMediaUrl(url);if(!safe)return;
+    const safe=safePublicMediaUrl(url);if(!safe||/\.(?:m3u8?|mpd)(?:[?#]|$)/i.test(safe.pathname+safe.search))return;
     const mime=String(mimeType||descriptor?.mime_type||descriptor?.mime||descriptor?.content_type||descriptor?.contentType||"").split(";")[0].trim().toLowerCase();
     const pathExt=(safe.pathname.match(/\.([a-z0-9]{2,5})$/i)?.[1]||"").toLowerCase();
     const declaredExt=String(ext||descriptor?.ext||descriptor?.extension||"").replace(/^\./,"").toLowerCase();
