@@ -27,7 +27,32 @@ assert.equal(valid.title, "ARYANZZ 8K test.mp4");
 assert.throws(() => validateMuxRequest({ ...payload, videoUrl: "http://127.0.0.1/private.mp4" }), /HTTPS/);
 assert.throws(() => validateMuxRequest({ ...payload, videoUrl: "https://example.com/video.mp4" }), /diizinkan/);
 assert.throws(() => validateMuxRequest({ ...payload, height: 1081 }), /Resolusi/);
-assert.throws(() => validateMuxRequest({ ...payload, videoExt: "webm", audioExt: "m4a" }), /Format sumber tidak cocok/);
+assert.throws(() => validateMuxRequest({ ...payload, videoExt: "exe" }), /Format video/);
+const socialSingleFile = validateMuxRequest({
+  ...payload,
+  videoUrl: "https://scontent.cdninstagram.com/v/t50.2886-16/clip.mov",
+  audioUrl: null,
+  videoExt: "mov",
+  audioExt: "",
+  height: 0,
+  referer: "https://www.instagram.com/"
+});
+assert.equal(socialSingleFile.audioUrl, null);
+assert.ok(buildFfmpegArgs(socialSingleFile).includes("0:a:0"), "A progressive social video should map its embedded audio track.");
+const socialAdaptive = validateMuxRequest({
+  ...payload,
+  videoUrl: "https://v16m.tiktokcdn.com/video.webm",
+  audioUrl: "https://v16m.tiktokcdn.com/audio.opus",
+  videoExt: "webm",
+  audioExt: "opus",
+  videoCodec: "vp9",
+  audioCodec: "opus",
+  referer: "https://www.tiktok.com/"
+});
+const socialArgs = buildFfmpegArgs(socialAdaptive);
+assert.equal(socialArgs[socialArgs.indexOf("-c:v") + 1], "copy");
+assert.equal(socialArgs[socialArgs.indexOf("-c:a") + 1], "aac");
+assert.ok(socialArgs.includes("192k"), "Social Opus audio should be converted to AAC for MP4 output.");
 const webmPayload = validateMuxRequest({
   ...payload,
   videoExt: "webm",
