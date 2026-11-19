@@ -674,7 +674,7 @@
       progressText.textContent="Tahap 2/3 · Mengambil komponen suara…";
       progressMeta.textContent=measuredSizeNote+" Tahap video selesai 100%; sekarang mengunduh audio. Jangan tutup tab.";track?.classList.remove("is-indeterminate");
       audioBytes=await fetchYoutubeTrack(audioItem,info,maxTrack,bar,progressText,progressMeta,"Tahap 2/3 · Audio",38,38,speed,audioProbe);
-      if(videoSize+audioBytes.byteLength>maxCombined)throw new Error("Gabungan media "+formatDownloadSize(videoSize+audioBytes.byteLength)+" melewati batas aman memori HP. ARYANZZ mencoba kualitas lebih rendah.");
+      if(videoSize+audioBytes.byteLength>maxCombined)throw new Error("Gabungan media "+formatDownloadSize(videoSize+audioBytes.byteLength)+" terlalu besar untuk RAM HP. Mesin MP4 server 2K/4K/8K belum aktif; unduhan dihentikan agar perangkat tidak kehabisan memori.");
       await ffmpeg.writeFile(inputAudio,audioBytes);audioBytes=null;
       track?.classList.add("is-indeterminate");
       progressText.textContent="Tahap 3/3 · Menyatukan MP4…";
