@@ -5,26 +5,18 @@ import { fileURLToPath } from "node:url";
 export const MAX_MUX_OUTPUT_BYTES = 14 * 1024 * 1024 * 1024;
 const PORT = Number(process.env.PORT || 8080);
 const MAX_BODY_BYTES = 64 * 1024;
-const ALLOWED_MEDIA_ROOTS = [
-  "googlevideo.com",
-  "kavin.rocks",
-  "leptons.xyz",
-  "nosebs.ru",
-  "privacy.com.de",
-  "adminforge.de",
-  "piped.yt",
-  "drgns.space",
-  "owo.si",
-  "ducks.party",
-  "codespace.cz",
-  "reallyaweso.me",
-  "private.coffee",
-  "darkness.services",
-  "orangenet.cc",
-  "nadeko.net",
-  "nerdvpn.de",
-  "tiekoetter.com"
+const BUILTIN_MEDIA_ROOTS = [
+  "googlevideo.com","kavin.rocks","leptons.xyz","nosebs.ru","privacy.com.de","adminforge.de",
+  "piped.yt","drgns.space","owo.si","ducks.party","codespace.cz","reallyaweso.me","private.coffee",
+  "darkness.services","orangenet.cc","nadeko.net","nerdvpn.de","tiekoetter.com",
+  "cdninstagram.com","fbcdn.net","fbsbx.com","tiktokcdn.com","tiktokv.com","byteoversea.com",
+  "ibytedtos.com","twimg.com","redditmedia.com","redd.it","vimeocdn.com","vimeo.com",
+  "pinimg.com","kwai.net","snackvideo.com","threads.net","threads.com","capcut.com"
 ];
+const ALLOWED_MEDIA_ROOTS=[...new Set([...BUILTIN_MEDIA_ROOTS,...String(process.env.MUX_ALLOWED_HOSTS||"").split(",").map(value=>value.trim().toLowerCase().replace(/^\\.+|\\.+$/g,"")).filter(Boolean)])];
+const ALLOWED_REFERER_ROOTS=[...ALLOWED_MEDIA_ROOTS,"youtube.com","tiktok.com","instagram.com","facebook.com","x.com","twitter.com","reddit.com","pinterest.com","threads.com","threads.net","vimeo.com","capcut.com","soundcloud.com"];
+const ALLOWED_VIDEO_EXTS=new Set(["mp4","m4v","webm","mov","avi","3gp","flv","mkv","ts","mpg","mpeg","wmv"]);
+const ALLOWED_AUDIO_EXTS=new Set(["m4a","aac","mp3","opus","ogg","wav","flac","webm"]);
 const ALLOWED_HEIGHTS = new Set([144, 240, 360, 480, 720, 1080, 1440, 2160, 4320]);
 const USER_AGENT = "Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36";
 
@@ -46,33 +38,46 @@ function allowedMediaUrl(raw) {
   }
   const host = url.hostname.toLowerCase();
   const allowed = ALLOWED_MEDIA_ROOTS.some(root => host === root || host.endsWith("." + root));
-  if (!allowed) throw new Error("Host stream tidak termasuk sumber YouTube yang diizinkan.");
+  if (!allowed) throw new Error("Host stream tidak termasuk CDN media publik yang diizinkan.");
   return url.href;
+}
+function allowedReferer(raw) {
+  if (!raw) return "https://www.youtube.com/";
+  let url;
+  try { url = new URL(raw); } catch { throw new Error("Referer sumber tidak valid."); }
+  if (url.protocol !== "https:" || url.username || url.password || url.port) throw new Error("Referer harus memakai HTTPS.");
+  const host = url.hostname.toLowerCase();
+  if (!ALLOWED_REFERER_ROOTS.some(root => host === root || host.endsWith("." + root))) throw new Error("Domain referer tidak diizinkan.");
+  return url.origin + "/";
 }
 
 export function validateMuxRequest(payload) {
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) throw new Error("Data mux tidak valid.");
   if (!/^[0-9a-f-]{36}$/i.test(String(payload.id || ""))) throw new Error("ID proses tidak valid.");
-  const height = Number(payload.height);
-  if (!ALLOWED_HEIGHTS.has(height)) throw new Error("Resolusi sumber tidak didukung.");
+  const height = Number(payload.height) || 0;
+  if (height !== 0 && !ALLOWED_HEIGHTS.has(height)) throw new Error("Resolusi sumber tidak didukung.");
   const videoExt = String(payload.videoExt || "").toLowerCase();
   const audioExt = String(payload.audioExt || "").toLowerCase();
-  const mp4Pair = ["mp4", "m4v"].includes(videoExt) && ["m4a", "aac"].includes(audioExt);
-  const webmPair = videoExt === "webm" && ["webm", "opus"].includes(audioExt);
-  if (!mp4Pair && !webmPair) throw new Error("Format sumber tidak cocok. Gunakan MP4 + M4A/AAC atau WebM + Opus.");
+  if (!ALLOWED_VIDEO_EXTS.has(videoExt)) throw new Error("Format video sumber belum didukung untuk MP4.");
+  const audioUrl = payload.audioUrl ? allowedMediaUrl(payload.audioUrl) : null;
+  if (audioUrl && !ALLOWED_AUDIO_EXTS.has(audioExt)) throw new Error("Format audio sumber belum didukung untuk MP4.");
+  if (!audioUrl && audioExt) throw new Error("Ekstensi audio dikirim tanpa URL audio.");
   const videoCodec = String(payload.videoCodec || "").toLowerCase();
   const audioCodec = String(payload.audioCodec || "").toLowerCase();
-  if (videoCodec && !["h264", "hevc", "av1", "vp9"].includes(videoCodec)) throw new Error("Codec video tidak kompatibel dengan MP4.");
-  if (audioCodec && !["aac", "opus", "vorbis"].includes(audioCodec)) throw new Error("Codec audio tidak kompatibel dengan MP4.");
+  const supportedVideoCodecs = ["h264","hevc","av1","vp9","vp8","mpeg4","mpeg2video","mpeg1video","h263","mjpeg","prores","theora","wmv3","vc1","flv1"];
+  const supportedAudioCodecs = ["aac","opus","vorbis","mp3","mp2","ac3","eac3","flac","pcm_s16le","alac","wma","wmav1","wmav2"];
+  if (videoCodec && !supportedVideoCodecs.includes(videoCodec)) throw new Error("Codec video " + videoCodec + " belum didukung oleh FFmpeg.");
+  if (audioCodec && !supportedAudioCodecs.includes(audioCodec)) throw new Error("Codec audio " + audioCodec + " belum didukung oleh FFmpeg.");
   const videoUrl = allowedMediaUrl(payload.videoUrl);
-  const audioUrl = allowedMediaUrl(payload.audioUrl);
   const title = safeFilename(payload.title);
-  return { id: String(payload.id), videoUrl, audioUrl, title, height, videoExt, audioExt, videoCodec, audioCodec };
+  const referer = allowedReferer(payload.referer);
+  return { id: String(payload.id), videoUrl, audioUrl, title, height, videoExt, audioExt, videoCodec, audioCodec, referer };
 }
 
 export function buildFfmpegArgs(payload) {
-  const referer = "https://www.youtube.com/";
-  const headers = "Referer: " + referer + "\r\nOrigin: https://www.youtube.com\r\n";
+  const referer = payload.referer || "https://www.youtube.com/";
+  const origin = new URL(referer).origin;
+  const headers = "Referer: " + referer + "\\r\\nOrigin: " + origin + "\\r\\n";
   const input = url => [
     "-user_agent", USER_AGENT,
     "-headers", headers,
@@ -82,24 +87,22 @@ export function buildFfmpegArgs(payload) {
     "-reconnect_delay_max", "5",
     "-i", url
   ];
+  const videoCodecArgs = ["h264","hevc","av1","vp9"].includes(String(payload.videoCodec||"").toLowerCase())
+    ? ["-c:v","copy"]
+    : ["-c:v","libx264","-preset","veryfast","-crf","18","-pix_fmt","yuv420p"];
+  const audioCodecArgs = String(payload.audioCodec||"").toLowerCase()==="aac"
+    ? ["-c:a","copy"]
+    : ["-c:a","aac","-b:a","192k","-ar","48000"];
+  const inputs = [...input(payload.videoUrl), ...(payload.audioUrl ? input(payload.audioUrl) : [])];
+  const maps = payload.audioUrl ? ["-map","0:v:0","-map","1:a:0"] : ["-map","0:v:0","-map","0:a:0"];
   return [
-    "-hide_banner",
-    "-loglevel", "error",
-    "-nostdin",
-    "-y",
-    ...input(payload.videoUrl),
-    ...input(payload.audioUrl),
-    "-map", "0:v:0",
-    "-map", "1:a:0",
-    "-c:v", "copy",
-    ...(payload.audioCodec === "aac" ? ["-c:a", "copy"] : ["-c:a", "aac", "-b:a", "192k", "-ar", "48000"]),
-    "-map_metadata", "-1",
-    "-metadata", "title=" + payload.title.replace(/\.mp4$/i, ""),
-    "-max_muxing_queue_size", "2048",
-    "-movflags", "+frag_keyframe+empty_moov+default_base_moof",
-    "-shortest",
-    "-f", "mp4",
-    "pipe:1"
+    "-hide_banner","-loglevel","error","-nostdin","-y",
+    ...inputs,...maps,...videoCodecArgs,...audioCodecArgs,
+    "-map_metadata","-1",
+    "-metadata","title="+payload.title.replace(/\\.mp4$/i,""),
+    "-max_muxing_queue_size","2048",
+    "-movflags","+frag_keyframe+empty_moov+default_base_moof",
+    "-shortest","-f","mp4","pipe:1"
   ];
 }
 
@@ -126,24 +129,22 @@ function json(res, status, body) {
   res.end(data);
 }
 
-export function buildFfprobeArgs(streamUrl) {
-  const headers = "Referer: https://www.youtube.com/\r\nOrigin: https://www.youtube.com\r\n";
+export function buildFfprobeArgs(streamUrl, referer = "https://www.youtube.com/") {
+  const origin = new URL(referer).origin;
+  const headers = "Referer: " + referer + "\\r\\nOrigin: " + origin + "\\r\\n";
   return [
-    "-v", "error",
-    "-user_agent", USER_AGENT,
-    "-headers", headers,
-    "-rw_timeout", "30000000",
-    "-show_entries", "stream=codec_type,height,codec_name",
-    "-of", "json",
-    "-i", streamUrl
+    "-v","error","-user_agent",USER_AGENT,"-headers",headers,
+    "-rw_timeout","30000000",
+    "-show_entries","stream=codec_type,height,codec_name",
+    "-of","json","-i",streamUrl
   ];
 }
 
-function probeSingleStream(streamUrl, spawnImpl) {
+function probeSingleStream(streamUrl, spawnImpl, referer = "https://www.youtube.com/") {
   return new Promise((resolve, reject) => {
     let child;
     try {
-      child = spawnImpl("ffprobe", buildFfprobeArgs(streamUrl), { stdio: ["ignore", "pipe", "pipe"], windowsHide: true });
+      child = spawnImpl("ffprobe", buildFfprobeArgs(streamUrl, referer), { stdio: ["ignore", "pipe", "pipe"], windowsHide: true });
     } catch (error) {
       reject(new Error("FFprobe tidak dapat dijalankan: " + String(error?.message || error).slice(0, 120)));
       return;
@@ -164,20 +165,18 @@ function probeSingleStream(streamUrl, spawnImpl) {
 }
 
 async function inspectMuxStreams(payload, spawnImpl) {
-  const [videoData, audioData] = await Promise.all([
-    probeSingleStream(payload.videoUrl, spawnImpl),
-    probeSingleStream(payload.audioUrl, spawnImpl)
-  ]);
+  const videoData = await probeSingleStream(payload.videoUrl, spawnImpl, payload.referer);
+  const audioData = payload.audioUrl ? await probeSingleStream(payload.audioUrl, spawnImpl, payload.referer) : videoData;
   const video = (Array.isArray(videoData.streams) ? videoData.streams : []).find(item => item.codec_type === "video");
   const audio = (Array.isArray(audioData.streams) ? audioData.streams : []).find(item => item.codec_type === "audio");
-  if (!video || !audio) throw new Error("Sumber tidak memiliki pasangan video dan audio lengkap.");
+  if (!video || !audio) throw new Error("Sumber tidak memiliki track video dan audio lengkap.");
   const actualHeight = Number(video.height) || 0;
   const videoCodec = String(video.codec_name || "").toLowerCase();
   const audioCodec = String(audio.codec_name || "").toLowerCase();
-  if (actualHeight !== payload.height) throw new Error("Resolusi sumber sebenarnya " + actualHeight + "p, bukan " + payload.height + "p. ARYANZZ menghentikan proses agar tidak memberi label kualitas palsu.");
-  if (!["h264", "hevc", "av1", "vp9"].includes(videoCodec)) throw new Error("Codec video " + (videoCodec || "tidak diketahui") + " tidak dapat dimasukkan ke MP4 tanpa konversi video.");
-  const allowedAudio = ["m4a", "aac"].includes(payload.audioExt) ? ["aac"] : ["opus", "vorbis"];
-  if (!allowedAudio.includes(audioCodec)) throw new Error("Codec audio " + (audioCodec || "tidak diketahui") + " tidak cocok dengan format sumber yang dipilih.");
+  if (!ALLOWED_HEIGHTS.has(actualHeight)) throw new Error("Resolusi sumber " + actualHeight + "p belum didukung oleh mesin MP4.");
+  if (payload.height && actualHeight !== payload.height) throw new Error("Resolusi sumber sebenarnya " + actualHeight + "p, bukan " + payload.height + "p. ARYANZZ menghentikan proses agar tidak memberi label kualitas palsu.");
+  if (!["h264","hevc","av1","vp9","vp8","mpeg4","mpeg2video","mpeg1video","h263","mjpeg","prores","theora","wmv3","vc1","flv1"].includes(videoCodec)) throw new Error("Codec video " + (videoCodec || "tidak diketahui") + " belum didukung oleh FFmpeg.");
+  if (!["aac","opus","vorbis","mp3","mp2","ac3","eac3","flac","pcm_s16le","alac","wma","wmav1","wmav2"].includes(audioCodec)) throw new Error("Codec audio " + (audioCodec || "tidak diketahui") + " belum didukung oleh FFmpeg.");
   return { ok: true, height: actualHeight, videoCodec, audioCodec };
 }
 
@@ -186,7 +185,7 @@ export function createMuxServer({ spawnImpl = spawn, probeImpl = inspectMuxStrea
   return http.createServer(async (req, res) => {
     const url = new URL(req.url || "/", "http://container");
     if (req.method === "GET" && url.pathname === "/health") {
-      return json(res, 200, { ok: true, service: "aryanzz-youtube-mp4-mux", ffmpeg: true });
+      return json(res, 200, { ok: true, service: "aryanzz-universal-mp4-mux", ffmpeg: true });
     }
     if (req.method === "POST" && /^\/probe\/[0-9a-f-]{36}$/i.test(url.pathname)) {
       let payload;
@@ -224,7 +223,7 @@ export function createMuxServer({ spawnImpl = spawn, probeImpl = inspectMuxStrea
       "content-disposition": "attachment; filename*=UTF-8''" + encodeURIComponent(payload.title),
       "cache-control": "no-store, no-cache, must-revalidate",
       "x-content-type-options": "nosniff",
-      "x-aryanzz-mux-mode": "stream-copy",
+      "x-aryanzz-mux-mode": ["h264","hevc","av1","vp9"].includes(payload.videoCodec) ? "video-stream-copy" : "video-transcode",
       "x-aryanzz-source-height": String(payload.height)
     };
     const cleanup = () => {
@@ -269,7 +268,7 @@ export function createMuxServer({ spawnImpl = spawn, probeImpl = inspectMuxStrea
       if (!responseStarted) {
         json(res, 502, {
           ok: false,
-          error: "Stream YouTube tidak dapat digabung menjadi MP4. " + (stderrTail.trim().slice(-260) || "Provider menolak stream atau audio/video tidak cocok.")
+          error: "Stream publik tidak dapat digabung menjadi MP4. " + (stderrTail.trim().slice(-260) || "Provider menolak stream atau audio/video tidak cocok.")
         });
       } else if (code === 0 && !res.destroyed) {
         res.end();
