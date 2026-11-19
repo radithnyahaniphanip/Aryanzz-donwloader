@@ -47,6 +47,7 @@ export class YouTubeMuxContainer extends DurableObject {
     if (!container.running) {
       container.start({
         image: container.images.base,
+        instance: "standard-3",
         enableInternet: true
       });
     }
@@ -92,6 +93,7 @@ export default {
     }
     const id = url.pathname.split("/").pop();
     if (!payload || payload.id !== id) return json({ ok: false, error: "ID proses tidak cocok." }, 400);
-    return env.YOUTUBE_MUX.getByName(id).fetch(request);
+    const slot = Number.parseInt(id.replace(/-/g, "").slice(-1), 16) % 2;
+    return env.YOUTUBE_MUX.getByName("slot-" + slot).fetch(request);
   }
 };
