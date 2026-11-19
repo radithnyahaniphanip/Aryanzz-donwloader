@@ -61,7 +61,7 @@ assert.ok(downloader.includes("candidates=selectProviderCandidates(youtubeCandid
 assert.ok(downloader.includes("async function muxSocialVideo("),"Social providers need a real video/audio mux path for adaptive formats");
 assert.ok(downloader.includes("hasCompatibleProviderAudio(item,info.formats)"),"Adaptive quality choices must be hidden unless a compatible audio track exists");
 assert.ok(downloader.includes("Resolusi video sumber tetap"),"Muxing must preserve and report the real source resolution");
-assert.ok(downloader.includes("returnOnly: true"),"Adaptive track downloads must support an intermediate mode without saving an incomplete file");
+assert.ok(downloader.includes("returnOnly:true"),"Adaptive track downloads must support an intermediate mode without saving an incomplete file");
 assert.ok(downloader.includes('[4320,"4320p · 8K"]'),"The quality menu must include native 8K when the provider supplies it");
 assert.ok(downloader.includes("2160,4320].includes(height)"),"Browser provider parser must accept 4320p");
 assert.ok(worker.includes("402:4320,571:4320"),"Worker must recognize YouTube 8K itags");
