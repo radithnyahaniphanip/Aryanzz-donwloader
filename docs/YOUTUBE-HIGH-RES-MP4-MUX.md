@@ -4,7 +4,8 @@
 
 - Native YouTube source choices from 144p through 4320p (8K), only when the source actually offers them.
 - Direct progressive MP4 streams are passed through Cloudflare Workers as streams, with a 14 GiB safety cap. The Worker does not buffer the complete video in memory.
-- Adaptive YouTube MP4 video-only streams are paired with the matching M4A audio track and remuxed with FFmpeg stream-copy. The source video is not re-encoded or upscaled.
+- Adaptive YouTube MP4 video-only streams are paired with M4A/AAC audio and remuxed with FFmpeg stream-copy.
+- High-resolution WebM VP9/AV1 video-only streams can also be packaged as MP4. The original video is stream-copied without re-encoding; WebM Opus/Vorbis audio is converted to AAC for MP4 compatibility.
 - FFprobe checks that both tracks exist and that the returned video height matches the selected resolution before a download ticket is issued.
 - The FFmpeg process writes fragmented MP4 to stdout. Cloudflare streams it to the browser; the phone does not hold a multi-gigabyte video or audio buffer in RAM.
 
@@ -26,7 +27,7 @@ The main Worker reports serverMuxReady: true at /api/youtube/status after activa
 
 ## Limits and honest behavior
 
-- The mux service accepts YouTube GoogleVideo MP4 video + M4A audio pairs. Other containers/codecs use the existing supported path.
+- The mux service accepts YouTube GoogleVideo MP4 + M4A/AAC or WebM VP9/AV1 + Opus/Vorbis pairs. WebM audio is converted to AAC; video remains untouched. Other containers/codecs use the existing supported path.
 - 1440p, 2160p, and 4320p are never fabricated. If the requested height is absent, the app must show only a real available source quality.
 - If YouTube blocks a stream, expires its signed URL, or withholds audio/video, the download can still fail. The app reports the provider error rather than returning a renamed or upscaled file.
 - Direct streaming is capped at 14 GiB. The adaptive mux response is streamed and capped at 14 GiB by the container.
