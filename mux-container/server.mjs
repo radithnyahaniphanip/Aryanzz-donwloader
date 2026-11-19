@@ -13,7 +13,7 @@ const BUILTIN_MEDIA_ROOTS = [
   "ibytedtos.com","twimg.com","redditmedia.com","redd.it","vimeocdn.com","vimeo.com",
   "pinimg.com","kwai.net","snackvideo.com","threads.net","threads.com","capcut.com"
 ];
-const ALLOWED_MEDIA_ROOTS=[...new Set([...BUILTIN_MEDIA_ROOTS,...String(process.env.MUX_ALLOWED_HOSTS||"").split(",").map(value=>value.trim().toLowerCase().replace(/^\\.+|\\.+$/g,"")).filter(Boolean)])];
+const ALLOWED_MEDIA_ROOTS=[...new Set([...BUILTIN_MEDIA_ROOTS,...String(process.env.MUX_ALLOWED_HOSTS||"").split(",").map(value=>value.trim().toLowerCase().replace(/^\.+|\.+$/g,"")).filter(Boolean)])];
 const ALLOWED_REFERER_ROOTS=[...ALLOWED_MEDIA_ROOTS,"youtube.com","tiktok.com","instagram.com","facebook.com","x.com","twitter.com","reddit.com","pinterest.com","threads.com","threads.net","vimeo.com","capcut.com","soundcloud.com"];
 const ALLOWED_VIDEO_EXTS=new Set(["mp4","m4v","webm","mov","avi","3gp","flv","mkv","ts","mpg","mpeg","wmv"]);
 const ALLOWED_AUDIO_EXTS=new Set(["m4a","aac","mp3","opus","ogg","wav","flac","webm"]);
@@ -77,7 +77,7 @@ export function validateMuxRequest(payload) {
 export function buildFfmpegArgs(payload) {
   const referer = payload.referer || "https://www.youtube.com/";
   const origin = new URL(referer).origin;
-  const headers = "Referer: " + referer + "\\r\\nOrigin: " + origin + "\\r\\n";
+  const headers = "Referer: " + referer + "\r\nOrigin: " + origin + "\r\n";
   const input = url => [
     "-user_agent", USER_AGENT,
     "-headers", headers,
@@ -99,7 +99,7 @@ export function buildFfmpegArgs(payload) {
     "-hide_banner","-loglevel","error","-nostdin","-y",
     ...inputs,...maps,...videoCodecArgs,...audioCodecArgs,
     "-map_metadata","-1",
-    "-metadata","title="+payload.title.replace(/\\.mp4$/i,""),
+    "-metadata","title="+payload.title.replace(/\.mp4$/i,""),
     "-max_muxing_queue_size","2048",
     "-movflags","+frag_keyframe+empty_moov+default_base_moof",
     "-shortest","-f","mp4","pipe:1"
@@ -131,7 +131,7 @@ function json(res, status, body) {
 
 export function buildFfprobeArgs(streamUrl, referer = "https://www.youtube.com/") {
   const origin = new URL(referer).origin;
-  const headers = "Referer: " + referer + "\\r\\nOrigin: " + origin + "\\r\\n";
+  const headers = "Referer: " + referer + "\r\nOrigin: " + origin + "\r\n";
   return [
     "-v","error","-user_agent",USER_AGENT,"-headers",headers,
     "-rw_timeout","30000000",
