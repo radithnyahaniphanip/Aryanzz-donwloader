@@ -804,12 +804,11 @@ function mediaAsciiAt(bytes,offset,value){
 }
 function detectSocialMediaSignature(bytes,mode){
   const limit=Math.min(bytes.length,65536);
-  for(let i=0;i<=limit-4;i++){
-    if(mediaAsciiAt(bytes,i,"ftyp"))return mode==="audio"?{mime:"audio/mp4",ext:"m4a",mode:"audio"}:{mime:"video/mp4",ext:"mp4",mode:"video"};
-  }
-  if(bytes.length>=12&&mediaAsciiAt(bytes,0,"ftyp")){
-    const brand=String.fromCharCode(...bytes.subarray(8,12));
-    return brand==="qt  "?{mime:"video/quicktime",ext:"mov",mode:"video"}:{mime:"video/mp4",ext:"mp4",mode:"video"};
+  for(let i=0;i<=limit-12;i++){
+    if(mediaAsciiAt(bytes,i,"ftyp")){
+      const brand=String.fromCharCode(...bytes.subarray(i+4,i+8));
+      return mode==="audio"?{mime:"audio/mp4",ext:"m4a",mode:"audio"}:brand==="qt  "?{mime:"video/quicktime",ext:"mov",mode:"video"}:{mime:"video/mp4",ext:"mp4",mode:"video"};
+    }
   }
   if(bytes.length>=4&&bytes[0]===0x1a&&bytes[1]===0x45&&bytes[2]===0xdf&&bytes[3]===0xa3){
     const header=new TextDecoder().decode(bytes.subarray(0,Math.min(bytes.length,65536)));
