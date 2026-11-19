@@ -3437,7 +3437,10 @@ async function hybridYoutubeMuxTicket(request,env){
   try{data=await request.json()}catch{return json({ok:false,error:"Data pilihan MP4 tidak valid."},400)}
   const height=Number(data?.height);
   if(![144,240,360,480,720,1080,1440,2160,4320].includes(height))return json({ok:false,error:"Resolusi sumber tidak didukung."},422);
-  if(String(data?.videoExt||"").toLowerCase()!=="mp4"||String(data?.audioExt||"").toLowerCase()!=="m4a")return json({ok:false,error:"Mesin server saat ini hanya menerima pasangan stream MP4 + M4A YouTube."},422);
+  const videoExt=String(data?.videoExt||"").toLowerCase(),audioExt=String(data?.audioExt||"").toLowerCase();
+  const mp4Pair=["mp4","m4v"].includes(videoExt)&&["m4a","aac"].includes(audioExt);
+  const webmPair=videoExt==="webm"&&["webm","opus"].includes(audioExt);
+  if(!mp4Pair&&!webmPair)return json({ok:false,error:"Sumber harus berupa MP4 + M4A/AAC atau WebM + Opus agar bisa digabung menjadi MP4."},422);
   const videoInstance=await trustedHybridInstanceOrigin(data?.videoInstance);
   const audioInstance=await trustedHybridInstanceOrigin(data?.audioInstance);
   const video=hybridMediaUrl(data?.videoUrl,videoInstance);
@@ -3448,7 +3451,7 @@ async function hybridYoutubeMuxTicket(request,env){
   if(!mediaHostAllowed(videoHost)||!mediaHostAllowed(audioHost))return json({ok:false,error:"Provider ini belum didukung oleh mesin mux MP4 resolusi tinggi."},422);
   const now=Date.now(),id=crypto.randomUUID();
   const title=hybridFilename(String(data?.title||"ARYANZZ YouTube"),"mp4");
-  const payload={v:1,id,videoUrl:video.href,audioUrl:audio.href,title,height,videoExt:"mp4",audioExt:"m4a",videoInstance:videoInstance||null,audioInstance:audioInstance||null,issuedAt:now,expiresAt:now+30*60*1000};
+  const payload={v:1,id,videoUrl:video.href,audioUrl:audio.href,title,height,videoExt,audioExt,videoInstance:videoInstance||null,audioInstance:audioInstance||null,issuedAt:now,expiresAt:now+30*60*1000};
   let probeResponse,probeData;
   try{
     probeResponse=await fetch(new URL("/probe/"+id,serviceOrigin).href,{
@@ -3464,6 +3467,9 @@ async function hybridYoutubeMuxTicket(request,env){
   }
   if(!probeResponse.ok||!probeData.ok)return json({ok:false,error:probeData.error||"Stream tidak lolos pemeriksaan FFprobe."},probeResponse.status||422);
   if(Number(probeData.height)!==height)return json({ok:false,error:"Resolusi sumber tidak cocok dengan pilihan "+height+"p."},422);
+  payload.videoCodec=String(probeData.videoCodec||"").toLowerCase();
+  payload.audioCodec=String(probeData.audioCodec||"").toLowerCase();
+  if(!payload.videoCodec||!payload.audioCodec)return json({ok:false,error:"Codec sumber belum dapat diverifikasi."},422);
   const ticket=await signYoutubeMuxTicket(payload,secret);
   return json({ok:true,ticket,filename:title,height,expiresAt:payload.expiresAt,mode:"server-stream-copy"});
 }
