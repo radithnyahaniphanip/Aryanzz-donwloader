@@ -76,7 +76,7 @@ export default {
     if (url.pathname === "/health" && request.method === "GET") {
       return json({ ok: true, service: "aryanzz-youtube-mp4-mux" });
     }
-    if (request.method !== "POST" || !/^\/mux\/[0-9a-f-]{36}$/i.test(url.pathname)) {
+    if (request.method !== "POST" || !/^\/(?:mux|probe)\/[0-9a-f-]{36}$/i.test(url.pathname)) {
       return json({ ok: false, error: "Endpoint tidak ditemukan." }, 404);
     }
     if (!tokenMatches(request, env.MUX_TOKEN)) {
