@@ -26,7 +26,7 @@ assert.equal(valid.height, 4320);
 assert.equal(valid.title, "ARYANZZ 8K test.mp4");
 assert.throws(() => validateMuxRequest({ ...payload, videoUrl: "http://127.0.0.1/private.mp4" }), /HTTPS/);
 assert.throws(() => validateMuxRequest({ ...payload, videoUrl: "https://example.com/video.mp4" }), /diizinkan/);
-assert.throws(() => validateMuxRequest({ ...payload, height: 1081 }), /Resolusi/);
+assert.throws(() => validateMuxRequest({ ...payload, height: 5000 }), /Resolusi/);
 assert.throws(() => validateMuxRequest({ ...payload, videoExt: "exe" }), /Format video/);
 const socialSingleFile = validateMuxRequest({
   ...payload,
