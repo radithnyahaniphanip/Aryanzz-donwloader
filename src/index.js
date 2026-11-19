@@ -950,7 +950,8 @@ async function socialMediaFile(request){
     detected=socialMimeForExtension(requestedExt,mode);
     if(rangeStart===0&&prefixLength>=8){
       const signature=detectSocialMediaSignature(prefix,mode);
-      if(signature)detected=signature.mode===mode?signature:null;
+      detected=signature&&signature.mode===mode?signature:null;
+      if(!signature)detected=socialMimeForExtension(requestedExt,mode);
     }
   }else if(rangeStart===0||!responseIsPartial)detected=detectSocialMediaSignature(prefix,mode);
   else if(responseIsPartial)detected=socialMimeForExtension(requestedExt,mode);
