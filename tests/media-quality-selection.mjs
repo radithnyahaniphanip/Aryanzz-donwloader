@@ -18,6 +18,7 @@ const qualityOrder=new Function("return ("+functionSource(downloader,"youtubeCan
 const providerAudio=new Function("return ("+functionSource(downloader,"providerAudioForVideo")+");")();
 const hasCompatibleAudio=new Function("providerAudioForVideo","return ("+functionSource(downloader,"hasCompatibleAudio")+");")(providerAudio);
 const hasCompatibleProviderAudio=new Function("hasCompatibleAudio","return ("+functionSource(downloader,"hasCompatibleProviderAudio")+");")(hasCompatibleAudio);
+const socialVideoCandidates=new Function("youtubeCandidateQualityOrder","hasCompatibleProviderAudio","return ("+functionSource(downloader,"socialVideoCandidates")+");")(qualityOrder,hasCompatibleProviderAudio);
 const estimateFormatBytes=(item,duration)=>({
   bytes:Number(item.sizeBytes)||Math.round((Number(item.bitrate)||0)*(Number(duration)||0)/8),
   exact:Number(item.sizeBytes)>0
@@ -54,6 +55,16 @@ assert.equal(estimateQuality({formats:[adaptive1440],duration:60},1440),null,"Ad
 const publicVideo={mode:"video",ext:"mp4",height:1440,videoOnly:true,instance:"https://provider.example",bitrate:8_000_000,downloadUrl:"/api/social-file?video=1"};
 const publicAudio={mode:"audio",ext:"m4a",instance:"https://provider.example",bitrate:128_000,downloadUrl:"/api/social-file?audio=1"};
 assert.equal(hasCompatibleProviderAudio(publicVideo,[publicVideo,publicAudio]),true,"Social adaptive video should be selectable when a matching audio track exists");
+const publicWebm={mode:"video",ext:"webm",height:2160,videoOnly:true,instance:"https://provider.example",downloadUrl:"/api/social-file?webm=1"};
+const publicOpus={mode:"audio",ext:"opus",instance:"https://provider.example",downloadUrl:"/api/social-file?opus=1"};
+assert.equal(providerAudio(publicWebm,[publicWebm,publicOpus]).ext,"opus","WebM video should pair with a compatible Opus audio track.");
+const publicMov={mode:"video",ext:"mov",height:1080,videoOnly:false,downloadUrl:"/api/social-file?mov=1"};
+const publicAvi={mode:"video",ext:"avi",height:1440,videoOnly:false,downloadUrl:"/api/social-file?avi=1"};
+const publicFlv={mode:"video",ext:"flv",height:720,videoOnly:false,downloadUrl:"/api/social-file?flv=1"};
+const socialCandidates=socialVideoCandidates([publicMov,publicFlv,publicAvi],1440);
+assert.equal(socialCandidates[0].ext,"avi","An exact 1440p AVI source should remain selectable for MP4 conversion.");
+assert.ok(socialCandidates.some(item=>item.ext==="mov"),"MOV sources must not be discarded before MP4 conversion.");
+assert.ok(socialCandidates.some(item=>item.ext==="flv"),"FLV sources must not be discarded before MP4 conversion.");
 const publicEstimate=estimateProviderQuality({duration:60},1440,[publicVideo,publicAudio]);
 assert.equal(publicEstimate.kind,"adaptive");
 assert.equal(publicEstimate.actualHeight,1440);
@@ -61,6 +72,10 @@ assert.ok(publicEstimate.bytes>0,"Adaptive size estimate must include video and 
 
 assert.ok(downloader.includes("candidates=selectProviderCandidates(youtubeCandidateQualityOrder(exactFormats,wanted),2,8)"),"YouTube download must only attempt the resolution the user selected");
 assert.ok(downloader.includes("async function muxSocialVideo("),"Social providers need a real video/audio mux path for adaptive formats");
+assert.ok(downloader.includes("async function convertSocialVideoToMp4("),"Single-file MOV/WebM/AVI/FLV sources should be converted to a validated MP4.");
+assert.ok(downloader.includes("aryanzz-social-output.mp4"),"Adaptive social video and audio tracks should be packaged as MP4.");
+assert.ok(downloader.includes("socialVideoCandidates(all,Number(quality)||480)"),"Social video candidates must include supported non-MP4 source containers rather than rejecting them early.");
+assert.ok(downloader.includes("Video slideshow MP4 siap"),"Photo carousel slideshow should finish as MP4 even when MediaRecorder only supports WebM.");
 assert.ok(downloader.includes("hasCompatibleProviderAudio(item,info.formats)"),"Adaptive quality choices must be hidden unless a compatible audio track exists");
 assert.ok(downloader.includes("Resolusi video sumber tetap"),"Muxing must preserve and report the real source resolution");
 assert.ok(downloader.includes("returnOnly:true"),"Adaptive track downloads must support an intermediate mode without saving an incomplete file");
