@@ -791,7 +791,7 @@
     const mp4Pair=["mp4","m4v"].includes(videoExt)&&["m4a","aac"].includes(audioExt);
     const webmPair=videoExt==="webm"&&["webm","opus"].includes(audioExt);
     if(!mp4Pair&&!webmPair)return null;
-    try{if(!/(?:^|\\.)googlevideo\\.com$/i.test(new URL(videoItem.url).hostname)||!/(?:^|\\.)googlevideo\\.com$/i.test(new URL(audioItem.url).hostname))return null}catch{return null}
+    try{if(!/(?:^|\.)googlevideo\.com$/i.test(new URL(videoItem.url).hostname)||!/(?:^|\.)googlevideo\.com$/i.test(new URL(audioItem.url).hostname))return null}catch{return null}
     const filename=safeFilename((info.outputName||info.title||"aryanzz-youtube").replace(/\.(?:mp4|mp3|m4a|webm|mov)$/i,"")+".mp4");
     progressText.textContent="Memeriksa stream "+height+"p dan menyiapkan MP4 di server…";
     progressMeta.textContent="Video dan audio asli diperiksa terlebih dahulu. Penggabungan dilakukan tanpa memuat file multi-GB ke RAM HP.";
