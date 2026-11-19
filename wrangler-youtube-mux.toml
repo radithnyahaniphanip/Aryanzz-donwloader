@@ -1,0 +1,22 @@
+name = "aryanzz-youtube-mux"
+main = "src/youtube-mux-worker.js"
+compatibility_date = "2026-11-20"
+workers_dev = true
+keep_vars = true
+
+[[containers]]
+class_name = "YouTubeMuxContainer"
+image = "./mux-container/Dockerfile"
+instance_type = "standard-3"
+max_instances = 2
+
+[[durable_objects.bindings]]
+name = "YOUTUBE_MUX"
+class_name = "YouTubeMuxContainer"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["YouTubeMuxContainer"]
+
+[observability]
+enabled = true
