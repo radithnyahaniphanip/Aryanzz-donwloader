@@ -3471,7 +3471,7 @@ async function hybridYoutubeMuxTicket(request,env){
   payload.audioCodec=String(probeData.audioCodec||"").toLowerCase();
   if(!payload.videoCodec||!payload.audioCodec)return json({ok:false,error:"Codec sumber belum dapat diverifikasi."},422);
   const ticket=await signYoutubeMuxTicket(payload,secret);
-  return json({ok:true,ticket,filename:title,height,expiresAt:payload.expiresAt,mode:"server-stream-copy"});
+  return json({ok:true,ticket,filename:title,height,expiresAt:payload.expiresAt,mode:payload.audioCodec==="aac"?"server-stream-copy":"server-video-copy-audio-aac",videoCodec:payload.videoCodec,audioCodec:payload.audioCodec,audioTranscoded:payload.audioCodec!=="aac"});
 }
 async function hybridYoutubeMuxFile(request,env){
   const secret=String(env?.YOUTUBE_MUX_TOKEN||""),origin=youtubeMuxServiceOrigin(env);
