@@ -671,9 +671,10 @@
     let videoBytes=null,audioBytes=null,completed=false;
     progressText.textContent="Memeriksa ukuran komponen dan menyiapkan satu file video…";
     progressMeta.textContent="Mode kecepatan aktif · "+(Math.max(1,Math.min(5,Number(speed)||3)))+" jalur paralel jika sumber mendukung. Ukuran video dan audio diperiksa sebelum penggabungan.";
-    const outputExt=String(videoItem.ext||"mp4").toLowerCase()==="webm"?"webm":"mp4";
+    const outputExt="mp4";
+    const videoExt=String(videoItem.ext||"mp4").toLowerCase();
     const audioExt=String(audioItem.ext||"m4a").toLowerCase();
-    const inputVideo="aryanzz-video."+outputExt,inputAudio="aryanzz-audio."+audioExt,output="aryanzz-output."+outputExt;
+    const inputVideo="aryanzz-video."+videoExt,inputAudio="aryanzz-audio."+audioExt,output="aryanzz-output.mp4";
     let ffmpeg;
     try{
       const [videoProbe,audioProbe]=await Promise.all([probeYoutubeTrack(videoItem,info),probeYoutubeTrack(audioItem,info)]);
@@ -708,32 +709,17 @@
       track?.classList.add("is-indeterminate");
       progressText.textContent="Tahap 3/3 · Menyatukan MP4…";
       progressMeta.textContent="Target: 1 file "+outputExt.toUpperCase()+" · penggabungan lokal. Jangan tutup tab sampai file diserahkan ke Chrome.";
-      const onProgress=event=>{
-        const value=Number(event?.progress);if(!Number.isFinite(value))return;
-        const pct=Math.max(0,Math.min(1,value)),overall=Math.min(98,78+pct*20);
-        track?.classList.remove("is-indeterminate");bar.style.width=overall.toFixed(1)+"%";track?.setAttribute("aria-valuenow",String(Math.round(overall)));
-        progressText.textContent="Tahap 3/3 · Menyatukan MP4 · "+Math.round(pct*100)+"%";
-        progressMeta.textContent="Total "+Math.round(overall)+"% · hampir selesai";
-      };
-      ffmpeg.on?.("progress",onProgress);
-      let code;
-      const muxArgs=["-i",inputVideo,"-i",inputAudio,"-map","0:v:0","-map","1:a:0","-c","copy"];
-      if(outputExt==="mp4")muxArgs.push("-movflags","+faststart");
-      muxArgs.push("-shortest",output);
-      try{code=await ffmpeg.exec(muxArgs,300000);}
-      finally{ffmpeg.off?.("progress",onProgress);}
-      if(code!==0)throw new Error("Mesin MP4 tidak dapat menyatukan format sumber (kode "+code+").");
-      const result=await ffmpeg.readFile(output);
-      if(!result||result.length<1024)throw new Error("Hasil MP4 kosong atau tidak lengkap.");
-      const blob=new Blob([result],{type:outputExt==="webm"?"video/webm":"video/mp4"}),filename=safeFilename((info.outputName||info.title||"aryanzz-youtube").replace(/\.(?:mp4|mp3|m4a|webm|mov)$/i,"")+"."+outputExt);
-      progressText.textContent=outputExt.toUpperCase()+" selesai dirakit.";
-      progressMeta.textContent="Ukuran file "+formatDownloadSize(blob.size)+" · tekan tombol unduh di bawah.";
-      await saveBrowserBlob(blob,filename,progressText.parentElement);
+      const allowVideoReencode=!lowMemory&&Number(videoItem.height)<=1080&&videoSize+audioBytes.byteLength<=120*1024*1024;
+      const resultBlob=await runSocialMp4Mux(ffmpeg,["-i",inputVideo,"-i",inputAudio],output,allowVideoReencode,info.duration,progressText,progressMeta);
+      const filename=safeFilename((info.outputName||info.title||"aryanzz-youtube").replace(/\.(?:mp4|mp3|m4a|webm|mov)$/i,"")+".mp4");
+      progressText.textContent="MP4 selesai dirakit.";
+      progressMeta.textContent="Ukuran file "+formatDownloadSize(resultBlob.size)+" · tekan tombol unduh di bawah.";
+      await saveBrowserBlob(resultBlob,filename,progressText.parentElement);
       completed=true;
       track?.classList.remove("is-indeterminate");
       bar.style.width="100%";track?.setAttribute("aria-valuenow","100");
-      progressText.textContent="File "+outputExt.toUpperCase()+" siap · "+formatDownloadSize(blob.size)+" ✓";
-      progressMeta.textContent="Tekan “Unduh "+outputExt.toUpperCase()+" sekarang” untuk menyimpan ke Chrome.";
+      progressText.textContent="File MP4 siap · "+formatDownloadSize(resultBlob.size)+" ✓";
+      progressMeta.textContent="Tekan “Unduh MP4 sekarang” untuk menyimpan ke Chrome.";
       remember(info.url||"",filename,"video",videoItem.height);
       return filename;
     }finally{
