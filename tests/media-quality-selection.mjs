@@ -67,6 +67,11 @@ assert.ok(downloader.includes('[4320,"4320p · 8K"]'),"The quality menu must inc
 assert.ok(downloader.includes("2160,4320].includes(height)"),"Browser provider parser must accept 4320p");
 assert.ok(worker.includes("402:4320,571:4320"),"Worker must recognize YouTube 8K itags");
 assert.ok(worker.includes("2160,4320].includes(height)"),"Worker provider parser must accept 4320p");
+assert.ok(downloader.includes("downloadYoutubeServerMux"),"Adaptive MP4 streams should use the server-side streaming mux path before browser memory muxing.");
+assert.ok(downloader.includes("/api/youtube/hybrid/mux-ticket"),"The browser should request a signed mux ticket before starting a large MP4 download.");
+assert.ok(worker.includes("const MAX_YOUTUBE_BYTES=14*1024*1024*1024;"),"Direct YouTube MP4 streaming should allow files up to the configured 14 GB safety cap.");
+assert.ok(worker.includes("hybridYoutubeMuxTicket")&&worker.includes("hybridYoutubeMuxFile"),"The Worker should expose signed ticket and streaming mux endpoints.");
+assert.ok(worker.includes("serverMuxReady:!!env.YOUTUBE_MUX_URL&&!!env.YOUTUBE_MUX_TOKEN"),"YouTube status should report whether the high-resolution mux service is configured.");
 
 assert.ok(homeCss.includes("margin-bottom:26px!important"),"Paste-link mode must have clear space below the mode buttons");
 assert.ok(homeCss.includes("padding-top:8px!important"),"Platform search must have breathing room from the mode buttons");
