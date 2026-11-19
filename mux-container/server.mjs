@@ -187,7 +187,7 @@ export function createMuxServer({ spawnImpl = spawn, probeImpl = inspectMuxStrea
     if (req.method === "GET" && url.pathname === "/health") {
       return json(res, 200, { ok: true, service: "aryanzz-universal-mp4-mux", ffmpeg: true, authConfigured: Boolean(token) });
     }
-    if (url.pathname === "/probe/" + url.pathname.split("/").pop() || url.pathname.startsWith("/probe/") || url.pathname.startsWith("/mux/")) {
+    if (url.pathname.startsWith("/probe/") || url.pathname.startsWith("/mux/")) {
       const expected = String(token || "");
       const supplied = String(req.headers.authorization || "");
       if (!expected) return json(res, 503, { ok: false, error: "MUX_TOKEN belum dikonfigurasi pada server." });
