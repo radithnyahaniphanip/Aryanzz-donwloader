@@ -15,7 +15,8 @@ function functionSource(source,name,indent="  "){
 
 const qualityOrder=new Function("return ("+functionSource(downloader,"youtubeCandidateQualityOrder")+");")();
 const providerAudio=new Function("return ("+functionSource(downloader,"providerAudioForVideo")+");")();
-const hasCompatibleProviderAudio=new Function("providerAudioForVideo","return ("+functionSource(downloader,"hasCompatibleProviderAudio")+");")(providerAudio);
+const hasCompatibleAudio=new Function("providerAudioForVideo","return ("+functionSource(downloader,"hasCompatibleAudio")+");")(providerAudio);
+const hasCompatibleProviderAudio=new Function("hasCompatibleAudio","return ("+functionSource(downloader,"hasCompatibleProviderAudio")+");")(hasCompatibleAudio);
 const estimateFormatBytes=(item,duration)=>({
   bytes:Number(item.sizeBytes)||Math.round((Number(item.bitrate)||0)*(Number(duration)||0)/8),
   exact:Number(item.sizeBytes)>0
