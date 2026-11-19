@@ -3375,7 +3375,7 @@ async function hybridYoutubeFile(request){
   let received=0;
   const limited=response.body.pipeThrough(new TransformStream({transform(chunk,controller){
     received+=chunk.byteLength;
-    if(received>MAX_YOUTUBE_BYTES){controller.error(new Error("File melebihi batas 500 MB."));return;}
+    if(received>MAX_YOUTUBE_BYTES){controller.error(new Error("File melebihi batas aman 14 GB."));return;}
     controller.enqueue(chunk);
   }}));
   return new Response(limited,{status:response.status,headers});
