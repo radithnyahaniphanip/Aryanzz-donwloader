@@ -55,6 +55,7 @@ export function validateMuxRequest(payload) {
   if (!/^[0-9a-f-]{36}$/i.test(String(payload.id || ""))) throw new Error("ID proses tidak valid.");
   const height = Number(payload.height);
   if (!ALLOWED_HEIGHTS.has(height)) throw new Error("Resolusi sumber tidak didukung.");
+  if (String(payload.videoExt || "").toLowerCase() !== "mp4" || String(payload.audioExt || "").toLowerCase() !== "m4a") throw new Error("Mesin mux hanya menerima pasangan MP4 + M4A.");
   const videoUrl = allowedMediaUrl(payload.videoUrl);
   const audioUrl = allowedMediaUrl(payload.audioUrl);
   const title = safeFilename(payload.title);
