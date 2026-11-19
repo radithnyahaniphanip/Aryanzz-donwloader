@@ -300,13 +300,28 @@
       recorder.stop();
       await stopped;
       const actualMime=recorder.mimeType||mimeType||"video/webm";
-      const videoBlob=new Blob(chunks,{type:actualMime});
+      let videoBlob=new Blob(chunks,{type:actualMime});
       if(!videoBlob.size||!actualMime.startsWith("video/"))throw new Error("Hasil slideshow tidak menghasilkan file video yang valid.");
-      const extension=actualMime.includes("mp4")?"mp4":"webm";
-      const safeTitle=String(title||"aryanzz-photo-slideshow").replace(/[\\:*?"<>|]+/g," ").replace(/\//g," ").trim().slice(0,70)||"aryanzz-photo-slideshow";
-      await saveBrowserBlob(videoBlob,safeTitle+"-slideshow."+extension,container,"⬇ Simpan video slideshow");
-      if(button){button.textContent="Video slideshow siap ✓";button.disabled=true;}
-      return {mime:actualMime,extension,size:videoBlob.size};
+      const extension="mp4";
+      if(!actualMime.toLowerCase().includes("mp4")){
+        if(button)button.textContent="Mengonversi slideshow ke MP4…";
+        const meta={textContent:"Konversi video slideshow ke MP4."};
+        const progressLabel=button||{textContent:"Menyiapkan mesin MP4…"};
+        const ffmpeg=await loadBrowserFfmpeg(progressLabel,meta,null);
+        const input="aryanzz-photo-slideshow.webm",output="aryanzz-photo-slideshow.mp4";
+        try{
+          await ffmpeg.writeFile(input,new Uint8Array(await videoBlob.arrayBuffer()));
+          videoBlob=await runSocialMp4Mux(ffmpeg,["-i",input],output,true,0,progressLabel,meta);
+        }finally{
+          for(const name of [input,output])try{await ffmpeg.deleteFile(name)}catch{}
+        }
+      }else{
+        await inspectMp4Blob(videoBlob);
+      }
+      const safeTitle=String(title||"aryanzz-photo-slideshow").replace(/[\\:*?"<>|]+/g," ").replace(/\\//g," ").trim().slice(0,70)||"aryanzz-photo-slideshow";
+      await saveBrowserBlob(videoBlob,safeTitle+"-slideshow.mp4",container,"⬇ Simpan video slideshow MP4");
+      if(button){button.textContent="Video slideshow MP4 siap ✓";button.disabled=true;}
+      return {mime:"video/mp4",extension,size:videoBlob.size};
     }catch(error){
       if(recorder.state!=="inactive"){try{recorder.stop();await stopped.catch(()=>{})}catch{}}
       if(button){button.textContent=originalLabel;button.disabled=false;}
