@@ -12,7 +12,7 @@ const deploy = read("../.github/workflows/deploy-cloudflare.yml");
 const server = read("../mux-container/server.mjs");
 
 assert.ok(docker.includes("ffmpeg") && docker.includes("USER node") && docker.includes("HEALTHCHECK"), "Mux container installs FFmpeg, runs non-root, and exposes a health check.");
-assert.ok(compose.includes("MUX_TOKEN: ${MUX_TOKEN:?Set MUX_TOKEN in .env}") && compose.includes("MUX_DOMAIN: ${MUX_DOMAIN:?Set MUX_DOMAIN in .env}"), "Compose requires explicit mux credentials and domain configuration.");
+assert.ok(compose.includes("MUX_TOKEN: ${MUX_TOKEN:?Set MUX_TOKEN in mux-container/.env}") && compose.includes("MUX_DOMAIN: ${MUX_DOMAIN:?Set MUX_DOMAIN in mux-container/.env}"), "Compose requires explicit mux credentials and domain configuration.");
 assert.ok(compose.includes("127.0.0.1") === false && compose.includes('443:443') && compose.includes('80:80'), "Caddy publishes HTTPS while the mux service remains internal to the Docker network.");
 assert.ok(compose.includes("cap_drop:") && compose.includes("no-new-privileges:true"), "The container drops Linux capabilities and disables privilege escalation.");
 assert.ok(caddy.includes("reverse_proxy media-mux:8080") && caddy.includes("{$MUX_DOMAIN}"), "Caddy routes the public HTTPS domain to the private mux container.");
