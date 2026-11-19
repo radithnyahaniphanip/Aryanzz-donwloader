@@ -1209,7 +1209,7 @@ function socialNetworkPlan(selected=0){
         await saveBrowserBlob(blob,filename,progressText.parentElement,"⬇ Unduh "+outputExt.toUpperCase()+" sekarang");
         bar.style.width="100%";bar.parentElement?.classList.remove("is-indeterminate");bar.parentElement?.setAttribute("aria-valuenow","100");
         progressText.textContent=outputExt.toUpperCase()+" "+(Number(videoItem.height)||quality||"asli")+"p siap ✓";
-        progressMeta.textContent="Ukuran akhir "+formatDownloadSize(blob.size)+" · rata-rata transfer "+formatDownloadRate(transferRate)+" · video "+formatDownloadSize(actualVideoSize)+" + audio "+formatDownloadSize(actualAudioSize)+".";
+        progressMeta.textContent="Ukuran akhir "+formatDownloadSize(blob.size)+" · rata-rata transfer "+formatDownloadRate(transferRate)+" · video "+formatDownloadSize(actualVideoSize)+" + audio "+formatDownloadSize(actualAudioSize)+" · Resolusi video sumber tetap "+(Number(videoItem.height)||"asli")+"p.";
         remember(info.url||"",filename,"video",Number(videoItem.height)||quality);
         return filename;
       }finally{
