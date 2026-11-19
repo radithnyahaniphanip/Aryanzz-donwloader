@@ -3568,9 +3568,9 @@ async function socialMuxTicket(request,env){
   payload.height=Number(probeData.height)||0;
   payload.videoCodec=String(probeData.videoCodec||"").toLowerCase();
   payload.audioCodec=String(probeData.audioCodec||"").toLowerCase();
-  if(!payload.height||!payload.videoCodec||!payload.audioCodec)return json({ok:false,error:"Metadata resolusi dan codec belum dapat diverifikasi."},422);
+  if(!payload.height||!payload.videoCodec||(audio&&!payload.audioCodec))return json({ok:false,error:"Metadata resolusi dan codec belum dapat diverifikasi."},422);
   const ticket=await signYoutubeMuxTicket(payload,secret);
-  return json({ok:true,ticket,filename:title,height:payload.height,expiresAt:payload.expiresAt,mode:payload.videoCodec==="h264"||payload.videoCodec==="hevc"||payload.videoCodec==="av1"||payload.videoCodec==="vp9"?"server-video-copy":"server-video-transcode",videoCodec:payload.videoCodec,audioCodec:payload.audioCodec,audioTranscoded:payload.audioCodec!=="aac"});
+  return json({ok:true,ticket,filename:title,height:payload.height,expiresAt:payload.expiresAt,mode:["h264","hevc","av1","vp9"].includes(payload.videoCodec)?"server-video-copy":"server-video-transcode",videoCodec:payload.videoCodec,audioCodec:payload.audioCodec,hasAudio:!!payload.audioCodec,audioTranscoded:!!payload.audioCodec&&payload.audioCodec!=="aac"});
 }
 async function socialMuxFile(request,env){
   const secret=String(env?.MEDIA_MUX_TOKEN||env?.YOUTUBE_MUX_TOKEN||""),origin=youtubeMuxServiceOrigin(env);
@@ -3581,7 +3581,7 @@ async function socialMuxFile(request,env){
   if(Number(payload.expiresAt)<Date.now())return json({ok:false,error:"Tiket mux sudah kedaluwarsa. Periksa tautan sekali lagi."},410);
   const video=safePublicMediaUrl(payload.videoUrl||""),audio=payload.audioUrl?safePublicMediaUrl(payload.audioUrl):null;
   if(!video||!socialMuxHostAllowed(video,env)||payload.audioUrl&&(!audio||!socialMuxHostAllowed(audio,env)))return json({ok:false,error:"CDN sumber pada tiket tidak diizinkan."},422);
-  if(!Number.isInteger(Number(payload.height))||Number(payload.height)<144||Number(payload.height)>4320||!payload.videoCodec||!payload.audioCodec)return json({ok:false,error:"Metadata mux pada tiket tidak valid."},422);
+  if(!Number.isInteger(Number(payload.height))||Number(payload.height)<144||Number(payload.height)>4320||!payload.videoCodec||(payload.audioUrl&&!payload.audioCodec))return json({ok:false,error:"Metadata mux pada tiket tidak valid."},422);
   const endpoint=new URL("/mux/"+payload.id,origin);
   let upstream;
   try{

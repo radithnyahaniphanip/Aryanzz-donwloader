@@ -38,7 +38,9 @@ const socialSingleFile = validateMuxRequest({
   referer: "https://www.instagram.com/"
 });
 assert.equal(socialSingleFile.audioUrl, null);
-assert.ok(buildFfmpegArgs(socialSingleFile).includes("0:a:0"), "A progressive social video should map its embedded audio track.");
+const silentVideoArgs=buildFfmpegArgs({...socialSingleFile,videoCodec:"h264",audioCodec:""});
+assert.ok(silentVideoArgs.includes("0:a:0?"), "A progressive social video should allow an embedded audio track without requiring one.");
+assert.equal(silentVideoArgs[silentVideoArgs.indexOf("-c:a")+1],"copy","A silent progressive video must not be forced through audio transcoding.");
 const socialAdaptive = validateMuxRequest({
   ...payload,
   videoUrl: "https://v16m.tiktokcdn.com/video.webm",
@@ -78,8 +80,10 @@ assert.ok(ffprobeVideoArgs.includes("stream=codec_type,height,codec_name"));
 assert.ok(ffprobeVideoArgs.includes(valid.videoUrl));
 assert.ok(ffprobeAudioArgs.includes(valid.audioUrl));
 
+let lastFfmpegArgs=[];
 function fakeSpawn(command, args) {
   assert.equal(command, "ffmpeg");
+  lastFfmpegArgs=args;
   assert.ok(args.includes("pipe:1"));
   const child = new EventEmitter();
   child.stdout = new PassThrough();
@@ -106,7 +110,7 @@ function fakeSpawn(command, args) {
 
 const server = createMuxServer({
   spawnImpl: fakeSpawn,
-  probeImpl: async value => ({ ok: true, height: value.height, videoCodec: "av01", audioCodec: "aac" }),
+  probeImpl: async value => ({ ok: true, height: value.height||720, videoCodec: "h264", audioCodec: value.audioUrl ? "aac" : "" }),
   token: "test-mux-secret"
 });
 await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
@@ -132,8 +136,27 @@ try {
   assert.equal(response.headers.get("content-type"), "video/mp4");
   assert.equal(response.headers.get("x-aryanzz-source-height"), "4320");
   assert.ok((await response.arrayBuffer()).byteLength >= 24);
+
+  const silentId="00000000-0000-4000-8000-000000000002";
+  const silentProbe=await fetch(base+"/probe/"+silentId,{
+    method:"POST",
+    headers:{"content-type":"application/json",authorization:"Bearer test-mux-secret"},
+    body:JSON.stringify({...socialSingleFile,id:silentId})
+  });
+  assert.equal(silentProbe.status,200);
+  const silentMetadata=await silentProbe.json();
+  assert.equal(silentMetadata.audioCodec,"","A genuinely silent source should pass preflight without inventing an audio track.");
+  const silentResponse=await fetch(base+"/mux/"+silentId,{
+    method:"POST",
+    headers:{"content-type":"application/json",authorization:"Bearer test-mux-secret"},
+    body:JSON.stringify({...socialSingleFile,id:silentId,height:720,videoCodec:"h264",audioCodec:""})
+  });
+  assert.equal(silentResponse.status,200);
+  assert.ok(lastFfmpegArgs.includes("0:a:0?"),"FFmpeg must treat embedded audio as optional for silent sources.");
+  assert.equal(lastFfmpegArgs[lastFfmpegArgs.indexOf("-c:a")+1],"copy");
+  assert.ok((await silentResponse.arrayBuffer()).byteLength>=24);
 } finally {
   await new Promise((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
 }
 
-console.log("ARYANZZ high-resolution MP4 mux tests passed: 2K/4K/8K source validation, MP4+M4A pairing, stream-copy FFmpeg, FFprobe preflight, and streamed response.");
+console.log("ARYANZZ high-resolution MP4 mux tests passed: 2K/4K/8K source validation, MP4+M4A pairing, silent-video handling, stream-copy FFmpeg, FFprobe preflight, and streamed response.");

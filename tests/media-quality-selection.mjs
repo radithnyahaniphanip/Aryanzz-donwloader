@@ -92,7 +92,7 @@ assert.ok(worker.includes("hybridYoutubeMuxTicket")&&worker.includes("hybridYout
 assert.ok(worker.includes("serverMuxReady:!!(env.MEDIA_MUX_URL||env.YOUTUBE_MUX_URL)&&!!(env.MEDIA_MUX_TOKEN||env.YOUTUBE_MUX_TOKEN)"),"The API status should report whether the optional external media mux service is configured.");
 assert.ok(downloader.includes('videoExt==="webm"&&["webm","opus"].includes(audioExt)'),"High-resolution WebM video plus Opus audio should use the MP4 server mux path.");
 assert.ok(worker.includes('videoExt==="webm"&&["webm","opus"].includes(audioExt)'),"The Worker should accept compatible WebM plus Opus sources.");
-assert.ok(muxServer.includes('const audioCodecArgs = String(payload.audioCodec||"").toLowerCase()==="aac"')&&muxServer.includes('["-c:a","aac","-b:a","192k","-ar","48000"]'),"Non-AAC social audio should be converted to AAC while preserving compatible source video.");
+assert.ok(muxServer.includes('const audioCodec=String(payload.audioCodec||"").toLowerCase()')&&muxServer.includes('["-c:a","aac","-b:a","192k","-ar","48000"]')&&muxServer.includes('"0:a:0?"'),"Non-AAC social audio should be converted to AAC while embedded audio remains optional for silent progressive sources.");
 assert.ok(muxServer.includes('["h264","hevc","av1","vp9"]')&&muxServer.includes('"libx264"'),"The mux should copy compatible source video and only transcode unsupported video codecs without upscaling.");
 
 assert.ok(homeCss.includes("margin-bottom:26px!important"),"Paste-link mode must have clear space below the mode buttons");
