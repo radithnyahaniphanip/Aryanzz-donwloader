@@ -9,8 +9,8 @@ const BUILTIN_MEDIA_ROOTS = [
   "googlevideo.com","kavin.rocks","leptons.xyz","nosebs.ru","privacy.com.de","adminforge.de",
   "piped.yt","drgns.space","owo.si","ducks.party","codespace.cz","reallyaweso.me","private.coffee",
   "darkness.services","orangenet.cc","nadeko.net","nerdvpn.de","tiekoetter.com",
-  "cdninstagram.com","fbcdn.net","fbsbx.com","tiktokcdn.com","tiktokv.com","byteoversea.com",
-  "ibytedtos.com","twimg.com","redditmedia.com","redd.it","vimeocdn.com","vimeo.com",
+  "cdninstagram.com","fbcdn.net","fbsbx.com","tiktokcdn.com","tiktokcdn-us.com","tiktokcdn-eu.com","tiktokcdn.net","tiktokv.com","byteoversea.com",
+  "ibytedtos.com","bytecdn.cn","muscdn.com","musical.ly","twimg.com","redditmedia.com","redd.it","vimeocdn.com","vimeo.com",
   "pinimg.com","kwai.net","snackvideo.com","threads.net","threads.com","capcut.com"
 ];
 const ALLOWED_MEDIA_ROOTS=[...new Set([...BUILTIN_MEDIA_ROOTS,...String(process.env.MUX_ALLOWED_HOSTS||"").split(",").map(value=>value.trim().toLowerCase().replace(/^\.+|\.+$/g,"")).filter(Boolean)])];
