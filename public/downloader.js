@@ -311,7 +311,7 @@
         const input="aryanzz-photo-slideshow.webm",output="aryanzz-photo-slideshow.mp4";
         try{
           await ffmpeg.writeFile(input,new Uint8Array(await videoBlob.arrayBuffer()));
-          videoBlob=await runSocialMp4Mux(ffmpeg,["-i",input],output,true,0,progressLabel,meta);
+          videoBlob=await runSocialMp4Mux(ffmpeg,["-i",input],output,true,0,progressLabel,meta,true);
         }finally{
           for(const name of [input,output])try{await ffmpeg.deleteFile(name)}catch{}
         }
@@ -1116,9 +1116,9 @@ function socialNetworkPlan(selected=0){
     if(!received||total&&received!==total)throw new Error(label+" terpotong: "+received+" dari "+total+" byte.");
     return new Blob(chunks,{type:mime});
   }
-  async function runSocialMp4Mux(ffmpeg,inputArgs,output,allowVideoReencode,expectedDuration,progressText,progressMeta){
+  async function runSocialMp4Mux(ffmpeg,inputArgs,output,allowVideoReencode,expectedDuration,progressText,progressMeta,allowSilent=false){
     const hasSeparateAudio=inputArgs.filter(value=>value==="-i").length>1;
-    const mapArgs=hasSeparateAudio?["-map","0:v:0","-map","1:a:0"]:["-map","0:v:0","-map","0:a?"];
+    const mapArgs=hasSeparateAudio?["-map","0:v:0","-map","1:a:0"]:allowSilent?["-map","0:v:0","-map","0:a:0?"]:["-map","0:v:0","-map","0:a:0"];
     const base=[...inputArgs,...mapArgs];
     const attempts=[
       {label:"stream-copy",codec:["-c:v","copy","-c:a","copy"]},
@@ -1253,6 +1253,59 @@ function socialNetworkPlan(selected=0){
       if(ffmpeg)for(const name of [input,output])try{await ffmpeg.deleteFile(name)}catch{}
     }
   }
+  async function downloadSocialServerMux(sourceUrl,videoItem,audioItem,info,bar,progressText,progressMeta,videoCheck=null){
+    const mediaUrl=item=>{
+      try{
+        const endpoint=new URL(item?.downloadUrl,location.href);
+        if(endpoint.origin!==location.origin||endpoint.pathname!=="/api/social-file")return null;
+        const raw=endpoint.searchParams.get("url");
+        const actual=safeUrl(raw);
+        return actual?.href||null;
+      }catch{return null}
+    };
+    const videoUrl=mediaUrl(videoItem),audioUrl=audioItem?mediaUrl(audioItem):null;
+    if(!videoUrl||audioItem&&!audioUrl)return null;
+    const videoExt=String(videoCheck?.extension||videoItem?.ext||"").toLowerCase();
+    const audioExt=String(audioItem?.ext||"").toLowerCase();
+    const filename=safeFilename((info.outputName||info.title||"aryanzz-media").replace(/\.[a-z0-9]{2,5}$/i,"")+".mp4");
+    progressText.textContent="Memeriksa mesin MP4 server…";
+    if(progressMeta)progressMeta.textContent="Jika mesin FFmpeg eksternal tersedia, video dan audio akan digabung di server tanpa memenuhi RAM HP.";
+    try{
+      const response=await fetch("/api/social/mux-ticket",{
+        method:"POST",
+        headers:{"content-type":"application/json","accept":"application/json"},
+        body:JSON.stringify({
+          sourceUrl:String(sourceUrl||info.url||""),
+          videoUrl,
+          audioUrl,
+          videoExt,
+          audioExt:audioUrl?audioExt:"",
+          height:Number(videoItem?.height)||0,
+          title:info.outputName||info.title||"ARYANZZ Media"
+        }),
+        cache:"no-store",
+        signal:downloadTimeoutSignal(90000)
+      });
+      const data=await response.json().catch(()=>({}));
+      if(response.status===503&&data.code==="MEDIA_MUX_NOT_CONFIGURED")return null;
+      if(!response.ok||!data.ok||!data.ticket){
+        if(progressMeta)progressMeta.textContent="Mesin server belum dapat memproses sumber ini; mencoba mesin MP4 di perangkat. "+String(data.error||"").slice(0,140);
+        return null;
+      }
+      const target="/api/social/mux?ticket="+encodeURIComponent(data.ticket);
+      const container=bar.parentElement?.parentElement;
+      addReadyDownloadLink(container,target,filename,"⬇ Unduh MP4 "+(Number(data.height)||"asli")+"p sekarang");
+      bar.parentElement?.classList.add("is-indeterminate");
+      progressText.textContent="MP4 server siap · "+(Number(data.height)||"resolusi sumber")+"p ✓";
+      if(progressMeta)progressMeta.textContent=data.audioTranscoded?"Audio sedang disesuaikan ke AAC; video sumber dipertahankan. Ketuk tombol unduh untuk menerima satu file MP4.":"Video dan audio sumber telah lolos pemeriksaan. Ketuk tombol unduh untuk menerima satu file MP4.";
+      remember(sourceUrl||info.url||"",filename,"video",Number(data.height)||videoItem?.height||0);
+      return filename;
+    }catch(error){
+      if(activeDownloadController?.signal.aborted)throw new Error("Unduhan dibatalkan.");
+      if(progressMeta)progressMeta.textContent="Mesin MP4 server tidak tersedia; beralih ke mesin browser. "+String(error?.message||error).slice(0,140);
+      return null;
+    }
+  }
     async function downloadFile(url, mode, quality, bar, progressText, info={}, requestedAudioFormat="mp3",progressMeta=null) {
     const hasSocialDownloadFormats=Array.isArray(info.formats)&&info.formats.some(item=>item?.downloadUrl);
     if(hasSocialDownloadFormats){
@@ -1303,7 +1356,8 @@ function socialNetworkPlan(selected=0){
         const audioItem=providerAudioForVideo(selected,info.formats);
         if(!audioItem)throw new Error("Provider tidak menyediakan audio yang cocok untuk resolusi "+Number(selected.height)+"p.");
         const muxSpeed=Number(document.getElementById("aryDownloadSpeed")?.value)||0;
-        try{return await muxSocialVideo(selected,audioItem,info,bar,progressText,progressMeta,muxSpeed,check);}
+        const serverMux=await downloadSocialServerMux(url,selected,audioItem,{...info,url:info.url||url},bar,progressText,progressMeta,check);if(serverMux)return serverMux;
+        try{return await muxSocialVideo(selected,audioItem,{...info,url:info.url||url},bar,progressText,progressMeta,muxSpeed,check);}
         catch(error){
           if(activeDownloadController?.signal.aborted)throw new Error("Unduhan dibatalkan.");
           const sameResolutionDirect=probeResults.find(result=>result.check?.valid===true&&!result.candidate.videoOnly&&Number(result.candidate.height)===Number(selected.height));
@@ -1313,7 +1367,8 @@ function socialNetworkPlan(selected=0){
         }
       }
       if(mode==="video"&&!["mp4","m4v"].includes(String(check.extension||"").toLowerCase())){
-        return await convertSocialVideoToMp4(selected,info,check,bar,progressText,progressMeta);
+        const serverMux=await downloadSocialServerMux(url,selected,null,{...info,url:info.url||url},bar,progressText,progressMeta,check);if(serverMux)return serverMux;
+        return await convertSocialVideoToMp4(selected,{...info,url:info.url||url},check,bar,progressText,progressMeta);
       }
       const size=Number(check.bytes)||Number(selected.filesize)||0;
       const filenameBase=safeFilename(info.outputName||info.title||"aryanzz-media").replace(/\.[a-z0-9]{2,5}$/i,"");
