@@ -704,12 +704,13 @@
       progressText.textContent="Tahap 2/3 · Mengambil komponen suara…";
       progressMeta.textContent=measuredSizeNote+" Tahap video selesai 100%; sekarang mengunduh audio. Jangan tutup tab.";track?.classList.remove("is-indeterminate");
       audioBytes=await fetchYoutubeTrack(audioItem,info,maxTrack,bar,progressText,progressMeta,"Tahap 2/3 · Audio",38,38,speed,audioProbe);
-      if(videoSize+audioBytes.byteLength>maxCombined)throw new Error("Gabungan media "+formatDownloadSize(videoSize+audioBytes.byteLength)+" terlalu besar untuk RAM HP. Mesin MP4 server 2K/4K/8K belum aktif; unduhan dihentikan agar perangkat tidak kehabisan memori.");
+      const audioSize=audioBytes.byteLength;
+      if(videoSize+audioSize>maxCombined)throw new Error("Gabungan media "+formatDownloadSize(videoSize+audioSize)+" terlalu besar untuk RAM HP. Mesin MP4 server 2K/4K/8K belum aktif; unduhan dihentikan agar perangkat tidak kehabisan memori.");
       await ffmpeg.writeFile(inputAudio,audioBytes);audioBytes=null;
       track?.classList.add("is-indeterminate");
       progressText.textContent="Tahap 3/3 · Menyatukan MP4…";
       progressMeta.textContent="Target: 1 file "+outputExt.toUpperCase()+" · penggabungan lokal. Jangan tutup tab sampai file diserahkan ke Chrome.";
-      const allowVideoReencode=!lowMemory&&Number(videoItem.height)<=1080&&videoSize+audioBytes.byteLength<=120*1024*1024;
+      const allowVideoReencode=!lowMemory&&Number(videoItem.height)<=1080&&videoSize+audioSize<=120*1024*1024;
       const resultBlob=await runSocialMp4Mux(ffmpeg,["-i",inputVideo,"-i",inputAudio],output,allowVideoReencode,info.duration,progressText,progressMeta);
       const filename=safeFilename((info.outputName||info.title||"aryanzz-youtube").replace(/\.(?:mp4|mp3|m4a|webm|mov)$/i,"")+".mp4");
       progressText.textContent="MP4 selesai dirakit.";
