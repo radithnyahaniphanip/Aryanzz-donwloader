@@ -62,8 +62,10 @@
     el.setAttribute("aria-live", "polite");
   }
   function formatDownloadSize(bytes){
-    const value=Number(bytes)||0;
-    if(value<1024*1024)return (value/1024).toFixed(0)+" KB";
+    const value=Math.max(0,Number(bytes)||0);
+    if(value===0)return "0 B";
+    if(value<1024)return (value<10?value.toFixed(1):Math.round(value))+" B";
+    if(value<1024*1024)return (value<10240?(value/1024).toFixed(1):(value/1024).toFixed(0))+" KB";
     return (value/1048576).toFixed(1)+" MB";
   }
   function sourceFormatBytes(item){
@@ -1655,8 +1657,11 @@ function socialNetworkPlan(selected=0){
             muteToggle.setAttribute("aria-label",preview.muted||preview.volume===0?"Aktifkan suara":"Bisukan video");
           };
           playToggle.addEventListener("click",()=>{
-            if(preview.paused)preview.play().catch(()=>{previewStatus.textContent="Browser belum dapat memutar stream ini.";previewStatus.className="warning";});
-            else preview.pause();
+            if(preview.paused){
+              preview.preload="auto";
+              preview.setAttribute("preload","auto");
+              preview.play().catch(()=>{previewStatus.hidden=false;previewStatus.textContent="Browser belum dapat memutar stream ini.";previewStatus.className="warning";});
+            }else preview.pause();
           });
           seek.addEventListener("input",()=>{
             const total=Number(preview.duration);
@@ -1671,8 +1676,7 @@ function socialNetworkPlan(selected=0){
           });
           previewWrap.addEventListener("contextmenu",event=>event.preventDefault());
           ["loadedmetadata","durationchange","timeupdate","play","pause","ended","volumechange"].forEach(name=>preview.addEventListener(name,updatePlayerControls));
-          let previewCandidateIndex=0,previewDirectFallbackTried=false,previewWatchdog=null;
-          const clearPreviewWatchdog=()=>{if(previewWatchdog){clearTimeout(previewWatchdog);previewWatchdog=null;}};
+          let previewCandidateIndex=0,previewDirectFallbackTried=false;
           const previewSourceFor=(candidate,direct=false)=>{
             const source=safeUrl(direct?candidate?.url:(candidate?.previewUrl||candidate?.downloadUrl));
             if(!source)return null;
@@ -1722,6 +1726,7 @@ function socialNetworkPlan(selected=0){
             };
             window.addEventListener("message",onPlayerMessage);
             previewWrap.replaceChildren(frame);
+            previewStatus.hidden=false;
             previewStatus.textContent="Video dibuka melalui pemutar resmi TikTok. File MP4 belum tersedia dari sumber publik untuk tautan ini.";
             previewStatus.className="ary-player-status";
             return true;
@@ -1730,6 +1735,7 @@ function socialNetworkPlan(selected=0){
             const sourceLink=make("a","youtube-thumb-download","Buka video di "+platformName(url));
             sourceLink.href=url.href;sourceLink.target="_blank";sourceLink.rel="noopener";
             previewWrap.replaceChildren(sourceLink);
+            previewStatus.hidden=false;
             previewStatus.textContent="Semua jalur pratinjau publik gagal. Video tetap dapat dibuka pada platform asal; ARYANZZ tidak akan menampilkan player 0:00 seolah-olah siap.";
             previewStatus.className="warning";
           };
@@ -1738,16 +1744,7 @@ function socialNetworkPlan(selected=0){
             if(!source)return false;
             previewCandidateIndex=index;
             preview.src=source.href;preview.load();
-            if(reason){previewStatus.textContent=reason+" · mencoba jalur pemutaran yang kompatibel…";previewStatus.className="muted";}
-            clearPreviewWatchdog();
-            previewWatchdog=setTimeout(()=>{
-              if(preview.readyState>=1)return;
-              if(!previewDirectFallbackTried){
-                previewDirectFallbackTried=true;
-                if(setPreviewCandidate(previewCandidateIndex,true,"Proxy belum mengirim metadata; mencoba CDN sumber"))return;
-              }
-              if(!tryNextPreviewCandidate("Waktu tunggu metadata habis")&&!showTikTokOfficialPlayer())showUnavailablePreview();
-            },6500);
+            if(reason){previewStatus.hidden=false;previewStatus.textContent=reason+" · menyiapkan stream video…";previewStatus.className="muted";}
             return true;
           };
           const tryNextPreviewCandidate=reason=>{
@@ -1768,7 +1765,6 @@ function socialNetworkPlan(selected=0){
              }else if(preview.readyState<1)previewStatus.textContent="Menunggu metadata video dari sumber…";
            };
            preview.addEventListener("loadedmetadata",()=>{
-             clearPreviewWatchdog();
              applyIntrinsicRatio();
              const actual=Number(preview.duration),expected=Number(info.duration)||0;
              if(Number.isFinite(actual)&&actual>0){const mm=Math.floor(actual/60),ss=Math.floor(actual%60);mediaMetaLine.textContent=[info.extractor||platformName(url),mm+":"+String(ss).padStart(2,"0"),info.size?(info.size/1048576).toFixed(1)+" MB":""].filter(Boolean).join(" · ");}
@@ -1778,9 +1774,8 @@ function socialNetworkPlan(selected=0){
              }else previewStatus.className="muted";
            });
            preview.addEventListener("durationchange",applyIntrinsicRatio);
-           preview.addEventListener("loadeddata",()=>{clearPreviewWatchdog();if(preview.videoWidth&&preview.videoHeight)applyIntrinsicRatio()});
+           preview.addEventListener("loadeddata",()=>{if(preview.videoWidth&&preview.videoHeight)applyIntrinsicRatio()});
            preview.addEventListener("error",()=>{
-             clearPreviewWatchdog();
              if(!previewDirectFallbackTried){
                previewDirectFallbackTried=true;
                if(setPreviewCandidate(previewCandidateIndex,true,"Stream proxy gagal; mencoba CDN sumber"))return;
@@ -1788,21 +1783,28 @@ function socialNetworkPlan(selected=0){
              if(tryNextPreviewCandidate("Stream sebelumnya gagal"))return;
              if(!showTikTokOfficialPlayer())showUnavailablePreview();
            });
-           preview.addEventListener("canplay",()=>{clearPreviewWatchdog();previewStatus.textContent="Video siap diputar · kontrol dan durasi aktif.";previewStatus.className="muted"});
-           preview.addEventListener("playing",()=>{clearPreviewWatchdog();previewStatus.textContent="Video sedang diputar.";previewStatus.className="muted"});
-           preview.addEventListener("waiting",()=>{if(preview.readyState<1){previewStatus.textContent="Menunggu metadata · mencoba jalur alternatif bila sumber tidak merespons…";armPreviewWatchdog();}else previewStatus.textContent="Memuat bagian video berikutnya…";});
-           preview.addEventListener("stalled",()=>{if(preview.readyState<1){previewStatus.textContent="Koneksi stream tertahan · mencoba jalur alternatif…";armPreviewWatchdog();}else{previewStatus.textContent="Koneksi stream tertahan · menunggu data berikutnya…";previewStatus.className="warning";}});
-           const armPreviewWatchdog=()=>{
-             clearPreviewWatchdog();
-             previewWatchdog=setTimeout(()=>{
-               if(preview.readyState>=1)return;
-               if(!previewDirectFallbackTried){
-                 previewDirectFallbackTried=true;
-                 if(setPreviewCandidate(previewCandidateIndex,true,"Metadata belum tiba; mencoba CDN sumber"))return;
-               }
-               if(!tryNextPreviewCandidate("Waktu tunggu metadata habis")&&!showTikTokOfficialPlayer())showUnavailablePreview();
-             },6500);
-           };
+           preview.addEventListener("canplay",()=>{
+             previewStatus.hidden=false;
+             previewStatus.textContent="Video siap diputar · kontrol dan durasi aktif.";
+             previewStatus.className="muted";
+           });
+           preview.addEventListener("playing",()=>{
+             previewStatus.hidden=false;
+             previewStatus.textContent="Video sedang diputar.";
+             previewStatus.className="muted";
+           });
+           preview.addEventListener("waiting",()=>{
+             if(preview.readyState>=1){previewStatus.hidden=true;return;}
+             previewStatus.hidden=false;
+             previewStatus.textContent="Menunggu data awal video…";
+             previewStatus.className="muted";
+           });
+           preview.addEventListener("stalled",()=>{
+             if(preview.readyState>=1){previewStatus.hidden=true;return;}
+             previewStatus.hidden=false;
+             previewStatus.textContent="Menunggu koneksi video…";
+             previewStatus.className="muted";
+           });
            setPreviewCandidate(0,false,"Memuat pratinjau video");
            window.addEventListener("resize",applyIntrinsicRatio,{passive:true});
            previewWrap.append(preview,playerControls);
