@@ -106,15 +106,18 @@ function fakeSpawn(command, args) {
 
 const server = createMuxServer({
   spawnImpl: fakeSpawn,
-  probeImpl: async value => ({ ok: true, height: value.height, videoCodec: "av01", audioCodec: "aac" })
+  probeImpl: async value => ({ ok: true, height: value.height, videoCodec: "av01", audioCodec: "aac" }),
+  token: "test-mux-secret"
 });
 await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
 const address = server.address();
 const base = "http://127.0.0.1:" + address.port;
 try {
+  const unauthorized = await fetch(base + "/probe/" + id, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) });
+  assert.equal(unauthorized.status, 401, "Mux endpoints must reject requests without the private service token.");
   const probe = await fetch(base + "/probe/" + id, {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: { "content-type": "application/json", authorization: "Bearer test-mux-secret" },
     body: JSON.stringify(payload)
   });
   assert.equal(probe.status, 200);
@@ -122,7 +125,7 @@ try {
 
   const response = await fetch(base + "/mux/" + id, {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: { "content-type": "application/json", authorization: "Bearer test-mux-secret" },
     body: JSON.stringify(payload)
   });
   assert.equal(response.status, 200);
