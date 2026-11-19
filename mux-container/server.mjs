@@ -90,11 +90,12 @@ export function buildFfmpegArgs(payload) {
   const videoCodecArgs = ["h264","hevc","av1","vp9"].includes(String(payload.videoCodec||"").toLowerCase())
     ? ["-c:v","copy"]
     : ["-c:v","libx264","-preset","veryfast","-crf","18","-pix_fmt","yuv420p"];
-  const audioCodecArgs = String(payload.audioCodec||"").toLowerCase()==="aac"
+  const audioCodec=String(payload.audioCodec||"").toLowerCase();
+  const audioCodecArgs = !audioCodec||audioCodec==="aac"
     ? ["-c:a","copy"]
     : ["-c:a","aac","-b:a","192k","-ar","48000"];
   const inputs = [...input(payload.videoUrl), ...(payload.audioUrl ? input(payload.audioUrl) : [])];
-  const maps = payload.audioUrl ? ["-map","0:v:0","-map","1:a:0"] : ["-map","0:v:0","-map","0:a:0"];
+  const maps = payload.audioUrl ? ["-map","0:v:0","-map","1:a:0"] : ["-map","0:v:0","-map","0:a:0?"];
   return [
     "-hide_banner","-loglevel","error","-nostdin","-y",
     ...inputs,...maps,...videoCodecArgs,...audioCodecArgs,
@@ -169,14 +170,15 @@ async function inspectMuxStreams(payload, spawnImpl) {
   const audioData = payload.audioUrl ? await probeSingleStream(payload.audioUrl, spawnImpl, payload.referer) : videoData;
   const video = (Array.isArray(videoData.streams) ? videoData.streams : []).find(item => item.codec_type === "video");
   const audio = (Array.isArray(audioData.streams) ? audioData.streams : []).find(item => item.codec_type === "audio");
-  if (!video || !audio) throw new Error("Sumber tidak memiliki track video dan audio lengkap.");
+  if (!video) throw new Error("Sumber tidak memiliki track video.");
+  if (payload.audioUrl && !audio) throw new Error("Sumber audio terpisah tidak memiliki track audio.");
   const actualHeight = Number(video.height) || 0;
   const videoCodec = String(video.codec_name || "").toLowerCase();
-  const audioCodec = String(audio.codec_name || "").toLowerCase();
+  const audioCodec = String(audio?.codec_name || "").toLowerCase();
   if (!Number.isInteger(actualHeight) || actualHeight < 144 || actualHeight > 4320) throw new Error("Resolusi sumber " + actualHeight + "p belum didukung oleh mesin MP4.");
   if (payload.height && actualHeight !== payload.height) throw new Error("Resolusi sumber sebenarnya " + actualHeight + "p, bukan " + payload.height + "p. ARYANZZ menghentikan proses agar tidak memberi label kualitas palsu.");
   if (!["h264","hevc","av1","vp9","vp8","mpeg4","mpeg2video","mpeg1video","h263","mjpeg","prores","theora","wmv3","vc1","flv1"].includes(videoCodec)) throw new Error("Codec video " + (videoCodec || "tidak diketahui") + " belum didukung oleh FFmpeg.");
-  if (!["aac","opus","vorbis","mp3","mp2","ac3","eac3","flac","pcm_s16le","alac","wma","wmav1","wmav2"].includes(audioCodec)) throw new Error("Codec audio " + (audioCodec || "tidak diketahui") + " belum didukung oleh FFmpeg.");
+  if (audioCodec && !["aac","opus","vorbis","mp3","mp2","ac3","eac3","flac","pcm_s16le","alac","wma","wmav1","wmav2"].includes(audioCodec)) throw new Error("Codec audio " + audioCodec + " belum didukung oleh FFmpeg.");
   return { ok: true, height: actualHeight, videoCodec, audioCodec };
 }
 
@@ -213,7 +215,7 @@ export function createMuxServer({ spawnImpl = spawn, probeImpl = inspectMuxStrea
       payload = validateMuxRequest(await readJson(req));
       const pathId = url.pathname.split("/").pop();
       if (payload.id !== pathId) throw new Error("ID proses tidak cocok.");
-      if (!payload.videoCodec || !payload.audioCodec) throw new Error("Metadata codec sumber belum diverifikasi.");
+      if (!payload.videoCodec || (payload.audioUrl && !payload.audioCodec)) throw new Error("Metadata codec sumber belum diverifikasi.");
     } catch (error) {
       return json(res, 400, { ok: false, error: String(error?.message || "Data mux tidak valid.").slice(0, 180) });
     }
