@@ -320,14 +320,16 @@
       });
 
       if (result.response.status === 409 && result.data.order) {
+        clearCart();
         showPayment(result.data.order, result.data.payment || {});
-        setMessage("Masih ada invoice sebelumnya. Lanjutkan pembayaran invoice tersebut.", "pending");
+        setMessage("Masih ada invoice sebelumnya. ARYANZZ menampilkan status pesanan yang sama agar tidak membuat tagihan ganda.", "pending");
         return;
       }
       if (!result.response.ok || !result.data.ok) {
         throw new Error(result.data.error || "Invoice belum berhasil dibuat.");
       }
 
+      clearCart();
       showPayment(result.data.order, result.data.payment);
       await refreshMe();
     } catch (error) {
@@ -357,20 +359,34 @@
     if (result.data.membership) state.membership = result.data.membership;
     if (order.status === "paid") {
       stopPolling();
+      stopCountdown();
+      clearCart();
       setMessage("Pembayaran berhasil diverifikasi. Membership " + (order.planName || "") + " sudah aktif!", "success");
       await refreshMe();
       byId("membershipPaymentExpiry").textContent = "Membership aktif sampai " + formatDate(state.membership.expiresAt);
+      byId("membershipPaymentCountdown").textContent = "LUNAS";
       state.activeOrderId = "";
       return false;
     }
     if (order.status === "expired" || order.status === "failed" || order.status === "rejected") {
       stopPolling();
-      setMessage("Invoice " + order.status + ". Pilih paket kembali untuk membuat invoice baru.", "error");
+      stopCountdown();
+      clearCart();
+      byId("membershipQr").removeAttribute("src");
+      byId("membershipQr").hidden = true;
+      byId("membershipPaymentExpiry").textContent = "Invoice sudah " + order.status + ".";
+      setMessage("Invoice " + order.status + ". Keranjang dikosongkan; pilih paket kembali untuk membuat invoice baru.", "error");
       await refreshMe();
       state.activeOrderId = "";
       return false;
     }
-    setMessage("Pembayaran belum terdeteksi. Jika sudah membayar, tunggu beberapa saat lalu periksa kembali.", "pending");
+    const checkoutExpired = order.checkoutExpired === true ||
+      Date.now() >= Number(order.checkoutExpiresAt || (Number(order.createdAt || Date.now()) + 10 * 60 * 1000));
+    if (checkoutExpired) {
+      setMessage("Batas checkout 10 menit berakhir. QR sudah ditutup dan keranjang direset. ARYANZZ masih memeriksa status AirPay agar pembayaran yang sudah masuk tetap tercatat.", "warning");
+    } else {
+      setMessage("Pembayaran belum terdeteksi. Jika sudah membayar, tunggu beberapa saat lalu periksa kembali.", "pending");
+    }
     return true;
   }
 
@@ -407,6 +423,38 @@
     return true;
   }
 
+  function escapeHtml(value) {
+    return String(value ?? "").replace(/[&<>"']/g, char => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;"
+    })[char]);
+  }
+
+  function downloadReceipt(order) {
+    const paidAt = order.paidAt ? formatDate(order.paidAt) : "Belum dibayar";
+    const html = `<!doctype html><html lang="id"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Bukti Transaksi ARYANZZ</title>
+    <style>body{font:15px/1.6 Arial,sans-serif;color:#172033;margin:0;padding:28px;background:#f3f6fa}.receipt{max-width:620px;margin:auto;padding:28px;background:#fff;border:1px solid #dce4ee;border-radius:18px}.brand{font-size:12px;letter-spacing:2px;font-weight:900;color:#2766b4}.title{font-size:25px;margin:8px 0 3px}.status{display:inline-block;margin:14px 0;padding:6px 11px;border-radius:30px;background:#e6f8ef;color:#13784c;font-weight:800}.line{display:flex;justify-content:space-between;gap:16px;padding:11px 0;border-bottom:1px solid #e7edf4}.line span{color:#66758b}.total{font-size:19px;font-weight:900}.foot{margin-top:22px;color:#78869a;font-size:11px}@media print{body{background:#fff;padding:0}.receipt{border:0;box-shadow:none}}</style>
+    <main class="receipt"><div class="brand">ARYANZZ MEMBERSHIP</div><h1 class="title">Bukti Transaksi</h1><div>Dokumen pembayaran digital</div><div class="status">PEMBAYARAN BERHASIL</div>
+    <div class="line"><span>ID Pesanan</span><b>${escapeHtml(order.id)}</b></div>
+    <div class="line"><span>ID Transaksi AirPay</span><b>${escapeHtml(order.providerTransactionId || order.transactionId || "-")}</b></div>
+    <div class="line"><span>Paket</span><b>${escapeHtml(order.planName || order.planId || "Membership")}</b></div>
+    <div class="line"><span>Periode</span><b>${order.billingPeriod === "yearly" ? "Tahunan · 365 hari" : "Bulanan · 30 hari"}</b></div>
+    <div class="line"><span>Harga paket</span><b>${escapeHtml(money(order.amount))}</b></div>
+    <div class="line"><span>Biaya transaksi</span><b>${escapeHtml(money(order.feeAmount || 0))}</b></div>
+    <div class="line total"><span>Total dibayar</span><b>${escapeHtml(money(order.totalAmount || order.amount))}</b></div>
+    <div class="line"><span>Waktu pembayaran</span><b>${escapeHtml(paidAt)}</b></div>
+    <div class="line"><span>Metode</span><b>QRIS · AirPay</b></div>
+    <p class="foot">Bukti ini dibuat oleh ARYANZZ berdasarkan status pembayaran yang telah diverifikasi oleh server. Simpan dokumen ini sebagai arsip transaksi.</p><button onclick="window.print()">Cetak / Simpan PDF</button></main></html>`;
+    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = make("a", "");
+    link.href = url;
+    link.download = "ARYANZZ-Bukti-" + String(order.id || "transaksi").replace(/[^A-Za-z0-9-]/g, "") + ".html";
+    document.body.append(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 30000);
+  }
+
   function renderOrders() {
     const list = byId("membershipOrdersList");
     list.replaceChildren();
@@ -414,14 +462,31 @@
       list.append(make("p", "ary-membership-order-empty", "Belum ada transaksi membership."));
       return;
     }
-    state.orders.slice(0, 8).forEach(order => {
+    state.orders.slice(0, 20).forEach(order => {
       const row = make("div", "ary-membership-order");
-      const copy = make("div", "");
+      const copy = make("div", "ary-membership-order-copy");
       copy.append(make("strong", "", (order.planName || order.planId || "Membership") + " · " +
         (order.billingPeriod === "yearly" ? "Tahunan" : "Bulanan")));
-      copy.append(make("small", "", money(order.amount) + " · " + formatDate(order.createdAt)));
+      copy.append(make("small", "", money(order.totalAmount || order.amount) + " · " + formatDate(order.createdAt)));
+      if (order.transactionId) copy.append(make("small", "", "ID transaksi: " + order.transactionId));
       row.append(copy);
-      row.append(make("span", "ary-membership-order-status", order.status || "pending"));
+      row.append(make("span", "ary-membership-order-status status-" + String(order.status || "pending").toLowerCase(), order.status || "pending"));
+      if (order.status === "paid") {
+        const receipt = make("button", "ary-membership-receipt", "Bukti transaksi ↓");
+        receipt.type = "button";
+        receipt.addEventListener("click", () => downloadReceipt(order));
+        row.append(receipt);
+      } else if (order.status === "pending") {
+        const resume = make("button", "ary-membership-receipt", "Periksa");
+        resume.type = "button";
+        resume.addEventListener("click", () => showPayment(order, {
+          qrUrl: order.qrUrl,
+          totalAmount: order.totalAmount,
+          feeAmount: order.feeAmount,
+          expiryAt: order.gatewayExpiresAt || order.expiresAt
+        }));
+        row.append(resume);
+      }
       list.append(row);
     });
   }
