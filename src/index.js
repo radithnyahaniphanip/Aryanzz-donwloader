@@ -4137,7 +4137,13 @@ const workerHandler = {async fetch(request,env){
    if(url.pathname==="/api/youtube/hybrid/thumbnail"&&request.method==="GET")return hybridYoutubeThumbnail(request);
   if(url.pathname==="/api/youtube/info"&&request.method==="GET")return youtubeInfo(request,env);
     if(url.pathname==="/api/security/status"&&request.method==="GET")return json({ok:true,security:{active:true,mode:"worker-edge-defense",controls:["origin-validation","method-allowlist","content-type-validation","request-size-guard","per-ip-endpoint-rate-limits","content-security-policy","strict-transport-security","frame-protection","mime-sniffing-protection","request-id","sanitized-error-handling"],events:{blockedOrigin:SECURITY_EVENTS.blockedOrigin,rateLimited:SECURITY_EVENTS.rateLimited,oversizedRequest:SECURITY_EVENTS.oversizedRequest,blockedMethod:SECURITY_EVENTS.blockedMethod},note:"Event counters are per Worker isolate and are not a global security incident log."}});
-  if(url.pathname.startsWith("/api/membership/")||url.pathname.startsWith("/api/cosmetics/")||url.pathname.startsWith("/api/redeem/"))return json({ok:false,error:"Fitur ini sudah tidak tersedia."},410);
+  if(url.pathname.startsWith("/api/membership/")){
+      const membershipNamespace=env.MEMBERSHIP_STORE;
+      if(!membershipNamespace||typeof membershipNamespace.idFromName!=="function")return json({ok:false,error:"MembershipStore belum dikonfigurasi pada Worker."},503);
+      const membershipId=membershipNamespace.idFromName("aryanzz-membership-global-v1");
+      return membershipNamespace.get(membershipId).fetch(request);
+    }
+    if(url.pathname.startsWith("/api/cosmetics/")||url.pathname.startsWith("/api/redeem/"))return json({ok:false,error:"Fitur ini belum tersedia."},410);
   if(url.pathname.startsWith("/api/auth/"))return handleAuthRequest(request,env);
   if(url.pathname==="/api/health"&&request.method==="GET")return json({ok:true,service:"ARYANZZ",version:"V2",publicVersion:"V2",buildId:env.ARYANZZ_BUILD_VERSION||BUILD_VERSION,securityActive:true,mode:"cloudflare-worker-zero-server-hybrid",directMediaDownload:true,selfHostedDownloader:false,youtubeDownloader:true,youtubeApiKeyConfigured:false,cobalt:false,paidYoutubeProvider:false,musicRecognitionConfigured:!!env.AUDD_API_TOKEN,musicFallbackReady:false,musicVideoRecognitionReady:false,platformExtraction:true,platformBackend:"public-free-community-api"});
   if(url.pathname==="/api/social-file"&&request.method==="GET")return socialMediaFile(request);
@@ -4219,7 +4225,8 @@ async function securityFetch(request,env){
   if(url.pathname.startsWith("/api/")){
     if(url.search.length>8192)return securityError("Parameter permintaan terlalu panjang.",414,requestId);
     const origin=request.headers.get("origin");
-    if(origin){
+    const signedAirPayWebhook=url.pathname==="/api/membership/webhook"&&request.method==="POST";
+    if(origin&&!signedAirPayWebhook){
       let parsedOrigin;
       try{parsedOrigin=new URL(origin)}catch{SECURITY_EVENTS.blockedOrigin++;return securityError("Origin permintaan tidak valid.",403,requestId)}
       if(parsedOrigin.origin!==url.origin){

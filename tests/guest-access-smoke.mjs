@@ -22,5 +22,6 @@ assert.ok(guest.includes('document.addEventListener("DOMContentLoaded", start, {
 assert.ok(guest.includes("guestCopyBound") && guest.includes("navigator.clipboard.writeText"), "The automatically generated ID must be copyable from Profile");
 assert.ok(html.includes("guest-access.js") && !html.includes("Akses administrator · Masuk admin"), "The guest client must remain while the Administrator entry is removed");
 assert.ok(owner.includes("/api/auth/admin/") && owner.includes("ownerBanAccountId"), "Owner moderation UI must keep ban and restore controls");
-assert.ok(!html.includes("membership.js") && !html.includes("membership.css"), "Membership, checkout, cosmetics, and redeem UI must not be loaded");
-console.log("ARYANZZ V2 anonymous public access and guest ID checks passed; retired Membership and Administrator entry are absent.");
+assert.ok(html.includes("membership-ui.js") && html.includes("membership.css") && html.includes('data-nav="membership"') && html.includes('id="membership"'), "The requested Membership panel, stylesheet, and navigation must be loaded");
+assert.ok(html.includes("data-membership-min=\"pro\"") && html.includes("data-membership-min=\"ultra\"") && html.includes("data-membership-min=\"max\""), "Paid creative tools must declare their required membership tier");
+console.log("ARYANZZ V2 anonymous public access, guest ID, and Membership integration checks passed.");

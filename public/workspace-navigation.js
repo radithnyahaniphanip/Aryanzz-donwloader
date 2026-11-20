@@ -23,6 +23,13 @@ function showPanel(id){
  if(panelId){
   const candidate=document.getElementById(panelId);
   if(!candidate||candidate.parentElement!==toolsArea||!candidate.classList.contains("panel"))panelId="allTools";
+  else if(candidate.dataset.membershipMin){
+   const membership=window.ARYANZZMembership;
+   if(!membership||!membership.canAccess(candidate.dataset.membershipMin)){
+    membership?.setNotice("Fitur ini membutuhkan Membership "+String(candidate.dataset.membershipMin).toUpperCase()+". Pilih paket untuk membuka aksesnya.");
+    panelId="membership";
+   }
+  }
  }
  const isHome=!panelId;
  const view=isHome?"home":panelId==="owner"?"owner":panelId==="profile"?"profile":panelId==="history"?"library":panelId==="allTools"?"tools":"tool";
@@ -42,7 +49,7 @@ function showPanel(id){
   panel.setAttribute("aria-hidden",String(!active));
   panel.classList.remove("v677-enter","v677-reveal","v25-reveal");
  });
- const navKey=isHome?"home":panelId==="history"?"history":panelId==="owner"?"owner":panelId==="profile"?"profile" :"allTools";
+ const navKey=isHome?"home":panelId==="history"?"history":panelId==="owner"?"owner":panelId==="profile"?"profile":panelId==="membership"?"membership":"allTools";
  nav.querySelectorAll("[data-nav]").forEach(button=>{
   const active=button.dataset.nav===navKey;
   button.classList.toggle("active",active);

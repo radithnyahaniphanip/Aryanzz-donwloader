@@ -40,6 +40,7 @@
 <link rel="stylesheet" href="/image-studio.css?v=81.4">
 <link rel="stylesheet" href="/preview-fix.css?v=1.1">
 <link rel="stylesheet" href="/search-session-fix.css?v=94.12.2">
+<link rel="stylesheet" href="/membership.css?v=__ARYANZZ_VERSION__">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -556,6 +557,7 @@ body .nav button.active .nav-icon{color:#9af4e8!important}
 <button class="tool" data-panel="heart" data-category="utility"><div class="ico">◉</div><b>Camera Lab</b><small>Uji kamera langsung dari browser.</small><span class="v674-tool-category">UTILITY</span></button>
 
 <button class="tool" data-panel="members" data-category="personal"><div class="ico">♙</div><b>Anggota & Pengunjung</b><small>Lihat sesi aktif dan ringkasan kunjungan.</small><span class="v674-tool-category">PERSONAL</span></button>
+<button class="tool" data-panel="membership" data-category="personal"><div class="ico">♛</div><b>Membership ARYANZZ</b><small>Pilih paket Starter, Pro, Ultra, atau Max.</small><span class="v674-tool-category">MEMBERSHIP · AIRPAY QRIS</span></button>
 <button class="tool" data-panel="mediaStudio" data-category="media"><div class="ico">▣</div><b>Media Studio Pro</b><small>Pustaka media lokal, pemutar video, antrean unduhan, dan penyimpanan.</small><span class="v674-tool-category">MEDIA · PRO</span></button>
 <button class="tool" data-panel="queue" data-category="media"><div class="ico">⇄</div><b>Smart Queue</b><small>Atur beberapa unduhan dalam antrean.</small><span class="v674-tool-category">MEDIA</span></button>
 <button class="tool" data-panel="editor" data-category="video"><div class="ico">▶</div><b>Video Editor Studio</b><small>Trim, filter, teks, audio, subtitle, dan ekspor.</small><span class="v674-tool-category">CREATIVE</span></button>
@@ -591,7 +593,7 @@ body .nav button.active .nav-icon{color:#9af4e8!important}
 </div>
 <p class="v674-no-tools" id="toolEmpty" hidden>Tools tidak ditemukan. Coba kata kunci lain.</p></div>
 <div class="panel card v1lt-panel" id="v1LightTools"><div class="v1lt-view"><span class="v1lt-kicker">ARYANZZ V2</span><h3>Menyiapkan Tools Studio…</h3><p>Modul alat sedang dimuat.</p></div></div>
-<div class="panel card emote-panel" id="emoteStudio" hidden><div class="v1lt-view"><span class="v1lt-kicker">ARYANZZ V2 · CREATIVE LAB</span><h3>Menyiapkan Emote Studio…</h3><p>Modul kreatif sedang dimuat.</p></div></div>
+<div class="panel card emote-panel" id="emoteStudio" data-membership-min="max" hidden><div class="v1lt-view"><span class="v1lt-kicker">ARYANZZ V2 · CREATIVE LAB</span><h3>Menyiapkan Emote Studio…</h3><p>Modul kreatif sedang dimuat.</p></div></div>
 <div class="panel card v93-bypass-panel" id="linkBypass">
   <div class="v93-bypass-hero"><span class="section-kicker">ARYANZZ · LINK TOOLS</span><div class="v93-bypass-mark">↗</div><h2>Lewati link SFL, langsung ke tujuan.</h2><p>Tempel tautan sf1.gl atau sfl.gl. ARYANZZ akan memeriksa pengalihan yang tersedia dan menampilkan alamat tujuan jika dapat ditemukan.</p></div>
   <form id="sflBypassForm" class="v93-bypass-form">
@@ -607,7 +609,7 @@ body .nav button.active .nav-icon{color:#9af4e8!important}
   </section>
   <p class="v93-bypass-note">Hanya memproses pengalihan publik yang dapat diakses. CAPTCHA, login, dan verifikasi wajib tidak dilewati.</p>
   <button class="back-home" data-panel="">← Kembali ke Beranda</button>
-</div><div class="panel card editor-panel" id="editor">
+</div><div class="panel card editor-panel" id="editor" data-membership-min="ultra">
   <div class="editor-pro-head">
     <div>
       <span class="section-kicker">ARYANZZ CREATIVE STUDIO</span>
@@ -968,7 +970,7 @@ body .nav button.active .nav-icon{color:#9af4e8!important}
 </div>
 
 
-<div class="panel card media-studio-panel" id="mediaStudio">
+<div class="panel card media-studio-panel" id="mediaStudio" data-membership-min="pro">
   <div class="media-studio-hero">
     <div><span class="section-kicker">ARYANZZ · SMART MEDIA STUDIO</span><h2>Media Studio Pro</h2><p>Kelola media di perangkat, putar video, simpan favorit, dan pantau penyimpanan. File tetap berada di browser perangkat ini.</p></div>
     <span class="media-studio-orb">▣</span>
@@ -1027,6 +1029,53 @@ body .nav button.active .nav-icon{color:#9af4e8!important}
   <p class="queue-status" id="queueStatus" role="status" aria-live="polite">Antrean tersimpan secara lokal di browser ini.</p>
   <div class="queue-list" id="queueList"></div>
   <button class="back-home" type="button" data-panel="allTools">← Kembali ke Pusat Alat</button>
+</div>
+<div class="panel card ary-membership-panel" id="membership" hidden>
+  <div class="ary-membership-hero">
+    <div><span class="ary-membership-kicker">ARYANZZ · MEMBERSHIP</span><h2>Pilih level keanggotaanmu</h2><p>Aktifkan fasilitas member melalui pembayaran QRIS. Status transaksi akan diperiksa oleh server sebelum paket diaktifkan.</p></div>
+    <span class="ary-membership-current" id="membershipCurrentBadge">FREE</span>
+  </div>
+  <div class="ary-membership-account">
+    <div><strong id="membershipAccountTitle">Kamu menggunakan ARYANZZ Free</strong><small id="membershipAccountExpiry">Pilih paket untuk membuka fasilitas member.</small></div>
+    <span class="ary-membership-plan-label">STATUS AKUN</span>
+  </div>
+  <div class="ary-membership-period" role="group" aria-label="Periode membership">
+    <button class="active" id="membershipMonthly" type="button" aria-pressed="true">Bulanan</button>
+    <button id="membershipYearly" type="button" aria-pressed="false">Tahunan</button>
+  </div>
+  <div class="ary-membership-plan-grid" id="membershipPlans" aria-live="polite"></div>
+  <section class="ary-membership-checkout" id="membershipCheckout" hidden>
+    <h3 id="membershipCheckoutTitle">Checkout membership</h3>
+    <p id="membershipCheckoutSummary">Pilih paket untuk melanjutkan.</p>
+    <form class="ary-membership-form" id="membershipCheckoutForm">
+      <label>Nama (opsional)<input id="membershipCustomerName" type="text" maxlength="100" autocomplete="name" placeholder="Nama pemesan"></label>
+      <label>Email (opsional)<input id="membershipCustomerEmail" type="email" maxlength="254" autocomplete="email" placeholder="nama@email.com"></label>
+      <button class="ary-membership-submit" id="membershipCreateInvoice" type="submit">Buat invoice QRIS</button>
+    </form>
+    <div class="ary-membership-note">Pembayaran AirPay menggunakan QRIS. Tidak perlu memasukkan nomor rekening atau nomor HP. Scan QR menggunakan aplikasi DANA, GoPay, LinkAja, atau mobile banking yang mendukung QRIS.</div>
+  </section>
+  <section class="ary-membership-payment" id="membershipPayment" hidden>
+    <h3 id="membershipPaymentTitle">Selesaikan pembayaran</h3>
+    <div class="ary-membership-payment-layout">
+      <div class="ary-membership-qr-wrap"><img class="ary-membership-qr" id="membershipQr" alt="QRIS pembayaran ARYANZZ" hidden></div>
+      <div class="ary-membership-payment-details">
+        <span class="ary-membership-plan-label">TOTAL PEMBAYARAN</span>
+        <div class="ary-membership-amount" id="membershipPaymentAmount">Rp0</div>
+        <p id="membershipPaymentBase">Nominal paket</p>
+        <p id="membershipPaymentExpiry">Menunggu pembayaran.</p>
+        <a class="ary-membership-pay-link" id="membershipPayLink" href="#" target="_blank" rel="noopener noreferrer" hidden>Buka halaman pembayaran ↗</a>
+        <button class="ary-membership-check-status" id="membershipCheckStatus" type="button">Saya sudah bayar · Periksa status</button>
+        <div class="ary-membership-methods"><span>QRIS</span><span>DANA</span><span>GoPay</span><span>LinkAja</span><span>Mobile Banking</span></div>
+      </div>
+    </div>
+  </section>
+  <p class="ary-membership-status" id="membershipStatus" role="status" aria-live="polite">Memuat katalog membership…</p>
+  <div class="ary-membership-orders">
+    <h3>Riwayat membership</h3>
+    <div id="membershipOrdersList"><p>Belum ada transaksi membership.</p></div>
+  </div>
+  <div class="ary-membership-note">Akses Pro membuka Media Studio Pro, Ultra membuka Video Editor Studio, dan Max membuka Emote Studio. Fitur unduh dasar tetap tersedia untuk semua pengguna.</div>
+  <button class="ary-membership-back" type="button" data-panel="allTools">← Kembali ke Pusat Alat</button>
 </div>
 <div class="panel card ary-members-panel" id="members">
   <div class="v674-tools-head"><div><span class="section-kicker">KOMUNITAS ARYANZZ</span><h2>Anggota & Pengunjung</h2><p>Ringkasan pengunjung aktif pada website kamu.</p></div><div class="v674-tools-orb">♙</div></div>
@@ -1364,7 +1413,7 @@ body .nav button.active .nav-icon{color:#9af4e8!important}
 </section>
 
 <footer>© <span id="year"></span> ARYANZZ</footer></div>
-<nav class="nav" aria-label="Navigasi utama"><button class="active" data-nav="home"><span class="nav-icon">⌂</span><span>Beranda</span></button><button data-nav="allTools"><span class="nav-icon">✦</span><span>Alat</span></button><button data-nav="history"><span class="nav-icon">◷</span><span>Pustaka</span></button><button data-nav="owner"><span class="nav-icon">♛</span><span>Pemilik</span></button><button data-nav="profile"><span class="nav-icon">◉</span><span>Profil</span></button></nav>
+<nav class="nav" aria-label="Navigasi utama"><button class="active" data-nav="home"><span class="nav-icon">⌂</span><span>Beranda</span></button><button data-nav="allTools"><span class="nav-icon">✦</span><span>Alat</span></button><button data-nav="history"><span class="nav-icon">◷</span><span>Pustaka</span></button><button data-nav="owner"><span class="nav-icon">♛</span><span>Pemilik</span></button><button data-nav="profile"><span class="nav-icon">◉</span><span>Profil</span></button><button data-nav="membership"><span class="nav-icon">♛</span><span>Member</span></button></nav>
 <script src="/workspace-home.js?v=__ARYANZZ_VERSION__"></script>
 <script src="/workspace-layout.js?v=__ARYANZZ_VERSION__"></script>
 <script src="/toolbox-100.js?v=__ARYANZZ_VERSION__"></script>
@@ -1372,6 +1421,7 @@ body .nav button.active .nav-icon{color:#9af4e8!important}
 <script src="/workspace-tools.js?v=__ARYANZZ_VERSION__"></script>
 <script src="/wa-quote-generator.js?v=__ARYANZZ_VERSION__"></script>
 <script src="/workspace-navigation.js?v=__ARYANZZ_VERSION__"></script>
+<script src="/membership-ui.js?v=__ARYANZZ_VERSION__" defer></script>
 <script src="/workspace-guides.js?v=__ARYANZZ_VERSION__"></script>
 <script src="/emote-studio.js?v=__ARYANZZ_VERSION__"></script>
 <script>
