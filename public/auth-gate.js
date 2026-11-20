@@ -272,8 +272,13 @@
         } catch (error) {
           const localUser = error.code === "ACCOUNT_NOT_FOUND" ? legacyAccount(identifier) : null;
           if (localUser && await validLegacyPassword(localUser, password)) {
-            pendingLegacy = localUser; $("aryLegacyMigrate").hidden = false;
-            say("Akun lama ditemukan pada perangkat ini. Pilih “Pindahkan akun lama” agar email dan ID tersimpan di server ARYANZZ.");
+            if(config.registrationReady){
+              pendingLegacy = localUser; $("aryLegacyMigrate").hidden = false;
+              say("Akun lokal lama ditemukan. Pindahkan akun agar email, ID, dan Membership dapat tersimpan di server ARYANZZ.");
+              return;
+            }
+            await localLogin(identifier,password);
+            say("Berhasil masuk ke akun lokal. Akun ini hanya tersedia pada browser ini sampai layanan akun server diaktifkan.");
             return;
           }
           throw error;
