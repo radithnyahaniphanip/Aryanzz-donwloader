@@ -32,6 +32,7 @@ jobs:
         run: |
           node --check src/index.js
           node --check src/auth.js
+          node --check src/airpay-membership.js
           node --check public/guest-access.js
           node --check tests/guest-access-smoke.mjs
           node --check tests/live-public-access-smoke.mjs
@@ -108,7 +109,7 @@ jobs:
           DB_ID="$ARYANZZ_AUTH_DB_ID"
           if [ -z "$DB_ID" ]; then
             if ! DB_LIST="$(curl -fsS --retry 3 -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/d1/database" 2>&1)"; then
-              echo "::notice::D1 is not accessible with the current Cloudflare token. Deploying the public V2 website without the account database so visitors can use ARYANZZ without login or registration. Server-synced IDs, administrator authentication and D1-backed moderation remain unavailable until Account > D1 > Edit is granted. Membership features have been retired; public guest access remains available."
+              echo "::notice::D1 is not accessible with the current Cloudflare token. Deploying the public V2 website without the account database so visitors can use ARYANZZ without login or registration. Server-synced IDs, administrator authentication, and Membership checkout remain unavailable until D1 access is configured."
               exit 0
             fi
             DB_ID="$(printf '%s' "$DB_LIST" | jq -r '.result[]? | select(.name == "aryanzz-auth-db") | .uuid' | head -n 1)"
@@ -143,8 +144,9 @@ jobs:
           AUTH_EMAIL_FROM: ${{ secrets.AUTH_EMAIL_FROM }}
           TURNSTILE_SECRET_KEY: ${{ secrets.TURNSTILE_SECRET_KEY || secrets.TURNSTILE_SECRET || secrets.CF_TURNSTILE_SECRET_KEY }}
           AUTH_TURNSTILE_SITE_KEY: ${{ secrets.AUTH_TURNSTILE_SITE_KEY || secrets.TURNSTILE_SITE_KEY || secrets.CF_TURNSTILE_SITE_KEY }}
+          AIRPAY_API_KEY: ${{ secrets.AIRPAY_API_KEY }}
         run: |
-          for name in AUTH_SESSION_SECRET RESEND_API_KEY AUTH_EMAIL_FROM TURNSTILE_SECRET_KEY AUTH_TURNSTILE_SITE_KEY; do
+          for name in AUTH_SESSION_SECRET RESEND_API_KEY AUTH_EMAIL_FROM TURNSTILE_SECRET_KEY AUTH_TURNSTILE_SITE_KEY AIRPAY_API_KEY; do
             value="$(printenv "$name" || true)"
             if [ -n "$value" ]; then
               printf '%s' "$value" | wrangler secret put "$name"
@@ -178,6 +180,7 @@ jobs:
           AUTH_EMAIL_FROM: ${{ secrets.AUTH_EMAIL_FROM }}
           TURNSTILE_SECRET_KEY: ${{ secrets.TURNSTILE_SECRET_KEY || secrets.TURNSTILE_SECRET || secrets.CF_TURNSTILE_SECRET_KEY }}
           AUTH_TURNSTILE_SITE_KEY: ${{ secrets.AUTH_TURNSTILE_SITE_KEY || secrets.TURNSTILE_SITE_KEY || secrets.CF_TURNSTILE_SITE_KEY }}
+          AIRPAY_API_KEY: ${{ secrets.AIRPAY_API_KEY }}
         run: |
           set -euo pipefail
           cp wrangler.toml wrangler-backup.toml
@@ -186,7 +189,7 @@ jobs:
           sed -i 's#ARYANZZ_PUBLIC_ORIGIN = "https://aryanzz-donwloader.aryanz.workers.dev"#ARYANZZ_PUBLIC_ORIGIN = "https://aryanzz-backup.aryanz.workers.dev"#' wrangler-backup.toml
           grep -q 'name = "aryanzz-backup"' wrangler-backup.toml
           grep -q 'ARYANZZ_PUBLIC_ORIGIN = "https://aryanzz-backup.aryanz.workers.dev"' wrangler-backup.toml
-          node --input-type=module -e 'import fs from "node:fs"; const names=["AUDD_API_TOKEN","AUTH_SESSION_SECRET","RESEND_API_KEY","AUTH_EMAIL_FROM","TURNSTILE_SECRET_KEY","AUTH_TURNSTILE_SITE_KEY"]; const secrets=Object.fromEntries(names.map(name=>[name,process.env[name]||""]).filter(([,value])=>value)); if(Object.keys(secrets).length)fs.writeFileSync("/tmp/aryanzz-backup-secrets.json",JSON.stringify(secrets));'
+          node --input-type=module -e 'import fs from "node:fs"; const names=["AUDD_API_TOKEN","AUTH_SESSION_SECRET","RESEND_API_KEY","AUTH_EMAIL_FROM","TURNSTILE_SECRET_KEY","AUTH_TURNSTILE_SITE_KEY","AIRPAY_API_KEY"]; const secrets=Object.fromEntries(names.map(name=>[name,process.env[name]||""]).filter(([,value])=>value)); if(Object.keys(secrets).length)fs.writeFileSync("/tmp/aryanzz-backup-secrets.json",JSON.stringify(secrets));'
           if [ -s /tmp/aryanzz-backup-secrets.json ]; then
             wrangler --config wrangler-backup.toml deploy --keep-vars --secrets-file /tmp/aryanzz-backup-secrets.json 2>&1 | tee /tmp/aryanzz-backup-deploy.log
           else
