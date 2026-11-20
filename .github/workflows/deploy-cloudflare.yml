@@ -165,7 +165,9 @@ jobs:
           VERSION_ID=$(grep -oE 'Current Version ID: [0-9a-f-]+' /tmp/aryanzz-wrangler-deploy.log | tail -n 1 | awk '{print $4}')
           test -n "$VERSION_ID" || { echo "::error::Wrangler did not report the newly uploaded Worker version ID."; exit 1; }
           echo "wrangler deploy has already activated Worker version $VERSION_ID on production traffic."
-          wrangler deployments status
+          if ! wrangler deployments status; then
+            echo "::warning::Wrangler version-history lookup has not propagated yet; continuing to the live HTTP release verification below."
+          fi
       - name: Deploy secondary ARYANZZ workers.dev endpoint
         continue-on-error: true
         env:
