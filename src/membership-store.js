@@ -167,16 +167,43 @@ export class MembershipStore {
   async session(request) {
     const deviceToken = readCookie(request, "aryanzz_device_lock");
     if (!/^[a-f0-9]{64}$/i.test(deviceToken)) return null;
+    const lockHash = hex(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(deviceToken.toLowerCase())));
+    const deviceId = "device-" + lockHash;
     const db = this.env.AUTH_DB;
-    if (!db || typeof db.prepare !== "function" || String(this.env.AUTH_SESSION_SECRET || "").length < 32) return null;
+    if (!db || typeof db.prepare !== "function" || String(this.env.AUTH_SESSION_SECRET || "").length < 32) {
+      return { id: deviceId, cookie: null, deviceBound: true };
+    }
     try {
-      const lockHash = hex(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(deviceToken.toLowerCase())));
       const row = await db.prepare("SELECT user_id FROM auth_device_lock_accounts WHERE lock_hash=?1 LIMIT 1").bind(lockHash).first();
-      if (!row || !row.user_id) return null;
-      return { id: String(row.user_id), cookie: null };
+      if (!row || !row.user_id) return { id: deviceId, cookie: null, deviceBound: true };
+      const accountId = String(row.user_id);
+      if (accountId !== deviceId) await this.migrateDeviceIdentity(deviceId, accountId);
+      return { id: accountId, cookie: null, deviceBound: false };
     } catch (error) {
       console.warn("[ARYANZZ_MEMBERSHIP] identity_lookup_failed", error && error.name || "unknown");
-      return null;
+      return { id: deviceId, cookie: null, deviceBound: true };
+    }
+  }
+
+  async migrateDeviceIdentity(deviceId, accountId) {
+    try {
+      const deviceMembership = await this.ctx.storage.get("membership:" + deviceId);
+      const accountMembership = await this.ctx.storage.get("membership:" + accountId);
+      if (deviceMembership && (!accountMembership || accountMembership.status !== "active")) {
+        await this.ctx.storage.put("membership:" + accountId, deviceMembership);
+      }
+      const deviceOrders = await this.ctx.storage.get("orders:" + deviceId) || [];
+      if (deviceOrders.length) {
+        const accountOrders = await this.ctx.storage.get("orders:" + accountId) || [];
+        const known = new Set(accountOrders.map(order => order.id));
+        for (const order of deviceOrders) {
+          order.userId = accountId;
+          await this.ctx.storage.put("order:" + order.id, order);
+          if (!known.has(order.id)) await this.saveOrderList(accountId, order);
+        }
+      }
+    } catch (error) {
+      console.warn("[ARYANZZ_MEMBERSHIP] device_membership_migration_failed", error && error.name || "unknown");
     }
   }
 
@@ -209,13 +236,14 @@ export class MembershipStore {
 
     if (path === "/api/membership/payment-config" && method === "GET") {
       const apiKeyReady = !!this.apiKey();
-      const identityReady = !!(await this.session(request));
+      const session = await this.session(request);
+      const identityReady = !!session;
       const authReady = !!this.env.AUTH_DB && typeof this.env.AUTH_DB.prepare === "function" && String(this.env.AUTH_SESSION_SECRET || "").length >= 32;
-      const ready = apiKeyReady && authReady && identityReady;
+      const ready = apiKeyReady && identityReady;
       const missing = [];
       if (!apiKeyReady) missing.push("AIRPAY_API_KEY · Secret API Key AirPay pada Cloudflare Worker");
-      if (!authReady) missing.push("AUTH_DB + AUTH_SESSION_SECRET · layanan identitas ARYANZZ");
-      if (authReady && !identityReady) missing.push("ID ARYANZZ belum tersinkron pada perangkat ini");
+      if (!identityReady) missing.push("ID perangkat ARYANZZ belum tersedia; muat ulang halaman");
+      if (!authReady) missing.push("AUTH_DB + AUTH_SESSION_SECRET · opsional untuk sinkronisasi Membership lintas perangkat");
       return json({
         ok: true,
         enabled: ready,
@@ -223,6 +251,7 @@ export class MembershipStore {
         apiKeyReady,
         authReady,
         identityReady,
+        identityMode: session?.deviceBound ? "device" : identityReady ? "account" : "unavailable",
         provider: "AirPay QRIS",
         mode: this.apiKey().startsWith("ak_test_") ? "sandbox" : apiKeyReady ? "live" : "not-configured",
         statusVerification: "webhook-and-server-side-polling",
@@ -230,8 +259,10 @@ export class MembershipStore {
         webhookUrl: new URL("/api/membership/webhook", url.origin).href,
         missing,
         message: ready
-          ? "Checkout QRIS siap. Webhook dan pemeriksaan status server memverifikasi pembayaran sebelum membership aktif."
-          : "Checkout menunggu konfigurasi API AirPay dan identitas ID ARYANZZ yang valid."
+          ? authReady
+            ? "Checkout QRIS siap. Pembayaran diverifikasi server dan Membership tersimpan pada akun ARYANZZ."
+            : "Checkout QRIS siap pada perangkat ini. Membership terikat ke ID perangkat; aktifkan D1 dan AUTH_SESSION_SECRET untuk sinkronisasi lintas perangkat."
+          : "Checkout menunggu API Key AirPay dan ID perangkat ARYANZZ."
       });
     }
 
