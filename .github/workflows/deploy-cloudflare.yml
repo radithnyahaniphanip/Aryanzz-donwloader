@@ -217,10 +217,12 @@ jobs:
         env:
           WORKER_URL: https://aryanzz-donwloader.aryanz.workers.dev
         run: node tests/live-release-smoke.mjs
-      - name: Install Chromium for live desktop and Android-emulation QA
-        run: |
-          npm install --prefix /tmp/aryanzz-qa --no-save playwright@latest
-          /tmp/aryanzz-qa/node_modules/.bin/playwright install --with-deps chromium
+      - name: Install Playwright for live desktop and Android-emulation QA
+        timeout-minutes: 5
+        run: npm install --prefix /tmp/aryanzz-qa --no-save playwright@latest
+      - name: Install Chromium browser for live QA
+        timeout-minutes: 5
+        run: /tmp/aryanzz-qa/node_modules/.bin/playwright install chromium
       - name: Verify direct media formats and desktop/Android browser behavior
         env:
           WORKER_URL: https://aryanzz-donwloader.aryanz.workers.dev
