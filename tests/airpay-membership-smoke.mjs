@@ -67,6 +67,8 @@ assert.equal(invalidWebhookResponse.status, 401, "Unsigned payment callbacks mus
 assert.ok(source.includes('headers.set("X-API-Key",airpayKey(env))'));
 assert.ok(source.includes('"/api/qris/create"'));
 assert.ok(source.includes('"/api/qris/status?transaction_id="'));
+assert.ok(source.includes('return_url:origin+"/?membership=return"'));
+assert.ok(frontend.includes('params.get("transaction_id")'));
 assert.ok(source.includes("X-AirPay-Signature"));
 assert.ok(source.includes("external_id"));
 assert.ok(source.includes('if(statusName(data.status)!=="paid")'));
