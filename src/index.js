@@ -4139,7 +4139,7 @@ const workerHandler = {async fetch(request,env){
     headers.set("expires","0");
     return new Response(html,{status:assetResponse.status,statusText:assetResponse.statusText,headers});
   }
-  if(request.method==="GET"&&["/","/index.html","/sw.js","/release.json","/manifest.webmanifest","/robots.txt","/sitemap.xml"].includes(url.pathname)){
+  if(request.method==="GET"&&["/","/index.html","/sw.js","/release.json","/release-manifest.json","/manifest.webmanifest","/robots.txt","/sitemap.xml"].includes(url.pathname)){
     const headers=new Headers(assetResponse.headers);
     headers.set("cache-control","no-store, no-cache, must-revalidate, max-age=0");
     headers.set("pragma","no-cache");
