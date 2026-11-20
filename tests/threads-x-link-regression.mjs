@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import worker from "../src/index.js";
 import { PLATFORM_CATALOG, platformForHost } from "../src/platform-catalog.js";
 
-assert.equal(PLATFORM_CATALOG.length,200,"V1 must preserve all 200 catalogue entries");
+assert.equal(PLATFORM_CATALOG.length,200,"V2 must preserve all 200 catalogue entries");
 for(const domain of ["threads.com","www.threads.com","threads.net","www.threads.net"]){
   assert.equal(platformForHost(domain)?.id,"threads","Threads domain was not recognized: "+domain);
 }
