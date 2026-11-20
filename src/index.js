@@ -2098,13 +2098,17 @@ async function fetchTikTokPhotoEmbedProxy(canonicalUrl,timeoutMs=22000){
   const target="https://www.tiktok.com/embed/v2/"+itemId;
   const encoded=encodeURIComponent(target);
   const headers={"accept":"text/plain, text/markdown, */*","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"};
+  const readerHttps="https://r.jina.ai/https://www.tiktok.com/embed/v2/"+itemId;
+  const readerHttp="https://r.jina.ai/http://www.tiktok.com/embed/v2/"+itemId;
   const jina=[
-    // Latest live diagnostics recovered Photo Mode image URLs through the HTTP
-    // reader route and validated the resulting JPEG through our own image proxy.
-    // Try that route first; retain HTTPS and CORS.dev as independent fallbacks.
-    {name:"Jina Reader Markdown HTTP",url:"https://r.jina.ai/http://www.tiktok.com/embed/v2/"+itemId,headers},
-    {name:"Jina Reader Markdown HTTPS",url:"https://r.jina.ai/https://www.tiktok.com/embed/v2/"+itemId,headers},
-    {name:"CORS.dev → Jina Reader",url:"https://proxy.cors.dev/https://r.jina.ai/https://www.tiktok.com/embed/v2/"+itemId,headers:{accept:"text/plain, text/markdown, */*"}}
+    // Cloudflare Worker egress can receive HTTP 429 from Jina even when the
+    // same reader URL works from a normal browser/CI runner. Relay the Markdown
+    // response through AllOrigins first, then keep direct reader routes as
+    // independent fallbacks. The response is still parsed and URL-validated here.
+    {name:"AllOrigins → Jina Reader Markdown HTTPS",url:"https://api.allorigins.win/raw?url="+encodeURIComponent(readerHttps),headers},
+    {name:"Jina Reader Markdown HTTPS",url:readerHttps,headers},
+    {name:"Jina Reader Markdown HTTP",url:readerHttp,headers},
+    {name:"AllOrigins → Jina Reader Markdown HTTP",url:"https://api.allorigins.win/raw?url="+encodeURIComponent(readerHttp),headers}
   ];
   const fallbacks=[
     {name:"AllOrigins",url:"https://api.allorigins.win/raw?url="+encoded,headers:{accept:"text/html,*/*"}},
@@ -2134,13 +2138,9 @@ async function fetchTikTokPhotoEmbedProxy(canonicalUrl,timeoutMs=22000){
   for(const endpoint of jina){
     try{return await readEndpoint(endpoint)}
     catch(error){
-      const message=String(error?.message||error);
-      errors.push(message.slice(0,100));
-      if(/HTTP 429/.test(message)&&Date.now()<deadline-900){
-        await new Promise(resolve=>setTimeout(resolve,650));
-        try{return await readEndpoint(endpoint)}
-        catch(retryError){errors.push(String(retryError?.message||retryError).slice(0,100))}
-      }
+      // Do not hammer a rate-limited reader with immediate duplicate requests.
+      // Move to the next independent relay instead.
+      errors.push(String(error?.message||error).slice(0,110));
     }
   }
   const remaining=deadline-Date.now();
