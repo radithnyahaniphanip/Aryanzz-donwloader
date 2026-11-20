@@ -449,8 +449,8 @@ for (const [name, ok] of checks) {
 }
 console.log("\nARYANZZ V2 modular workspace, profile and account security smoke tests passed.");
 
-assert.equal(read("../public/index.html").includes('src="/membership.js'),false,"Membership script must not be loaded");
-assert.equal(read("../public/workspace-navigation.js").includes('membership"'),false,"Membership must not have a navigation destination");
+assert.equal(read("../public/index.html").includes('src="/membership.js'),true,"AirPay Membership UI script must be loaded");
+assert.equal(read("../public/workspace-navigation.js").includes('membership"'),true,"Membership must have a navigation destination");
 assert.equal(read("../public/index.html").includes('Akses administrator · Masuk admin'),false,"Administrator entry must be removed from Owner page");
 const toolsWorkspaceJs=read("../public/workspace-tools.js");
 assert.ok(toolsWorkspaceJs.includes('grid.querySelectorAll(".tool")') && toolsWorkspaceJs.includes("const gridObserver=new MutationObserver(apply)") && toolsWorkspaceJs.includes("gridObserver.observe(grid,{childList:true,subtree:true})"),"Dynamically added tool cards must participate in search and filters");
