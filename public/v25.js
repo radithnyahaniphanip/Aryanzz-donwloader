@@ -239,7 +239,7 @@
       /SamsungBrowser\//.test(ua)?"Samsung Internet":/Chrome\//.test(ua)?"Google Chrome":
       /Safari\//.test(ua)?"Safari":"Browser tidak teridentifikasi";
     const fullBrowser=browserMatch?browser+" "+browserMatch[1].split(".")[0]:browser;
-    const rawModel=ua.match(/Android[^;)]*;\s*([^;)]+?)(?:\s+Build\/|\))/i)?.[1]?.trim()||"";
+    const rawModel=ua.match(/Android[^;)]*;\s*([^;)]+?)(?:\s+Build\/|;\s*wv\b|\))/i)?.[1]?.trim()||"";
     const model=rawModel.length>=3&&!/^(?:Linux|Android|Mobile|wv)$/i.test(rawModel)?rawModel:"Tidak dibagikan browser";
     const kind=/iPad|Tablet/i.test(ua)||(/Android/i.test(ua)&&!/Mobile/i.test(ua))?"Tablet":/Android|iPhone|iPod/i.test(ua)?"Ponsel":"Komputer";
     return {os,browser:fullBrowser,model,kind,label:[model!=="Tidak dibagikan browser"?model:kind,os.split(" ")[0],browser].join(" / ")};
@@ -249,13 +249,35 @@
     const node=document.querySelector('#deviceSpecGrid [data-device-spec="'+key+'"]');
     if(node)node.textContent=String(value??"Tidak tersedia");
   }
+  function formatDeviceBytes(value){
+    const n=Number(value);if(!Number.isFinite(n)||n<0)return "Tidak tersedia";
+    if(n<1024)return n+" B";
+    const units=["KB","MB","GB","TB"];let size=n/1024,index=0;
+    while(size>=1024&&index<units.length-1){size/=1024;index++}
+    return size.toFixed(size>=100?0:size>=10?1:2)+" "+units[index];
+  }
+  function deviceGpuRenderer(){
+    try{
+      const canvas=document.createElement("canvas");
+      const gl=canvas.getContext("webgl")||canvas.getContext("experimental-webgl");
+      if(!gl)return "Tidak dibagikan browser";
+      const ext=gl.getExtension("WEBGL_debug_renderer_info");
+      const renderer=String(gl.getParameter(ext?ext.UNMASKED_RENDERER_WEBGL:gl.RENDERER)||"").trim();
+      const vendor=String(gl.getParameter(ext?ext.UNMASKED_VENDOR_WEBGL:gl.VENDOR)||"").trim();
+      const value=[vendor,renderer].filter(Boolean).join(" · ").replace(/\s+/g," ");
+      return value&&value.length>3?value.slice(0,150):"Renderer disamarkan browser";
+    }catch{return "Tidak dibagikan browser"}
+  }
   function renderDeviceSpecifications(info){
     const width=Number(window.screen?.width)||0,height=Number(window.screen?.height)||0;
     const dpr=Number(window.devicePixelRatio)||1;
+    const physicalWidth=Math.round(width*dpr),physicalHeight=Math.round(height*dpr);
     const connection=navigator.connection||navigator.mozConnection||navigator.webkitConnection;
     const threads=Number(navigator.hardwareConcurrency)||0;
     const ram=Number(navigator.deviceMemory)||0;
     const timezone=Intl.DateTimeFormat().resolvedOptions().timeZone||"Tidak diketahui";
+    const orientation=screen.orientation?.type||(window.innerWidth>=window.innerHeight?"landscape":"portrait");
+    const touchPoints=Number(navigator.maxTouchPoints)||0;
     writeDeviceSpec("os",info.os);
     writeDeviceSpec("model",info.model);
     writeDeviceSpec("browser",info.browser);
@@ -263,23 +285,58 @@
     writeDeviceSpec("screen",width&&height?width+" × "+height+" CSS px":"Tidak tersedia");
     writeDeviceSpec("scale",Number.isFinite(dpr)?dpr.toFixed(2)+"×":"Tidak tersedia");
     writeDeviceSpec("cpu",threads?threads+" thread logis (perkiraan)":"Tidak dibagikan browser");
-    writeDeviceSpec("ram",ram?ram+" GB (perkiraan)":"Tidak dibagikan browser");
-    writeDeviceSpec("network",connection?.effectiveType?String(connection.effectiveType).toUpperCase()+" (estimasi)":"Tidak dibagikan browser");
+    writeDeviceSpec("ram",ram?ram+" GB (perkiraan browser)":"Tidak dibagikan browser");
+    const networkParts=[];
+    if(connection?.effectiveType)networkParts.push(String(connection.effectiveType).toUpperCase());
+    if(Number(connection?.downlink)>0)networkParts.push(Number(connection.downlink).toFixed(1)+" Mbps");
+    if(Number(connection?.rtt)>0)networkParts.push("RTT "+Math.round(connection.rtt)+" ms");
+    if(connection?.saveData)networkParts.push("Hemat data aktif");
+    writeDeviceSpec("network",networkParts.length?networkParts.join(" · "):"Jenis jaringan tidak dibagikan browser");
     writeDeviceSpec("locale",(navigator.language||"Tidak diketahui")+" / "+timezone);
     writeDeviceSpec("battery","Tidak dibagikan browser");
+    writeDeviceSpec("physicalScreen",physicalWidth&&physicalHeight?physicalWidth+" × "+physicalHeight+" px (estimasi DPR)":"Tidak tersedia");
+    writeDeviceSpec("cpuArch","Tidak dibagikan browser");
+    writeDeviceSpec("gpu",deviceGpuRenderer());
+    writeDeviceSpec("touch",touchPoints?touchPoints+" titik sentuh · "+orientation:"Tanpa data sentuh · "+orientation);
+    writeDeviceSpec("storage","Memeriksa kuota browser…");
+    writeDeviceSpec("online",navigator.onLine?"Online":"Offline");
     if(typeof navigator.getBattery==="function"){
       navigator.getBattery().then(battery=>{
         if(!battery)return;
-        const node=document.querySelector('#deviceSpecGrid [data-device-spec="battery"]');
-        if(node)node.textContent=Math.round(Number(battery.level)*100)+"%"+(battery.charging?" (mengisi daya)":"");
+        writeDeviceSpec("battery",Math.round(Number(battery.level)*100)+"%"+(battery.charging?" (mengisi daya)":""));
       }).catch(()=>{});
     }
+    if(navigator.storage?.estimate){
+      navigator.storage.estimate().then(data=>{
+        const quota=Number(data?.quota)||0,usage=Number(data?.usage)||0;
+        writeDeviceSpec("storage",quota?formatDeviceBytes(usage)+" terpakai / "+formatDeviceBytes(quota)+" kuota":"Kuota tidak dibagikan browser");
+      }).catch(()=>writeDeviceSpec("storage","Tidak tersedia"));
+    }else writeDeviceSpec("storage","Tidak didukung browser");
     if(navigator.userAgentData?.getHighEntropyValues){
-      navigator.userAgentData.getHighEntropyValues(["model"]).then(data=>{
+      navigator.userAgentData.getHighEntropyValues(["model","platformVersion","architecture","bitness","fullVersionList"]).then(data=>{
         const model=String(data?.model||"").trim();
-        if(model.length>=3&&!/^(?:Linux|Android|Mobile)$/i.test(model))writeDeviceSpec("model",model);
+        if(model.length>=2&&!/^(?:Linux|Android|Mobile)$/i.test(model)&&(info.model==="Tidak dibagikan browser"||model.length>info.model.length)){
+          writeDeviceSpec("model",model);
+          const current=$("deviceCurrent");
+          if(current)current.textContent=[model,info.os.split(" ")[0],info.browser.split(" ")[0]].join(" / ");
+        }
+        const platformVersion=String(data?.platformVersion||"").trim();
+        if(platformVersion&&/android/i.test(String(navigator.userAgentData?.platform||"")))writeDeviceSpec("os","Android "+platformVersion);
+        const architecture=String(data?.architecture||"").trim();
+        const bitness=String(data?.bitness||"").trim();
+        writeDeviceSpec("cpuArch",architecture?(architecture+(bitness?" · "+bitness+" bit":"")):"Tidak dibagikan browser");
+        const versions=Array.isArray(data?.fullVersionList)?data.fullVersionList:[];
+        const preferred=versions.find(item=>/Google Chrome|Chromium|Microsoft Edge|Samsung Internet/i.test(String(item?.brand||"")));
+        if(preferred?.version){
+          const brand=String(preferred.brand||info.browser).replace("Google Chrome","Google Chrome");
+          writeDeviceSpec("browser",brand+" "+String(preferred.version).split(".").slice(0,3).join("."));
+        }
       }).catch(()=>{});
     }
+    const refreshNetwork=()=>{const c=navigator.connection||navigator.mozConnection||navigator.webkitConnection;const parts=[];if(c?.effectiveType)parts.push(String(c.effectiveType).toUpperCase());if(Number(c?.downlink)>0)parts.push(Number(c.downlink).toFixed(1)+" Mbps");if(Number(c?.rtt)>0)parts.push("RTT "+Math.round(c.rtt)+" ms");if(c?.saveData)parts.push("Hemat data aktif");writeDeviceSpec("network",parts.length?parts.join(" · "):"Jenis jaringan tidak dibagikan browser")};
+    connection?.addEventListener?.("change",refreshNetwork);
+    window.addEventListener("online",()=>writeDeviceSpec("online","Online"));
+    window.addEventListener("offline",()=>writeDeviceSpec("online","Offline"));
   }
   function renderDeviceHistory(){
     const box=$("deviceHistoryList");if(!box)return;

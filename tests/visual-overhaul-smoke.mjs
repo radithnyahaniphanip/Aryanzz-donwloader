@@ -1,0 +1,37 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+
+const read=path=>readFileSync(new URL("../"+path,import.meta.url),"utf8");
+const html=read("public/index.html");
+const css=read("public/arya-ui-overhaul.css");
+const theme=read("public/theme-studio.js");
+const owner=read("public/owner.js");
+const profile=read("public/v25.js");
+const search=read("public/v674.js");
+const worker=read("src/index.js");
+const regression=read("tests/search-regression.mjs");
+
+assert.ok(html.includes("/arya-ui-overhaul.css"),"The shared visual overhaul stylesheet must be loaded");
+assert.match(html,/<body[^>]*data-motion="on"/,"Motion should be enabled by default");
+const toolGrid=html.match(/<div class="all-tools-grid v674-tool-grid" id="toolGrid">([\s\S]*?)<\/div>\s*<div/);
+assert.ok(toolGrid,"The main tool grid must exist");
+assert.equal((toolGrid[1].match(/<button\b/g)||[]).length,38,"All 38 tool cards must remain in the catalog");
+assert.ok(css.includes("#toolsArea #allTools .tool")&&css.includes(".ary-guide-hub-card"),"All tool cards and the guide hub must use the new card layout");
+assert.ok(css.includes("aryBrandDrift")&&css.includes("box-shadow:none!important"),"The home logo should animate without the old purple glow");
+assert.ok(!html.includes("#7b78ff")&&!html.includes("#c18cff"),"The home logo must not retain its purple gradient stops");
+assert.ok(css.includes(".ary-theme-advanced")&&css.includes("body[data-ary-design-bg="),"Advanced border/background options must apply to the workspace");
+for(const id of ["aryDesignBorderStyle","aryDesignBorderColor","aryDesignBorderWidth","aryDesignRadius","aryDesignBackgroundStyle","aryDesignBgA","aryDesignBgB","aryDesignEffect","aryDesignSpeed","aryDesignIntensity","aryDesignApply","aryDesignReset"])assert.ok(html.includes('id="'+id+'"'),"Missing visual customization control: "+id);
+assert.ok(html.includes("80JT+ KOMBINASI"),"The advanced design studio should advertise its 80M+ combination system");
+assert.ok(theme.includes("function applyDesign")&&theme.includes("const readDesign=")&&theme.includes("DESIGN_KEY"),"Design settings must preview, persist, and reapply after reload");
+assert.ok(theme.includes('savedMotion===null?true:savedMotion==="1"'),"Animations should default on while retaining the user toggle");
+assert.ok(html.includes('data-device-spec="gpu"')&&html.includes('data-device-spec="storage"')&&html.includes('data-device-spec="physicalScreen"'),"The profile should expose expanded mobile device diagnostics");
+assert.ok(profile.includes('getHighEntropyValues(["model","platformVersion","architecture","bitness","fullVersionList"])'),"Device detection should use available User-Agent Client Hints");
+assert.ok(profile.includes("deviceGpuRenderer")&&profile.includes("navigator.storage?.estimate"),"GPU and browser storage estimates should be detected when exposed");
+assert.ok(!html.includes('data-owner-link="telegram"')&&!html.includes("ownerTelegramUrl"),"Telegram must be removed from public channels and owner settings");
+assert.ok(owner.includes('whatsapp: "https://wa.me/6283163637190"'),"The owner WhatsApp action must keep the correct destination");
+assert.ok(owner.includes('"Chat WhatsApp"')&&!owner.includes("+62 831-6363-7190"),"The WhatsApp card must not print the owner's phone number");
+assert.ok(css.includes("aryDeveloperBadge")&&css.includes("ary-owner2-social-card:hover"),"The owner badge and official channel cards should have dedicated effects");
+assert.ok(search.includes('const shouldTryYoutube=kind!=="image"&&selected!=="youtube"&&(!mediaItems.length||(selected==="all"&&!hasYoutubeResult))'),"Title search should retry YouTube if all-platform results lack YouTube");
+assert.ok(regression.includes('query:"Tabola Bale",platform:"all",mediaType:"video"'),"A Tabola Bale all-platform regression test must remain in the suite");
+assert.ok(worker.includes('query+" official video"')&&worker.includes('youtubeFallbackAttempted&&youtubeFallbackCandidateCount>0'),"The Worker should retry YouTube with video intent and report all-platform fallback");
+console.log("✔ ARYANZZ visual overhaul preserves all 38 tools and verifies device, owner, theme, and YouTube fallback behavior");
