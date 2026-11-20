@@ -4225,7 +4225,8 @@ async function securityFetch(request,env){
   if(url.pathname.startsWith("/api/")){
     if(url.search.length>8192)return securityError("Parameter permintaan terlalu panjang.",414,requestId);
     const origin=request.headers.get("origin");
-    if(origin){
+    const signedAirPayWebhook=url.pathname==="/api/membership/webhook"&&request.method==="POST";
+    if(origin&&!signedAirPayWebhook){
       let parsedOrigin;
       try{parsedOrigin=new URL(origin)}catch{SECURITY_EVENTS.blockedOrigin++;return securityError("Origin permintaan tidak valid.",403,requestId)}
       if(parsedOrigin.origin!==url.origin){
