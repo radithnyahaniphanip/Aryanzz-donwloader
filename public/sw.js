@@ -1,7 +1,7 @@
 const CACHE="aryanzz-build-__ARYANZZ_VERSION__";
 const BUILD_ID="__ARYANZZ_VERSION__";
 const RELEASE_CHANNEL="V2";
-const SHELL=["/auth-gate.css?v=__ARYANZZ_VERSION__","/auth-gate.js?v=__ARYANZZ_VERSION__","/guest-access.js?v=__ARYANZZ_VERSION__","/text-protection.css?v=__ARYANZZ_VERSION__","/text-protection.js?v=__ARYANZZ_VERSION__","/auth-profile-v1.css?v=2","/auth-reset-v1.css?v=2","/update-manager.js?v=__ARYANZZ_VERSION__",
+const SHELL=["/auth-gate.css?v=__ARYANZZ_VERSION__","/auth-gate.js?v=__ARYANZZ_VERSION__","/membership.css?v=__ARYANZZ_VERSION__","/membership.js?v=__ARYANZZ_VERSION__","/guest-access.js?v=__ARYANZZ_VERSION__","/text-protection.css?v=__ARYANZZ_VERSION__","/text-protection.js?v=__ARYANZZ_VERSION__","/auth-profile-v1.css?v=2","/auth-reset-v1.css?v=2","/update-manager.js?v=__ARYANZZ_VERSION__",
   "/workspace-home.css?v=__ARYANZZ_VERSION__","/workspace-tools.css?v=__ARYANZZ_VERSION__","/brand-polish.css?v=__ARYANZZ_VERSION__","/brand-system.css?v=__ARYANZZ_VERSION__","/v1-experience.css?v=__ARYANZZ_VERSION__","/desktop-workspace.css?v=__ARYANZZ_VERSION__","/arya-ui-overhaul.css?v=__ARYANZZ_VERSION__",
   "/arya-v2-refresh.css?v=__ARYANZZ_VERSION__","/workspace-library.css?v=__ARYANZZ_VERSION__","/workspace-navigation.css?v=__ARYANZZ_VERSION__",
   "/workspace-home.js?v=__ARYANZZ_VERSION__",

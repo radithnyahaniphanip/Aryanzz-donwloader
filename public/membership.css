@@ -1,0 +1,59 @@
+.ary-membership-panel{overflow:hidden}
+.ary-membership-hero{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;padding:clamp(18px,4vw,30px);border:1px solid rgba(130,151,255,.28);border-radius:24px;background:radial-gradient(circle at 90% 0,rgba(53,214,231,.17),transparent 42%),linear-gradient(135deg,rgba(83,75,184,.2),rgba(13,25,43,.95) 58%,rgba(11,54,62,.65))}
+.ary-membership-kicker{display:inline-flex;align-items:center;gap:7px;color:#8fe9e2;font-size:10px;font-weight:900;letter-spacing:.18em}
+.ary-membership-hero h1{margin:9px 0 8px;font-size:clamp(27px,5vw,42px);letter-spacing:-.04em}
+.ary-membership-hero p{max-width:590px;margin:0;color:#aebed4;line-height:1.75}
+.ary-membership-hero-mark{display:grid;place-items:center;flex:0 0 66px;width:66px;height:66px;border:1px solid rgba(153,167,255,.4);border-radius:22px;background:linear-gradient(145deg,rgba(120,95,255,.25),rgba(42,199,199,.2));font-size:30px;box-shadow:0 14px 36px rgba(0,0,0,.22)}
+.ary-membership-current{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:16px 0;padding:15px 17px;border:1px solid rgba(101,226,177,.2);border-radius:17px;background:rgba(18,54,49,.25)}
+.ary-membership-current b{display:block;color:#e8fff7}
+.ary-membership-current small{display:block;margin-top:3px;color:#a5c9bf}
+.ary-membership-current-status{flex:0 0 auto;padding:7px 11px;border:1px solid rgba(101,226,177,.32);border-radius:999px;color:#85e6bf;font-size:10px;font-weight:900;letter-spacing:.08em}
+.ary-membership-period{display:flex;gap:8px;margin:20px 0 14px;padding:5px;border:1px solid #293b5b;border-radius:14px;background:#091321}
+.ary-membership-period button{flex:1;min-height:42px;border:0;border-radius:10px;background:transparent;color:#9db0ca;font-weight:800}
+.ary-membership-period button.active{background:linear-gradient(110deg,#705bff,#228da8);color:white;box-shadow:0 8px 20px #0003}
+.ary-membership-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
+.ary-membership-card{position:relative;display:flex;flex-direction:column;min-width:0;padding:18px;border:1px solid rgba(126,148,190,.27);border-radius:19px;background:linear-gradient(150deg,rgba(23,34,59,.98),rgba(11,21,37,.98));box-shadow:0 12px 30px rgba(0,0,0,.18)}
+.ary-membership-card.is-popular{border-color:rgba(92,213,219,.65);box-shadow:0 0 0 1px rgba(92,213,219,.12),0 18px 40px rgba(0,0,0,.23)}
+.ary-membership-card-badge{display:inline-flex;align-self:flex-start;padding:5px 9px;border:1px solid rgba(135,157,255,.3);border-radius:999px;background:rgba(93,106,210,.14);color:#c9d6ff;font-size:9px;font-weight:900;letter-spacing:.12em}
+.ary-membership-card h3{margin:12px 0 4px;font-size:21px}
+.ary-membership-card-period{color:#96a9c5;font-size:12px}
+.ary-membership-price{margin:13px 0 2px;font-size:clamp(23px,4vw,30px);font-weight:950;letter-spacing:-.04em;color:#f6fbff}
+.ary-membership-price-note{color:#8ea2bd;font-size:11px}
+.ary-membership-benefits{display:grid;gap:8px;margin:15px 0 18px;padding:0;list-style:none}
+.ary-membership-benefits li{display:flex;gap:8px;color:#c3d1e5;font-size:12px;line-height:1.5}
+.ary-membership-benefits li:before{content:"✓";flex:0 0 auto;color:#7fe2c2;font-weight:900}
+.ary-membership-buy{width:100%;margin-top:auto;padding:12px 14px;border:1px solid rgba(139,160,255,.32);border-radius:12px;background:linear-gradient(105deg,#725cff,#278db0);color:#fff;font-weight:900}
+.ary-membership-buy:disabled{opacity:.55;cursor:not-allowed}
+.ary-membership-notice{margin:13px 0;padding:12px 14px;border:1px solid rgba(239,190,107,.24);border-radius:12px;background:rgba(75,49,16,.18);color:#e6d0a9;font-size:12px;line-height:1.65}
+.ary-membership-payment{margin-top:18px;padding:18px;border:1px solid rgba(90,210,210,.32);border-radius:20px;background:linear-gradient(145deg,rgba(13,43,54,.6),rgba(12,20,37,.96))}
+.ary-membership-payment h2{margin:0 0 7px;font-size:21px}
+.ary-membership-payment-copy{color:#aebfd4;font-size:13px;line-height:1.7}
+.ary-membership-payment-layout{display:grid;grid-template-columns:minmax(0,230px) minmax(0,1fr);gap:18px;align-items:center;margin-top:14px}
+.ary-membership-qr{display:block;width:100%;max-width:230px;aspect-ratio:1;object-fit:contain;padding:10px;border-radius:16px;background:white}
+.ary-membership-qr-placeholder{display:grid;place-items:center;aspect-ratio:1;width:100%;max-width:230px;padding:16px;border:1px dashed #49617f;border-radius:16px;color:#9fb3ce;text-align:center;font-size:12px}
+.ary-membership-payment-details{display:grid;gap:10px;min-width:0}
+.ary-membership-payment-row{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid rgba(139,159,192,.16);font-size:12px}
+.ary-membership-payment-row span{color:#98acc6}
+.ary-membership-payment-row b{text-align:right;overflow-wrap:anywhere;color:#eff6ff}
+.ary-membership-payment-actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:8px}
+.ary-membership-payment-actions a,.ary-membership-payment-actions button{display:inline-flex;justify-content:center;align-items:center;min-height:42px;padding:10px 14px;border:1px solid rgba(143,168,255,.32);border-radius:11px;background:linear-gradient(110deg,#6958ec,#218da8);color:#fff;text-decoration:none;font-size:12px;font-weight:900}
+.ary-membership-payment-actions button.secondary{background:rgba(20,36,58,.8);color:#c9d8ee}
+.ary-membership-history{margin-top:22px}
+.ary-membership-history h2{font-size:18px}
+.ary-membership-order{display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid rgba(139,159,192,.16);font-size:12px}
+.ary-membership-order small{display:block;margin-top:3px;color:#8fa3bf}
+.ary-membership-order-status{align-self:center;color:#8fe4c0;font-weight:900}
+.ary-membership-resume{align-self:center;min-height:38px;padding:8px 12px;border:1px solid rgba(139,160,255,.32);border-radius:10px;background:rgba(30,56,82,.9);color:#dcecff;font-size:11px;font-weight:800}
+.ary-membership-status{min-height:22px;margin-top:12px;color:#a9bbd2;font-size:12px}
+@media(max-width:620px){
+ .ary-membership-hero{padding:18px;border-radius:19px}
+ .ary-membership-hero-mark{flex-basis:50px;width:50px;height:50px;border-radius:17px;font-size:23px}
+ .ary-membership-grid{grid-template-columns:1fr}
+ .ary-membership-card{padding:17px}
+ .ary-membership-payment-layout{grid-template-columns:1fr}
+ .ary-membership-qr,.ary-membership-qr-placeholder{max-width:220px;margin:0 auto}
+ .ary-membership-order{align-items:flex-start;flex-direction:column}
+ body .nav{gap:2px!important;padding-left:4px!important;padding-right:4px!important}
+ body .nav button{flex:1 1 0!important;min-width:0!important;padding:7px 2px!important;font-size:9px!important}
+ body .nav button .nav-icon{font-size:17px!important}
+}

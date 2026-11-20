@@ -100,7 +100,35 @@ if(saveButton){const hex=saveButton.dataset.saveColor;let saved=[];try{saved=JSO
 if(favorites)favorites.onclick=async event=>{const chip=event.target.closest("[data-copy-color]");if(!chip)return;const hex=chip.dataset.copyColor;selectExpandedColor(hex);const ok=await copyExpandedColor(hex);const message=$("colorMessage");if(message)message.textContent=ok?hex+" berhasil disalin.":"Warna dipilih: "+hex};
 renderExpandedFavorites();renderExpandedPalette();
 }
-function initMotion(){document.querySelectorAll(".v677-reveal").forEach(card=>{card.classList.remove("v677-reveal");card.classList.add("v677-visible");card.style.opacity="1";card.style.transform="none";})}
+function initMotion(){
+ const cards=[...document.querySelectorAll("#toolGrid .tool")];
+ const motionDisabled=document.body.dataset.motion==="off";
+ if(motionDisabled){
+  cards.forEach(card=>{card.classList.remove("v677-reveal","v677-visible");card.style.opacity="1";card.style.transform="none";});
+  return;
+ }
+ cards.forEach((card,index)=>{
+  card.classList.add("v677-reveal");
+  card.classList.remove("v677-visible");
+  card.style.removeProperty("opacity");
+  card.style.removeProperty("transform");
+  card.style.setProperty("--v677-order",String(index));
+ });
+ if(!("IntersectionObserver" in window)){
+  cards.forEach(card=>card.classList.add("v677-visible"));
+  return;
+ }
+ const observer=new IntersectionObserver((entries,currentObserver)=>{
+  entries.forEach(entry=>{
+   if(entry.isIntersecting){
+    entry.target.classList.add("v677-visible");
+    currentObserver.unobserve(entry.target);
+   }
+  });
+ },{threshold:.08,rootMargin:"0px 0px -36px 0px"});
+ cards.forEach(card=>observer.observe(card));
+}
+window.addEventListener("aryanzz:motion-changed",initMotion);
 function init(){decorateCards();decoratePanels();expandColorStudio();initMotion();const about=document.querySelector("#about .v674-roadmap");if(about&&!document.querySelector(".v677-roadmap-note")){const note=document.createElement("p");note.className="v677-roadmap-note";note.textContent="Target V80.4 adalah roadmap bertahap, bukan fitur yang sudah aktif. Setiap rilis akan diuji sebelum dipromosikan ke versi berikutnya.";about.after(note)}}
 if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init,{once:true});else init();
 })();

@@ -1,49 +1,157 @@
 (()=>{"use strict";
 const $=id=>document.getElementById(id);
-const historyKey='aryanzz-download-history-v1';
-function readHistory(){try{return JSON.parse(localStorage.getItem(historyKey)||'[]')}catch{return []}}
-function saveHistory(item){const h=[item,...readHistory().filter(x=>x.url!==item.url)].slice(0,12);localStorage.setItem(historyKey,JSON.stringify(h));renderHistory()}
-function renderHistory(){const box=$('historyBox'),h=readHistory();if(!h.length){box.hidden=true;return}box.hidden=false;box.innerHTML='<b>Riwayat unduhan di perangkat ini</b><div id="historyItems"></div><button id="clearHistory" class="tag" style="margin-top:9px">Hapus riwayat</button>';const list=$('historyItems');h.forEach(item=>{const row=document.createElement('div');row.style.cssText='padding:8px 0;border-bottom:1px solid #263852;overflow-wrap:anywhere';const a=document.createElement('a');a.href=item.url;a.target='_blank';a.rel='noopener';a.style.color='#8ec5ff';a.textContent=item.name||item.url;const small=document.createElement('div');small.className='muted';small.textContent=new Date(item.at).toLocaleString();row.append(a,small);list.append(row)});$('clearHistory').onclick=()=>{localStorage.removeItem(historyKey);renderHistory()}}
-const favoritesKey='aryanzz-library-favorites-v1';
-function readFavorites(){try{return JSON.parse(localStorage.getItem(favoritesKey)||'[]')}catch{return []}}
-function writeFavorites(items){localStorage.setItem(favoritesKey,JSON.stringify(items.slice(0,80)));renderLibrary()}
-function escapeLibraryText(v){return String(v||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+const HISTORY_KEY="aryanzz.history.v2";
+const LEGACY_HISTORY_KEY="aryanzz-download-history-v1";
+const FAVORITES_KEY="aryanzz.favorites.v2";
+const LEGACY_FAVORITES_KEY="aryanzz-library-favorites-v1";
+let activeTab="history";
+function readArray(key){
+ try{const value=JSON.parse(localStorage.getItem(key)||"[]");return Array.isArray(value)?value:[]}catch{return []}
+}
+function writeArray(key,items){
+ try{localStorage.setItem(key,JSON.stringify(items));return true}catch{return false}
+}
+function safeMediaUrl(raw){
+ try{const url=new URL(String(raw||""));return ["http:","https:"].includes(url.protocol)&&!url.username&&!url.password?url.href:""}catch{return ""}
+}
+function mergeCollections(keys,limit){
+ const merged=new Map();
+ for(const key of keys)for(const item of readArray(key)){
+  const url=safeMediaUrl(item?.url);if(!url)continue;
+  const at=Number(item.at||item.savedAt)||0,current=merged.get(url);
+  if(!current||(Number(current.at||current.savedAt)||0)<=at)merged.set(url,{...current,...item,url});
+ }
+ return [...merged.values()].sort((a,b)=>(Number(b.at||b.savedAt)||0)-(Number(a.at||a.savedAt)||0)).slice(0,limit);
+}
+function readHistory(){return mergeCollections([HISTORY_KEY,LEGACY_HISTORY_KEY],80)}
+function readFavorites(){return mergeCollections([FAVORITES_KEY,LEGACY_FAVORITES_KEY],120)}
+function writeFavorites(items){
+ const next=items.slice(0,120);
+ writeArray(FAVORITES_KEY,next);
+ renderLibrary();
+ window.dispatchEvent(new Event("aryanzz:history-updated"));
+}
+function saveHistory(item){
+ const url=safeMediaUrl(item?.url);if(!url)return false;
+ const next=[{...item,url,at:Number(item.at)||Date.now()},...readHistory().filter(value=>value.url!==url)].slice(0,80);
+ if(!writeArray(HISTORY_KEY,next))return false;
+ renderHistory();renderLibrary();
+ window.dispatchEvent(new Event("aryanzz:history-updated"));
+ return true;
+}
+function make(tag,className,text){
+ const node=document.createElement(tag);if(className)node.className=className;if(text!==undefined)node.textContent=text;return node;
+}
+function mediaKind(item){
+ const mode=String(item?.mode||item?.type||"").toLowerCase();
+ const ext=String(item?.extension||item?.ext||item?.name||item?.url||"").toLowerCase();
+ if(mode==="audio"||/\.(?:mp3|m4a|aac|wav|ogg|flac|opus)(?:[?#]|$)/.test(ext))return "audio";
+ if(mode==="image"||/\.(?:jpe?g|png|webp|gif|avif|bmp)(?:[?#]|$)/.test(ext))return "image";
+ return "video";
+}
+function displaySource(item){
+ if(item?.platform)return String(item.platform);
+ try{return new URL(item.url).hostname.replace(/^www\./,"")}catch{return "Media"}
+}
+function dateLabel(item){
+ const value=Number(item?.at||item?.savedAt)||0;
+ return value?new Date(value).toLocaleString("id-ID",{dateStyle:"medium",timeStyle:"short"}):"Disimpan di perangkat ini";
+}
+function renderHistory(){
+ const box=$("historyBox"),items=readHistory();if(!box)return;
+ if(!items.length){box.hidden=true;return}
+ box.hidden=false;box.replaceChildren();
+ box.append(make("b","ary-history-mini-title","Riwayat unduhan di perangkat ini"));
+ const list=make("div","ary-history-mini-list");
+ items.slice(0,6).forEach(item=>{
+  const row=make("div","ary-history-mini-item");
+  const link=make("a","",item.name||item.title||item.url);link.href=safeMediaUrl(item.url)||"#";link.target="_blank";link.rel="noopener noreferrer";
+  const small=make("small","",dateLabel(item));row.append(link,small);list.append(row);
+ });
+ const clear=make("button","tag","Hapus riwayat");clear.type="button";clear.addEventListener("click",()=>clearHistory());
+ box.append(list,clear);
+}
+function toggleFavorite(item){
+ const current=readFavorites(),exists=current.some(value=>value.url===item.url);
+ writeFavorites(exists?current.filter(value=>value.url!==item.url):[{...item,savedAt:Date.now()},...current]);
+}
 function renderLibrary(){
- const hist=readHistory(),favs=readFavorites();
- $('aryLibraryHistoryCount').textContent=hist.length;$('aryLibraryFavoriteCount').textContent=favs.length;
- $('aryLibraryHistoryBadge').textContent=hist.length;$('aryLibraryFavoriteBadge').textContent=favs.length;
+ const history=readHistory(),favorites=readFavorites();
+ const historyCount=$("aryLibraryHistoryCount"),favoriteCount=$("aryLibraryFavoriteCount");
+ if(historyCount)historyCount.textContent=String(history.length);
+ if(favoriteCount)favoriteCount.textContent=String(favorites.length);
+ const historyBadge=$("aryLibraryHistoryBadge"),favoriteBadge=$("aryLibraryFavoriteBadge");
+ if(historyBadge)historyBadge.textContent=String(history.length);
+ if(favoriteBadge)favoriteBadge.textContent=String(favorites.length);
+ const query=String($("aryLibrarySearch")?.value||"").trim().toLocaleLowerCase("id-ID");
+ const sort=$("aryLibrarySort")?.value||"newest";
  const draw=(id,items,kind)=>{
-  const box=$(id);box.innerHTML='';
-  if(!items.length){const empty=document.createElement('div');empty.className='ary-library-empty-state';empty.innerHTML=kind==='history'?'<span style="font-size:25px">◷</span><b>Belum ada riwayat</b><small>Aktivitas unduhanmu akan muncul di sini.</small>':'<span style="font-size:25px">♡</span><b>Belum ada favorit</b><small>Tekan ikon bintang pada riwayat untuk menyimpan item.</small>';box.append(empty);return}
-  items.forEach((item,index)=>{
-   const row=document.createElement('div');row.className='ary-library-item';
-   const icon=document.createElement('span');icon.className='ary-library-item-icon';icon.textContent=(item.name||'').match(/\.mp3|\.m4a|\.wav/i)?'♫':'▶';
-   const main=document.createElement('div');main.className='ary-library-item-main';
-   const a=document.createElement('a');a.textContent=item.name||item.url||'Media';a.href=item.url||'#';a.target='_blank';a.rel='noopener noreferrer';a.title=item.name||item.url||'';
-   const small=document.createElement('small');small.textContent=item.at?new Date(item.at).toLocaleString():'Disimpan di perangkat ini';main.append(a,small);
-   const action=document.createElement('button');action.type='button';action.className='ary-library-item-action';action.textContent=kind==='history'?(favs.some(x=>x.url===item.url)?'★':'☆'):'×';action.setAttribute('aria-label',kind==='history'?'Simpan ke favorit':'Hapus dari favorit');
-   action.addEventListener('click',()=>{
-    if(kind==='history'){const next=readFavorites();if(next.some(x=>x.url===item.url)){writeFavorites(next.filter(x=>x.url!==item.url))}else{writeFavorites([{...item,savedAt:Date.now()},...next])}}
-    else writeFavorites(readFavorites().filter(x=>x.url!==item.url));
+  const box=$(id);if(!box)return;box.replaceChildren();
+  const filtered=items.filter(item=>[item.name,item.title,item.platform,item.mode,item.type,item.url].join(" ").toLocaleLowerCase("id-ID").includes(query));
+  filtered.sort((a,b)=>{
+   const first=Number(a.at||a.savedAt)||0,second=Number(b.at||b.savedAt)||0;
+   return sort==="oldest"?first-second:second-first;
+  });
+  if(!filtered.length){
+   const empty=make("div","ary-library-empty-state");
+   empty.append(make("span","ary-library-empty-icon",kind==="history"?"◷":"♡"));
+   empty.append(make("b","",query?"Tidak ada hasil yang cocok":kind==="history"?"Belum ada riwayat unduhan":"Belum ada media favorit"));
+   empty.append(make("small","",query?"Coba kata kunci lain.":kind==="history"?"Hasil unduhan yang berhasil akan tersimpan di sini.":"Simpan media dari riwayat agar mudah ditemukan kembali."));
+   box.append(empty);return;
+  }
+  filtered.forEach(item=>{
+   const row=make("article","ary-library-item ary-library-item-"+kind);
+   const kindValue=mediaKind(item),icon=make("span","ary-library-item-icon ary-library-kind-"+kindValue,kindValue==="audio"?"♫":kindValue==="image"?"▧":"▶");
+   const main=make("div","ary-library-item-main");
+   const title=make("b","ary-library-item-title",item.name||item.title||"Media tanpa judul");
+   const meta=make("small","ary-library-item-meta",[displaySource(item),kindValue==="audio"?"Audio":kindValue==="image"?"Gambar":"Video",item.quality||""].filter(Boolean).join(" · "));
+   const date=make("small","ary-library-item-date",dateLabel(item));
+   main.append(title,meta,date);
+   const actions=make("div","ary-library-item-actions");
+   const url=safeMediaUrl(item.url);
+   if(url){const open=make("a","ary-library-item-open","Buka ↗");open.href=url;open.target="_blank";open.rel="noopener noreferrer";actions.append(open);}
+   const action=make("button","ary-library-item-action",kind==="history"?(favorites.some(value=>value.url===item.url)?"★":"☆"):"×");
+   action.type="button";action.setAttribute("aria-label",kind==="history"?"Simpan atau hapus favorit":"Hapus dari favorit");
+   action.addEventListener("click",()=>{
+    if(kind==="history")toggleFavorite(item);
+    else writeFavorites(readFavorites().filter(value=>value.url!==item.url));
    });
-   row.append(icon,main,action);box.append(row);
+   actions.append(action);row.append(icon,main,actions);box.append(row);
   });
  };
- draw('historyList',hist,'history');draw('favoriteList',favs,'favorite');
+ draw("historyList",history,"history");draw("favoriteList",favorites,"favorite");
 }
 function setLibraryTab(tab){
- const history=tab==='history';
- $('aryLibraryHistoryTab').classList.toggle('active',history);$('aryLibraryFavoriteTab').classList.toggle('active',!history);
- $('aryLibraryHistoryTab').setAttribute('aria-selected',String(history));$('aryLibraryFavoriteTab').setAttribute('aria-selected',String(!history));
- $('aryLibraryHistoryView').classList.toggle('active',history);$('aryLibraryFavoriteView').classList.toggle('active',!history);
- $('aryLibraryHistoryView').hidden=!history;$('aryLibraryFavoriteView').hidden=history;
+ activeTab=tab==="favorite"?"favorite":"history";
+ const history=activeTab==="history";
+ const historyTab=$("aryLibraryHistoryTab"),favoriteTab=$("aryLibraryFavoriteTab");
+ const historyView=$("aryLibraryHistoryView"),favoriteView=$("aryLibraryFavoriteView");
+ if(historyTab){historyTab.classList.toggle("active",history);historyTab.setAttribute("aria-selected",String(history));}
+ if(favoriteTab){favoriteTab.classList.toggle("active",!history);favoriteTab.setAttribute("aria-selected",String(!history));}
+ if(historyView){historyView.classList.toggle("active",history);historyView.hidden=!history;}
+ if(favoriteView){favoriteView.classList.toggle("active",!history);favoriteView.hidden=history;}
+ renderLibrary();
 }
-$('aryLibraryHistoryTab').onclick=()=>setLibraryTab('history');$('aryLibraryFavoriteTab').onclick=()=>setLibraryTab('favorite');
-$('clearHistoryV2').onclick=()=>{if(confirm('Hapus semua riwayat pada perangkat ini?')){localStorage.removeItem(historyKey);renderHistory();renderLibrary()}};
-$('clearFavoritesV2').onclick=()=>{if(confirm('Hapus semua favorit pada perangkat ini?')){localStorage.removeItem(favoritesKey);renderLibrary()}};
-
-
+function clearHistory(){
+ if(!confirm("Hapus semua riwayat unduhan pada perangkat ini?"))return;
+ for(const key of [HISTORY_KEY,LEGACY_HISTORY_KEY])try{localStorage.removeItem(key)}catch{}
+ renderHistory();renderLibrary();
+ window.dispatchEvent(new Event("aryanzz:history-updated"));
+}
+function clearFavorites(){
+ if(!confirm("Hapus semua media favorit pada perangkat ini?"))return;
+ for(const key of [FAVORITES_KEY,LEGACY_FAVORITES_KEY])try{localStorage.removeItem(key)}catch{}
+ renderLibrary();
+ window.dispatchEvent(new Event("aryanzz:history-updated"));
+}
+$("aryLibraryHistoryTab")?.addEventListener("click",()=>setLibraryTab("history"));
+$("aryLibraryFavoriteTab")?.addEventListener("click",()=>setLibraryTab("favorite"));
+$("aryLibrarySearch")?.addEventListener("input",renderLibrary);
+$("aryLibrarySort")?.addEventListener("change",renderLibrary);
+$("clearHistoryV2")?.addEventListener("click",clearHistory);
+$("clearFavoritesV2")?.addEventListener("click",clearFavorites);
+window.addEventListener("aryanzz:history-updated",()=>{renderHistory();renderLibrary()});
+window.addEventListener("storage",event=>{if([HISTORY_KEY,LEGACY_HISTORY_KEY,FAVORITES_KEY,LEGACY_FAVORITES_KEY].includes(event.key)){renderHistory();renderLibrary()}});
 window.ARYANZZLibrary=Object.freeze({saveHistory,renderHistory,renderLibrary,readHistory,readFavorites});
-renderHistory();
-renderLibrary();
+renderHistory();renderLibrary();
 })();

@@ -165,6 +165,79 @@ async function testPwaAndStorage(page) {
   console.log("PASS PWA: active SW " + afterVersion + ", versioned cache present, localStorage and IndexedDB test records survived reload.");
 }
 
+async function testWorkspaceAndProfile(page, deviceLabel) {
+  await page.waitForFunction(expected => document.querySelector("#homeReleaseVersion")?.dataset.buildId === expected, EXPECTED_BUILD_VERSION, { timeout: 30000 });
+  const visual = await page.evaluate(() => {
+    const hero = document.querySelector("#home>.v89-welcome");
+    const header = document.querySelector("#home>.v674-top");
+    const badge = document.querySelector("#homeReleaseVersion");
+    const style = element => element ? getComputedStyle(element) : null;
+    return {
+      buildBadge: badge?.dataset.buildId || "",
+      heroRadius: style(hero)?.borderRadius || "",
+      heroBackground: style(hero)?.backgroundImage || "",
+      headerRadius: style(header)?.borderRadius || "",
+      stylesheets: [...document.querySelectorAll('link[rel="stylesheet"]')].map(link => link.href)
+    };
+  });
+  assert.equal(visual.buildBadge, EXPECTED_BUILD_VERSION, deviceLabel + " V2 refresh script did not confirm the active release build.");
+  assert.ok(visual.stylesheets.some(url => url.includes("/arya-v2-refresh.css")), deviceLabel + " V2 refresh stylesheet is not linked.");
+  assert.ok(visual.stylesheets.some(url => url.includes("/workspace-tools.css")), deviceLabel + " Workspace stylesheet is not linked.");
+  assert.ok(visual.stylesheets.some(url => url.includes("/toolbox-100.css")), deviceLabel + " Toolbox stylesheet is not linked.");
+  assert.ok(visual.stylesheets.some(url => url.includes("/v25.css")), deviceLabel + " Profile stylesheet is not linked.");
+  assert.ok(parseFloat(visual.heroRadius) >= 20 && visual.heroBackground !== "none" && parseFloat(visual.headerRadius) >= 16,
+    deviceLabel + " V2 visual layer did not apply to the homepage header and hero.");
+  console.log("PASS " + deviceLabel + " V2 visual layer: build " + visual.buildBadge + ", hero " + visual.heroRadius + ", header " + visual.headerRadius + ".");
+
+  await page.locator('.nav [data-nav="allTools"]').click();
+  await page.locator("#allTools.active").waitFor({ state: "visible", timeout: 30000 });
+  assert.equal(await page.locator("#toolsArea").isVisible(), true, deviceLabel + " Tools workspace did not open.");
+  assert.ok(await page.locator('#allTools [data-panel="toolbox100"]').count() === 1, deviceLabel + " 100 Tools Lab entry is missing.");
+  await page.evaluate(() => {
+    const root = document.getElementById("toolsArea");
+    const panel = document.createElement("section");
+    panel.id = "qa-dynamic-workspace-panel";
+    panel.className = "panel active";
+    root.append(panel);
+  });
+  await page.locator("#toolsArea>.ary-tools-backbar").waitFor({ state: "visible", timeout: 10000 });
+  await page.evaluate(() => document.getElementById("qa-dynamic-workspace-panel")?.remove());
+  await page.locator("#toolsArea>.ary-tools-backbar").waitFor({ state: "hidden", timeout: 10000 });
+  await page.locator('#allTools [data-panel="toolbox100"]').click();
+  await page.locator("#toolbox100.active").waitFor({ state: "visible", timeout: 30000 });
+  const toolCount = await page.locator("#toolbox100 [data-tool-id]").count();
+  assert.equal(toolCount, 100, deviceLabel + " Toolbox should render exactly 100 tools; got " + toolCount + ".");
+  await page.locator("#t100Input").fill("aryanzz v2");
+  await page.locator("#t100Run").click();
+  await page.waitForFunction(() => document.querySelector("#t100Output")?.value === "ARYANZZ V2", null, { timeout: 30000 });
+  assert.equal(await page.locator("#t100Status").innerText(), "Selesai · 10 karakter hasil.", deviceLabel + " Toolbox did not complete the uppercase example.");
+  if (await page.evaluate(() => window.innerWidth <= 600)) {
+    const width = await page.evaluate(() => document.documentElement.scrollWidth);
+    assert.ok(width <= 602, deviceLabel + " Toolbox causes horizontal overflow: " + width + "px.");
+  }
+  console.log("PASS " + deviceLabel + " Workspace navigation and 100 Tools Lab: 100 cards, local tool execution and responsive layout.");
+
+  await page.locator('.nav [data-nav="profile"]').click();
+  await page.locator("#profile.active").waitFor({ state: "visible", timeout: 30000 });
+  await page.waitForFunction(() => {
+    const value = document.querySelector("#deviceCurrent")?.textContent?.trim() || "";
+    return value && value !== "Membaca perangkat…";
+  }, null, { timeout: 30000 });
+  const profile = await page.evaluate(() => ({
+    nameField: !!document.querySelector("#profileName"),
+    device: document.querySelector("#deviceCurrent")?.textContent?.trim() || "",
+    specs: [...document.querySelectorAll("#profile .ary-v1-device-specs dd")].map(node => node.textContent.trim()).filter(Boolean)
+  }));
+  assert.ok(profile.nameField, deviceLabel + " Profile name field is missing.");
+  assert.ok(profile.device.length > 3, deviceLabel + " Profile did not detect the current device.");
+  assert.ok(profile.specs.length >= 3, deviceLabel + " Profile device specifications are not populated.");
+  console.log("PASS " + deviceLabel + " Profile V25: current device detected and " + profile.specs.length + " specifications populated.");
+
+  await page.locator('.nav [data-nav="home"]').click();
+  await page.locator("#url").waitFor({ state: "visible", timeout: 30000 });
+  assert.equal(await page.locator("#home").isVisible(), true, deviceLabel + " Home navigation did not restore the downloader workspace.");
+}
+
 const browser = await chromium.launch({ headless: true });
 try {
   const desktop = await browser.newContext({
@@ -174,6 +247,7 @@ try {
   });
   const desktopPage = await openHome(desktop, "Desktop Chromium");
   await testPwaAndStorage(desktopPage);
+  await testWorkspaceAndProfile(desktopPage, "Desktop Chromium");
   for (const test of tests) await testDownload(desktopPage, test, "Desktop");
   await testInvalidMedia(desktopPage);
   await desktop.close();
@@ -188,6 +262,7 @@ try {
     userAgent: "Mozilla/5.0 (Linux; Android 13; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36"
   });
   const mobilePage = await openHome(mobile, "Android-like Chromium");
+  await testWorkspaceAndProfile(mobilePage, "Android-like Chromium");
   await testDownload(mobilePage, tests[0], "Android-like");
   await testDownload(mobilePage, tests[3], "Android-like");
   await mobile.close();

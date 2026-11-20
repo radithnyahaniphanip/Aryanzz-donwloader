@@ -1,5 +1,8 @@
 # ARYANZZ V1 Membership Payments
 
+> **Legacy V1 reference:** this document describes the retired static-QRIS/manual-review flow. The current AirPay QRIS checkout, automatic verification, pricing and Worker-secret setup are documented in [AIRPAY-MEMBERSHIP-SETUP.md](AIRPAY-MEMBERSHIP-SETUP.md).
+
+
 ## Current GoPay Merchant QRIS mode
 
 The existing `MEMBERSHIP_QRIS_IMAGE_URL` setting displays the merchant's QRIS image. This mode creates a pending order and requires the owner to check the GoPay Merchant transaction list before approving it in Membership Center. A static QR image alone cannot notify a Cloudflare Worker that a customer has paid.

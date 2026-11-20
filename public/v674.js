@@ -148,7 +148,7 @@ const setPlatform=(id,options={})=>{
  picker?.setAttribute("data-selected-platform",selected);
  updateSearchHelp();setMode(activeMode);renderPlatformPage(platformPage);persistPlatformSession();
 };
-picker?.addEventListener("click",e=>{const btn=e.target.closest("[data-platform]");if(btn)setPlatform(btn.dataset.platform)});
+picker?.addEventListener("click",e=>{const btn=e.target.closest("[data-platform]");if(btn){window.aryanzzPlatformSelectionExplicit=true;setPlatform(btn.dataset.platform)}});
 window.aryanzzSelectedPlatform=()=>selected;window.aryanzzAutoSelectPlatform=id=>setPlatform(id,{preserveLink:true,preserveOutput:true,silent:true});picker?.setAttribute("data-selected-platform",selected);
 setMode(activeMode);
 const updateSearchHelp=()=>{

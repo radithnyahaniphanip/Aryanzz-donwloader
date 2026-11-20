@@ -64,8 +64,21 @@ function syncBackbar(){
  const excluded=active&&(active.classList.contains("v25-profile-panel")||active.classList.contains("owner-panel")||active.classList.contains("ary-library-panel"));
  backbar.hidden=!active||!!excluded;
 }
+const observedPanels=new WeakSet();
 const panelObserver=new MutationObserver(syncBackbar);
-root.querySelectorAll(":scope > .panel").forEach(panel=>panelObserver.observe(panel,{attributes:true,attributeFilter:["class"]}));
+function observePanel(panel){
+ if(observedPanels.has(panel))return;
+ observedPanels.add(panel);
+ panelObserver.observe(panel,{attributes:true,attributeFilter:["class"]});
+}
+root.querySelectorAll(":scope > .panel").forEach(observePanel);
+const panelListObserver=new MutationObserver(records=>{
+ for(const record of records)for(const node of record.addedNodes){
+  if(node.nodeType===1&&node.classList.contains("panel"))observePanel(node);
+ }
+ syncBackbar();
+});
+panelListObserver.observe(root,{childList:true});
 syncBackbar();
 const gridObserver=new MutationObserver(apply);
 gridObserver.observe(grid,{childList:true,subtree:true});
