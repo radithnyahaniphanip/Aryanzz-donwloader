@@ -165,11 +165,16 @@ export class MembershipStore {
     const deviceToken = readCookie(request, "aryanzz_device_lock");
     if (!/^[a-f0-9]{64}$/i.test(deviceToken)) return null;
     const db = this.env.AUTH_DB;
-    if (!db || typeof db.prepare !== "function") return null;
-    const lockHash = hex(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(deviceToken.toLowerCase())));
-    const row = await db.prepare("SELECT user_id FROM auth_device_lock_accounts WHERE lock_hash=?1 LIMIT 1").bind(lockHash).first();
-    if (!row || !row.user_id) return null;
-    return { id: String(row.user_id), cookie: null };
+    if (!db || typeof db.prepare !== "function" || String(this.env.AUTH_SESSION_SECRET || "").length < 32) return null;
+    try {
+      const lockHash = hex(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(deviceToken.toLowerCase())));
+      const row = await db.prepare("SELECT user_id FROM auth_device_lock_accounts WHERE lock_hash=?1 LIMIT 1").bind(lockHash).first();
+      if (!row || !row.user_id) return null;
+      return { id: String(row.user_id), cookie: null };
+    } catch (error) {
+      console.warn("[ARYANZZ_MEMBERSHIP] identity_lookup_failed", error && error.name || "unknown");
+      return null;
+    }
   }
 
   apiKey() {
@@ -202,11 +207,11 @@ export class MembershipStore {
     if (path === "/api/membership/payment-config" && method === "GET") {
       const apiKeyReady = !!this.apiKey();
       const identityReady = !!(await this.session(request));
-      const authReady = !!this.env.AUTH_DB && typeof this.env.AUTH_DB.prepare === "function";
+      const authReady = !!this.env.AUTH_DB && typeof this.env.AUTH_DB.prepare === "function" && String(this.env.AUTH_SESSION_SECRET || "").length >= 32;
       const ready = apiKeyReady && authReady && identityReady;
       const missing = [];
       if (!apiKeyReady) missing.push("AIRPAY_API_KEY · Secret API Key AirPay pada Cloudflare Worker");
-      if (!authReady) missing.push("AUTH_DB · database identitas ARYANZZ");
+      if (!authReady) missing.push("AUTH_DB + AUTH_SESSION_SECRET · layanan identitas ARYANZZ");
       if (authReady && !identityReady) missing.push("ID ARYANZZ belum tersinkron pada perangkat ini");
       return json({
         ok: true,
