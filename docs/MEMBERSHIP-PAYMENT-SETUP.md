@@ -1,5 +1,8 @@
 # ARYANZZ V1 Membership payment setup
 
+> **Legacy V1 reference:** this document describes the retired static-QRIS/manual-review flow. The current AirPay QRIS checkout, automatic verification, pricing and Worker-secret setup are documented in [AIRPAY-MEMBERSHIP-SETUP.md](AIRPAY-MEMBERSHIP-SETUP.md).
+
+
 ## Current payment flow
 
 - Membership orders are stored in Cloudflare D1 (AUTH_DB).
