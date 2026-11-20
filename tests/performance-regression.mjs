@@ -22,4 +22,4 @@ const checks=[
  ["All earlier public features retain their endpoints",html.includes('id="platformPicker"')&&html.includes('id="titleSearchBtn"')&&server.includes('async function searchSocial(request)')&&server.includes('async function socialImageSearch(request)')]
 ];
 for(const [label,ok] of checks){assert.ok(ok,label);console.log("✔ "+label);}
-console.log("ARYANZZ V1 speed optimizations regression checks passed.");
+console.log("ARYANZZ V2 speed optimizations regression checks passed.");
