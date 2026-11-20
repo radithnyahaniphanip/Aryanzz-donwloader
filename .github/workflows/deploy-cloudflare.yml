@@ -137,15 +137,16 @@ jobs:
           fi
           echo "ARYANZZ_D1_READY=true" >> "$GITHUB_ENV"
           echo "ARYANZZ D1 account database is ready and AUTH_DB is included in this deployment."
-      - name: Sync ARYANZZ account email and CAPTCHA secrets when configured
+      - name: Sync ARYANZZ account, CAPTCHA and AirPay secrets when configured
         env:
           AUTH_SESSION_SECRET: ${{ secrets.AUTH_SESSION_SECRET }}
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           AUTH_EMAIL_FROM: ${{ secrets.AUTH_EMAIL_FROM }}
           TURNSTILE_SECRET_KEY: ${{ secrets.TURNSTILE_SECRET_KEY || secrets.TURNSTILE_SECRET || secrets.CF_TURNSTILE_SECRET_KEY }}
           AUTH_TURNSTILE_SITE_KEY: ${{ secrets.AUTH_TURNSTILE_SITE_KEY || secrets.TURNSTILE_SITE_KEY || secrets.CF_TURNSTILE_SITE_KEY }}
+          AIRPAY_API_KEY: ${{ secrets.AIRPAY_API_KEY }}
         run: |
-          for name in AUTH_SESSION_SECRET RESEND_API_KEY AUTH_EMAIL_FROM TURNSTILE_SECRET_KEY AUTH_TURNSTILE_SITE_KEY; do
+          for name in AUTH_SESSION_SECRET RESEND_API_KEY AUTH_EMAIL_FROM TURNSTILE_SECRET_KEY AUTH_TURNSTILE_SITE_KEY AIRPAY_API_KEY; do
             value="$(printenv "$name" || true)"
             if [ -n "$value" ]; then
               printf '%s' "$value" | wrangler secret put "$name"
@@ -179,6 +180,7 @@ jobs:
           AUTH_EMAIL_FROM: ${{ secrets.AUTH_EMAIL_FROM }}
           TURNSTILE_SECRET_KEY: ${{ secrets.TURNSTILE_SECRET_KEY || secrets.TURNSTILE_SECRET || secrets.CF_TURNSTILE_SECRET_KEY }}
           AUTH_TURNSTILE_SITE_KEY: ${{ secrets.AUTH_TURNSTILE_SITE_KEY || secrets.TURNSTILE_SITE_KEY || secrets.CF_TURNSTILE_SITE_KEY }}
+          AIRPAY_API_KEY: ${{ secrets.AIRPAY_API_KEY }}
         run: |
           set -euo pipefail
           cp wrangler.toml wrangler-backup.toml
@@ -187,7 +189,7 @@ jobs:
           sed -i 's#ARYANZZ_PUBLIC_ORIGIN = "https://aryanzz-donwloader.aryanz.workers.dev"#ARYANZZ_PUBLIC_ORIGIN = "https://aryanzz-backup.aryanz.workers.dev"#' wrangler-backup.toml
           grep -q 'name = "aryanzz-backup"' wrangler-backup.toml
           grep -q 'ARYANZZ_PUBLIC_ORIGIN = "https://aryanzz-backup.aryanz.workers.dev"' wrangler-backup.toml
-          node --input-type=module -e 'import fs from "node:fs"; const names=["AUDD_API_TOKEN","AUTH_SESSION_SECRET","RESEND_API_KEY","AUTH_EMAIL_FROM","TURNSTILE_SECRET_KEY","AUTH_TURNSTILE_SITE_KEY"]; const secrets=Object.fromEntries(names.map(name=>[name,process.env[name]||""]).filter(([,value])=>value)); if(Object.keys(secrets).length)fs.writeFileSync("/tmp/aryanzz-backup-secrets.json",JSON.stringify(secrets));'
+          node --input-type=module -e 'import fs from "node:fs"; const names=["AUDD_API_TOKEN","AUTH_SESSION_SECRET","RESEND_API_KEY","AUTH_EMAIL_FROM","TURNSTILE_SECRET_KEY","AUTH_TURNSTILE_SITE_KEY","AIRPAY_API_KEY"]; const secrets=Object.fromEntries(names.map(name=>[name,process.env[name]||""]).filter(([,value])=>value)); if(Object.keys(secrets).length)fs.writeFileSync("/tmp/aryanzz-backup-secrets.json",JSON.stringify(secrets));'
           if [ -s /tmp/aryanzz-backup-secrets.json ]; then
             wrangler --config wrangler-backup.toml deploy --keep-vars --secrets-file /tmp/aryanzz-backup-secrets.json 2>&1 | tee /tmp/aryanzz-backup-deploy.log
           else
