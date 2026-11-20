@@ -688,7 +688,15 @@ export class MembershipStore {
       if (totalAmount && totalAmount !== Number(order.totalAmount)) {
         return json({ ok: false, error: "Total pembayaran webhook tidak cocok dengan pesanan." }, 409);
       }
-      await this.activateMembership(order, data);
+      try {
+        await this.checkOrderStatus(order);
+      } catch (error) {
+        return json({ ok: false, error: "Webhook diterima, tetapi verifikasi status AirPay belum berhasil: " + String(error && error.message || error).slice(0, 140) }, 503);
+      }
+      const verifiedOrder = await this.ctx.storage.get("order:" + orderId);
+      if (!verifiedOrder || verifiedOrder.status !== "paid") {
+        return json({ ok: false, error: "Status AirPay belum terkonfirmasi lunas. Webhook akan dicoba kembali." }, 503);
+      }
     } else if (status === "expired" || status === "failed") {
       order.status = status;
       order.note = "Status invoice diperbarui melalui webhook AirPay.";
