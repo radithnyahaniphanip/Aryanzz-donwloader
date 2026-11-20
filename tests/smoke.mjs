@@ -151,7 +151,7 @@ const checks=[
   ["Invidious media URLs are resolved against the active instance and allowed for download",downloader.includes("new URL(raw,trustedOrigin||undefined)")&&downloader.includes("browserHybridMediaUrl(selected.url,instance)")],
   ["MP4 quality options are derived from actual available video streams",downloader.includes("const hasVideo=")&&downloader.includes("if(videoOption)videoOption.disabled=!hasVideo")],
 
-  ["Progressive MP4 uses a one-byte Worker preflight and direct Chrome attachment streaming",downloader.includes("probe=1")&&downloader.includes("link.download=filename")&&downloader.includes("youtube-ready-link")&&downloader.includes("Tekan tombol unduh di bawah")&&workerSource.includes("content-disposition")],
+  ["Progressive MP4 is preflighted, validated, then saved through the browser download handoff",workerSource.includes('u.searchParams.get("probe")==="1"')&&downloader.includes("probe=1")&&downloader.includes("async function probeYoutubeTrack")&&downloader.includes("await saveBrowserBlob(blob,filename,progressText.parentElement")&&downloader.includes("handoffDownloadToChrome")],
   ["Adaptive MP4 remux fallback uses device-aware memory budgets",downloader.includes("function youtubeMuxMemoryBudget")&&downloader.includes("maxTrack:280*1024*1024")&&downloader.includes("maxCombined:440*1024*1024")&&downloader.includes("melewati batas aman memori perangkat")&&downloader.includes("progressiveFallback")],
   ["Browser CORS failure on adaptive tracks is reported instead of claiming success",downloader.includes("browserError=error")&&downloader.includes("detail.error||browserError.message")],
   ["legacy competing downloader handler removed",!v15.includes("button.onclick=async()=>{")],
