@@ -174,7 +174,7 @@
     row.append(remove);
     items.append(row);
     byId("membershipCartTotal").textContent = money(price);
-    byId("membershipCartCheckout").disabled = !state.checkoutEnabled;
+    byId("membershipCartCheckout").disabled = !state.checkoutEnabled || !!state.activeOrderId;
   }
 
   function addToCart(plan) {
@@ -198,7 +198,11 @@
       return;
     }
     if (!state.checkoutEnabled) {
-      setMessage("Checkout belum siap. Pastikan akun tersinkron dan API Key AirPay sudah dipasang pada server.", "warning");
+      setMessage("Checkout belum siap. API Key AirPay harus dipasang sebagai Secret pada Cloudflare Worker.", "warning");
+      return;
+    }
+    if (state.activeOrderId) {
+      setMessage("Masih ada invoice yang menunggu status final AirPay. ARYANZZ mencegah pembuatan tagihan ganda.", "warning");
       return;
     }
     state.selectedPlan = plan;
