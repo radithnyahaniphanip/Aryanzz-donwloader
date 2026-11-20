@@ -192,7 +192,7 @@ async function createAirpayOrder(request,env,user){
   external_id:id,
   description:"ARYANZZ Membership "+plan.name+" "+plan.periodLabel,
   callback_url:origin+"/api/membership/webhook",
-  return_url:origin+"/?membership=return&order="+encodeURIComponent(id)
+  return_url:origin+"/?membership=return"
  };
  try{
   const response=await fetch(API_ORIGIN+"/api/qris/create",{
