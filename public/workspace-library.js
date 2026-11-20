@@ -12,10 +12,20 @@ function renderLibrary(){
  const hist=readHistory(),favs=readFavorites();
  $('aryLibraryHistoryCount').textContent=hist.length;$('aryLibraryFavoriteCount').textContent=favs.length;
  $('aryLibraryHistoryBadge').textContent=hist.length;$('aryLibraryFavoriteBadge').textContent=favs.length;
+ const query=String($('aryLibrarySearch')?.value||'').trim().toLocaleLowerCase('id-ID');
  const draw=(id,items,kind)=>{
   const box=$(id);box.innerHTML='';
-  if(!items.length){const empty=document.createElement('div');empty.className='ary-library-empty-state';empty.innerHTML=kind==='history'?'<span style="font-size:25px">◷</span><b>Belum ada riwayat</b><small>Aktivitas unduhanmu akan muncul di sini.</small>':'<span style="font-size:25px">♡</span><b>Belum ada favorit</b><small>Tekan ikon bintang pada riwayat untuk menyimpan item.</small>';box.append(empty);return}
-  items.forEach((item,index)=>{
+  const visibleItems=items.filter(item=>!query||[item.name,item.url,item.platform,item.title].some(value=>String(value||'').toLocaleLowerCase('id-ID').includes(query)));
+  if(!visibleItems.length){
+   const empty=document.createElement('div');empty.className='ary-library-empty-state';
+   if(items.length){
+    empty.innerHTML='<span class="ary-library-empty-icon">⌕</span><b>Tidak ada hasil yang cocok</b><small>Coba kata kunci lain atau hapus pencarian.</small>';
+   }else{
+    empty.innerHTML=kind==='history'?'<span class="ary-library-empty-icon">◷</span><b>Belum ada riwayat</b><small>Aktivitas unduhanmu akan muncul di sini.</small>':'<span class="ary-library-empty-icon">♡</span><b>Belum ada favorit</b><small>Tekan ikon bintang pada riwayat untuk menyimpan item.</small>';
+   }
+   box.append(empty);return;
+  }
+  visibleItems.forEach((item,index)=>{
    const row=document.createElement('div');row.className='ary-library-item';
    const icon=document.createElement('span');icon.className='ary-library-item-icon';icon.textContent=(item.name||'').match(/\.mp3|\.m4a|\.wav/i)?'♫':'▶';
    const main=document.createElement('div');main.className='ary-library-item-main';
@@ -39,6 +49,7 @@ function setLibraryTab(tab){
  $('aryLibraryHistoryView').hidden=!history;$('aryLibraryFavoriteView').hidden=history;
 }
 $('aryLibraryHistoryTab').onclick=()=>setLibraryTab('history');$('aryLibraryFavoriteTab').onclick=()=>setLibraryTab('favorite');
+$('aryLibrarySearch')?.addEventListener('input',renderLibrary);
 $('clearHistoryV2').onclick=()=>{if(confirm('Hapus semua riwayat pada perangkat ini?')){localStorage.removeItem(historyKey);renderHistory();renderLibrary()}};
 $('clearFavoritesV2').onclick=()=>{if(confirm('Hapus semua favorit pada perangkat ini?')){localStorage.removeItem(favoritesKey);renderLibrary()}};
 
