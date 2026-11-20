@@ -1483,12 +1483,16 @@ async function searchSocial(request){
     }
     if((platform==="all"||platform==="youtube")&&!candidates.some(item=>platformIdForUrl(item.url)==="youtube"&&strictTitleIntentScore(query,item.title,item.snippet||"")>=0.7)){
       // Community YouTube providers are only used when the indexed search found no YouTube candidate.
-      const youtubeTerms=[query,query+" lagu",query+" song",query+" official audio",query+" DJ remix",...variants]
+      const youtubeTerms=(desiredMode==="audio"
+        ?[query,query+" official audio",query+" song",query+" lagu",query+" DJ remix",...variants]
+        :[query,query+" official video",query+" video",query+" lagu",query+" song",query+" DJ remix",...variants])
         .map(value=>String(value||"").replace(/\s+/g," ").trim())
-        .filter((value,index,array)=>value.length>=2&&array.indexOf(value)===index).slice(0,platform==="all"?3:5);
+        .filter((value,index,array)=>value.length>=2&&array.indexOf(value)===index).slice(0,platform==="all"?4:6);
+      // For all-platform searches, retry YouTube with both the raw title and a video/audio intent.
+      // This avoids losing Indonesian song titles when public social indexes return unrelated posts.
       const [hybridPages,directYoutube]=await Promise.all([
-        Promise.all(youtubeTerms.slice(0,platform==="all"?1:2).map(term=>hybridYouTubeSearch(term))),
-        freeYouTubeSearchItems(query,youtubeTerms.slice(0,platform==="all"?2:3),platform==="all"?6300:7500)
+        Promise.all(youtubeTerms.slice(0,2).map(term=>hybridYouTubeSearch(term))),
+        freeYouTubeSearchItems(query,youtubeTerms.slice(0,platform==="all"?3:4),platform==="all"?7600:8500)
       ]);
       for(const page of hybridPages)for(const item of page?.results||[]){
         if(!seen.has(item.url)){seen.add(item.url);candidates.push({...item,platform:"youtube",snippet:item.channel||"YouTube video",searchProvider:item.provider||"YouTube public search"});}
@@ -1552,7 +1556,7 @@ async function searchSocial(request){
       resultSeen.add(item.url);results.push(item);
       if(results.length>=resultLimit)break;
     }
-    const fallbackUsed=platform!=="all"&&platform!=="youtube"&&(fallbackSearchOnly.length>0||verifiedResults.some(item=>item.platform==="youtube"));
+    const fallbackUsed=platform!=="youtube"&&(fallbackSearchOnly.length>0||verifiedResults.some(item=>item.platform==="youtube")||(platform==="all"&&youtubeFallbackAttempted&&youtubeFallbackCandidateCount>0));
     const resultsWithThumbnails=results; // Kandidat tanpa gambar tidak menunggu pengambilan thumbnail eksternal.
     const searchOnlyCount=resultsWithThumbnails.filter(item=>item.searchOnly===true).length;
     const verifiedCount=resultsWithThumbnails.filter(item=>item.verified===true&&item.downloadable===true).length;
