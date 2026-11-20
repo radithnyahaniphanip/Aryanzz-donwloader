@@ -54,7 +54,7 @@ const checks = [
   ["Workspace layout mounts Toolbox before search/back navigation initializes",
     workspaceScriptOrder.every(index => index >= 0) && workspaceScriptOrder.every((index, i) => i === 0 || workspaceScriptOrder[i - 1] < index) &&
     toolboxJs.includes('panel.id="toolbox100"') && toolboxJs.includes("toolsArea.insertBefore(panel,profilePanel||null)") &&
-    workspaceLayoutJs.includes("normalizeWorkspaceLayout();") && workspaceToolsJs.includes("root.insertBefore(backbar,root.firstChild)") && navigationJs.includes("candidate.parentElement!==toolsArea")],
+    workspaceLayoutJs.includes("normalizeWorkspaceLayout();") && workspaceToolsJs.includes("root.insertBefore(backbar,root.firstChild)") && workspaceToolsJs.includes("const observedPanels=new WeakSet()") && workspaceToolsJs.includes("panelListObserver.observe(root,{childList:true})") && navigationJs.includes("candidate.parentElement!==toolsArea")],
   ["Profile, Tools and Toolbox keep independent ownership inside the single V2 release",
     workspace.workspaces.profile.root === "#profile" && workspace.workspaces.profile.js.includes("/v25.js") &&
     workspace.workspaces.tools.root === "#toolsArea" && workspace.workspaces.tools.js.includes("/workspace-tools.js") &&
