@@ -315,7 +315,7 @@
     if(navigator.userAgentData?.getHighEntropyValues){
       navigator.userAgentData.getHighEntropyValues(["model","platformVersion","architecture","bitness","fullVersionList"]).then(data=>{
         const model=String(data?.model||"").trim();
-        if(model.length>=2&&!/^(?:Linux|Android|Mobile)$/i.test(model)){
+        if(model.length>=2&&!/^(?:Linux|Android|Mobile)$/i.test(model)&&(info.model==="Tidak dibagikan browser"||model.length>info.model.length)){
           writeDeviceSpec("model",model);
           const current=$("deviceCurrent");
           if(current)current.textContent=[model,info.os.split(" ")[0],info.browser.split(" ")[0]].join(" / ");
