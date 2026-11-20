@@ -59,11 +59,19 @@ const sitemapPath = resolve(root, "public/sitemap.xml");
 if (existsSync(sitemapPath)) {
   const sitemap = readFileSync(sitemapPath, "utf8");
   const sitemapDate = new Date().toISOString().slice(0, 10);
-  const refreshedSitemap = sitemap.replace(
-    /(<url>\\s*<loc>[^<]+<\\/loc>\\s*<lastmod>)[^<]*(<\\/lastmod>)/,
-    "$1" + sitemapDate + "$2"
-  );
-  if (refreshedSitemap !== sitemap) writeFileSync(sitemapPath, refreshedSitemap);
+  const homeStart = sitemap.indexOf("<url>");
+  const homeEnd = sitemap.indexOf("</url>", homeStart);
+  if (homeStart >= 0 && homeEnd > homeStart) {
+    const homeEntry = sitemap.slice(homeStart, homeEnd);
+    const lastmodStart = homeEntry.indexOf("<lastmod>");
+    const lastmodEnd = homeEntry.indexOf("</lastmod>", lastmodStart);
+    if (lastmodStart >= 0 && lastmodEnd > lastmodStart) {
+      const valueStart = lastmodStart + "<lastmod>".length;
+      const refreshedHomeEntry = homeEntry.slice(0, valueStart) + sitemapDate + homeEntry.slice(lastmodEnd);
+      const refreshedSitemap = sitemap.slice(0, homeStart) + refreshedHomeEntry + sitemap.slice(homeEnd);
+      writeFileSync(sitemapPath, refreshedSitemap);
+    }
+  }
 }
 
 const shellMatch = sw.match(/const SHELL=\[(.*?)\];/s);
