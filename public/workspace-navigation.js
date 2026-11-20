@@ -25,7 +25,7 @@ function showPanel(id){
   if(!candidate||candidate.parentElement!==toolsArea||!candidate.classList.contains("panel"))panelId="allTools";
  }
  const isHome=!panelId;
- const view=isHome?"home":panelId==="owner"?"owner":panelId==="profile"?"profile":panelId==="history"?"library":panelId==="allTools"?"tools":"tool";
+ const view=isHome?"home":panelId==="owner"?"owner":panelId==="profile"?"profile":panelId==="membership"?"membership":panelId==="history"?"library":panelId==="allTools"?"tools":"tool";
  document.body.dataset.view=view;
  home.hidden=!isHome;
  home.inert=!isHome;
@@ -42,7 +42,7 @@ function showPanel(id){
   panel.setAttribute("aria-hidden",String(!active));
   panel.classList.remove("v677-enter","v677-reveal","v25-reveal");
  });
- const navKey=isHome?"home":panelId==="history"?"history":panelId==="owner"?"owner":panelId==="profile"?"profile" :"allTools";
+ const navKey=isHome?"home":panelId==="history"?"history":panelId==="owner"?"owner":panelId==="profile"?"profile":panelId==="membership"?"membership" :"allTools";
  nav.querySelectorAll("[data-nav]").forEach(button=>{
   const active=button.dataset.nav===navKey;
   button.classList.toggle("active",active);
