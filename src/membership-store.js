@@ -89,10 +89,12 @@ function readCookie(request, name = "aryanzz_device_lock") {
   return part ? part.slice(prefix.length) : "";
 }
 
-function safeHttpsUrl(value) {
+function safeAirPayUrl(value) {
   try {
     const url = new URL(String(value || ""));
-    if (url.protocol !== "https:" || url.username || url.password) return "";
+    const host = url.hostname.toLowerCase();
+    if (url.protocol !== "https:" || url.username || url.password ||
+        !(host === "airpaygateway.site" || host.endsWith(".airpaygateway.site"))) return "";
     return url.href;
   } catch {
     return "";
@@ -384,21 +386,43 @@ export class MembershipStore {
     }
 
     const priorOrders = await this.ctx.storage.get("orders:" + session.id) || [];
-    const pending = priorOrders.find(order =>
-      order.status === "pending" &&
-      (!order.expiryAt || new Date(order.expiryAt).getTime() > Date.now())
-    );
+    let pending = null;
+    for (const candidate of priorOrders.filter(order => order.status === "pending")) {
+      if (candidate.transactionId) {
+        try {
+          // Reconcile with AirPay before allowing another invoice. The local
+          // 10-minute checkout timer must never create a duplicate payable QR.
+          await this.checkOrderStatus(candidate);
+        } catch (error) {
+          console.warn("[ARYANZZ_MEMBERSHIP] pending_order_reconcile_failed", error && error.name || "unknown");
+        }
+      }
+      const latest = await this.ctx.storage.get("order:" + candidate.id) || candidate;
+      if (latest.status !== "pending") continue;
+      if (!latest.transactionId && Date.now() - Number(latest.createdAt || 0) > 2 * 60 * 1000) {
+        latest.status = "rejected";
+        latest.note = "Invoice tidak selesai dibuat oleh gateway dan ditutup otomatis.";
+        await this.ctx.storage.put("order:" + latest.id, latest);
+        await this.saveOrderList(session.id, latest);
+        continue;
+      }
+      pending = latest;
+      break;
+    }
     if (pending) {
       return json({
         ok: false,
         code: "PENDING_ORDER_EXISTS",
-        error: "Masih ada invoice yang menunggu pembayaran. Lanjutkan pembayaran sebelumnya terlebih dahulu.",
+        error: pending.checkoutExpiresAt && Date.now() >= Number(pending.checkoutExpiresAt)
+          ? "Waktu checkout 10 menit sudah habis. ARYANZZ menutup QR dari halaman, tetapi tetap mencocokkan status invoice AirPay sampai gateway menyatakan transaksi berakhir agar tidak terjadi pembayaran ganda."
+          : "Masih ada invoice yang menunggu pembayaran. Lanjutkan pembayaran sebelumnya terlebih dahulu.",
         order: publicOrder(pending),
         payment: {
           provider: "AirPay QRIS",
           qrUrl: pending.qrUrl || null,
           payUrl: pending.payUrl || null,
           totalAmount: pending.totalAmount || pending.amount,
+          feeAmount: pending.feeAmount || 0,
           expiryAt: pending.expiryAt || null
         }
       }, 409);
@@ -461,10 +485,14 @@ export class MembershipStore {
 
       const invoice = payload.data || payload;
       const transactionId = String(invoice.transaction_id || invoice.id || "").trim();
-      const qrUrl = safeHttpsUrl(invoice.qr_url);
-      const payUrl = safeHttpsUrl(invoice.pay_url);
+      const returnedExternalId = String(invoice.external_id || "").trim();
+      const qrUrl = safeAirPayUrl(invoice.qr_url);
+      const payUrl = safeAirPayUrl(invoice.pay_url);
+      if (returnedExternalId && returnedExternalId !== id) {
+        throw new Error("Referensi invoice yang dikembalikan AirPay tidak cocok dengan pesanan ARYANZZ.");
+      }
       if (!transactionId || !qrUrl) {
-        throw new Error("AirPay harus mengembalikan transaction_id dan qr_url agar pembayaran dapat dipindai langsung di ARYANZZ.");
+        throw new Error("AirPay harus mengembalikan transaction_id dan qr_url resmi agar QR pembayaran dapat dipindai langsung di ARYANZZ.");
       }
       if (invoice.base_amount !== undefined && Number(invoice.base_amount) !== amount) {
         throw new Error("Nominal dasar invoice AirPay tidak cocok dengan harga paket.");
@@ -483,7 +511,11 @@ export class MembershipStore {
         throw new Error("Rincian biaya invoice AirPay tidak konsisten.");
       }
       order.expiryAt = invoice.expiry_at || new Date(now + 15 * 60 * 1000).toISOString();
-      order.note = "Invoice QRIS dibuat. Menunggu pembayaran.";
+      const gatewayExpiry = Date.parse(order.expiryAt);
+      order.checkoutExpiresAt = Number.isFinite(gatewayExpiry)
+        ? Math.min(now + 10 * 60 * 1000, gatewayExpiry)
+        : now + 10 * 60 * 1000;
+      order.note = "Invoice QRIS dibuat. Sesi checkout ARYANZZ berlaku 10 menit; status gateway tetap direkonsiliasi sampai final.";
       await this.ctx.storage.put("order:" + id, order);
       await this.saveOrderList(session.id, order);
       await this.scheduleStatusCheck();
