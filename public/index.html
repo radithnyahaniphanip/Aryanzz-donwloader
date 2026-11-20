@@ -1444,13 +1444,16 @@ function aryPlatformForUrl(raw){
  try{
   const dynamic=window.aryanzzPlatformForUrl?.(raw);if(dynamic)return dynamic;
   const host=new URL(raw).hostname.toLowerCase().replace(/^www\./,"");
+  const catalog=[...(Array.isArray(window.ARYANZZ_PLATFORM_CATALOG)?window.ARYANZZ_PLATFORM_CATALOG:[]),...(Array.isArray(window.ARYANZZ_PLATFORM_CATALOG_FALLBACK)?window.ARYANZZ_PLATFORM_CATALOG_FALLBACK:[])];
+  const catalogEntry=catalog.find(platform=>(platform.domains||[]).some(domain=>host===domain||host.endsWith("."+domain)));
+  if(catalogEntry)return catalogEntry.aliasOf||catalogEntry.id;
   const rules=[
    [/^(?:youtube\.com|m\.youtube\.com|music\.youtube\.com|youtu\.be|www\.youtu\.be|youtube-nocookie\.com|www\.youtube-nocookie\.com)$/, "youtube"],
    [/(?:^|\.)tiktok\.com$/, "tiktok"],[/(?:^|\.)instagram\.com$|^instagr\.am$/, "instagram"],
    [/(?:^|\.)snackvideo\.com$/, "snackvideo"],[/(?:^|\.)capcut\.com$/, "capcut"],
    [/(?:^|\.)pinterest\.com$|^pin\.it$/, "pinterest"],[/(?:^|\.)facebook\.com$|^fb\.watch$/, "facebook"],
    [/(?:^|\.)(?:x\.com|twitter\.com)$/, "x"],[/(?:^|\.)reddit\.com$|^redd\.it$|^v\.redd\.it$/, "reddit"],
-   [/(?:^|\.)vimeo\.com$/, "vimeo"],[/(?:^|\.)threads\.net$/, "threads"],
+   [/(?:^|\.)vimeo\.com$/, "vimeo"],[/(?:^|\.)threads\.net$|(?:^|\.)threads\.com$/, "threads"],
    [/(?:^|\.)soundcloud\.com$/, "soundcloud"],[/(?:^|\.)snapchat\.com$/, "snapchat"],
    [/(?:^|\.)idntimes\.com$/, "idnapp"],[/(?:^|\.)linkedin\.com$/, "linkedin"],
    [/(?:^|\.)(?:wechat\.com|weixin\.qq\.com)$/, "wechat"],[/(?:^|\.)kakao\.com$/, "kakaotalk"]
