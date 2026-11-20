@@ -89,7 +89,7 @@ try{
   assert.equal(stalled.response.status,502,"a stalled probe body must fail promptly instead of hanging like a full download");
   assert.match(stalled.data?.error||"",/Stream tidak mengirim data/,"the stalled probe must report its bounded stream timeout");
 
-  console.log("ARYANZZ social media file preflight, alternate upstream retry, and bounded probe timeout tests passed.");
+  console.log("ARYANZZ social media file preflight, bounded fast retries, alternate upstream fallback, and stalled-stream timeout tests passed.");
 }finally{
   globalThis.fetch=originalFetch;
 }
