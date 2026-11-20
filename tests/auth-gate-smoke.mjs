@@ -13,7 +13,7 @@ assert.ok(client.includes("function openAccount")&&client.includes("function clo
 assert.ok(client.includes('gate.hidden = !!user || (!ownerMode && !window.ARYANZZAccountOpen)'),"Guests must remain in public mode until they explicitly open the account dialog");
 assert.ok(client.includes('node.hidden = needsServerCaptcha'),"Local CAPTCHA should be shown only when server CAPTCHA is unavailable");
 assert.ok(client.includes("window.aryanzzAuthReady"),"Guest identity bootstrap must wait for account restoration");
-assert.ok(client.includes("const saved=localSession()")&&client.includes("setUser(localUser,true)"),"Existing same-browser local accounts must be restored");
+assert.ok(client.includes("const saved=localSession()")&&client.includes("localStorage.removeItem(SESSION_KEY)")&&client.includes("Login lokal dinonaktifkan")&&!client.includes("if(localUser){setUser(localUser,true);return;}"),"Legacy local accounts must remain available for explicit migration, but browser-stored local sessions must never be auto-restored");
 assert.ok(client.includes("accountUser=user?{...user,localOnly:!!localOnly}:null"),"The client must label local-only accounts so Membership does not treat them as server accounts");
 assert.ok(client.includes('post("/api/auth/login"')&&client.includes('post("/api/auth/register/start"'),"Online login and registration must use the account API when configured");
 assert.ok(client.includes('post("/api/auth/reset/device/start"')&&client.includes('post("/api/auth/reset/device/verify"'),"Online password reset must verify the previously registered device");
