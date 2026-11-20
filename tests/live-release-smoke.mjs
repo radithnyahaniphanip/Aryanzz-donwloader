@@ -161,6 +161,10 @@ async function waitForVersionedJson(path,label){
   throw new Error(label+" belum mengikuti versi Worker "+version+" setelah menunggu propagasi; respons terakhir: "+last);
 }
 const release=await waitForVersionedJson("/release.json","Metadata release.json");
+const updateManifest=await waitForVersionedJson("/release-manifest.json","Update manifest");
+assert.ok(Array.isArray(updateManifest.files)&&updateManifest.files.length>=80,"Update manifest must contain the complete service-worker asset shell");
+assert.equal(Number(updateManifest.totalBytes),updateManifest.files.reduce((sum,file)=>sum+(Number(file.bytes)||0),0),"Update manifest total byte size must match its file entries");
+assert.ok(updateManifest.files.some(file=>String(file.url||"").includes("update-manager.js")),"Update manifest must include the update manager");
 const manifest=await waitForVersionedJson("/manifest.webmanifest?v="+version,"PWA manifest");
 assert.equal(release.release,"V1","Public release label must remain V1");
 assert.equal(manifest.name,"ARYANZZ","Installed PWA name must use the ARYANZZ brand");
@@ -174,6 +178,7 @@ const swResponse=await request("/sw.js");
 assert.equal(swResponse.status,200,"Service worker tidak tersedia");
 const sw=await swResponse.text();
 assert.ok(sw.includes("aryanzz-build-"+version),"Namespace cache PWA tidak mengikuti versi build");
+assert.ok(sw.includes("ARYANZZ_UPDATE_PROGRESS")&&sw.includes("installReleaseAssets")&&sw.includes("release-manifest.json"),"Service worker must report measurable update-download progress and install the complete release manifest");
 assert.ok(sw.includes("/speed-test.js?v="+version),"Service worker belum mencache controller Speed Test dengan versi terbaru");
 assert.ok(sw.includes("/link-bypass.js?v="+version),"Service worker belum mencache Link Bypass dengan versi terbaru");
 for(const asset of ["workspace-home.css","workspace-tools.css","workspace-library.css","workspace-navigation.css","workspace-home.js","workspace-layout.js","workspace-library.js","workspace-tools.js","workspace-navigation.js","workspace-manifest.json"])assert.ok(sw.includes("/"+asset+"?v="+version),"Service worker belum mencache modul workspace: "+asset);
