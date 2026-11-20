@@ -22,4 +22,4 @@ assert.ok(!navigationJs.includes("localStorage.setItem(SESSION_KEY") && !navigat
 assert.ok(!authJs.includes("const sessionUser = session && Array.isArray(users)"), "Auth must not restore bypassable browser-only login sessions");
 assert.ok(authCss.includes(".ary-auth-gate") && !/(^|[},])\s*(body|html|\.panel|input|button)\s*\{/m.test(authCss), "Auth CSS must remain scoped to Auth components");
 assert.ok(manifest.architectureGuard?.requiredChecks?.includes("module-boundaries-smoke"));
-console.log("ARYANZZ V1 module-boundary and feature-isolation checks passed.");
+console.log("ARYANZZ V2 module-boundary and feature-isolation checks passed.");
