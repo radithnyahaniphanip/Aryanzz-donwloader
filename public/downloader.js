@@ -1740,7 +1740,7 @@ function socialNetworkPlan(selected=0){
       // Share-link resolution and image extraction may require multiple upstream requests.
       // Do not cancel those requests earlier than the backend's own fallback budget.
       const imageCheckTimeout=fast?9000
-        :(slowSocialSource?38000:((isTikTokPhotoPost||isTikTokShortLink)?34000:(isYouTubePhotoPost||isPhotoRoute||isSocialImagePostRoute)?20000:16000));
+        :(isThreadsPlatform?16000:(slowSocialSource?20000:((isTikTokPhotoPost||isTikTokShortLink)?28000:(isYouTubePhotoPost||isPhotoRoute||isSocialImagePostRoute)?18000:14000)));
       const imageExtractionPromise=shouldTryImageExtraction
         ?(async()=>{
           const endpoint="/api/image/extract?url="+encodeURIComponent(url.href);
