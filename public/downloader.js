@@ -135,7 +135,7 @@
       throw new Error(String(failure.error||"File langsung tidak dapat diperiksa (HTTP "+response.status+").").slice(0,240));
     }
     const responseMime=String(response.headers.get("content-type")||"").split(";")[0].trim().toLowerCase();
-    if(/^(?:text\\/|application\\/(?:json|xml|x-mpegurl|vnd\\.apple\\.mpegurl))/i.test(responseMime))throw new Error("URL tersebut mengirim halaman atau data teks, bukan file media.");
+    if(/^(?:text\/|application\/(?:json|xml|x-mpegurl|vnd\.apple\.mpegurl))/i.test(responseMime))throw new Error("URL tersebut mengirim halaman atau data teks, bukan file media.");
     if(descriptor.mode==="video"&&(responseMime.startsWith("audio/")||responseMime.startsWith("image/")))throw new Error("Tipe file sumber bukan video.");
     if(descriptor.mode==="audio"&&(responseMime.startsWith("video/")||responseMime.startsWith("image/")))throw new Error("Tipe file sumber bukan audio.");
     const reader=response.body?.getReader();
@@ -150,8 +150,8 @@
       }
     }finally{await reader.cancel().catch(()=>{});}
     if(!directMediaSignatureMatches(prefix,descriptor.extension))throw new Error("Ekstensi URL terdeteksi, tetapi isi file tidak cocok dengan tanda tangan "+descriptor.extension.toUpperCase()+". File tidak akan disimpan.");
-    const range=String(response.headers.get("content-range")||"").match(/^bytes\\s+\\d+-\\d+\\/(\\d+)$/i);
-    const size=Number(range?.[1])||Number(response.headers.get("content-length")||0)||0;
+    const range=String(response.headers.get("content-range")||"").match(/^bytes\s+\d+-\d+\/(\d+)$/i);
+    const size=Number(range?.[1])||(response.status===206?0:Number(response.headers.get("content-length")||0))||0;
     return {mimeType:responseMime&&!responseMime.includes("octet-stream")?responseMime:descriptor.mimeType,size,rangeSupported:response.status===206};
   }
   async function directMediaInfo(url,descriptor){
@@ -159,7 +159,7 @@
     let filename="";
     try{filename=decodeURIComponent(url.pathname.split("/").pop()||"")}catch{}
     filename=filename.replace(/[\\\\:*?"<>|]+/g,"_").slice(0,100);
-    const title=filename.replace(/\\.[a-z0-9]{2,8}$/i,"").replace(/[-_]+/g," ").trim()||"File media langsung";
+    const title=filename.replace(/\.[a-z0-9]{2,8}$/i,"").replace(/[-_]+/g," ").trim()||"File media langsung";
     return {
       ok:true,title,filename,extension:descriptor.extension,type:descriptor.mode,mimeType:probe.mimeType,size:probe.size,
       directMedia:true,sourceLabel:"File langsung",
