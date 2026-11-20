@@ -48,6 +48,7 @@ jobs:
           node --check tests/auth-backend-smoke.mjs
           node --check tests/live-runtime-config-smoke.mjs
           node --check tests/live-release-smoke.mjs
+          node --check tests/live-browser-compatibility.mjs
           node --check tests/live-platform-matrix.mjs
           node --check tests/live-tiktok-user-link.mjs
           node --check tests/live-threads-user-links.mjs
@@ -216,6 +217,16 @@ jobs:
         env:
           WORKER_URL: https://aryanzz-donwloader.aryanz.workers.dev
         run: node tests/live-release-smoke.mjs
+      - name: Install Chromium for live desktop and Android-emulation QA
+        run: |
+          npm install --prefix /tmp/aryanzz-qa --no-save playwright@latest
+          /tmp/aryanzz-qa/node_modules/.bin/playwright install --with-deps chromium
+      - name: Verify direct media formats and desktop/Android browser behavior
+        env:
+          WORKER_URL: https://aryanzz-donwloader.aryanz.workers.dev
+          EXPECTED_BUILD_VERSION: ${{ env.EXPECTED_BUILD_VERSION }}
+          PLAYWRIGHT_MODULE: /tmp/aryanzz-qa/node_modules/playwright/index.mjs
+        run: node tests/live-browser-compatibility.mjs
       - name: Verify secondary Cloudflare Worker and public guest access
         continue-on-error: true
         env:
