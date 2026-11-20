@@ -108,7 +108,7 @@ try{
   }),{});
   assert.equal(youtubeSocialTitleSearch.status,200,"YouTube selected-platform search must use the shared source-aware title-search route");
   const youtubeSocialData=await youtubeSocialTitleSearch.json();
-  assert.ok(youtubeSocialData.results.some(item=>item.platform==="youtube"&&/tabola bale/i.test(item.title)),"Selecting YouTube in the UI must display official YouTube results inside ARYANZZ");
+  assert.ok(youtubeSocialData.results.some(item=>item.platform==="youtube"&&/tabola bale/i.test(item.title)),"Selecting YouTube in the UI must display official YouTube results inside ARYANZZ: "+JSON.stringify({fallbackAttempted:youtubeSocialData.youtubeFallbackAttempted,fallbackCount:youtubeSocialData.youtubeFallbackCandidateCount,variants:youtubeSocialData.searchVariants,diagnostics:youtubeSocialData.providerDiagnostics,results:youtubeSocialData.results}));
   assert.ok(youtubeSocialData.results.some(item=>item.searchOnly===true),"YouTube search results remain available even if the download stream has not yet been verified");
   console.log("✔ Selected YouTube uses the same in-app source-aware result pipeline");
 
