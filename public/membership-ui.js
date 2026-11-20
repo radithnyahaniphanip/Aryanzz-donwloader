@@ -12,6 +12,8 @@
     selectedPlan: null,
     activeOrderId: "",
     pollTimer: null,
+    countdownTimer: null,
+    cart: null,
     checkoutEnabled: false,
     identityReady: false
   };
@@ -58,6 +60,28 @@
     return element;
   }
 
+  function canAccessTier(requiredTier) {
+    const current = state.membership && state.membership.status === "active"
+      ? String(state.membership.tier || "free").toLowerCase()
+      : "free";
+    return (rank[current] || 0) >= (rank[String(requiredTier || "free").toLowerCase()] || 0);
+  }
+
+  function renderFeatureLocks() {
+    document.querySelectorAll("[data-membership-min]").forEach(element => {
+      const required = String(element.dataset.membershipMin || "free").toLowerCase();
+      const locked = !canAccessTier(required);
+      element.dataset.membershipLocked = locked ? "true" : "false";
+      if (element.classList.contains("tool")) {
+        let tag = element.querySelector(".ary-membership-lock-tag");
+        if (locked && !tag) {
+          tag = make("span", "ary-membership-lock-tag", "🔒 " + required.toUpperCase());
+          element.append(tag);
+        } else if (!locked && tag) tag.remove();
+      }
+    });
+  }
+
   function renderAccount() {
     const membership = state.membership || { tier: "free", planName: "Free", status: "free" };
     const active = membership.status === "active";
@@ -69,6 +93,7 @@
     byId("membershipAccountExpiry").textContent = active
       ? "Aktif sampai " + formatDate(membership.expiresAt)
       : "Pilih paket untuk membuka fasilitas member.";
+    renderFeatureLocks();
   }
 
   function renderPlans() {
@@ -88,24 +113,107 @@
       const list = make("ul", "");
       (plan.features || []).forEach(feature => list.append(make("li", "", feature)));
       card.append(list);
-      const button = make("button", "ary-membership-select", "Pilih " + plan.name);
+      const inCart = state.cart && state.cart.planId === plan.id && state.cart.period === state.period;
+      const button = make("button", "ary-membership-select", inCart ? "✓ Di keranjang" : "＋ Tambah ke keranjang");
       button.type = "button";
       button.disabled = !state.checkoutEnabled;
-      button.addEventListener("click", () => choosePlan(plan));
+      button.addEventListener("click", () => addToCart(plan));
       card.append(button);
       grid.append(card);
     });
   }
 
-  function choosePlan(plan) {
+  function persistCart() {
+    try {
+      if (state.cart) sessionStorage.setItem("aryanzz_membership_cart_v1", JSON.stringify(state.cart));
+      else sessionStorage.removeItem("aryanzz_membership_cart_v1");
+    } catch {}
+  }
+
+  function restoreCart() {
+    try {
+      const saved = JSON.parse(sessionStorage.getItem("aryanzz_membership_cart_v1") || "null");
+      const plan = state.catalog?.plans?.find(item => item.id === saved?.planId);
+      if (plan && ["monthly", "yearly"].includes(saved.period)) state.cart = { planId: plan.id, period: saved.period };
+    } catch {}
+    renderCart();
+  }
+
+  function clearCart() {
+    state.cart = null;
+    persistCart();
+    renderCart();
+    renderPlans();
+  }
+
+  function renderCart() {
+    const cart = byId("membershipCart");
+    if (!cart) return;
+    const count = state.cart ? 1 : 0;
+    byId("membershipCartCount").textContent = String(count);
+    const button = byId("membershipCartToggle");
+    if (button) button.setAttribute("aria-expanded", String(!cart.hidden));
+    const items = byId("membershipCartItems");
+    items.replaceChildren();
+    const plan = state.cart && state.catalog?.plans?.find(item => item.id === state.cart.planId);
+    if (!plan) {
+      items.append(make("p", "ary-membership-cart-empty", "Keranjang masih kosong. Tambahkan satu paket dari daftar Membership."));
+      byId("membershipCartTotal").textContent = money(0);
+      byId("membershipCartCheckout").disabled = true;
+      return;
+    }
+    const price = state.cart.period === "yearly" ? plan.yearlyPrice : plan.monthlyPrice;
+    const row = make("div", "ary-membership-cart-item");
+    const copy = make("div", "ary-membership-cart-item-copy");
+    copy.append(make("strong", "", plan.name + " · " + (state.cart.period === "yearly" ? "Tahunan" : "Bulanan")));
+    copy.append(make("small", "", state.cart.period === "yearly" ? "Masa aktif 365 hari" : "Masa aktif 30 hari"));
+    row.append(copy, make("b", "ary-membership-cart-item-price", money(price)));
+    const remove = make("button", "ary-membership-cart-remove", "Hapus");
+    remove.type = "button";
+    remove.addEventListener("click", clearCart);
+    row.append(remove);
+    items.append(row);
+    byId("membershipCartTotal").textContent = money(price);
+    byId("membershipCartCheckout").disabled = !state.checkoutEnabled;
+  }
+
+  function addToCart(plan) {
+    const replaced = !!state.cart && state.cart.planId !== plan.id;
+    state.cart = { planId: plan.id, period: state.period };
+    persistCart();
+    renderCart();
+    renderPlans();
+    byId("membershipCart").hidden = false;
+    byId("membershipCartToggle").setAttribute("aria-expanded", "true");
+    setMessage(replaced
+      ? "Keranjang diperbarui. Satu pesanan Membership hanya berisi satu paket."
+      : "Paket " + plan.name + " ditambahkan ke keranjang.", "success");
+    byId("membershipCart").scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+
+  function openCheckout() {
+    const plan = state.cart && state.catalog?.plans?.find(item => item.id === state.cart.planId);
+    if (!plan) {
+      setMessage("Tambahkan paket Membership ke keranjang terlebih dahulu.", "warning");
+      return;
+    }
+    if (!state.checkoutEnabled) {
+      setMessage("Checkout belum siap. Pastikan akun tersinkron dan API Key AirPay sudah dipasang pada server.", "warning");
+      return;
+    }
     state.selectedPlan = plan;
+    state.period = state.cart.period;
+    byId("membershipMonthly").classList.toggle("active", state.period === "monthly");
+    byId("membershipYearly").classList.toggle("active", state.period === "yearly");
     const price = state.period === "yearly" ? plan.yearlyPrice : plan.monthlyPrice;
     byId("membershipCheckoutTitle").textContent = "Checkout " + plan.name;
     byId("membershipCheckoutSummary").textContent =
       money(price) + (state.period === "yearly" ? " untuk 1 tahun." : " untuk 1 bulan.");
+    byId("membershipCart").hidden = true;
+    byId("membershipCartToggle").setAttribute("aria-expanded", "false");
     byId("membershipCheckout").hidden = false;
     byId("membershipPayment").hidden = true;
-    setMessage("Lengkapi nama dan email jika ingin mencantumkannya pada catatan pesanan, lalu buat invoice QRIS.", "info");
+    setMessage("Paket siap dibayar melalui QRIS. Tidak perlu memasukkan nomor rekening atau nomor HP.", "info");
     byId("membershipCheckout").scrollIntoView({ behavior: "smooth", block: "nearest" });
   }
 
