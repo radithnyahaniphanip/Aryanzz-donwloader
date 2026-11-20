@@ -226,22 +226,59 @@
     }
   }
 
+  function stopCountdown() {
+    if (state.countdownTimer) clearInterval(state.countdownTimer);
+    state.countdownTimer = null;
+  }
+
+  function startCheckoutCountdown(order) {
+    stopCountdown();
+    const deadline = Number(order.checkoutExpiresAt || (Number(order.createdAt || Date.now()) + 10 * 60 * 1000));
+    const display = byId("membershipPaymentCountdown");
+    const caption = document.querySelector(".ary-membership-countdown-caption");
+    const update = () => {
+      const remaining = Math.max(0, deadline - Date.now());
+      const minutes = String(Math.floor(remaining / 60000)).padStart(2, "0");
+      const seconds = String(Math.floor((remaining % 60000) / 1000)).padStart(2, "0");
+      display.textContent = minutes + ":" + seconds;
+      if (remaining <= 0) {
+        stopCountdown();
+        const qr = byId("membershipQr");
+        qr.removeAttribute("src");
+        qr.hidden = true;
+        if (caption) caption.textContent = "Waktu checkout berakhir · menunggu status final AirPay";
+        byId("membershipPaymentExpiry").textContent = "Sesi checkout 10 menit telah berakhir. QR ditutup dan pesanan dikeluarkan dari keranjang.";
+        clearCart();
+        setMessage("Waktu checkout 10 menit habis. QR ditutup dan keranjang direset. Server tetap memeriksa status AirPay sampai hasil akhir; pembayaran yang benar-benar berhasil tetap akan mengaktifkan Membership.", "warning");
+      }
+    };
+    update();
+    if (deadline > Date.now()) state.countdownTimer = setInterval(update, 1000);
+  }
+
   function showPayment(order, payment) {
     const data = payment || {};
     state.activeOrderId = order.id;
     byId("membershipPayment").hidden = false;
     byId("membershipCheckout").hidden = true;
+    byId("membershipCart").hidden = true;
+    byId("membershipCartToggle").setAttribute("aria-expanded", "false");
     byId("membershipPaymentTitle").textContent = "Selesaikan pembayaran " + (order.planName || "membership");
     byId("membershipPaymentAmount").textContent = money(data.totalAmount || order.totalAmount || order.amount);
     byId("membershipPaymentBase").textContent = "Harga paket " + money(order.amount) +
       (Number(data.feeAmount || order.feeAmount || 0) > 0 ? " · biaya " + money(data.feeAmount || order.feeAmount) : "");
-    byId("membershipPaymentExpiry").textContent = data.expiryAt || order.expiresAt
-      ? "Batas pembayaran: " + formatDate(data.expiryAt || order.expiresAt)
-      : "Selesaikan pembayaran sebelum invoice kedaluwarsa.";
+
+    const checkoutDeadline = Number(order.checkoutExpiresAt || (Number(order.createdAt || Date.now()) + 10 * 60 * 1000));
+    const checkoutExpired = Date.now() >= checkoutDeadline;
+    byId("membershipPaymentExpiry").textContent = checkoutExpired
+      ? "Sesi checkout berakhir. Menunggu konfirmasi final dari AirPay."
+      : data.expiryAt || order.gatewayExpiresAt || order.expiresAt
+        ? "Invoice gateway berlaku sampai " + formatDate(data.expiryAt || order.gatewayExpiresAt || order.expiresAt)
+        : "Selesaikan checkout dalam 10 menit.";
 
     const qr = byId("membershipQr");
     const qrUrl = safeProviderLink(data.qrUrl || order.qrUrl);
-    if (qrUrl) {
+    if (qrUrl && !checkoutExpired) {
       qr.src = qrUrl;
       qr.hidden = false;
     } else {
@@ -249,17 +286,16 @@
       qr.hidden = true;
     }
 
-    const payLink = byId("membershipPayLink");
-    const payUrl = safeProviderLink(data.payUrl || order.payUrl);
-    if (payUrl) {
-      payLink.href = payUrl;
-      payLink.hidden = false;
+    const checkButton = byId("membershipCheckStatus");
+    checkButton.disabled = false;
+    startCheckoutCountdown(order);
+    if (checkoutExpired) {
+      const caption = document.querySelector(".ary-membership-countdown-caption");
+      if (caption) caption.textContent = "Waktu checkout berakhir · menunggu status final AirPay";
+      setMessage("Invoice ini melewati batas checkout 10 menit. QR disembunyikan; ARYANZZ tetap memeriksa status gateway agar pembayaran yang sudah masuk tidak hilang.", "warning");
     } else {
-      payLink.removeAttribute("href");
-      payLink.hidden = true;
+      setMessage("Menunggu pembayaran. ARYANZZ memeriksa status langsung ke server AirPay.", "pending");
     }
-
-    setMessage("Menunggu pembayaran. ARYANZZ akan memeriksa status langsung ke server AirPay.", "pending");
     byId("membershipPayment").scrollIntoView({ behavior: "smooth", block: "nearest" });
     startPolling(order.id);
   }
