@@ -554,15 +554,15 @@ body .nav button.active .nav-icon{color:#9af4e8!important}
 
 <button class="tool" data-panel="members" data-category="personal"><div class="ico">♙</div><b>Anggota & Pengunjung</b><small>Lihat sesi aktif dan ringkasan kunjungan.</small><span class="v674-tool-category">PERSONAL</span></button>
 <button class="tool" data-panel="membership" data-category="personal"><div class="ico">♛</div><b>Membership ARYANZZ</b><small>Pilih paket Starter, Pro, Ultra, atau Max.</small><span class="v674-tool-category">MEMBERSHIP · AIRPAY QRIS</span></button>
-<button class="tool" data-panel="mediaStudio" data-category="media"><div class="ico">▣</div><b>Media Studio Pro</b><small>Pustaka media lokal, pemutar video, antrean unduhan, dan penyimpanan.</small><span class="v674-tool-category">MEDIA · PRO</span></button>
-<button class="tool" data-panel="queue" data-category="media"><div class="ico">⇄</div><b>Smart Queue</b><small>Atur beberapa unduhan dalam antrean.</small><span class="v674-tool-category">MEDIA</span></button>
-<button class="tool" data-panel="editor" data-category="video"><div class="ico">▶</div><b>Video Editor Studio</b><small>Trim, filter, teks, audio, subtitle, dan ekspor.</small><span class="v674-tool-category">CREATIVE</span></button>
+<button class="tool" data-panel="mediaStudio" data-membership-min="pro" data-category="media"><div class="ico">▣</div><b>Media Studio Pro</b><small>Pustaka media lokal, pemutar video, antrean unduhan, dan penyimpanan.</small><span class="v674-tool-category">MEDIA · PRO</span></button>
+<button class="tool" data-panel="queue" data-membership-min="pro" data-category="media"><div class="ico">⇄</div><b>Smart Queue</b><small>Atur beberapa unduhan dalam antrean.</small><span class="v674-tool-category">MEDIA</span></button>
+<button class="tool" data-panel="editor" data-membership-min="ultra" data-category="video"><div class="ico">▶</div><b>Video Editor Studio</b><small>Trim, filter, teks, audio, subtitle, dan ekspor.</small><span class="v674-tool-category">CREATIVE</span></button>
 <button class="tool" data-panel="musicFinder" data-category="media"><div class="ico">♫</div><b>Music Finder</b><small>Kenali lagu dari audio, video, atau mikrofon.</small><span class="v674-tool-category">MEDIA</span></button>
 <button class="tool" data-panel="audioStudio" data-category="media"><div class="ico">♫</div><b>MP4 ke MP3 Converter</b><small>Ubah video MP4 menjadi audio MP3 langsung di perangkat.</small><span class="v674-tool-category">MEDIA</span></button>
 <button class="tool" data-panel="history" data-category="media"><div class="ico">◷</div><b>Library</b><small>Riwayat unduhan dan daftar favorit.</small><span class="v674-tool-category">MEDIA</span></button>
 <button class="tool" data-panel="waQuoteTools" data-category="creative"><div class="ico">☏</div><b>WA Quote Generator</b><small>Buat mockup chat WhatsApp Android dan iPhone, ekspor PNG.</small><span class="v674-tool-category">CREATIVE</span></button>
 <button class="tool" data-panel="toolbox100" data-category="utility"><div class="ico">✣</div><b>100 Tools Lab</b><small>100 alat lokal untuk teks, data, angka, warna, validasi, file, dan konten.</small><span class="v674-tool-category">100 TOOLS · LOCAL</span></button>
-<button class="tool" data-panel="emoteStudio" data-category="creative"><div class="ico">✧</div><b>Emote Studio</b><small>Edit stiker secara manual, ekspor PNG dan WebP, buat GIF, serta tambahkan stiker ke video MP4.</small><span class="v674-tool-category">CREATIVE · AI + LOCAL</span></button>
+<button class="tool" data-panel="emoteStudio" data-membership-min="max" data-category="creative"><div class="ico">✧</div><b>Emote Studio</b><small>Edit stiker secara manual, ekspor PNG dan WebP, buat GIF, serta tambahkan stiker ke video MP4.</small><span class="v674-tool-category">CREATIVE · AI + LOCAL</span></button>
 <button class="tool" data-panel="imageTools" data-category="image"><div class="ico">▧</div><b>Image Studio</b><small>Unduh, edit, atur rasio, resolusi, dan ekspor gambar.</small><span class="v674-tool-category">CREATIVE</span></button>
 <button class="tool" data-panel="pdfTools" data-category="file"><div class="ico">▤</div><b>PDF & Text Tools</b><small>Alat dokumen dan pengolah teks.</small><span class="v674-tool-category">CREATIVE</span></button>
 <button class="tool" data-panel="qrTools" data-category="utility"><div class="ico">▦</div><b>QR Generator</b><small>Buat dan unduh kode QR.</small><span class="v674-tool-category">UTILITY</span></button>
@@ -1007,7 +1007,7 @@ body .nav button.active .nav-icon{color:#9af4e8!important}
   </section>
   <button class="back-home" type="button" data-panel="allTools">← Kembali ke Pusat Alat</button>
 </div>
-<div class="panel card queue-panel" id="queue">
+<div class="panel card queue-panel" id="queue" data-membership-min="pro">
   <span class="section-kicker">ARYANZZ · DOWNLOAD MANAGER</span>
   <h2>Smart Download Queue</h2>
   <p>Susun beberapa tautan dan buka satu per satu melalui downloader utama. Status unduhan ditandai setelah kamu menyelesaikannya di halaman downloader.</p>
@@ -1029,8 +1029,16 @@ body .nav button.active .nav-icon{color:#9af4e8!important}
 <div class="panel card ary-membership-panel" id="membership" hidden>
   <div class="ary-membership-hero">
     <div><span class="ary-membership-kicker">ARYANZZ · MEMBERSHIP</span><h2>Pilih level keanggotaanmu</h2><p>Aktifkan fasilitas member melalui pembayaran QRIS. Status transaksi akan diperiksa oleh server sebelum paket diaktifkan.</p></div>
-    <span class="ary-membership-current" id="membershipCurrentBadge">FREE</span>
+    <div class="ary-membership-hero-actions">
+      <span class="ary-membership-current" id="membershipCurrentBadge">FREE</span>
+      <button class="ary-membership-cart-toggle" id="membershipCartToggle" type="button" aria-expanded="false" aria-controls="membershipCart">♧ Keranjang <b id="membershipCartCount">0</b></button>
+    </div>
   </div>
+  <section class="ary-membership-cart" id="membershipCart" hidden aria-label="Keranjang Membership">
+    <div class="ary-membership-cart-head"><div><span class="ary-membership-kicker">CHECKOUT</span><h3>Keranjang Membership</h3><p>Satu paket Membership per pesanan. Pilihan paket dan periode dapat diganti kapan saja.</p></div><span class="ary-membership-cart-icon">♧</span></div>
+    <div id="membershipCartItems"><p class="ary-membership-cart-empty">Keranjang masih kosong.</p></div>
+    <div class="ary-membership-cart-footer"><strong id="membershipCartTotal">Rp0</strong><div><button class="ary-membership-cart-clear" id="membershipCartClear" type="button">Kosongkan</button><button class="ary-membership-cart-checkout" id="membershipCartCheckout" type="button" disabled>Lanjut checkout →</button></div></div>
+  </section>
   <div class="ary-membership-account">
     <div><strong id="membershipAccountTitle">Kamu menggunakan ARYANZZ Free</strong><small id="membershipAccountExpiry">Pilih paket untuk membuka fasilitas member.</small></div>
     <span class="ary-membership-plan-label">STATUS AKUN</span>
@@ -1059,9 +1067,9 @@ body .nav button.active .nav-icon{color:#9af4e8!important}
         <div class="ary-membership-amount" id="membershipPaymentAmount">Rp0</div>
         <p id="membershipPaymentBase">Nominal paket</p>
         <p id="membershipPaymentExpiry">Menunggu pembayaran.</p>
-        <a class="ary-membership-pay-link" id="membershipPayLink" href="#" target="_blank" rel="noopener noreferrer" hidden>Buka halaman pembayaran ↗</a>
-        <button class="ary-membership-check-status" id="membershipCheckStatus" type="button">Saya sudah bayar · Periksa status</button>
-        <div class="ary-membership-methods"><span>QRIS</span><span>DANA</span><span>GoPay</span><span>LinkAja</span><span>Mobile Banking</span></div>
+        <div class="ary-membership-countdown" id="membershipPaymentCountdown" role="timer" aria-live="off">10:00</div>
+        <small class="ary-membership-countdown-caption">Sisa waktu checkout · 10 menit</small>
+        <button class="ary-membership-check-status" id="membershipCheckStatus" type="button">Periksa status pembayaran</button>
       </div>
     </div>
   </section>
