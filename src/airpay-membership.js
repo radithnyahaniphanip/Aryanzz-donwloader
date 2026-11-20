@@ -209,7 +209,8 @@ async function createAirpayOrder(request,env,user){
   const base=numericIfPresent(data.base_amount);
   if(external!==id||!tx||base!==null&&base!==plan.price)throw new Error("Respons AirPay tidak cocok dengan pesanan ARYANZZ.");
   const payUrl=safeAirpayUrl(data.pay_url);
-  const qrUrl=safeAirpayUrl(data.qr_url);
+  const legacyQrUrl=data.merchant_id?API_ORIGIN+"/api/qris/image?tid="+encodeURIComponent(tx)+"&mid="+encodeURIComponent(String(data.merchant_id)):"";
+  const qrUrl=safeAirpayUrl(data.qr_url||legacyQrUrl);
   if(!payUrl&&!qrUrl&&!data.qr_string)throw new Error("AirPay tidak mengirim tautan checkout atau data QRIS.");
   const total=numericIfPresent(data.total_amount)??plan.price;
   const fee=numericIfPresent(data.fee_amount);
