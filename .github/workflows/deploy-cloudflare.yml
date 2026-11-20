@@ -1,4 +1,4 @@
-name: ARYANZZ — Validate and deploy V1 Full Release
+name: ARYANZZ — Validate and deploy V2 Full Release
 
 on:
   push:
@@ -16,7 +16,7 @@ concurrency:
 
 jobs:
   test:
-    name: Validate V1 Full Release
+    name: Validate V2 Full Release
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -66,7 +66,7 @@ jobs:
         run: npm test
 
   deploy:
-    name: Deploy V1 Full Release to Cloudflare Workers
+    name: Deploy V2 Full Release to Cloudflare Workers
     needs: test
     permissions:
       contents: write
@@ -108,7 +108,7 @@ jobs:
           DB_ID="$ARYANZZ_AUTH_DB_ID"
           if [ -z "$DB_ID" ]; then
             if ! DB_LIST="$(curl -fsS --retry 3 -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/d1/database" 2>&1)"; then
-              echo "::notice::D1 is not accessible with the current Cloudflare token. Deploying the public V1 website without the account database so visitors can use ARYANZZ without login or registration. Server-synced IDs, administrator authentication and D1-backed moderation remain unavailable until Account > D1 > Edit is granted. Membership features have been retired; public guest access remains available."
+              echo "::notice::D1 is not accessible with the current Cloudflare token. Deploying the public V2 website without the account database so visitors can use ARYANZZ without login or registration. Server-synced IDs, administrator authentication and D1-backed moderation remain unavailable until Account > D1 > Edit is granted. Membership features have been retired; public guest access remains available."
               exit 0
             fi
             DB_ID="$(printf '%s' "$DB_LIST" | jq -r '.result[]? | select(.name == "aryanzz-auth-db") | .uuid' | head -n 1)"
@@ -116,13 +116,13 @@ jobs:
           if [ -z "$DB_ID" ] || [ "$DB_ID" = "null" ]; then
             echo "No existing aryanzz-auth-db found; attempting to create it."
             if ! CREATE_OUTPUT="$(wrangler d1 create aryanzz-auth-db 2>&1)"; then
-              echo "::notice::Could not create the optional account database with the current token. Continuing with public V1 access; D1-dependent account and Membership services remain pending."
+              echo "::notice::Could not create the optional account database with the current token. Continuing with public V2 access; D1-dependent account and Membership services remain pending."
               exit 0
             fi
             DB_ID="$(printf '%s\\n' "$CREATE_OUTPUT" | sed -nE 's/.*database_id[[:space:]]*=[[:space:]]*"([^"]+)".*/\\1/p' | head -n 1)"
           fi
           if [ -z "$DB_ID" ] || [ "$DB_ID" = "null" ]; then
-            echo "::notice::The D1 database ID is not available. Continuing with public V1 access; configure ARYANZZ_AUTH_DB_ID and Account > D1 > Edit to enable server account services."
+            echo "::notice::The D1 database ID is not available. Continuing with public V2 access; configure ARYANZZ_AUTH_DB_ID and Account > D1 > Edit to enable server account services."
             exit 0
           fi
           cp wrangler.toml /tmp/aryanzz-wrangler-before-d1.toml
@@ -131,7 +131,7 @@ jobs:
           fi
           if ! wrangler d1 migrations apply aryanzz-auth-db --remote; then
             cp /tmp/aryanzz-wrangler-before-d1.toml wrangler.toml
-            echo "::notice::D1 migrations could not be applied with the current token. Continuing with public V1 access only; D1-backed login and account sync remain pending."
+            echo "::notice::D1 migrations could not be applied with the current token. Continuing with public V2 access only; D1-backed login and account sync remain pending."
             exit 0
           fi
           echo "ARYANZZ_D1_READY=true" >> "$GITHUB_ENV"
