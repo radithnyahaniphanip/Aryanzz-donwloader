@@ -251,7 +251,7 @@ jobs:
           WORKER_URL: https://aryanzz-donwloader.aryanz.workers.dev
           EXPECTED_BUILD_VERSION: ${{ env.EXPECTED_BUILD_VERSION }}
         run: node tests/live-public-access-smoke.mjs
-      - name: Verify production D1, Turnstile and Poketo bindings
+      - name: Verify production D1, Turnstile and AirPay membership config
         if: success() && env.ARYANZZ_D1_READY == 'true'
         env:
           WORKER_URL: https://aryanzz-donwloader.aryanz.workers.dev
