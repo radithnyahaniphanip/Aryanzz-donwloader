@@ -69,7 +69,7 @@ assert.ok(source.includes('"/api/qris/create"'));
 assert.ok(source.includes('"/api/qris/status?transaction_id="'));
 assert.ok(source.includes("X-AirPay-Signature"));
 assert.ok(source.includes("external_id"));
-assert.ok(source.includes("statusName(data.status)===\"paid\""));
+assert.ok(source.includes('if(statusName(data.status)!=="paid")'));
 assert.ok(source.includes("INSERT OR IGNORE INTO airpay_webhook_events"));
 assert.ok(!source.includes("POKETO_SECRET_KEY"));
 assert.ok(frontend.includes("/api/membership/orders/status?orderId="));
