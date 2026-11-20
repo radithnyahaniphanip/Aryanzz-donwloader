@@ -7,7 +7,7 @@ const welcome=document.getElementById("v89Welcome");
 const download=home.querySelector(".v674-download");
 if(header&&header.parentElement!==home)home.insertBefore(header,home.firstChild);
 if(welcome&&welcome.parentElement!==home)home.insertBefore(welcome,download||null);
-const publicVersion=document.querySelector('meta[name="aryanzz-public-version"]')?.content||"V1";
+const publicVersion=document.querySelector('meta[name="aryanzz-public-version"]')?.content||"V2";
 const badge=document.getElementById("homeReleaseVersion");
 if(badge)badge.textContent=publicVersion+" GRATIS";
 async function initSecurityIndicator(){
