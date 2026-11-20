@@ -10,6 +10,9 @@ const profile=read("public/v25.js");
 const search=read("public/v674.js");
 const worker=read("src/index.js");
 const regression=read("tests/search-regression.mjs");
+const refreshCss=read("public/arya-v2-refresh.css");
+const refreshJs=read("public/arya-v2-refresh.js");
+const sw=read("public/sw.js");
 
 assert.ok(html.includes("/arya-ui-overhaul.css"),"The shared visual overhaul stylesheet must be loaded");
 assert.match(html,/<body[^>]*data-motion="on"/,"Motion should be enabled by default");
@@ -34,4 +37,12 @@ assert.ok(css.includes("aryDeveloperBadge")&&css.includes("ary-owner2-social-car
 assert.ok(search.includes('const shouldTryYoutube=kind!=="image"&&selected!=="youtube"&&(!mediaItems.length||(selected==="all"&&!hasYoutubeResult))'),"Title search should retry YouTube if all-platform results lack YouTube");
 assert.ok(regression.includes('query:"Tabola Bale",platform:"all",mediaType:"video"'),"A Tabola Bale all-platform regression test must remain in the suite");
 assert.ok(worker.includes('query+" official video"')&&worker.includes('youtubeFallbackAttempted&&youtubeFallbackCandidateCount>0'),"The Worker should retry YouTube with video intent and report all-platform fallback");
+assert.ok(html.includes('/arya-v2-refresh.css?v=__ARYANZZ_VERSION__')&&html.includes('/arya-v2-refresh.js?v=__ARYANZZ_VERSION__'),"The V2.1 visual layer and interaction script must be loaded by the live page");
+assert.ok(html.includes('id="homeReleaseVersion" aria-live="polite"')&&html.includes("BUILD MEMUAT"),"The home badge must display the active deployment build instead of a hardcoded V1 label");
+assert.ok(sw.includes("/arya-v2-refresh.css?v=__ARYANZZ_VERSION__")&&sw.includes("/arya-v2-refresh.js?v=__ARYANZZ_VERSION__"),"Both V2.1 assets must be included in the versioned service-worker update shell");
+assert.ok(refreshCss.includes("#home>.v89-welcome")&&refreshCss.includes("#toolsArea #allTools .tool")&&refreshCss.includes("#profile .ary-v1-device-specs"),"The new visual layer must refresh home, tool cards, and live device specifications");
+assert.ok(refreshCss.includes("aryV2LogoFloat")&&refreshCss.includes("aryV2PhoneFloat")&&refreshCss.includes("ary-guide-dialog"),"The new visual layer must animate the brand/device and restyle the interactive guide");
+assert.ok(refreshCss.includes("@media(max-width:760px)")&&refreshCss.includes("prefers-reduced-motion"),"The V2.1 visual layer must remain responsive and respect reduced-motion preferences");
+assert.ok(refreshJs.includes('fetch("/release.json?ui="+Date.now()')&&refreshJs.includes('badge.textContent="BUILD "+shortBuild'),"The header badge must show the actual live build returned by the release manifest");
+assert.ok(refreshJs.includes("IntersectionObserver")&&refreshJs.includes("arya-v2-pending"),"The new interface should reveal content as the user navigates without hiding content when motion is disabled");
 console.log("✔ ARYANZZ visual overhaul preserves all 38 tools and verifies device, owner, theme, and YouTube fallback behavior");
