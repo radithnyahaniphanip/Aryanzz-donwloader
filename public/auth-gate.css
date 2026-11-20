@@ -42,3 +42,16 @@
 @keyframes aryEyePupil{0%{transform:scale(.72)}100%{transform:scale(1)}}
 @keyframes aryEyeSlash{0%{stroke-dashoffset:26;opacity:0}100%{stroke-dashoffset:0;opacity:1}}
 @media(prefers-reduced-motion:reduce){.ary-eye-outline,.ary-eye-pupil,.ary-eye-slash{animation:none!important}}
+
+/* Optional public account dialog. */
+.ary-auth-gate{z-index:100200!important;align-items:center!important;justify-content:center!important;padding:14px!important;background:rgba(3,8,17,.92)!important;backdrop-filter:blur(16px)!important;-webkit-backdrop-filter:blur(16px)!important}
+.ary-auth-gate[hidden]{display:none!important}
+.ary-auth-shell{position:relative;max-height:calc(100vh - 28px);overflow:auto}
+.ary-auth-close{display:grid;place-items:center;width:34px;height:34px;flex:0 0 34px;margin-left:auto;border:1px solid rgba(147,181,218,.22);border-radius:10px;background:rgba(8,21,36,.8);color:#c8d9ec;font-size:22px;line-height:1;cursor:pointer}
+.ary-auth-brand{display:flex;align-items:center;gap:10px}
+.ary-auth-brand .ary-auth-free{margin-left:auto}
+@media(max-width:480px){
+ .ary-auth-gate{padding:7px!important}
+ .ary-auth-shell{max-height:calc(100vh - 14px);border-radius:17px!important}
+ .ary-auth-brand .ary-auth-free{display:none}
+}
