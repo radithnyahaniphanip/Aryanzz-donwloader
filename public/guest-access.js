@@ -16,6 +16,7 @@
   }
   function setIdentity(user, localOnly = false) {
     if (!user || !/^ARY-[A-Z0-9]{10}$/i.test(String(user.id || ""))) return;
+    if (localOnly || user.guest) { try { ensureDeviceLockCookie(); } catch {} }
     if (!localOnly) { try { localStorage.setItem(LOCAL_ID_KEY, String(user.id)); } catch {} }
     const role = String(user.role || "guest").toLowerCase();
     const isAdmin = ["owner", "admin", "developer"].includes(role) || String(user.id).toUpperCase() === "ARY-ZFTLQPEX92";
