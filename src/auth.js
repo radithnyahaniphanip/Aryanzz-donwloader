@@ -389,8 +389,6 @@ async function login(request, env) {
   if (!equal(await passwordDigest(password, user.password_salt, iterations), String(user.password_hash || ""))) {
     return reply({ ok: false, code: "INVALID_CREDENTIALS", error: "Email/ID atau password tidak cocok." }, 401);
   }
-  const adminAllowed=user.id==="ARY-ZFTLQPEX92"||["owner","admin","developer"].includes(String(user.role||"").toLowerCase());
-  if(!adminAllowed)return reply({ok:false,code:"PUBLIC_LOGIN_DISABLED",error:"Pengguna ARYANZZ tidak perlu login. Akses akun hanya tersedia untuk administrator melalui halaman pemilik."},403);
   const primary = await primaryDeviceOwner(deviceHash, env);
   const previouslyTrusted = await trustedDeviceOwner(deviceHash, env);
   if ((primary && primary.user_id !== user.id) || (previouslyTrusted && previouslyTrusted.user_id !== user.id)) return primaryAccountNotice();
@@ -541,13 +539,17 @@ export async function handleAuthRequest(request, env) {
   if (path === "/api/auth/config" && request.method === "GET") {
     const missing = missingConfig(env);
     const loginReady = ready(env);
-    const registrationReady = false;
+    const registrationAllowed = String(env.AUTH_PUBLIC_ACCOUNTS_ENABLED||"true").toLowerCase()!=="false";
     const missingLogin = missing.filter(item => ["Cloudflare D1 (AUTH_DB)","AUTH_SESSION_SECRET","TURNSTILE_SECRET_KEY (or TURNSTILE_SECRET / CF_TURNSTILE_SECRET_KEY)","AUTH_TURNSTILE_SITE_KEY (or TURNSTILE_SITE_KEY / CF_TURNSTILE_SITE_KEY)"].includes(item));
-    const missingRegistration = [];
+    const missingRegistration = [...missingLogin];
+    if(!String(env.RESEND_API_KEY||"").trim())missingRegistration.push("RESEND_API_KEY");
+    if(!String(env.AUTH_EMAIL_FROM||"").trim())missingRegistration.push("AUTH_EMAIL_FROM");
+    if(!registrationAllowed)missingRegistration.push("AUTH_PUBLIC_ACCOUNTS_ENABLED");
+    const registrationReady = loginReady && registrationAllowed && missingRegistration.length===0;
     const moderationReady=!!env.AUTH_DB&&typeof env.AUTH_DB.prepare==="function"&&String(env.AUTH_SESSION_SECRET||"").length>=32;
     const existing=deviceLockTokenFrom(request),lockToken=existing||randomHex(32);
-    return reply({ ok: true, ready: loginReady, loginReady, registrationReady, registrationEnabled:false, publicAccess:true, moderationReady, publicVersion: "V1", captchaSiteKey: turnstileSiteKey(env), missing, missingLogin, missingRegistration,
-      message: loginReady ? "Akses publik siap. Pengunjung tidak perlu login atau mendaftar; autentikasi hanya digunakan untuk administrator." : "Akses publik menunggu konfigurasi keamanan server: " + missingLogin.join(", ") + "." },
+    return reply({ ok: true, ready: loginReady, loginReady, registrationReady, registrationEnabled:registrationReady, publicAccess:true, moderationReady, publicVersion: "V2", captchaSiteKey: turnstileSiteKey(env), missing, missingLogin, missingRegistration,
+      message: loginReady ? (registrationReady ? "Login dan pendaftaran akun publik ARYANZZ siap." : "Login online siap. Pendaftaran online menunggu konfigurasi email verifikasi.") : "Layanan akun online menunggu konfigurasi keamanan server: " + missingLogin.join(", ") + "." },
       200,existing?{}:{"set-cookie":DEVICE_LOCK_COOKIE+"="+lockToken+"; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=63072000"});
   }
   if (path === "/api/auth/logout" && request.method === "POST") return logout(request, env);
@@ -559,13 +561,15 @@ export async function handleAuthRequest(request, env) {
   try {
     if (path === "/api/auth/me" && request.method === "GET") return me(request, env);
     if (request.method !== "POST") return reply({ ok: false, error: "Metode tidak diizinkan." }, 405);
-    if (["/api/auth/register/start","/api/auth/register/verify","/api/auth/legacy/start","/api/auth/legacy/verify"].includes(path))
-      return reply({ok:false,code:"REGISTRATION_DISABLED",error:"Pendaftaran ARYANZZ telah dinonaktifkan. Pengunjung mendapatkan ID otomatis tanpa perlu mendaftar."},410);
     if (path === "/api/auth/register/start") {
-      if (!String(env.RESEND_API_KEY || "").trim() || !String(env.AUTH_EMAIL_FROM || "").trim()) return reply({ok:false,code:"EMAIL_DELIVERY_NOT_CONFIGURED",error:"Pendaftaran belum tersedia karena layanan email verifikasi belum dikonfigurasi."},503);
+      if(String(env.AUTH_PUBLIC_ACCOUNTS_ENABLED||"true").toLowerCase()==="false")return reply({ok:false,code:"REGISTRATION_DISABLED",error:"Pendaftaran akun publik sedang dinonaktifkan."},410);
+      if (!String(env.RESEND_API_KEY || "").trim() || !String(env.AUTH_EMAIL_FROM || "").trim()) return reply({ok:false,code:"EMAIL_DELIVERY_NOT_CONFIGURED",error:"Pendaftaran online menunggu konfigurasi email verifikasi. Kamu masih dapat menggunakan akun lokal pada browser ini."},503);
       return startRegister(request, env);
     }
-    if (path === "/api/auth/register/verify") return verifyRegister(request, env);
+    if (path === "/api/auth/register/verify") {
+      if(String(env.AUTH_PUBLIC_ACCOUNTS_ENABLED||"true").toLowerCase()==="false")return reply({ok:false,code:"REGISTRATION_DISABLED",error:"Pendaftaran akun publik sedang dinonaktifkan."},410);
+      return verifyRegister(request, env);
+    }
     if (path === "/api/auth/login") return login(request, env);
     if (path === "/api/auth/legacy/start") return startLegacy(request, env);
     if (path === "/api/auth/legacy/verify") return verifyLegacy(request, env);
