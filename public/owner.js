@@ -8,7 +8,6 @@
   const DEFAULTS = {
     whatsapp: "https://wa.me/6283163637190",
     github: "https://github.com/radithnyahaniphanip",
-    telegram: "",
     tiktok: "https://www.tiktok.com/@azazeuu?_r=1&_t=ZS-9B2FU0QemSi",
     youtube: "https://www.youtube.com/@aryanz2855"
   };
@@ -46,7 +45,6 @@
     const fields = {
       whatsapp: "ownerWhatsappUrl",
       github: "ownerGithubUrl",
-      telegram: "ownerTelegramUrl",
       tiktok: "ownerTiktokUrl",
       youtube: "ownerYoutubeUrl"
     };
@@ -66,8 +64,8 @@
         card.setAttribute("aria-disabled", "false");
         if (action) {
           action.textContent = key === "whatsapp"
-            ? (href.includes("6283163637190") ? "Chat · +62 831-6363-7190" : "Chat WhatsApp")
-            : ({github:"Kunjungi GitHub",telegram:"Buka Telegram",tiktok:"Follow di TikTok",youtube:"Kunjungi Kanal YouTube"})[key] || "Buka tautan";
+            ? "Chat WhatsApp"
+            : ({github:"Kunjungi GitHub",tiktok:"Follow di TikTok",youtube:"Kunjungi Kanal YouTube"})[key] || "Buka tautan";
         }
       } else {
         card.removeAttribute("href");
@@ -113,13 +111,12 @@
     const values = {
       whatsapp: $("ownerWhatsappUrl")?.value.trim() || "",
       github: $("ownerGithubUrl")?.value.trim() || "",
-      telegram: $("ownerTelegramUrl")?.value.trim() || "",
       tiktok: $("ownerTiktokUrl")?.value.trim() || "",
       youtube: $("ownerYoutubeUrl")?.value.trim() || ""
     };
     for (const [key, value] of Object.entries(values)) {
       if (value && !validLink(value)) {
-        const input = ({whatsapp:"ownerWhatsappUrl",github:"ownerGithubUrl",telegram:"ownerTelegramUrl",tiktok:"ownerTiktokUrl",youtube:"ownerYoutubeUrl"})[key];
+        const input = ({whatsapp:"ownerWhatsappUrl",github:"ownerGithubUrl",tiktok:"ownerTiktokUrl",youtube:"ownerYoutubeUrl"})[key];
         $(input)?.focus();
         alert("Tautan " + key + " harus berupa URL lengkap yang diawali https:// atau http://.");
         return;
