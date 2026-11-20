@@ -30,7 +30,7 @@ const unavailable = await handleAuthRequest(new Request("https://aryanzz.example
 }), {});
 assert.equal(unavailable.status, 503);
 assert.equal((await unavailable.json()).code, "AUTH_NOT_CONFIGURED");
-console.log("ARYANZZ V1 backend email-auth and fail-closed configuration checks passed.");
+console.log("ARYANZZ V2 backend email-auth and fail-closed configuration checks passed.");
 
 assert.ok(backend.includes("auth_device_accounts"),"Server registration must use a persistent primary-device registry");
 assert.ok(backend.includes("primaryDeviceOwner(deviceHash, env)"),"Registration/login must check the existing primary account on this browser installation");
