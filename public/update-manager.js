@@ -92,7 +92,7 @@ function showNotice(version){
  progress.append(status,track,metaRow,files,file);
  bar.append(heading,message,button,progress);
  document.body.append(bar);
- currentNotice={bar,button,progress,status,track,fill,size,percent,files,file};
+ currentNotice={version,bar,button,progress,status,track,fill,size,percent,files,file};
  button.addEventListener("click",()=>startUpdate(version));
  if(lastProgress)setProgress(lastProgress);
 }
@@ -142,6 +142,21 @@ async function downloadWithProgress(version){
  }
  setProgress({phase:"ready",totalBytes:Math.max(totalBytes,downloadedBytes),downloadedBytes,totalFiles:manifest.files.length,fileIndex:manifest.files.length});
 }
+async function showReadyAndRefresh(version){
+ let totalBytes=Number(lastProgress?.totalBytes)||0,totalFiles=Number(lastProgress?.totalFiles)||0;
+ try{
+  const response=await fetch("/release-manifest.json?update="+encodeURIComponent(version),{cache:"no-store",credentials:"same-origin"});
+  if(response.ok){
+   const manifest=await response.json();
+   if(String(manifest.buildId||"")===version){
+    totalBytes=Number(manifest.totalBytes)||totalBytes;
+    totalFiles=Array.isArray(manifest.files)?manifest.files.length:totalFiles;
+   }
+  }
+ }catch{}
+ setProgress({phase:"ready",totalBytes,downloadedBytes:totalBytes,totalFiles,fileIndex:totalFiles});
+ window.setTimeout(()=>refreshToVersion(version),650);
+}
 async function startUpdate(version){
  if(updating||!currentNotice)return;
  updating=true;
@@ -164,21 +179,21 @@ async function startUpdate(version){
     const registration=await navigator.serviceWorker.register("/sw.js?v="+encodeURIComponent(version),{updateViaCache:"none"});
     const existingVersion=await readWorkerVersion(navigator.serviceWorker.controller||registration.active);
     if(existingVersion===version){
-     setProgress({phase:"ready",totalBytes:lastProgress?.totalBytes||0,downloadedBytes:lastProgress?.totalBytes||0,totalFiles:lastProgress?.totalFiles||0,fileIndex:lastProgress?.totalFiles||0});
-     window.setTimeout(()=>refreshToVersion(version),650);
+     await showReadyAndRefresh(version);
      return;
     }
     await registration.update();
     if(registration.waiting)registration.waiting.postMessage({type:"ARYANZZ_SKIP_WAITING"});
-    if(registration.installing)registration.installing.addEventListener("statechange",()=>{
-     if(registration.installing?.state==="redundant")controllerReadyResolve(false);
+    const installingWorker=registration.installing;
+    if(installingWorker)installingWorker.addEventListener("statechange",()=>{
+     if(installingWorker.state==="redundant")controllerReadyResolve(false);
     });
-    const timeout=window.setTimeout(()=>controllerReadyResolve(false),90000);
-    const ready=await Promise.race([controllerReady,new Promise(resolve=>window.setTimeout(()=>resolve(false),90000))]);
-    window.clearTimeout(timeout);
+    let timeoutId=0;
+    const timeoutPromise=new Promise(resolve=>{timeoutId=window.setTimeout(()=>resolve(false),90000)});
+    const ready=await Promise.race([controllerReady,timeoutPromise]);
+    window.clearTimeout(timeoutId);
     if(ready){
-     setProgress({phase:"ready",totalBytes:lastProgress?.totalBytes||0,downloadedBytes:lastProgress?.downloadedBytes||0,totalFiles:lastProgress?.totalFiles||0,fileIndex:lastProgress?.totalFiles||0});
-     window.setTimeout(()=>refreshToVersion(version),650);
+     await showReadyAndRefresh(version);
      return;
     }
     navigator.serviceWorker.removeEventListener("controllerchange",onControllerChange);
