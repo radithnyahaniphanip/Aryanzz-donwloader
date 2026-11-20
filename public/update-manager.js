@@ -238,7 +238,7 @@ async function startUpdate(version){
    }
   }
   await downloadWithProgress(version);
-  window.setTimeout(()=>refreshToVersion(version),650);
+  refreshWhenDownloadsFinish(version);
  }catch(error){
   updating=false;
   ui.button.disabled=false;
