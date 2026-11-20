@@ -16,8 +16,9 @@ try{
     const url=new URL(typeof input==="string"?input:input instanceof URL?input.href:input.url);
     if(url.hostname==="r.jina.ai"){
       readerCalls++;
-      firstReaderUrl=url.href;
+      firstReaderUrl=firstReaderUrl||url.href;
       readerHeaders=new Headers(init.headers||{});
+      if(readerCalls<=2)return new Response("rate limited",{status:429,headers:{"retry-after":"1"}});
       const markdown=[
         "Title: TikTok Photo Mode",
         "URL Source: https://www.tiktok.com/embed/v2/1234567890123456789",
@@ -40,13 +41,19 @@ try{
   assert.equal(data.platform,"tiktok");
   assert.equal(data.images.length,2,"real CDN images must be extracted while blob placeholders are ignored");
   assert.deepEqual(data.images.map(item=>item.url),images);
-  assert.equal(readerCalls,1,"the Markdown reader should be used without unnecessary retries");
-  assert.ok(firstReaderUrl.includes("/http://www.tiktok.com/embed/v2/"),"the verified HTTP Markdown route must be attempted before the slower HTTPS route");
+  assert.equal(readerCalls,3,"the Markdown reader should recover after two transient HTTP 429 responses");
+  assert.ok(firstReaderUrl.includes("/http://www.tiktok.com/embed/v2/"),"the verified HTTP Markdown route must be attempted first");
+  assert.equal(readerHeaders.get("referer"),"https://www.tiktok.com/","Jina requests should carry the official TikTok referer");
+  assert.equal(readerHeaders.get("accept-language"),"en-US,en;q=0.9,id;q=0.8","Jina requests should use stable language headers");
   assert.equal(readerHeaders.get("x-return-format"),null,"Jina must not be forced into HTML mode, which hides the Markdown image URLs");
   assert.match(readerHeaders.get("accept")||"",/text\/markdown/i);
   assert.ok(data.images.every(item=>item.previewUrl.includes("/api/social-image-file")));
   assert.ok(data.images.every(item=>item.downloadUrl.includes("/api/social-image-file")));
-  console.log("ARYANZZ TikTok Photo Mode Markdown gallery extraction regression passed.");
+  const secondResponse=await worker.fetch(new Request(requestUrl.href),{});
+  assert.equal(secondResponse.status,200,"the cached Photo Mode gallery should remain available on a repeated request");
+  assert.equal((await secondResponse.json()).images.length,2);
+  assert.equal(readerCalls,3,"a successful Photo Mode gallery should be cached instead of querying Jina again");
+  console.log("ARYANZZ TikTok Photo Mode Markdown gallery extraction, 429 backoff, and short-lived cache regression passed.");
 }finally{
   globalThis.fetch=originalFetch;
 }
