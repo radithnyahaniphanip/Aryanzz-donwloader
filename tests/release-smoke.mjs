@@ -437,6 +437,9 @@ const checks = [
   ["V2.2 redesign is embedded after external styles so the refreshed interface is visible even when a CSS cache is stale", html.includes("ARYANZZ V2.2 FORCE VISUAL LAYER") && html.includes("INTERFACE 2.2") && html.includes("aryanzz-v22-force-visual")],
   ["Service worker is explicitly checked for a new build on every page load", html.includes("await registration.update()") && html.includes("updateViaCache:'none'") && html.includes("ARYANZZ_SKIP_WAITING")],
   ["HTML, service worker and release manifests are sent with no-store cache headers", read("../public/_headers").includes("/sw.js") && read("../public/_headers").includes("/index.html") && read("../public/_headers").includes("Cache-Control: no-store")],
+  ["PWA activation rotates only the versioned cache and preserves offline IndexedDB and browser data", sw.includes('const OFFLINE_DB_NAME="aryanzz-offline-v1",OFFLINE_DB_VERSION=1') && sw.includes("keys.filter(k=>k!==CACHE).map(k=>caches.delete(k))") && !/indexedDB\\.deleteDatabase|localStorage\\.clear\\(|sessionStorage\\.clear\\(/.test(sw)],
+  ["Android and desktop downloads use network-aware limits, bounded streaming, and native browser download handoff", downloaderJs.includes("navigator.connection||navigator.mozConnection||navigator.webkitConnection") && downloaderJs.includes("connection?.saveData") && downloaderJs.includes("DOWNLOAD_STREAM_TOO_LARGE") && downloaderJs.includes("function handoffDownloadToChrome") && downloaderJs.includes("link.download=filename") && downloaderJs.includes("URL.createObjectURL(blob)")],
+
 ];
 
 for (const [name, ok] of checks) {
