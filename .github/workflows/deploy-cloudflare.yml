@@ -62,8 +62,7 @@ jobs:
         run: |
           node tests/guest-access-smoke.mjs
           npm run test:release
-      - name: Run legacy regression suite (diagnostic only)
-        continue-on-error: true
+      - name: Run full regression suite
         run: npm test
 
   deploy:
