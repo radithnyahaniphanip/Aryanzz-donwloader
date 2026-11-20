@@ -12,10 +12,10 @@ const PLANS = [
     yearlyDurationDays: 365,
     summary: "Mulai menikmati pengalaman member ARYANZZ.",
     features: [
-      "Badge keanggotaan Starter",
-      "Tema profil Starter",
-      "Riwayat transaksi membership",
-      "Akses pembaruan fitur member"
+      "Badge Starter pada panel Membership",
+      "Status keanggotaan terhubung ke ID ARYANZZ",
+      "Riwayat pembayaran dan masa aktif",
+      "Perpanjangan paket dari akun yang sama"
     ]
   },
   {
@@ -30,8 +30,8 @@ const PLANS = [
     features: [
       "Semua fasilitas Starter",
       "Membuka Media Studio Pro",
-      "Akses awal fitur kreatif terpilih",
-      "Prioritas dukungan"
+      "Pustaka media dan pemutar lokal",
+      "Smart Queue untuk mengatur unduhan"
     ]
   },
   {
@@ -46,8 +46,8 @@ const PLANS = [
     features: [
       "Semua fasilitas Pro",
       "Membuka Video Editor Studio",
-      "Tema dan identitas profil Ultra",
-      "Prioritas dukungan lebih tinggi"
+      "Trim, filter, teks, dan audio",
+      "Subtitle dan ekspor hasil edit"
     ]
   },
   {
@@ -62,8 +62,8 @@ const PLANS = [
     features: [
       "Semua fasilitas Ultra",
       "Membuka Emote Studio",
-      "Akses uji coba fitur baru lebih awal",
-      "Jalur dukungan VIP"
+      "Edit stiker dan ekspor PNG/WebP",
+      "Buat GIF dan tambahkan stiker ke MP4"
     ]
   }
 ];
