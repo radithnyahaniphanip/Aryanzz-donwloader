@@ -1,12 +1,12 @@
-# ARYANZZ V1 — Full Release
+# ARYANZZ V2 — Full Release
 
 Production website: https://aryanzz-donwloader.aryanz.workers.dev/
 
-**Public release identity: V1 (Full Release).** All previously developed ARYANZZ capabilities are included in this single public release line. The interface, downloader, profile, owner, library, and tools remain separated into owned modules so future updates can be made without replacing unrelated features. The monotonically increasing build identifier is internal and exists only for deployment verification, browser-cache invalidation, and automatic updates; it does not change the public V1 label.
+**Public release identity: V2 (Full Release).** All previously developed ARYANZZ capabilities are included in this single public release line. The interface, downloader, profile, owner, library, and tools remain separated into owned modules so future updates can be made without replacing unrelated features. The monotonically increasing build identifier is internal and exists only for deployment verification, browser-cache invalidation, and automatic updates; it does not change the public V2 label.
 
 ARYANZZ is a mobile-first creator workspace hosted on Cloudflare Workers. V94.0 adds a compact two-column mobile tools experience, a four-column desktop tools layout, a dedicated popular-tools area, consolidated Profile settings, cleaner original aurora banner styling, persistent About and Help entry points, and a guarded SFL shortlink resolver. The Link Bypass only follows public HTTPS redirects from supported SFL domains; it does not solve CAPTCHA, login, or required verification. V73.0 improves mobile download checkpoints, Chrome background-resume support for direct files, adaptive MP4 progress, speed modes, and thumbnail actions. No Cobalt, Docker Desktop, private extraction server, or paid downloader provider is required.
 
-## V1 online account service setup
+## V2 online account service setup
 
 The login and registration screens support two modes. When the Cloudflare account service is ready, accounts are stored centrally in D1 and users can sign in with either their email address or ARYANZZ ID. If the required service configuration is missing, the interface deliberately falls back to browser-local accounts and clearly labels that storage mode.
 
@@ -428,7 +428,7 @@ Relevant references: Permenkominfo No. 5 Tahun 2020 (as amended), https://jdih.k
 - Keep the download checker honest: MP4, image, photo-mode, live-stream, and audio availability depends on the actual public media formats exposed by each source; no login, DRM, CAPTCHA, or private-content restrictions are bypassed.
 
 
-## V1 online accounts, email verification and password recovery
+## V2 online accounts, email verification and password recovery
 
 The account gate supports server-backed email/ID login, email-verified registration, one-time verification codes, password confirmation, password reset and migration of existing local accounts. Passwords are PBKDF2-SHA-256 hashes. Sessions use secure HttpOnly cookies. Verification codes expire after 10 minutes and are limited to five attempts. Cloudflare Turnstile is verified by the Worker, not trusted from the browser.
 
