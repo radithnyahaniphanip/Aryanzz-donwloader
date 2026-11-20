@@ -39,6 +39,10 @@ const sitemap=file("../public/sitemap.xml");
 const favicon=file("../public/favicon.svg");
 const deployWorkflow=file("../.github/workflows/deploy-cloudflare.yml");
 
+const socialRangeBlobIndex=downloader.indexOf("const blob=new Blob(parts,{type:mime})");
+const socialRangeInspectIndex=downloader.indexOf("await inspectMp4Blob(blob);",socialRangeBlobIndex);
+const socialRangeSaveIndex=downloader.indexOf("await saveBrowserBlob(blob,filename,container",socialRangeBlobIndex);
+
 const checks=[
   ["V93.0 preserves the original responsive home and tools layout",!html.includes('class="v93-popular-grid"')&&!linkBypassCss.includes(".all-tools-grid")&&!linkBypassCss.includes(".v674-tool-grid")],
   ["V93.0 keeps the original homepage without the added Popular Tools section",!html.includes('id="v93PopularTitle"')&&!html.includes('class="v93-popular-card')],
@@ -234,7 +238,7 @@ const checks=[
   ["V77.0 social preview and Chrome resume preserve Content-Range and Accept-Ranges",workerSource.includes('headers.set("content-range",rangeHeader)')&&workerSource.includes('headers.set("accept-ranges","bytes")')&&workerSource.includes("socialMimeForExtension(requestedExt,mode)")],
   ["V77.0 social media probes report total size and stop stalled streams",workerSource.includes("const totalBytes=rangeTotal")&&workerSource.includes("async function readSocialChunk")&&workerSource.includes("60 detik. Unduhan dihentikan")],
   ["V2 social downloads report real byte progress and save only complete, size-verified Blobs",downloader.includes("async function readBrowserChunk")&&downloader.includes("async function downloadSocialRanges")&&downloader.includes("new Blob(parts,{type:mime})")&&downloader.includes("if(received!==size||parts.some(part=>!part))")&&downloader.includes("if(blob.size!==size)")&&downloader.includes('progressText.textContent="Mengunduh "')&&downloader.includes('bar.style.width="100%"')&&downloader.includes("await saveBrowserBlob(blob,filename,container")],
-  ["V2 downloaded MP4 must contain ftyp, moov and mdat and match the source duration before saving",downloader.includes("async function inspectMp4Blob")&&downloader.includes("File MP4 belum utuh")&&downloader.includes("berbeda jauh dari durasi sumber")&&downloader.includes("const blob=new Blob(parts,{type:mime})")&&downloader.includes("if(received!==size||parts.some(part=>!part))")&&downloader.indexOf("await inspectMp4Blob(blob);",downloader.indexOf("const blob=new Blob(parts,{type:mime})"))>downloader.indexOf("const blob=new Blob(parts,{type:mime})")&&downloader.indexOf("await inspectMp4Blob(blob);",downloader.indexOf("const blob=new Blob(parts,{type:mime})"))<downloader.indexOf("await saveBrowserBlob(blob,filename,container",downloader.indexOf("const blob=new Blob(parts,{type:mime})")))],
+  ["V2 downloaded MP4 must contain ftyp, moov and mdat and match the source duration before saving",downloader.includes("async function inspectMp4Blob")&&downloader.includes("File MP4 belum utuh")&&downloader.includes("berbeda jauh dari durasi sumber")&&downloader.includes("if(received!==size||parts.some(part=>!part))")&&socialRangeBlobIndex>=0&&socialRangeInspectIndex>socialRangeBlobIndex&&socialRangeSaveIndex>socialRangeInspectIndex],
 
   ["V85.5.0 social title search restores V84.7 provider verification and adds query variants",workerSource.includes("function socialSearchQueryVariants")&&workerSource.includes('const relevantCandidates=candidates.filter(item=>publicSearchRelevance(query,item.title+" "+item.snippet)>=0.25)')&&workerSource.includes("const orderedCandidates=platform===\"all\"")&&workerSource.includes("verifySocialSearchResult(item,request.url,desiredMode)")&&workerSource.includes("verification:\"provider-and-media-signature\"")],
 
