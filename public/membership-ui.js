@@ -12,7 +12,8 @@
     selectedPlan: null,
     activeOrderId: "",
     pollTimer: null,
-    checkoutEnabled: false
+    checkoutEnabled: false,
+    identityReady: false
   };
 
   const rank = { free: 0, starter: 1, pro: 2, ultra: 3, max: 4 };
@@ -250,11 +251,16 @@
 
   async function refreshMe() {
     const result = await api("/api/membership/me", { method: "GET" });
-    if (!result.response.ok || !result.data.ok) return;
+    if (!result.response.ok || !result.data.ok) {
+      state.identityReady = false;
+      return false;
+    }
+    state.identityReady = true;
     state.membership = result.data.membership || state.membership;
     state.orders = Array.isArray(result.data.orders) ? result.data.orders : [];
     renderAccount();
     renderOrders();
+    return true;
   }
 
   function renderOrders() {
@@ -276,13 +282,35 @@
     });
   }
 
+  async function waitForGuestIdentity() {
+    if (window.aryanzzAuthUser && window.aryanzzAuthUser.id) return true;
+    if (window.aryanzzGuestReady && typeof window.aryanzzGuestReady.then === "function") {
+      try { await window.aryanzzGuestReady; } catch {}
+      return !!(window.aryanzzAuthUser && window.aryanzzAuthUser.id);
+    }
+    return await new Promise(resolve => {
+      let settled = false;
+      const finish = () => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        document.removeEventListener("aryanzz:guest-ready", finish);
+        resolve(!!(window.aryanzzAuthUser && window.aryanzzAuthUser.id));
+      };
+      const timer = setTimeout(finish, 8000);
+      document.addEventListener("aryanzz:guest-ready", finish, { once: true });
+    });
+  }
+
   async function load() {
+    await waitForGuestIdentity();
     const [catalogResult, configResult] = await Promise.all([
       api("/api/membership/catalog", { method: "GET" }),
       api("/api/membership/payment-config", { method: "GET" })
     ]);
     if (catalogResult.response.ok && catalogResult.data.ok) state.catalog = catalogResult.data;
-    state.checkoutEnabled = !!(configResult.response.ok && configResult.data.checkoutEnabled);
+    const config = configResult.data || {};
+    state.checkoutEnabled = !!(configResult.response.ok && config.checkoutEnabled && config.identityReady);
     if (!state.catalog) {
       setMessage("Katalog membership belum dapat dimuat.", "error");
       return;
@@ -290,8 +318,15 @@
     renderPlans();
     await refreshMe();
 
+    if (!state.identityReady) {
+      state.checkoutEnabled = false;
+      renderPlans();
+      setMessage("ID ARYANZZ belum tersinkron. Tunggu sebentar lalu muat ulang halaman agar membership terhubung ke ID perangkatmu.", "warning");
+      return;
+    }
     if (!state.checkoutEnabled) {
-      setMessage("Paket sudah ditampilkan, tetapi checkout belum aktif. Pemilik perlu memasang Secret AIRPAY_API_KEY pada Cloudflare Worker.", "warning");
+      const missing = Array.isArray(config.missing) ? config.missing.join(", ") : "AIRPAY_API_KEY";
+      setMessage("Paket sudah ditampilkan, tetapi checkout belum aktif. Konfigurasi yang diperlukan: " + missing + ".", "warning");
     }
 
     const pending = state.orders.find(order => order.status === "pending" && order.transactionId);
