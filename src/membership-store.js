@@ -218,11 +218,13 @@ export class MembershipStore {
         enabled: ready,
         checkoutEnabled: ready,
         apiKeyReady,
+        authReady,
         identityReady,
         provider: "AirPay QRIS",
         mode: this.apiKey().startsWith("ak_test_") ? "sandbox" : apiKeyReady ? "live" : "not-configured",
         statusVerification: "webhook-and-server-side-polling",
         webhookAvailable: true,
+        webhookUrl: new URL("/api/membership/webhook", url.origin).href,
         missing,
         message: ready
           ? "Checkout QRIS siap. Webhook dan pemeriksaan status server memverifikasi pembayaran sebelum membership aktif."
