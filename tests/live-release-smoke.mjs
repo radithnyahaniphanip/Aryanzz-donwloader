@@ -23,6 +23,14 @@ assert.equal(health?.securityActive,true);
 const version=String(health.buildId);
 assert.equal(version,expectedVersion,"Live Worker version does not match the build that was just deployed");
 
+const cacheSensitivePaths=["/","/index.html","/sw.js","/release.json","/release-manifest.json","/manifest.webmanifest","/panduan","/download-video","/download-mp3","/download-gambar"];
+for(const path of cacheSensitivePaths){
+  const response=await request(path);
+  assert.equal(response.status,200,"Cache-sensitive route must return HTTP 200: "+path);
+  assert.match(String(response.headers.get("cache-control")||""),/no-store/i,"Worker must apply no-store to "+path+"; actual Cache-Control: "+String(response.headers.get("cache-control")||"missing"));
+}
+console.log("✔ Critical HTML, PWA and release-manifest routes pass through Worker and return no-store headers.");
+
 const securityResponse=await request("/api/security/status");
 assert.equal(securityResponse.status,200);
 const security=await securityResponse.json();
