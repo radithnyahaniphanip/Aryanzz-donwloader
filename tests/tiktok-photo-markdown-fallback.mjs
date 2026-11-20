@@ -41,7 +41,7 @@ try{
   assert.equal(data.images.length,2,"real CDN images must be extracted while blob placeholders are ignored");
   assert.deepEqual(data.images.map(item=>item.url),images);
   assert.equal(readerCalls,1,"the Markdown reader should be used without unnecessary retries");
-  assert.ok(firstReaderUrl.includes("/https://www.tiktok.com/embed/v2/"),"the faster HTTPS Markdown route must be attempted before the slower HTTP route");
+  assert.ok(firstReaderUrl.includes("/http://www.tiktok.com/embed/v2/"),"the verified HTTP Markdown route must be attempted before the slower HTTPS route");
   assert.equal(readerHeaders.get("x-return-format"),null,"Jina must not be forced into HTML mode, which hides the Markdown image URLs");
   assert.match(readerHeaders.get("accept")||"",/text\/markdown/i);
   assert.ok(data.images.every(item=>item.previewUrl.includes("/api/social-image-file")));

@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 const root = process.cwd();
@@ -51,4 +51,29 @@ const manifestPath = resolve(root, "public/manifest.webmanifest");
 const manifest = readFileSync(manifestPath, "utf8").replaceAll("__ARYANZZ_VERSION__", version);
 writeFileSync(manifestPath, manifest);
 writeFileSync(resolve(root, "public/release.json"), JSON.stringify({ name: "ARYANZZ", release: publicRelease, releaseName: "Full Release", version: publicRelease, publicVersion: publicRelease, buildId: version, commit, builtAt: new Date().toISOString() }, null, 2) + "\n");
-console.log("[ARYANZZ] Release " + version + " built from commit " + commit);
+
+const shellMatch = sw.match(/const SHELL=\[(.*?)\];/s);
+if (!shellMatch) throw new Error("Service-worker shell asset list is missing.");
+const shellUrls = [...shellMatch[1].matchAll(/"([^"]+)"/g)].map(match => match[1]);
+const shellAliases = new Map([
+  ["/", "index.html"],
+  ["/panduan", "panduan.html"],
+  ["/download-video", "download-video.html"],
+  ["/download-mp3", "download-mp3.html"],
+  ["/download-gambar", "download-gambar.html"]
+]);
+const releaseFiles = shellUrls.map(url => {
+  const pathname = url.split("?")[0];
+  const relativePath = shellAliases.get(pathname) || pathname.replace(/^\/+/, "");
+  const assetPath = resolve(root, "public", relativePath);
+  if (!existsSync(assetPath)) throw new Error("Missing update asset: " + assetPath);
+  return { url, name: relativePath.split("/").pop() || "index.html", bytes: statSync(assetPath).size };
+});
+const totalBytes = releaseFiles.reduce((sum, file) => sum + file.bytes, 0);
+writeFileSync(resolve(root, "public/release-manifest.json"), JSON.stringify({
+  name: "ARYANZZ",
+  buildId: version,
+  totalBytes,
+  files: releaseFiles
+}, null, 2) + "\n");
+console.log("[ARYANZZ] Release " + version + " built from commit " + commit + " with " + releaseFiles.length + " update assets (" + (totalBytes / 1048576).toFixed(2) + " MB).");

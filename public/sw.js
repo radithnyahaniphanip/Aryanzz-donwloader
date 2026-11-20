@@ -1,4 +1,5 @@
 const CACHE="aryanzz-build-__ARYANZZ_VERSION__";
+const BUILD_ID="__ARYANZZ_VERSION__";
 const RELEASE_CHANNEL="V1";
 const SHELL=["/auth-gate.css?v=__ARYANZZ_VERSION__","/auth-gate.js?v=__ARYANZZ_VERSION__","/guest-access.js?v=__ARYANZZ_VERSION__","/text-protection.css?v=__ARYANZZ_VERSION__","/text-protection.js?v=__ARYANZZ_VERSION__","/auth-profile-v1.css?v=2","/auth-reset-v1.css?v=2","/update-manager.js?v=__ARYANZZ_VERSION__",
   "/workspace-home.css?v=__ARYANZZ_VERSION__","/workspace-tools.css?v=__ARYANZZ_VERSION__","/brand-polish.css?v=__ARYANZZ_VERSION__","/brand-system.css?v=__ARYANZZ_VERSION__","/v1-experience.css?v=__ARYANZZ_VERSION__","/desktop-workspace.css?v=__ARYANZZ_VERSION__","/arya-ui-overhaul.css?v=__ARYANZZ_VERSION__","/workspace-library.css?v=__ARYANZZ_VERSION__","/workspace-navigation.css?v=__ARYANZZ_VERSION__",
@@ -128,8 +129,64 @@ async function browserMediaDownload(request){
   const limited=upstream.body.pipeThrough(new TransformStream({transform(chunk,controller){received+=chunk.byteLength;if(received>500*1024*1024){controller.error(new Error("File melebihi batas 500 MB."));return;}controller.enqueue(chunk);}}));
   return new Response(limited,{status:upstream.status,headers});
 }
-// Release 95: take control immediately and let the update manager verify the live Worker build.
-self.addEventListener("install",e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting())));
+async function notifyUpdateProgress(payload){
+ try{
+  const windows=await self.clients.matchAll({type:"window",includeUncontrolled:true});
+  for(const client of windows)client.postMessage({type:"ARYANZZ_UPDATE_PROGRESS",buildId:BUILD_ID,...payload});
+ }catch{}
+}
+async function installReleaseAssets(){
+ const manifestResponse=await fetch("/release-manifest.json?build="+encodeURIComponent(BUILD_ID),{cache:"no-store"});
+ if(!manifestResponse.ok)throw new Error("Release manifest HTTP "+manifestResponse.status);
+ const manifest=await manifestResponse.json();
+ if(String(manifest.buildId||"")!==BUILD_ID||!Array.isArray(manifest.files)||manifest.files.length!==SHELL.length)throw new Error("Release manifest does not match this service worker.");
+ const totalFiles=manifest.files.length;
+ let totalBytes=Math.max(0,Number(manifest.totalBytes)||manifest.files.reduce((sum,file)=>sum+(Number(file.bytes)||0),0));
+ let downloadedBytes=0;
+ const cache=await caches.open(CACHE);
+ await notifyUpdateProgress({phase:"start",downloadedBytes,totalBytes,totalFiles,fileIndex:0});
+ for(let index=0;index<manifest.files.length;index++){
+  const file=manifest.files[index];
+  if(!SHELL.includes(file.url))throw new Error("Unexpected release asset: "+file.url);
+  const response=await fetch(file.url,{cache:"reload",credentials:"same-origin"});
+  if(!response.ok)throw new Error("Asset "+file.url+" returned HTTP "+response.status);
+  const chunks=[];
+  let fileBytes=0;
+  if(response.body&&response.body.getReader){
+   const reader=response.body.getReader();
+   while(true){
+    const part=await reader.read();
+    if(part.done)break;
+    chunks.push(part.value);
+    fileBytes+=part.value.byteLength;
+    totalBytes=Math.max(totalBytes,downloadedBytes+fileBytes);
+    await notifyUpdateProgress({phase:"download",downloadedBytes:downloadedBytes+fileBytes,totalBytes,totalFiles,fileIndex:index+1,currentFile:file.name||file.url});
+   }
+  }else{
+   const buffer=await response.arrayBuffer();
+   chunks.push(new Uint8Array(buffer));
+   fileBytes=buffer.byteLength;
+   totalBytes=Math.max(totalBytes,downloadedBytes+fileBytes);
+   await notifyUpdateProgress({phase:"download",downloadedBytes:downloadedBytes+fileBytes,totalBytes,totalFiles,fileIndex:index+1,currentFile:file.name||file.url});
+  }
+  const headers=new Headers(response.headers);
+  headers.delete("content-length");
+  headers.delete("content-encoding");
+  await cache.put(file.url,new Response(new Blob(chunks),{status:response.status,statusText:response.statusText,headers}));
+  downloadedBytes+=fileBytes;
+  await notifyUpdateProgress({phase:"download",downloadedBytes,totalBytes:Math.max(totalBytes,downloadedBytes),totalFiles,fileIndex:index+1,currentFile:file.name||file.url});
+ }
+ await notifyUpdateProgress({phase:"ready",downloadedBytes,totalBytes:Math.max(totalBytes,downloadedBytes),totalFiles,fileIndex:totalFiles});
+}
+self.addEventListener("install",e=>e.waitUntil(installReleaseAssets().then(()=>self.skipWaiting())));
+self.addEventListener("message",e=>{
+ if(e.data?.type==="ARYANZZ_GET_VERSION"){
+  const reply={type:"ARYANZZ_SW_VERSION",buildId:BUILD_ID};
+  if(e.ports?.[0])e.ports[0].postMessage(reply);
+  else e.source?.postMessage(reply);
+ }
+ if(e.data?.type==="ARYANZZ_SKIP_WAITING")e.waitUntil(self.skipWaiting());
+});
 self.addEventListener("activate",e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener("fetch",e=>{
  if(e.request.method!=="GET")return;
@@ -138,7 +195,7 @@ self.addEventListener("fetch",e=>{
  if(u.pathname==="/api/youtube/hybrid/browser-file"){e.respondWith(offlineAwareFile(e.request,browserMediaDownload));return;}
  if(u.pathname==="/api/social-file"){e.respondWith(offlineAwareFile(e.request,request=>fetch(request)));return;}
  if(u.pathname.startsWith("/api/"))return;
- const critical=e.request.mode==="navigate"||["/","/index.html","/sw.js","/release.json","/manifest.webmanifest"].includes(u.pathname);
+ const critical=e.request.mode==="navigate"||["/","/index.html","/sw.js","/release.json","/release-manifest.json","/manifest.webmanifest"].includes(u.pathname);
  if(critical){
   e.respondWith(fetch(new Request(e.request,{cache:"no-store"})).catch(()=>caches.match(e.request).then(r=>r||(/navigate/.test(e.request.mode)?caches.match("/?v=__ARYANZZ_VERSION__"):Response.error()))));
   return;
