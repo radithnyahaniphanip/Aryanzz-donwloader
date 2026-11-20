@@ -30,5 +30,6 @@ assert.match(html, /DANA/);
 assert.match(html, /GoPay/);
 assert.match(html, /LinkAja/);
 assert.match(navigation, /candidate\.dataset\.membershipMin/);
+assert.match(navigation, /!membership\|\|!membership\.canAccess/);
 
 console.log("ARYANZZ AirPay membership smoke tests passed.");
