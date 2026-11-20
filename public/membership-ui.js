@@ -521,6 +521,7 @@
     const config = configResult.data || {};
     if (state.catalog) restoreCart();
     state.checkoutEnabled = !!(configResult.response.ok && config.checkoutEnabled && config.identityReady);
+    renderCart();
     if (!state.catalog) {
       setMessage("Katalog membership belum dapat dimuat.", "error");
       return;
