@@ -14,6 +14,7 @@ assert.ok(!downloader.includes("outputNameZoom") && !downloader.includes("ary-ou
 assert.ok(!downloader.includes("Mode otomatis membaca informasi jaringan HP"), "network helper text is removed");
 assert.ok(!downloader.includes("Hanya unduh konten milikmu atau yang diizinkan."), "extra disclaimer below filename is removed");
 assert.ok(downloader.includes('speedSelect.id="aryDownloadSpeed"'), "download speed selector remains functional");
+assert.ok(downloader.includes("if(fast&&isTikTokPlatform&&!isTikTokPhotoPost)") && downloader.includes('expectedPlatform:selectedPlatform,fast:false') && downloader.includes("Jalur cepat belum menemukan MP4"), "TikTok quick checks automatically retry the full provider cascade before falling back to an embed-only player");
 assert.ok(!guides.includes("Lihat panduan fitur ini") && !guides.includes("ary-guide-panel-entry"), "contextual guide shortcuts are not injected into Profile or other panels");
 assert.ok(!guideCss.includes(".ary-guide-panel-button"), "removed guide shortcut has no remaining visual style");
 assert.ok(home.includes('/brand-polish.css?v=__ARYANZZ_VERSION__'), "responsive downloader polish stylesheet is linked");
