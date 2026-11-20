@@ -13,7 +13,7 @@ assert.ok(searchUi.includes("Mencari judul satu per satu di semua platform video
 assert.ok(searchUi.includes("const PLATFORM_SESSION_KEY=")&&searchUi.includes("persistPlatformSession")&&searchUi.includes("platformPageLink")&&searchUi.includes("platformPageTitle"),"Platform browsing position and input values must survive page reloads");
 assert.ok(searchUi.includes("renderPlatformPage(platformPage)")&&!searchUi.includes("if(!canLink&&canSearch)v=\"title\""),"Selecting a platform must not reset the 200-platform pager or force-hide the link tab");
 assert.ok(searchUi.includes("a.hidden=false")&&searchUi.includes("b.hidden=false")&&searchUi.includes("v674-mode-unavailable"),"Both link and title modes remain visible with a clear unsupported-provider notice");
-assert.ok(searchUi.includes('platform:"youtube",mediaType:"video"')&&searchUi.includes("fallbackItems.length"),"A video title search automatically retries YouTube when the selected provider returns no usable results");
+assert.ok(searchUi.includes('platform:"youtube",mediaType:kind')&&searchUi.includes("fallbackItems.length"),"A video title search automatically retries YouTube when the selected provider returns no usable results");
 const workspaceCss=readFileSync(new URL("../public/desktop-workspace.css",import.meta.url),"utf8");
 assert.ok(workspaceCss.includes("margin:26px 0 12px")&&workspaceCss.includes(".v674-mode-unavailable"),"Platform search controls have clear spacing and unsupported-mode notices are styled");
 
