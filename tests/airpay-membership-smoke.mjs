@@ -19,6 +19,7 @@ assert.match(membership, /auth_device_lock_accounts/);
 assert.doesNotMatch(membership, /poketo\.id/i);
 assert.match(membership, /statusVerification: "webhook-and-server-side-polling"/);
 assert.match(worker, /env\.MEMBERSHIP_STORE/);
+assert.match(worker, /signedAirPayWebhook/);
 assert.match(wrangler, /name = "MEMBERSHIP_STORE"/);
 assert.match(html, /id="membership"/);
 assert.match(html, /data-nav="membership"/);
