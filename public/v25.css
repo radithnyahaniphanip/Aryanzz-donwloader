@@ -469,3 +469,23 @@ body[data-motion="off"] *,body[data-motion="off"] *:before,body[data-motion="off
   #profile.ary-profile-v2 .ary-profile2-avatar{font-size:30px}
   #profile.ary-profile-v2 .ary-profile2-identity-copy h2{font-size:16px}
 }
+
+/* V2 profile typography scale: text and cards stay visually balanced on mobile. */
+#profile.ary-profile-v2{font-size:13px;line-height:1.5}
+#profile.ary-profile-v2 .ary-profile2-header h1{font-size:clamp(22px,3.2vw,29px);line-height:1.18;letter-spacing:-.6px}
+#profile.ary-profile-v2 .ary-profile2-header p{font-size:12px;line-height:1.5}
+#profile.ary-profile-v2 .ary-profile2-identity-copy h2{font-size:clamp(18px,2.5vw,23px);line-height:1.25}
+#profile.ary-profile-v2 .ary-profile2-identity-copy p{font-size:11px;line-height:1.5}
+#profile.ary-profile-v2 .ary-profile2-card-heading h2{font-size:16px;line-height:1.3}
+#profile.ary-profile-v2 .ary-profile2-label{font-size:10px;line-height:1.4}
+#profile.ary-profile-v2 .ary-profile2-input{font-size:12px}
+#profile.ary-profile-v2 .ary-profile2-stat b{font-size:18px}
+#profile.ary-profile-v2 .ary-profile2-stat small{font-size:9px;line-height:1.35}
+#profile.ary-profile-v2 .ary-profile2-device-heading p,#profile.ary-profile-v2 .ary-profile2-card-copy{font-size:10px;line-height:1.55}
+@media(max-width:460px){
+ #profile.ary-profile-v2 .ary-profile2-header h1{font-size:23px}
+ #profile.ary-profile-v2 .ary-profile2-identity-copy h2{font-size:17px}
+ #profile.ary-profile-v2 .ary-profile2-identity-copy p{font-size:10px}
+ #profile.ary-profile-v2 .ary-profile2-card-heading h2{font-size:15px}
+ #profile.ary-profile-v2 .ary-profile2-stat b{font-size:16px}
+}
