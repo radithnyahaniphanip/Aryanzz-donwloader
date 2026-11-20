@@ -1127,10 +1127,10 @@ function platformSearchModes(id){
   const entry=PLATFORM_CATALOG_BY_ID.get(String(id||"").toLowerCase());
   const platform=entry?.aliasOf?PLATFORM_CATALOG_BY_ID.get(entry.aliasOf):entry;
   if(!platform)return [];
-  // Title discovery is a public-index operation, not a provider extractor.
-  // AIO catalog entries can therefore be searched by domain even though their
-  // media download path remains best-effort and must be checked after selection.
-  return (platform.mediaModes||[]).filter(mode=>["video","image","audio"].includes(mode));
+  // Use the catalogue's verified search capability, not its broader link-media
+  // capability. Experimental AIO entries remain available for pasted-link
+  // extraction but must not be advertised as title-search providers.
+  return (platform.searchModes||[]).filter(mode=>["video","image","audio"].includes(mode));
 }
 function platformSupportsSearchMode(id,mode){
   return platformSearchModes(id).includes(String(mode||"").toLowerCase());
