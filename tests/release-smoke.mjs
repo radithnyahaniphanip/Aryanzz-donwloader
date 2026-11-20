@@ -64,8 +64,8 @@ for (const match of html.matchAll(/\bid=["']([^"']+)["']/g)) idCounts.set(match[
 const duplicateIds = [...idCounts].filter(([, count]) => count > 1).map(([id]) => id);
 
 const checks = [
-  ["Membership, cosmetics, and redeem interfaces are completely excluded from the V2 page and service worker", !html.includes("/membership.js") && !html.includes("/membership.css") && !sw.includes("/membership.js") && !sw.includes("/membership.css")],
-  ["Retired Membership, cosmetics, and redeem APIs are disabled with HTTP 410", worker.includes('url.pathname.startsWith("/api/membership/")||url.pathname.startsWith("/api/cosmetics/")||url.pathname.startsWith("/api/redeem/")') && worker.includes('"Fitur ini sudah tidak tersedia."},410') && !worker.includes("handleMembership(request,env)")],
+  ["AirPay Membership UI is loaded and its assets are included in the versioned offline shell", html.includes("/membership.css?v=__ARYANZZ_VERSION__") && html.includes("/membership-ui.js?v=__ARYANZZ_VERSION__") && sw.includes("/membership.css?v=__ARYANZZ_VERSION__") && sw.includes("/membership-ui.js?v=__ARYANZZ_VERSION__")],
+  ["Membership API routes through its Durable Object while retired cosmetics and redeem APIs stay disabled", worker.includes('url.pathname.startsWith("/api/membership/")') && worker.includes("env.MEMBERSHIP_STORE") && worker.includes('url.pathname.startsWith("/api/cosmetics/")||url.pathname.startsWith("/api/redeem/")') && worker.includes('"Fitur ini belum tersedia."},410') && !worker.includes("handleMembership(request,env)")],
   ["Primary-device registration guard is backed by a unique first-party installation registry", read("../src/auth.js").includes("trustedDeviceOwner(deviceHash, env)") && read("../src/auth.js").includes("auth_device_accounts") && read("../migrations/0005_prestige_redeem_devices.sql").includes("device_hash TEXT PRIMARY KEY")],
 
   ["Global text protection blocks selection and copy on all content and form fields while retaining typing", html.includes("/text-protection.css?v=__ARYANZZ_VERSION__") && html.includes("/text-protection.js?v=__ARYANZZ_VERSION__") && sw.includes("/text-protection.css?v=__ARYANZZ_VERSION__") && sw.includes("/text-protection.js?v=__ARYANZZ_VERSION__") && textProtectionJs.includes("contextmenu") && textProtectionJs.includes("copy") && textProtectionJs.includes("cut") && textProtectionJs.includes("selectstart") && textProtectionJs.includes("selectionchange") && textProtectionCss.includes("user-select:none!important") && !textProtectionCss.includes("user-select:text!important")],
@@ -450,7 +450,7 @@ for (const [name, ok] of checks) {
 console.log("\nARYANZZ V2 modular workspace, profile and account security smoke tests passed.");
 
 assert.equal(read("../public/index.html").includes('src="/membership.js'),false,"Membership script must not be loaded");
-assert.equal(read("../public/workspace-navigation.js").includes('membership"'),false,"Membership must not have a navigation destination");
+assert.equal(read("../public/workspace-navigation.js").includes("candidate.dataset.membershipMin"),true,"Membership tier gates must be enforced during tool navigation");
 assert.equal(read("../public/index.html").includes('Akses administrator · Masuk admin'),false,"Administrator entry must be removed from Owner page");
 const toolsWorkspaceJs=read("../public/workspace-tools.js");
 assert.ok(toolsWorkspaceJs.includes('grid.querySelectorAll(".tool")') && toolsWorkspaceJs.includes("const gridObserver=new MutationObserver(apply)") && toolsWorkspaceJs.includes("gridObserver.observe(grid,{childList:true,subtree:true})"),"Dynamically added tool cards must participate in search and filters");
