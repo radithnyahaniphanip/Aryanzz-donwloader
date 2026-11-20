@@ -1255,7 +1255,7 @@ function parseBingSocialVideoResults(html,platform,query,seen,desiredMode="video
     if(key==="pinterest"&&!/\/pin\//i.test(link.pathname))continue;
     const url=link.href.split("#")[0];if(seen.has(url))continue;
     const rawTitle=decodeSearchHtml((match[2]||"").replace(/<[^>]+>/g," ")).replace(/\s+/g," ").trim();
-    const title=rawTitle||decodeSearchHtml(attrs.match(/\btitle=["']([^"']+)["']/i)?.[1]||"")||((key==="tiktok"?"Video TikTok ":"Konten ")+query);
+    const title=rawTitle||decodeSearchHtml(attrs.match(/\btitle=["']([^"']+)["']/i)?.[1]||"")||((key==="tiktok"?(desiredMode==="image"?"Foto TikTok ":"Video TikTok "):"Konten ")+query);
     const context=String(html||"").slice(Math.max(0,match.index-350),Math.min(String(html||"").length,match.index+1300));
     const snippet=decodeSearchHtml(context.replace(/<[^>]+>/g," ").replace(/\s+/g," ")).slice(0,500);
     if(publicSearchRelevance(query,title+" "+snippet)<0.18)continue;
@@ -1408,8 +1408,8 @@ function parseGoogleSocialVideoResults(html,platform,query,seen,desiredMode="vid
     }
     if(link.protocol!=="https:"||!domains.some(domain=>link.hostname===domain||link.hostname.endsWith("."+domain)))continue;
     const key=freePlatformKey(link.href);if(!key)continue;
-    if(key==="tiktok"&&!/\/video\//i.test(link.pathname))continue;
-    if(key==="instagram"&&!/\/(?:p|reel|tv|share)\//i.test(link.pathname))continue;
+    if(key==="tiktok"&&!(desiredMode==="image"?/\/photo\//i.test(link.pathname):/\/video\//i.test(link.pathname)))continue;
+    if(key==="instagram"&&!(desiredMode==="image"?/\/(?:p|share)\//i.test(link.pathname):/\/(?:p|reel|tv|share)\//i.test(link.pathname)))continue;
     if(key==="pinterest"&&!/\/pin\//i.test(link.pathname))continue;
     const href=link.href.split("#")[0];if(seen.has(href))continue;
     const title=decodeSearchHtml((match[2].match(/<h3\b[^>]*>([\s\S]*?)<\/h3>/i)?.[1]||match[2]).replace(/<[^>]+>/g," "));
@@ -1529,7 +1529,7 @@ async function searchSocial(request){
         for(const item of direct.items){if(!seen.has(item.url)){seen.add(item.url);candidates.push(item)}}
       }
     }
-    if((platform==="all"||platform==="youtube")&&!candidates.some(item=>platformIdForUrl(item.url)==="youtube"&&strictTitleIntentScore(query,item.title,item.snippet||"")>=0.7)){
+    if(desiredMode!=="image"&&(platform==="all"||platform==="youtube")&&!candidates.some(item=>platformIdForUrl(item.url)==="youtube"&&strictTitleIntentScore(query,item.title,item.snippet||"")>=0.7)){
       // Community YouTube providers are only used when the indexed search found no YouTube candidate.
       const youtubeTerms=(desiredMode==="audio"
         ?[query,query+" official audio",query+" song",query+" lagu",query+" DJ remix",...variants]
