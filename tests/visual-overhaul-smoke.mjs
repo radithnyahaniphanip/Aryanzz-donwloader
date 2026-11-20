@@ -20,7 +20,7 @@ assert.ok(html.includes("/arya-ui-overhaul.css"),"The shared visual overhaul sty
 assert.match(html,/<body[^>]*data-motion="on"/,"Motion should be enabled by default");
 const toolGrid=html.match(/<div class="all-tools-grid v674-tool-grid" id="toolGrid">([\s\S]*?)<\/div>\s*<div/);
 assert.ok(toolGrid,"The main tool grid must exist");
-assert.equal((toolGrid[1].match(/<button\b/g)||[]).length,38,"All 38 tool cards must remain in the catalog");
+assert.equal((toolGrid[1].match(/<button\b/g)||[]).length,39,"All 39 tool cards, including Membership, must remain in the catalog");
 assert.ok(css.includes("#toolsArea #allTools .tool")&&css.includes(".ary-guide-hub-card"),"All tool cards and the guide hub must use the new card layout");
 assert.ok(css.includes("aryBrandDrift")&&css.includes("box-shadow:none!important"),"The home logo should animate without the old purple glow");
 assert.ok(!html.includes("#7b78ff")&&!html.includes("#c18cff"),"The home logo must not retain its purple gradient stops");
@@ -49,4 +49,4 @@ assert.ok(refreshCss.includes("aryV2LogoFloat")&&refreshCss.includes("aryV2Phone
 assert.ok(refreshCss.includes("@media(max-width:760px)")&&refreshCss.includes("prefers-reduced-motion"),"The V2.1 visual layer must remain responsive and respect reduced-motion preferences");
 assert.ok(refreshJs.includes('fetch("/release.json?ui="+Date.now()')&&refreshJs.includes('badge.textContent="V2 GRATIS"')&&refreshJs.includes('badge.title="ARYANZZ V2 GRATIS · Build "+build'),"The header badge must show the V2 free release and expose the exact live build in its title");
 assert.ok(refreshJs.includes("IntersectionObserver")&&refreshJs.includes("arya-v2-pending"),"The new interface should reveal content as the user navigates without hiding content when motion is disabled");
-console.log("✔ ARYANZZ visual overhaul preserves all 38 tools and verifies device, owner, theme, and YouTube fallback behavior");
+console.log("✔ ARYANZZ visual overhaul preserves all 39 tools including Membership and verifies device, owner, theme, and YouTube fallback behavior");
