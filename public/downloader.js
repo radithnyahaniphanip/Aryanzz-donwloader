@@ -19,6 +19,12 @@
     ["ted.com","TED"],["archive.org","Internet Archive"],["snackvideo.com","SnackVideo"],["threads.net","Threads"],["threads.com","Threads"],["bluesky.app","Bluesky"],["kick.com","Kick"],["rumble.com","Rumble"],["odysee.com","Odysee"]
   ];
   let activeDownloadController=null,activeDownloadFfmpeg=null,analysisRunId=0,activeYouTubeLiveMonitor=null;
+  function setDownloadActivity(active){
+    const current=Math.max(0,Number(window.aryanzzActiveDownloads)||0);
+    const next=active?current+1:Math.max(0,current-1);
+    window.aryanzzActiveDownloads=next;
+    window.dispatchEvent(new CustomEvent("aryanzz:download-state",{detail:{active:next>0,count:next}}));
+  }
   function downloadTimeoutSignal(ms){
     const timeout=AbortSignal.timeout(ms),parent=activeDownloadController?.signal;
     return parent&&typeof AbortSignal.any==="function"?AbortSignal.any([parent,timeout]):parent||timeout;
@@ -1712,9 +1718,17 @@ function normalizeDownloadSpeed(value){
       }
       if(isDirectMediaUrl)intro.textContent="File media langsung terdeteksi · memeriksa isi file sebelum menampilkan unduhan…";
       if(!isDirectMediaUrl&&detectedKey!==selectedPlatform){
-        // The offline 200-platform catalogue is enough to process the URL. The visual
-        // picker is optional here; a slow /api/platform/status response must not block
-        // a valid pasted link or turn a platform-load race into a false extraction error.
+        if(window.aryanzzPlatformSelectionExplicit===true&&selectedPlatform!=="all"){
+          box.replaceChildren(
+            make("b","","DITOLAK — PLATFORM TIDAK SESUAI"),
+            make("p","warning","Platform yang dipilih adalah "+(selectedNames[selectedPlatform]||selectedPlatform)+", sedangkan tautan ini berasal dari "+(selectedNames[detectedKey]||detectedEntry?.name||detectedPlatform)+". Pilih platform yang sesuai, lalu periksa kembali. Tautan tidak akan dialihkan diam-diam ke provider lain.")
+          );
+          button.disabled=false;
+          button.textContent=oldText;
+          return;
+        }
+        // On a fresh page, retain convenient auto-detection. Once the user has
+        // explicitly selected a provider, never silently switch platforms.
         if(typeof window.aryanzzAutoSelectPlatform==="function")window.aryanzzAutoSelectPlatform(detectedKey);
         selectedPlatform=detectedKey;
         intro.textContent="Platform terdeteksi otomatis: "+(selectedNames[detectedKey]||detectedEntry?.name||detectedPlatform)+". Memeriksa tautan video dan gambar…";
@@ -1735,7 +1749,7 @@ function normalizeDownloadSpeed(value){
       // Share-link resolution and image extraction may require multiple upstream requests.
       // Do not cancel those requests earlier than the backend's own fallback budget.
       const imageCheckTimeout=fast?9000
-        :(slowSocialSource?38000:((isTikTokPhotoPost||isTikTokShortLink)?34000:(isYouTubePhotoPost||isPhotoRoute||isSocialImagePostRoute)?20000:16000));
+        :(isThreadsPlatform?22000:(slowSocialSource?38000:((isTikTokPhotoPost||isTikTokShortLink)?34000:(isYouTubePhotoPost||isPhotoRoute||isSocialImagePostRoute)?20000:16000)));
       const imageExtractionPromise=shouldTryImageExtraction
         ?(async()=>{
           const endpoint="/api/image/extract?url="+encodeURIComponent(url.href);
@@ -1769,18 +1783,26 @@ function normalizeDownloadSpeed(value){
                 // Accept only a response containing real media formats, never a metadata-only HTTP 200.
                 const direct=async()=>{
                   const response=await fetch("/api/threads/direct?url="+encodeURIComponent(url.href),{
-                    cache:"no-store",credentials:"same-origin",signal:downloadTimeoutSignal(43000)
+                    cache:"no-store",credentials:"same-origin",signal:downloadTimeoutSignal(fast?14000:26000)
                   });
                   const data=await response.json().catch(()=>({}));
                   if(!response.ok||!Array.isArray(data.formats)||!data.formats.some(item=>item?.downloadUrl))throw new Error(String(data.error||"Threads direct: no public media"));
                   return data;
                 };
                 const provider=async()=>{
-                  const data=await postJson("/api/platform/info",{url:url.href,expectedPlatform:"threads",fast},fast?9500:65000);
+                  const data=await postJson("/api/platform/info",{url:url.href,expectedPlatform:"threads",fast},fast?9500:38000);
                   if(!Array.isArray(data.formats)||!data.formats.some(item=>item?.downloadUrl))throw new Error(String(data.error||"Threads provider: no public media"));
                   return data;
                 };
-                try{return await Promise.any([direct(),provider()])}
+                const photoGallery=async()=>{
+                  const result=await imageExtractionPromise;
+                  const gallery=result?.data||{};
+                  if(result?.ok&&gallery.ok&&Array.isArray(gallery.images)&&gallery.images.length){
+                    return {ok:true,type:"image",title:gallery.title||"Threads",formats:[],canonicalUrl:gallery.sourceUrl||url.href,providerName:"Threads public photo gallery",imageGalleryFound:true};
+                  }
+                  throw new Error(String(gallery.error||"Threads public photo gallery not found"));
+                };
+                try{return await Promise.any([direct(),provider(),photoGallery()])}
                 catch(error){
                   const reasons=Array.isArray(error?.errors)?error.errors.map(item=>String(item?.message||item).slice(0,150)):[String(error?.message||error)];
                   return {ok:false,type:"image",title:"Threads",formats:[],error:"Belum ditemukan video/audio langsung. Memeriksa gambar Threads…",diagnostics:reasons};
@@ -1816,7 +1838,7 @@ function normalizeDownloadSpeed(value){
       }
       const hasVideoFormat=(info.formats||[]).some(item=>item?.mode==="video"||item?.type==="video"||/^video\//i.test(String(item?.mimeType||item?.mime_type||""))||["mp4","m4v","webm","mov","avi","3gp"].includes(String(item?.ext||"").toLowerCase()));
       // If Threads has an MP4, do not keep the result screen blocked on an unrelated photo request.
-      const imageNeedsWait=shouldTryImageExtraction&&(!hasVideoFormat||isTikTokPhotoPost||isYouTubePhotoPost||isPhotoRoute||(!isThreadsPlatform&&isSocialImagePostRoute));
+      const imageNeedsWait=shouldTryImageExtraction&&(!hasVideoFormat||isThreadsPlatform||isTikTokPhotoPost||isYouTubePhotoPost||isPhotoRoute||(!isThreadsPlatform&&isSocialImagePostRoute));
       const imageResult=imageNeedsWait?await imageExtractionPromise:null;
       if(runId!==analysisRunId)return;
       const imageData=imageResult?.data||{};
@@ -2525,7 +2547,7 @@ function normalizeDownloadSpeed(value){
       start.addEventListener("click", async () => {
         box.querySelector(".v851-complete-panel")?.remove();box.classList.remove("v851-download-complete");
         resetDownloadRate(progressMeta);
-        const runController=new AbortController();activeDownloadController=runController;activeDownloadFfmpeg=null;
+        const runController=new AbortController();activeDownloadController=runController;activeDownloadFfmpeg=null;setDownloadActivity(true);
         cancel.hidden=false;cancel.disabled=false;cancel.textContent="Batalkan";
         start.disabled = true;
         mode.disabled = true;
@@ -2554,7 +2576,7 @@ function normalizeDownloadSpeed(value){
           start.disabled=false;mode.disabled=false;quality.disabled=mode.value==="audio"||directMedia;audioBitrate.disabled=false;speedSelect.disabled=false;start.textContent="Coba lagi";
         } finally {
           if(activeDownloadController===runController)activeDownloadController=null;
-          activeDownloadFfmpeg=null;cancel.hidden=true;cancel.disabled=false;cancel.textContent="Batalkan";
+          activeDownloadFfmpeg=null;setDownloadActivity(false);cancel.hidden=true;cancel.disabled=false;cancel.textContent="Batalkan";
         }
       });
     } catch (error) {
