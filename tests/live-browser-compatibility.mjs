@@ -193,6 +193,16 @@ async function testWorkspaceAndProfile(page, deviceLabel) {
   await page.locator("#allTools.active").waitFor({ state: "visible", timeout: 30000 });
   assert.equal(await page.locator("#toolsArea").isVisible(), true, deviceLabel + " Tools workspace did not open.");
   assert.ok(await page.locator('#allTools [data-panel="toolbox100"]').count() === 1, deviceLabel + " 100 Tools Lab entry is missing.");
+  await page.evaluate(() => {
+    const root = document.getElementById("toolsArea");
+    const panel = document.createElement("section");
+    panel.id = "qa-dynamic-workspace-panel";
+    panel.className = "panel active";
+    root.append(panel);
+  });
+  await page.locator("#toolsArea>.ary-tools-backbar").waitFor({ state: "visible", timeout: 10000 });
+  await page.evaluate(() => document.getElementById("qa-dynamic-workspace-panel")?.remove());
+  await page.locator("#toolsArea>.ary-tools-backbar").waitFor({ state: "hidden", timeout: 10000 });
   await page.locator('#allTools [data-panel="toolbox100"]').click();
   await page.locator("#toolbox100.active").waitFor({ state: "visible", timeout: 30000 });
   const toolCount = await page.locator("#toolbox100 [data-tool-id]").count();
