@@ -41,3 +41,15 @@
  #profile.ary-profile-v2 .ary-profile2-stat small{font-size:8px!important}
  #profile.ary-profile-v2 .ary-profile2-card-heading h2{font-size:15px!important}
 }
+
+/* Account actions stay compact and aligned with the profile typography. */
+#profile .ary-profile2-header{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+#profile .ary-profile-account-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap;min-width:0}
+#profile .ary-profile-account-actions button{min-height:34px;width:auto!important;min-width:96px;padding:8px 12px!important;border-radius:10px!important;font-size:10px!important}
+#profile .ary-profile-account-actions span{flex:0 1 auto;color:#8da9c4;font-size:9px;line-height:1.4}
+@media(max-width:520px){
+ #profile .ary-profile2-header{align-items:flex-start}
+ #profile .ary-profile-account-actions{width:100%;justify-content:flex-start}
+ #profile .ary-profile-account-actions button{flex:0 0 auto}
+ #profile .ary-profile-account-actions span{width:100%}
+}
