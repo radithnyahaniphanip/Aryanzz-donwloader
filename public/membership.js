@@ -62,6 +62,14 @@ function renderHistory(){
   left.append(node("b","",(plan?.name||order.plan_id)+" · "+money(order.amount)));
   left.append(node("small","",new Date(Number(order.created_at)).toLocaleString("id-ID")+" · "+String(order.id)));
   row.append(left,node("span","ary-membership-order-status",String(order.status||"pending").toUpperCase()));
+  if(order.status==="pending"&&order.provider_transaction_id){
+   const resume=node("button","ary-membership-payment-actions secondary","Lanjutkan / periksa");resume.type="button";
+   resume.addEventListener("click",()=>{
+    const selected=plan||{};
+    makePaymentPanel({id:order.id,planName:selected.name||order.plan_id,period:selected.period||"monthly",amount:order.amount},{payUrl:order.provider_payment_url||null,qrUrl:order.provider_qr_url||null,baseAmount:order.amount,feeAmount:order.provider_fee_amount===null?null:Number(order.provider_fee_amount),totalAmount:Number(order.provider_total_amount)||Number(order.amount),qrString:order.provider_qr_string||null});
+    payment.scrollIntoView({behavior:"smooth",block:"start"});
+   });row.append(resume);
+  }
   history.append(row);
  });
 }
@@ -157,6 +165,11 @@ async function init(){
   tabs?.querySelectorAll("[data-membership-period]").forEach(button=>button.addEventListener("click",()=>setPeriod(button.dataset.membershipPeriod)));
   await refreshAccount();
   if(!config.checkoutEnabled)showStatus("Paket sudah ditampilkan. Checkout akan aktif setelah "+(config.missing||[]).join(" dan ")+".",true);
+  const pendingOrder=(account?.orders||[]).find(order=>order.status==="pending"&&order.provider_transaction_id);
+  if(pendingOrder){
+   const selected=plans.find(plan=>plan.id===pendingOrder.plan_id)||{};
+   makePaymentPanel({id:pendingOrder.id,planName:selected.name||pendingOrder.plan_id,period:selected.period||"monthly",amount:pendingOrder.amount},{payUrl:pendingOrder.provider_payment_url||null,qrUrl:pendingOrder.provider_qr_url||null,baseAmount:pendingOrder.amount,feeAmount:pendingOrder.provider_fee_amount===null?null:Number(pendingOrder.provider_fee_amount),totalAmount:Number(pendingOrder.provider_total_amount)||Number(pendingOrder.amount),qrString:pendingOrder.provider_qr_string||null});
+  }
   const params=new URLSearchParams(location.search),returnOrder=params.get("order");
   if(params.get("membership")==="return"&&returnOrder){
    activeOrder=returnOrder;payment.hidden=false;payment.replaceChildren(node("h2","","Memeriksa pembayaran…"),node("p","ary-membership-payment-copy","Redirect dari AirPay bukan bukti lunas. ARYANZZ sedang memeriksa status transaksi ke server AirPay."));
