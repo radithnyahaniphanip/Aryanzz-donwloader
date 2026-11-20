@@ -1642,7 +1642,7 @@ async function imagePostMetadata(rawUrl,requestUrl){
 function socialImageProviderFailure(diagnostics,sourceUrl){
   const details=diagnostics||null;
   const serialized=JSON.stringify(details||{});
-  const retryable=/HTTP\\s*429|Free Api Limit|quota|timed.?out|timeout|aborted|HTTP\\s*5\\d\\d|upstream_timeout/i.test(serialized);
+  const retryable=/HTTP\s*429|Free Api Limit|quota|timed.?out|timeout|aborted|HTTP\s*5\d\d|upstream_timeout/i.test(serialized);
   const error=retryable
     ?"Layanan pembaca publik sedang membatasi permintaan atau tidak merespons. Tautan sumber belum bisa diproses sekarang; coba lagi nanti."
     :"Belum ditemukan file gambar asli pada postingan publik ini. Postingan mungkin berisi video, privat, memerlukan login, atau tidak menyediakan galeri gambar.";
