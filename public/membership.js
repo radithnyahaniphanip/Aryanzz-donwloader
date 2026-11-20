@@ -165,7 +165,7 @@ async function init(){
   tabs?.querySelectorAll("[data-membership-period]").forEach(button=>button.addEventListener("click",()=>setPeriod(button.dataset.membershipPeriod)));
   await refreshAccount();
   if(!config.checkoutEnabled)showStatus("Paket sudah ditampilkan. Checkout akan aktif setelah "+(config.missing||[]).join(" dan ")+".",true);
-  const params=new URLSearchParams(location.search),returnOrder=params.get("order");
+  const params=new URLSearchParams(location.search),returnOrder=params.get("order")||params.get("transaction_id");
   const pendingOrder=(account?.orders||[]).find(order=>order.status==="pending"&&order.provider_transaction_id);
   if(params.get("membership")==="return"&&returnOrder){
    const returning=(account?.orders||[]).find(order=>order.id===returnOrder);
