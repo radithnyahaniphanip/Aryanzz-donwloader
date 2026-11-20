@@ -64,7 +64,13 @@ try{
   assert.ok(headerAttempts.includes("https://www.tiktok.com/"),"the source-referer profile must be attempted first");
   assert.ok(headerAttempts.includes("https://cdn.example/"),"the CDN-referer fallback profile must be attempted");
 
-  console.log("ARYANZZ social media file preflight and alternate upstream retry tests passed.");
+  const stalled=await run("1",async()=>{
+    return new Response(new ReadableStream({start(){}}),{status:200,headers:{"content-type":"video/mp4"}});
+  });
+  assert.equal(stalled.response.status,502,"a stalled probe body must fail promptly instead of hanging like a full download");
+  assert.match(stalled.data?.error||"",/Stream tidak mengirim data/,"the stalled probe must report its bounded stream timeout");
+
+  console.log("ARYANZZ social media file preflight, alternate upstream retry, and bounded probe timeout tests passed.");
 }finally{
   globalThis.fetch=originalFetch;
 }
