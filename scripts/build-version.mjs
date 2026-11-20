@@ -52,6 +52,20 @@ const manifest = readFileSync(manifestPath, "utf8").replaceAll("__ARYANZZ_VERSIO
 writeFileSync(manifestPath, manifest);
 writeFileSync(resolve(root, "public/release.json"), JSON.stringify({ name: "ARYANZZ", release: publicRelease, releaseName: "Full Release", version: publicRelease, publicVersion: publicRelease, buildId: version, commit, builtAt: new Date().toISOString() }, null, 2) + "\n");
 
+// Keep Google's homepage recrawl hint aligned with every production release.
+// The first sitemap entry is the canonical homepage; other landing pages keep
+// their own last-modified dates until their content changes.
+const sitemapPath = resolve(root, "public/sitemap.xml");
+if (existsSync(sitemapPath)) {
+  const sitemap = readFileSync(sitemapPath, "utf8");
+  const sitemapDate = new Date().toISOString().slice(0, 10);
+  const refreshedSitemap = sitemap.replace(
+    /(<url>\\s*<loc>[^<]+<\\/loc>\\s*<lastmod>)[^<]*(<\\/lastmod>)/,
+    "$1" + sitemapDate + "$2"
+  );
+  if (refreshedSitemap !== sitemap) writeFileSync(sitemapPath, refreshedSitemap);
+}
+
 const shellMatch = sw.match(/const SHELL=\[(.*?)\];/s);
 if (!shellMatch) throw new Error("Service-worker shell asset list is missing.");
 const shellUrls = [...shellMatch[1].matchAll(/"([^"]+)"/g)].map(match => match[1]);
