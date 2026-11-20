@@ -11,13 +11,13 @@ if (!EXPECTED_BUILD_VERSION) throw new Error("EXPECTED_BUILD_VERSION is required
 const startsWith = (bytes, values) => values.every((value, index) => bytes[index] === value);
 const containsAscii = (bytes, value) => bytes.includes(Buffer.from(value, "ascii"));
 const tests = [
-  { name: "MP4", ext: "mp4", mode: "video", url: "https://www.w3schools.com/html/mov_bbb.mp4", signature: bytes => containsAscii(bytes, "ftyp") },
-  { name: "WebM", ext: "webm", mode: "video", url: "https://filesamples.com/samples/video/webm/sample_640x360.webm", signature: bytes => startsWith(bytes, [0x1a, 0x45, 0xdf, 0xa3]) },
-  { name: "MKV", ext: "mkv", mode: "video", url: "https://filesamples.com/samples/video/mkv/sample_640x360.mkv", signature: bytes => startsWith(bytes, [0x1a, 0x45, 0xdf, 0xa3]) },
-  { name: "MP3", ext: "mp3", mode: "audio", url: "https://filesamples.com/samples/audio/mp3/sample1.mp3", signature: bytes => bytes.subarray(0, 3).toString("ascii") === "ID3" || (bytes[0] === 0xff && (bytes[1] & 0xe0) === 0xe0) },
-  { name: "WAV", ext: "wav", mode: "audio", url: "https://filesamples.com/samples/audio/wav/sample1.wav", signature: bytes => bytes.subarray(0, 4).toString("ascii") === "RIFF" && bytes.subarray(8, 12).toString("ascii") === "WAVE" },
-  { name: "FLAC", ext: "flac", mode: "audio", url: "https://filesamples.com/samples/audio/flac/sample1.flac", signature: bytes => bytes.subarray(0, 4).toString("ascii") === "fLaC" },
-  { name: "OGG", ext: "ogg", mode: "audio", url: "https://filesamples.com/samples/audio/ogg/sample1.ogg", signature: bytes => bytes.subarray(0, 4).toString("ascii") === "OggS" }
+  { name: "MP4", ext: "mp4", mode: "video", url: "https://pnb-website-bucket.s3.us-east-2.amazonaws.com/samples/videos/mp4/sample-video-480x270-1mb.mp4", signature: bytes => containsAscii(bytes, "ftyp") },
+  { name: "WebM", ext: "webm", mode: "video", url: "https://pnb-website-bucket.s3.us-east-2.amazonaws.com/samples/videos/webm/sample-video-480x270-1mb.webm", signature: bytes => startsWith(bytes, [0x1a, 0x45, 0xdf, 0xa3]) },
+  { name: "MKV", ext: "mkv", mode: "video", url: "https://pnb-website-bucket.s3.us-east-2.amazonaws.com/samples/videos/mkv/sample-video-480x270-1mb.mkv", signature: bytes => startsWith(bytes, [0x1a, 0x45, 0xdf, 0xa3]) },
+  { name: "MP3", ext: "mp3", mode: "audio", url: "https://pnb-freetoolsforweb.s3.us-east-2.amazonaws.com/samples/audio/mp3/sample-audio-15s-mono-64kbps.mp3", signature: bytes => bytes.subarray(0, 3).toString("ascii") === "ID3" || (bytes[0] === 0xff && (bytes[1] & 0xe0) === 0xe0) },
+  { name: "WAV", ext: "wav", mode: "audio", url: "https://pnb-website-bucket.s3.us-east-2.amazonaws.com/samples/audio/wav/sample-audio-10s-8khz-mono.wav", signature: bytes => bytes.subarray(0, 4).toString("ascii") === "RIFF" && bytes.subarray(8, 12).toString("ascii") === "WAVE" },
+  { name: "FLAC", ext: "flac", mode: "audio", url: "https://pnb-website-bucket.s3.us-east-2.amazonaws.com/samples/audio/flac/sample-audio-10s.flac", signature: bytes => bytes.subarray(0, 4).toString("ascii") === "fLaC" },
+  { name: "OGG", ext: "ogg", mode: "audio", url: "https://pnb-website-bucket.s3.us-east-2.amazonaws.com/samples/audio/ogg/sample-audio-15s.ogg", signature: bytes => bytes.subarray(0, 4).toString("ascii") === "OggS" }
 ];
 
 async function openHome(context, label) {
@@ -39,6 +39,7 @@ async function openHome(context, label) {
       button: rect(document.querySelector("#analyze"))
     };
   });
+  assert.ok(layout.documentWidth <= layout.width + 2, label + " page has horizontal overflow: document=" + layout.documentWidth + "px, viewport=" + layout.width + "px.");
   assert.ok(layout.input.width >= 100 && layout.input.height >= 24, label + " URL input is too small.");
   assert.ok(layout.button.width >= 60 && layout.button.height >= 24, label + " Analyze button is too small.");
   assert.ok(layout.input.left >= -2 && layout.input.right <= layout.width + 2, label + " URL input is clipped outside viewport.");
@@ -77,8 +78,9 @@ async function testDownload(page, test, deviceLabel) {
     return !!result && !result.hidden && Array.from(result.querySelectorAll("button")).some(button => /Unduh file asli/i.test(button.textContent || ""));
   }, null, { timeout: 90000 });
   const resultText = await page.locator("#downloadResult").innerText();
-  const expectedHint = test.mode === "audio" ? "File audio langsung" : "File video langsung";
-  assert.ok(resultText.includes(expectedHint), deviceLabel + " " + test.name + " was classified incorrectly: " + resultText.slice(0, 500));
+  assert.ok(resultText.includes("File langsung"), deviceLabel + " " + test.name + " was not identified as a direct media file: " + resultText.slice(0, 500));
+  const detectedMode = await page.locator("#aryMode").inputValue();
+  assert.equal(detectedMode, test.mode, deviceLabel + " " + test.name + " selected the wrong media mode: " + detectedMode);
   const button = page.getByRole("button", { name: /Unduh file asli/i });
   await button.waitFor({ state: "visible", timeout: 30000 });
   const downloadPromise = page.waitForEvent("download", { timeout: 90000 });
