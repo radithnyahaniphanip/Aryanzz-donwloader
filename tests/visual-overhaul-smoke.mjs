@@ -22,7 +22,7 @@ assert.ok(!html.includes("#7b78ff")&&!html.includes("#c18cff"),"The home logo mu
 assert.ok(css.includes(".ary-theme-advanced")&&css.includes("body[data-ary-design-bg="),"Advanced border/background options must apply to the workspace");
 for(const id of ["aryDesignBorderStyle","aryDesignBorderColor","aryDesignBorderWidth","aryDesignRadius","aryDesignBackgroundStyle","aryDesignBgA","aryDesignBgB","aryDesignEffect","aryDesignSpeed","aryDesignIntensity","aryDesignApply","aryDesignReset"])assert.ok(html.includes('id="'+id+'"'),"Missing visual customization control: "+id);
 assert.ok(html.includes("80JT+ KOMBINASI"),"The advanced design studio should advertise its 80M+ combination system");
-assert.ok(theme.includes("function applyDesign")&&theme.includes("function readDesign")&&theme.includes("DESIGN_KEY"),"Design settings must preview, persist, and reapply after reload");
+assert.ok(theme.includes("function applyDesign")&&theme.includes("const readDesign=")&&theme.includes("DESIGN_KEY"),"Design settings must preview, persist, and reapply after reload");
 assert.ok(theme.includes('savedMotion===null?true:savedMotion==="1"'),"Animations should default on while retaining the user toggle");
 assert.ok(html.includes('data-device-spec="gpu"')&&html.includes('data-device-spec="storage"')&&html.includes('data-device-spec="physicalScreen"'),"The profile should expose expanded mobile device diagnostics");
 assert.ok(profile.includes('getHighEntropyValues(["model","platformVersion","architecture","bitness","fullVersionList"])'),"Device detection should use available User-Agent Client Hints");
