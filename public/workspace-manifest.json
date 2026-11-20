@@ -124,7 +124,8 @@
     ],
     "purpose": "Shared responsive shell: desktop/laptop left navigation, compact workspace width, desktop home composition, and responsive platform toolbar.",
     "css": [
-      "/desktop-workspace.css"
+      "/desktop-workspace.css",
+      "/arya-ui-overhaul.css"
     ]
   },
   "featureModules": [
