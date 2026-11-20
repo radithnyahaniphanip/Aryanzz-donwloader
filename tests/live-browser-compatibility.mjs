@@ -166,6 +166,7 @@ async function testPwaAndStorage(page) {
 }
 
 async function testWorkspaceAndProfile(page, deviceLabel) {
+  await page.waitForFunction(expected => document.querySelector("#homeReleaseVersion")?.dataset.buildId === expected, EXPECTED_BUILD_VERSION, { timeout: 30000 });
   const visual = await page.evaluate(() => {
     const hero = document.querySelector("#home>.v89-welcome");
     const header = document.querySelector("#home>.v674-top");
