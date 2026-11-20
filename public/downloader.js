@@ -82,6 +82,90 @@
     if(url&&platformEntryForUrl(url)&&url.protocol==="http:")url.protocol="https:";
     return url;
   }
+  const DIRECT_MEDIA_TYPES=Object.freeze({
+    mp4:{mode:"video",mimeType:"video/mp4"},webm:{mode:"video",mimeType:"video/webm"},mov:{mode:"video",mimeType:"video/quicktime"},m4v:{mode:"video",mimeType:"video/mp4"},
+    mkv:{mode:"video",mimeType:"video/x-matroska"},avi:{mode:"video",mimeType:"video/x-msvideo"},mpeg:{mode:"video",mimeType:"video/mpeg"},mpg:{mode:"video",mimeType:"video/mpeg"},
+    m2ts:{mode:"video",mimeType:"video/mp2t"},mts:{mode:"video",mimeType:"video/mp2t"},ts:{mode:"video",mimeType:"video/mp2t"}, "3gp":{mode:"video",mimeType:"video/3gpp"},
+    ogv:{mode:"video",mimeType:"video/ogg"},asf:{mode:"video",mimeType:"video/x-ms-asf"},wmv:{mode:"video",mimeType:"video/x-ms-wmv"},
+    mp3:{mode:"audio",mimeType:"audio/mpeg"},m4a:{mode:"audio",mimeType:"audio/mp4"},aac:{mode:"audio",mimeType:"audio/aac"},wav:{mode:"audio",mimeType:"audio/wav"},
+    ogg:{mode:"audio",mimeType:"audio/ogg"},oga:{mode:"audio",mimeType:"audio/ogg"},flac:{mode:"audio",mimeType:"audio/flac"},opus:{mode:"audio",mimeType:"audio/ogg"},
+    wma:{mode:"audio",mimeType:"audio/x-ms-wma"},aiff:{mode:"audio",mimeType:"audio/aiff"},aif:{mode:"audio",mimeType:"audio/aiff"},mka:{mode:"audio",mimeType:"audio/x-matroska"}
+  });
+  function directMediaDescriptorForUrl(value){
+    const url=value instanceof URL?value:safeUrl(String(value||""));
+    if(!url)return null;
+    const extension=String(url.pathname.split(".").pop()||"").toLowerCase();
+    const type=DIRECT_MEDIA_TYPES[extension];
+    return type?{extension,...type}:null;
+  }
+  function directMediaSignatureMatches(bytes,extension){
+    if(!(bytes instanceof Uint8Array)||bytes.length<8)return false;
+    const ascii=(start,length)=>String.fromCharCode(...bytes.subarray(start,start+length));
+    const hasAscii=value=>{
+      for(let index=0;index+value.length<=bytes.length;index++)if(ascii(index,value.length)===value)return true;
+      return false;
+    };
+    const ebml=bytes[0]===0x1a&&bytes[1]===0x45&&bytes[2]===0xdf&&bytes[3]===0xa3;
+    const ogg=ascii(0,4)==="OggS",riff=ascii(0,4)==="RIFF";
+    const asfSignature=[0x30,0x26,0xb2,0x75,0x8e,0x66,0xcf,0x11,0xa6,0xd9,0x00,0xaa,0x00,0x62,0xce,0x6c];
+    const asf=asfSignature.every((value,index)=>bytes[index]===value);
+    const ftyp=hasAscii("ftyp");
+    switch(extension){
+      case "mp4":case "m4v":case "mov":case "3gp":case "m4a":return ftyp;
+      case "webm":case "mkv":return ebml;
+      case "mka":return ebml||ogg;
+      case "avi":return riff&&ascii(8,3)==="AVI";
+      case "wav":return riff&&ascii(8,4)==="WAVE";
+      case "aiff":case "aif":return ascii(0,4)==="FORM"&&(ascii(8,4)==="AIFF"||ascii(8,4)==="AIFC");
+      case "mp3":return ascii(0,3)==="ID3"||(bytes[0]===0xff&&(bytes[1]&0xe0)===0xe0);
+      case "aac":return bytes[0]===0xff&&(bytes[1]&0xf0)===0xf0;
+      case "ogg":case "oga":case "opus":case "ogv":return ogg;
+      case "flac":return ascii(0,4)==="fLaC";
+      case "asf":case "wmv":case "wma":return asf;
+      case "mpeg":case "mpg":return bytes[0]===0&&bytes[1]===0&&bytes[2]===1&&(bytes[3]===0xba||bytes[3]===0xb3);
+      case "m2ts":case "mts":case "ts":return bytes[0]===0x47||bytes[4]===0x47;
+      default:return false;
+    }
+  }
+  async function probeDirectMediaUrl(url,descriptor){
+    const endpoint="/api/direct-file?url="+encodeURIComponent(url.href);
+    const response=await fetch(endpoint,{method:"GET",headers:{Range:"bytes=0-63"},cache:"no-store",credentials:"same-origin",signal:downloadTimeoutSignal(12000)});
+    if(!response.ok){
+      const failure=await response.json().catch(()=>({}));
+      throw new Error(String(failure.error||"File langsung tidak dapat diperiksa (HTTP "+response.status+").").slice(0,240));
+    }
+    const responseMime=String(response.headers.get("content-type")||"").split(";")[0].trim().toLowerCase();
+    if(/^(?:text\/|application\/(?:json|xml|x-mpegurl|vnd\.apple\.mpegurl))/i.test(responseMime))throw new Error("URL tersebut mengirim halaman atau data teks, bukan file media.");
+    if(descriptor.mode==="video"&&(responseMime.startsWith("audio/")||responseMime.startsWith("image/")))throw new Error("Tipe file sumber bukan video.");
+    if(descriptor.mode==="audio"&&(responseMime.startsWith("video/")||responseMime.startsWith("image/")))throw new Error("Tipe file sumber bukan audio.");
+    const reader=response.body?.getReader();
+    if(!reader)throw new Error("Browser tidak menyediakan stream untuk memeriksa file langsung.");
+    let prefix=new Uint8Array(0);
+    try{
+      while(prefix.length<64){
+        const part=await readBrowserChunk(reader,5000);
+        if(part.done)break;
+        const next=new Uint8Array(prefix.length+part.value.length);
+        next.set(prefix);next.set(part.value,prefix.length);prefix=next;
+      }
+    }finally{await reader.cancel().catch(()=>{});}
+    if(!directMediaSignatureMatches(prefix,descriptor.extension))throw new Error("Ekstensi URL terdeteksi, tetapi isi file tidak cocok dengan tanda tangan "+descriptor.extension.toUpperCase()+". File tidak akan disimpan.");
+    const range=String(response.headers.get("content-range")||"").match(/^bytes\s+\d+-\d+\/(\d+)$/i);
+    const size=Number(range?.[1])||(response.status===206?0:Number(response.headers.get("content-length")||0))||0;
+    return {mimeType:responseMime&&!responseMime.includes("octet-stream")?responseMime:descriptor.mimeType,size,rangeSupported:response.status===206};
+  }
+  async function directMediaInfo(url,descriptor){
+    const probe=await probeDirectMediaUrl(url,descriptor);
+    let filename="";
+    try{filename=decodeURIComponent(url.pathname.split("/").pop()||"")}catch{}
+    filename=filename.replace(/[\\\\:*?"<>|]+/g,"_").slice(0,100);
+    const title=filename.replace(/\.[a-z0-9]{2,8}$/i,"").replace(/[-_]+/g," ").trim()||"File media langsung";
+    return {
+      ok:true,title,filename,extension:descriptor.extension,type:descriptor.mode,mimeType:probe.mimeType,size:probe.size,
+      directMedia:true,sourceLabel:"File langsung",
+      formats:[{mode:descriptor.mode,ext:descriptor.extension,mimeType:probe.mimeType,url:url.href,quality:"Original",height:0,sizeBytes:probe.size}]
+    };
+  }
   function status(el, text, error) {
     el.textContent = text;
     el.className = error ? "warning" : "muted";
@@ -1600,9 +1684,12 @@ function socialNetworkPlan(selected=0){
       const knownSocialHost=url.hostname.toLowerCase().replace(/^www\\./,"");
       const explicitPlatform=knownSocialHost==="threads.com"||knownSocialHost.endsWith(".threads.com")||knownSocialHost==="threads.net"||knownSocialHost.endsWith(".threads.net")?"threads"
         :knownSocialHost==="x.com"||knownSocialHost.endsWith(".x.com")||knownSocialHost==="twitter.com"||knownSocialHost.endsWith(".twitter.com")?"x":"";
-      const detectedKey=explicitPlatform||window.aryanzzPlatformForUrl?.(url.href)||platformIdForUrl(url)||(detectedPlatform==="Direct Media URL"?"":(detectedAliases[detectedPlatform.toLowerCase()]||detectedPlatform.toLowerCase()));
+      const catalogPlatformId=window.aryanzzPlatformForUrl?.(url.href)||platformIdForUrl(url)||"";
+      const directMediaDescriptor=directMediaDescriptorForUrl(url);
+      const isDirectMediaUrl=!catalogPlatformId&&detectedPlatform==="Direct Media URL"&&!!directMediaDescriptor;
+      const detectedKey=explicitPlatform||catalogPlatformId||(detectedPlatform==="Direct Media URL"?"":(detectedAliases[detectedPlatform.toLowerCase()]||detectedPlatform.toLowerCase()));
       const detectedEntry=platformEntryForUrl(url)||platformCatalogEntries().find(platform=>platform.id===detectedKey);
-      if(!detectedKey||(!detectedEntry&&detectedKey!=="threads"&&detectedKey!=="x")){
+      if(!isDirectMediaUrl&&(!detectedKey||(!detectedEntry&&detectedKey!=="threads"&&detectedKey!=="x"))){
         const message=detectedPlatform==="Direct Media URL"
           ?"Tautan ini merupakan URL file langsung atau CDN yang belum terdaftar sebagai tautan postingan platform."
           :"Domain tautan belum dikenali dalam katalog platform ARYANZZ.";
@@ -1611,7 +1698,8 @@ function socialNetworkPlan(selected=0){
         button.textContent=oldText;
         return;
       }
-      if(detectedKey!==selectedPlatform){
+      if(isDirectMediaUrl)intro.textContent="File media langsung terdeteksi · memeriksa isi file sebelum menampilkan unduhan…";
+      if(!isDirectMediaUrl&&detectedKey!==selectedPlatform){
         // The offline 200-platform catalogue is enough to process the URL. The visual
         // picker is optional here; a slow /api/platform/status response must not block
         // a valid pasted link or turn a platform-load race into a false extraction error.
@@ -1620,17 +1708,17 @@ function socialNetworkPlan(selected=0){
         intro.textContent="Platform terdeteksi otomatis: "+(selectedNames[detectedKey]||detectedEntry?.name||detectedPlatform)+". Memeriksa tautan video dan gambar…";
       }
       const host=url.hostname.toLowerCase();
-      const isYouTube=["youtube.com","www.youtube.com","m.youtube.com","music.youtube.com","youtu.be","www.youtu.be","youtube-nocookie.com","www.youtube-nocookie.com"].includes(host);
-      const isTikTokPlatform=selectedPlatform==="tiktok"||selectedPlatform==="tiktoklite";
+      const isYouTube=!isDirectMediaUrl&&["youtube.com","www.youtube.com","m.youtube.com","music.youtube.com","youtu.be","www.youtu.be","youtube-nocookie.com","www.youtube-nocookie.com"].includes(host);
+      const isTikTokPlatform=!isDirectMediaUrl&&(selectedPlatform==="tiktok"||selectedPlatform==="tiktoklite");
       const isTikTokPhotoPost=isTikTokPlatform&&/\/photo\//i.test(url.pathname);
       const isTikTokShortLink=isTikTokPlatform&&/^(?:vt|vm)\.tiktok\.com$/i.test(host);
       const isYouTubePhotoPost=isYouTube&&/\/(?:post|community)\//i.test(url.pathname);
-      const isPhotoRoute=/\/(?:photo|photos|image|images|album|gallery|pin)\//i.test(url.pathname);
-      const isExplicitVideoRoute=/\/(?:video|reel|reels|watch|shorts|live|clip)\//i.test(url.pathname);
-      const catalogPlatform=platformCatalogEntries().find(platform=>platform.id===selectedPlatform||platform.aliasOf===selectedPlatform);
-      const shouldTryImageExtraction=isTikTokPhotoPost||isTikTokShortLink||isYouTubePhotoPost||isPhotoRoute||(!isYouTube&&!isExplicitVideoRoute&&selectedPlatform!=="soundcloud"&&!isTikTokPlatform&&catalogPlatform?.mediaModes?.includes("image"));
-      const isSocialImagePostRoute=/\/(?:p|post|posts|status|pin|photo|photos|image|images|album|gallery|share)\//i.test(url.pathname);
-      const isThreadsPlatform=selectedPlatform==="threads";
+      const isPhotoRoute=!isDirectMediaUrl&&/\/(?:photo|photos|image|images|album|gallery|pin)\//i.test(url.pathname);
+      const isExplicitVideoRoute=!isDirectMediaUrl&&/\/(?:video|reel|reels|watch|shorts|live|clip)\//i.test(url.pathname);
+      const catalogPlatform=isDirectMediaUrl?null:platformCatalogEntries().find(platform=>platform.id===selectedPlatform||platform.aliasOf===selectedPlatform);
+      const shouldTryImageExtraction=!isDirectMediaUrl&&(isTikTokPhotoPost||isTikTokShortLink||isYouTubePhotoPost||isPhotoRoute||(!isYouTube&&!isExplicitVideoRoute&&selectedPlatform!=="soundcloud"&&!isTikTokPlatform&&catalogPlatform?.mediaModes?.includes("image")));
+      const isSocialImagePostRoute=!isDirectMediaUrl&&/\/(?:p|post|posts|status|pin|photo|photos|image|images|album|gallery|share)\//i.test(url.pathname);
+      const isThreadsPlatform=!isDirectMediaUrl&&selectedPlatform==="threads";
       const slowSocialSource=isThreadsPlatform||selectedPlatform==="x";
       // Share-link resolution and image extraction may require multiple upstream requests.
       // Do not cancel those requests earlier than the backend's own fallback budget.
@@ -1657,9 +1745,11 @@ function socialNetworkPlan(selected=0){
         :Promise.resolve(null);
       let info;
       try{
-        info=isYouTube
-          ?await browserHybridYoutubeInfo(url.href,fast?9000:25000)
-          :isTikTokPhotoPost
+        info=isDirectMediaUrl
+          ?await directMediaInfo(url,directMediaDescriptor)
+          :isYouTube
+            ?await browserHybridYoutubeInfo(url.href,fast?9000:25000)
+            :isTikTokPhotoPost
             ?{ok:true,title:"TikTok Photo Mode",filename:"TikTok Photo Mode",type:"image",formats:[],extractor:"TikTok Photo Mode"}
             :isThreadsPlatform
               ?await (async()=>{
@@ -1954,7 +2044,7 @@ function socialNetworkPlan(selected=0){
       const header = make("div", "youtube-heading");
       const details = make("div", "youtube-details");
       details.append(make("b", "youtube-title", info.title || info.filename || "Media siap diunduh"));
-      const mediaMetaLine=make("small","muted",[info.extractor||platformName(url),info.isLiveArchive?"Arsip siaran langsung":"",duration(info.duration),info.size?(info.size/1048576).toFixed(1)+" MB":""].filter(Boolean).join(" · "));
+      const mediaMetaLine=make("small","muted",[info.extractor||info.sourceLabel||platformName(url),info.isLiveArchive?"Arsip siaran langsung":"",duration(info.duration),info.size?(info.size/1048576).toFixed(1)+" MB":""].filter(Boolean).join(" · "));
       details.append(mediaMetaLine);
       if(isYouTube&&info.thumbnail){
         try{
@@ -2243,7 +2333,7 @@ function socialNetworkPlan(selected=0){
       outputNameLabel.style.marginTop="12px";
       const outputNameWrap=make("div","ary-output-name-wrap");const outputName=make("input","field");outputName.id="aryOutputName";outputName.type="text";outputName.maxLength=90;outputName.value=info.title||"aryanzz-media";outputName.autocomplete="off";outputName.placeholder="Nama file hasil unduhan";outputName.spellcheck=false;outputNameWrap.append(outputName);
 
-      const directMedia=!!info.extension&&!info.extractor;
+      const directMedia=info.directMedia===true&&!!info.extension&&!info.extractor;
       const providerAudioFormats=(info.formats||[]).filter(item=>item.mode==="audio"&&item.downloadUrl);
       const hasCompatibleProviderAudio=item=>providerAudioFormats.some(audio=>(item.ext==="webm"?["webm","opus","ogg"]:["m4a","aac","mp3"]).includes(String(audio.ext||"").toLowerCase())&&(!item.instance||!audio.instance||item.instance===audio.instance));
       const qualityFormats=hasProviderDownloadFormats?(info.formats||[]).filter(item=>item.mode==="video"&&item.downloadUrl&&["mp4","m4v","webm"].includes(String(item.ext||"").toLowerCase())&&(!item.videoOnly||hasCompatibleProviderAudio(item))):info.formats||[];
@@ -2413,7 +2503,7 @@ function socialNetworkPlan(selected=0){
         audioLabel.hidden=audioFormat.hidden;
         audioBitrate.hidden=true;
         bitrateLabel.hidden=true;
-        start.textContent=mode.value==="audio"?"Unduh Audio":"Unduh MP4";
+        start.textContent=directMedia?"Unduh file asli":mode.value==="audio"?"Unduh Audio":"Unduh MP4";
         speedLabel.hidden=!isYouTube||mode.value==="audio"||info.providerName==="Public API";speedSelect.hidden=speedLabel.hidden;
         updateQualityHint();
         progressMeta.textContent=mode.value==="audio"?"Target: 1 file audio · estimasi muncul setelah ukuran sumber terbaca.":"Target: 1 file MP4 · estimasi muncul setelah ukuran sumber terbaca.";
