@@ -2100,15 +2100,19 @@ async function fetchTikTokPhotoEmbedProxy(canonicalUrl,timeoutMs=22000){
   const headers={"accept":"text/plain, text/markdown, */*","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"};
   const readerHttps="https://r.jina.ai/https://www.tiktok.com/embed/v2/"+itemId;
   const readerHttp="https://r.jina.ai/http://www.tiktok.com/embed/v2/"+itemId;
+  const corsToolsReader="https://cors.tools/read?url="+encodeURIComponent(target)+"&render=true&format=markdown";
   const jina=[
+    // cors.tools can render the public TikTok embed itself before extracting
+    // Markdown. If that independent browser-rendered route is unavailable,
+    // fall back to the Jina reader relays and validate every extracted CDN URL.
+    {name:"cors.tools Rendered TikTok Embed Markdown",url:corsToolsReader,headers,timeoutMs:14000},
     // Cloudflare Worker egress can receive HTTP 429 from Jina even when the
     // same reader URL works from a normal browser/CI runner. Relay the Markdown
-    // response through AllOrigins first, then keep direct reader routes as
-    // independent fallbacks. The response is still parsed and URL-validated here.
-    {name:"AllOrigins → Jina Reader Markdown HTTPS",url:"https://api.allorigins.win/raw?url="+encodeURIComponent(readerHttps),headers},
-    {name:"Jina Reader Markdown HTTPS",url:readerHttps,headers},
-    {name:"Jina Reader Markdown HTTP",url:readerHttp,headers},
-    {name:"AllOrigins → Jina Reader Markdown HTTP",url:"https://api.allorigins.win/raw?url="+encodeURIComponent(readerHttp),headers}
+    // response through AllOrigins, then keep direct reader routes as fallbacks.
+    {name:"AllOrigins → Jina Reader Markdown HTTPS",url:"https://api.allorigins.win/raw?url="+encodeURIComponent(readerHttps),headers,timeoutMs:6500},
+    {name:"Jina Reader Markdown HTTPS",url:readerHttps,headers,timeoutMs:5500},
+    {name:"Jina Reader Markdown HTTP",url:readerHttp,headers,timeoutMs:4500},
+    {name:"AllOrigins → Jina Reader Markdown HTTP",url:"https://api.allorigins.win/raw?url="+encodeURIComponent(readerHttp),headers,timeoutMs:3500}
   ];
   const fallbacks=[
     {name:"AllOrigins",url:"https://api.allorigins.win/raw?url="+encoded,headers:{accept:"text/html,*/*"}},
@@ -2119,7 +2123,7 @@ async function fetchTikTokPhotoEmbedProxy(canonicalUrl,timeoutMs=22000){
   const readEndpoint=async endpoint=>{
     const remaining=deadline-Date.now();
     if(remaining<=0)throw new Error("Batas waktu provider habis.");
-    const response=await fetch(endpoint.url,{headers:endpoint.headers,redirect:"follow",cache:"no-store",signal:AbortSignal.timeout(Math.min(remaining,18000))});
+    const response=await fetch(endpoint.url,{headers:endpoint.headers,redirect:"follow",cache:"no-store",signal:AbortSignal.timeout(Math.min(remaining,Number(endpoint.timeoutMs)||9000))});
     if(!response.ok){await response.body?.cancel().catch(()=>{});throw new Error(endpoint.name+" HTTP "+response.status);}
     const body=(await response.text()).slice(0,5000000);
     const parsed=extractSocialImageCandidates(body,target,"tiktok").filter(item=>{try{return /photomode/i.test(new URL(item.url).pathname)}catch{return false}});
