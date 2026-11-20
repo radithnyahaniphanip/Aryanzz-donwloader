@@ -155,7 +155,7 @@ const checks=[
   ["Adaptive MP4 remux fallback uses device-aware memory budgets",downloader.includes("function youtubeMuxMemoryBudget")&&downloader.includes("maxTrack:280*1024*1024")&&downloader.includes("maxCombined:440*1024*1024")&&downloader.includes("melewati batas aman memori perangkat")&&downloader.includes("progressiveFallback")],
   ["Browser CORS failure on adaptive tracks is reported instead of claiming success",downloader.includes("browserError=error")&&downloader.includes("detail.error||browserError.message")],
   ["legacy competing downloader handler removed",!v15.includes("button.onclick=async()=>{")],
-  ["owner header controls are real buttons",html.includes('class="owner-menu-mark" type="button" data-panel="allTools"')&&html.includes('aria-label="Buka riwayat unduhan"')&&html.includes('aria-label="Buka personalisasi profil"')],
+  ["Owner profile remains reachable through the unified bottom navigation",html.includes('data-nav="owner"')&&html.includes('<div class="panel owner-panel ary-owner-v2" id="owner">')&&html.includes('id="ownerEditProfile" type="button"')],
   ["owner view hides home and uses dark palette",ownerCss.includes('body[data-view="owner"] #home{display:none!important}')&&ownerCss.includes("background:linear-gradient(145deg,#13223a,#0d1728)")],
   ["owner social cards use requested contacts",ownerJs.includes("https://wa.me/6282110767071")&&ownerJs.includes("https://www.tiktok.com/@azazeuu?_r=1&_t=ZS-9B2FU0QemSi")],
   ["profile background removal clears stored and applied background",file("../public/v25.js").includes('d.background="";if(!write(DESIGN_KEY,d))')&&file("../public/v25.js").includes('applyDesign();setSurface("aurora")')],
