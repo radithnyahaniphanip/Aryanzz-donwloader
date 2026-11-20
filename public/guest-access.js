@@ -7,6 +7,13 @@
   const RESTORE_KEY = "aryanzz.public.guest.restore.v1";
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   const randomId = () => "ARY-" + Array.from(crypto.getRandomValues(new Uint8Array(10)), v => alphabet[v % alphabet.length]).join("");
+  function ensureDeviceLockCookie() {
+    const existing = document.cookie.split(";").map(value => value.trim()).find(value => value.startsWith("aryanzz_device_lock="))?.slice("aryanzz_device_lock=".length) || "";
+    if (/^[a-f0-9]{64}$/i.test(existing)) return existing;
+    const token = Array.from(crypto.getRandomValues(new Uint8Array(32)), value => value.toString(16).padStart(2, "0")).join("");
+    document.cookie = "aryanzz_device_lock=" + token + "; Max-Age=31536000; Path=/; Secure; SameSite=Lax";
+    return token;
+  }
   function setIdentity(user, localOnly = false) {
     if (!user || !/^ARY-[A-Z0-9]{10}$/i.test(String(user.id || ""))) return;
     if (!localOnly) { try { localStorage.setItem(LOCAL_ID_KEY, String(user.id)); } catch {} }
@@ -73,6 +80,7 @@
     document.body.classList.remove("ary-authenticated");
   }
   function localFallback(_message = "", _error = false) {
+    try { ensureDeviceLockCookie(); } catch {}
     let id = "";
     try { id = localStorage.getItem(LOCAL_ID_KEY) || ""; } catch {}
     if (!/^ARY-[A-Z0-9]{10}$/i.test(id)) {
@@ -85,6 +93,7 @@
     return { ok: false, localOnly: true, user: window.aryanzzAuthUser };
   }
   async function bootstrap() {
+    try { ensureDeviceLockCookie(); } catch {}
     const response = await fetch("/api/auth/guest/bootstrap", { method: "GET", credentials: "same-origin", cache: "no-store", headers: { accept: "application/json" } });
     const data = await response.json().catch(() => ({}));
     if (!response.ok || !data.ok) {
