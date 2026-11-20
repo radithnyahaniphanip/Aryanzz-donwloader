@@ -1442,11 +1442,11 @@ async function searchSocial(request){
   const searchTargets=platform==="all"
     ?PLATFORM_CATALOG.filter(item=>!item.aliasOf&&platformSupportsSearchMode(item.id,desiredMode))
     :[PLATFORM_CATALOG_BY_ID.get(canonicalPlatform)].filter(Boolean);
-  // A global indexed query is more reliable for the 200-platform view than
-  // querying only the first 15 catalog domains. Results are still filtered
-  // against the exact supported-domain catalog before they are returned.
+  // In All Platforms mode, issue one bounded primary-domain query to every
+  // provider that has an explicit video/image search capability. The 200-link
+  // catalogue is not fanned out wholesale, and AIO-only entries are excluded.
   const searchSites=platform==="all"
-    ?[""]
+    ?searchTargets.map(item=>"site:"+item.domains[0])
     :domains.map(domain=>"site:"+domain);
   async function boundedLookup(inputs,task,parallel=6){
     const out=new Array(inputs.length);let cursor=0;
@@ -1462,7 +1462,7 @@ async function searchSocial(request){
       : desiredMode==="image"
         ? [query,query+" photo",query+" image",query+" picture",...queryVariants]
         : [query,query+" video",query+" clip",query+" shorts",query+" DJ remix",query+" official video",...queryVariants]).filter((value,index,array)=>array.indexOf(value)===index).slice(0,platform==="all"?3:12);
-    const searchTerms=platform==="all"?variants.slice(0,3):variants.slice(0,4);
+    const searchTerms=platform==="all"?[query]:variants.slice(0,4);
     const pages=await boundedLookup(searchTerms.flatMap(term=>searchSites.map(searchSite=>({term,searchSite}))),async ({term,searchSite})=>{
       const url=new URL("https://html.duckduckgo.com/html/");url.searchParams.set("q",(searchSite?searchSite+" ":"")+term);
       const response=await fetch(url.href,{headers:{accept:"text/html","user-agent":"Mozilla/5.0 (compatible; ARYANZZ/86.2; +https://aryanzz-donwloader.aryanz.workers.dev)"},signal:AbortSignal.timeout(4600),cache:"no-store"});
