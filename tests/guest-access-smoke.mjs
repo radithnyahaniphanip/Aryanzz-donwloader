@@ -23,4 +23,4 @@ assert.ok(guest.includes("guestCopyBound") && guest.includes("navigator.clipboar
 assert.ok(html.includes("guest-access.js") && !html.includes("Akses administrator · Masuk admin"), "The guest client must remain while the Administrator entry is removed");
 assert.ok(owner.includes("/api/auth/admin/") && owner.includes("ownerBanAccountId"), "Owner moderation UI must keep ban and restore controls");
 assert.ok(!html.includes("membership.js") && !html.includes("membership.css"), "Membership, checkout, cosmetics, and redeem UI must not be loaded");
-console.log("ARYANZZ V1 anonymous public access and guest ID checks passed; retired Membership and Administrator entry are absent.");
+console.log("ARYANZZ V2 anonymous public access and guest ID checks passed; retired Membership and Administrator entry are absent.");
