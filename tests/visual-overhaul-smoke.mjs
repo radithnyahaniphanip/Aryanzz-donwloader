@@ -38,7 +38,7 @@ assert.ok(search.includes('const shouldTryYoutube=kind!=="image"&&selected!=="yo
 assert.ok(regression.includes('query:"Tabola Bale",platform:"all",mediaType:"video"'),"A Tabola Bale all-platform regression test must remain in the suite");
 assert.ok(worker.includes('query+" official video"')&&worker.includes('youtubeFallbackAttempted&&youtubeFallbackCandidateCount>0'),"The Worker should retry YouTube with video intent and report all-platform fallback");
 assert.ok(html.includes('/arya-v2-refresh.css?v=__ARYANZZ_VERSION__')&&html.includes('/arya-v2-refresh.js?v=__ARYANZZ_VERSION__'),"The V2.1 visual layer and interaction script must be loaded by the live page");
-assert.ok(html.includes('id="homeReleaseVersion" aria-live="polite"')&&html.includes("BUILD MEMUAT"),"The home badge must display the active deployment build instead of a hardcoded V1 label");
+assert.ok(html.includes('id="homeReleaseVersion" aria-live="polite"')&&html.includes("BUILD MEMUAT"),"The home badge must display the active deployment build instead of a hardcoded V2 label");
 assert.ok(sw.includes("/arya-v2-refresh.css?v=__ARYANZZ_VERSION__")&&sw.includes("/arya-v2-refresh.js?v=__ARYANZZ_VERSION__"),"Both V2.1 assets must be included in the versioned service-worker update shell");
 assert.ok(refreshCss.includes("#home>.v89-welcome")&&refreshCss.includes("#toolsArea #allTools .tool")&&refreshCss.includes("#profile .ary-v1-device-specs"),"The new visual layer must refresh home, tool cards, and live device specifications");
 assert.ok(refreshCss.includes("aryV2LogoFloat")&&refreshCss.includes("aryV2PhoneFloat")&&refreshCss.includes("ary-guide-dialog"),"The new visual layer must animate the brand/device and restyle the interactive guide");

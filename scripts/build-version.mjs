@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 const root = process.cwd();
 const packagePath = resolve(root, "package.json");
 const packageJson = JSON.parse(readFileSync(packagePath, "utf8"));
-const publicRelease = String(packageJson.release || "V1").trim() || "V1";
+const publicRelease = String(packageJson.release || "V2").trim() || "V2";
 const [major, minor, patch] = String(packageJson.version || "95.0.0").split(".").map(value => Number(value) || 0);
 
 // Production releases must come from the serialized GitHub Actions pipeline.

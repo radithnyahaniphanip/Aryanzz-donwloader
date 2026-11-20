@@ -15,7 +15,7 @@ async function refreshReleaseBadge(){
   if(!/^\d+\.\d+\.\d+$/.test(build))return;
   const shortBuild=build.split(".").pop();
   badge.textContent="BUILD "+shortBuild;
-  badge.title="ARYANZZ "+String(release.publicVersion||"V1")+" GRATIS · Build "+build;
+  badge.title="ARYANZZ "+String(release.publicVersion||"V2")+" GRATIS · Build "+build;
   badge.setAttribute("aria-label","Build aktif ARYANZZ "+build);
   badge.dataset.buildId=build;
  }catch{}

@@ -40,23 +40,46 @@
       return url;
     } catch { return null; }
   }
+  function platformCatalogEntries() {
+    const live=Array.isArray(window.ARYANZZ_PLATFORM_CATALOG)?window.ARYANZZ_PLATFORM_CATALOG:[];
+    const fallback=Array.isArray(window.ARYANZZ_PLATFORM_CATALOG_FALLBACK)?window.ARYANZZ_PLATFORM_CATALOG_FALLBACK:[];
+    const seen=new Set();
+    return [...live,...fallback].filter(platform=>{
+      const id=String(platform?.id||"").toLowerCase();
+      if(!id||seen.has(id))return false;
+      seen.add(id);return true;
+    });
+  }
+  function platformEntryForUrl(value) {
+    const url=value instanceof URL?value:safeUrl(String(value||""));
+    if(!url)return null;
+    const host=url.hostname.toLowerCase().replace(/^www\./,"");
+    return platformCatalogEntries().find(platform=>(platform.domains||[]).some(domain=>host===domain||host.endsWith("."+domain)))||null;
+  }
+  function platformIdForUrl(value) {
+    const entry=platformEntryForUrl(value);
+    return entry?(entry.aliasOf||entry.id):null;
+  }
   function platformName(url) {
-    const host = url.hostname.toLowerCase().replace(/^www\./,"");
-    const catalogItem=(window.ARYANZZ_PLATFORM_CATALOG||[]).find(platform=>(platform.domains||[]).some(domain=>host===domain||host.endsWith("."+domain)));
+    const catalogItem=platformEntryForUrl(url);
     if(catalogItem)return catalogItem.name;
-    const item = PLATFORM_NAMES.find(([domain]) => host === domain || host.endsWith("." + domain));
-    return item ? item[1] : "Direct Media URL";
+    const host=url.hostname.toLowerCase().replace(/^www\./,"");
+    const item=PLATFORM_NAMES.find(([domain])=>host===domain||host.endsWith("."+domain));
+    return item?item[1]:"Direct Media URL";
   }
   function normalizeMediaInput(raw) {
     let text=String(raw||"").trim();
     if(!text)return null;
-    const social=text.match(/(?:https?:\/\/)?(?:[a-z0-9-]+\.)*(?:youtube\.com|youtu\.be|tiktok\.com|instagram\.com|instagr\.am|snackvideo\.com|capcut\.com|facebook\.com|fb\.watch|pinterest\.com|pin\.it|x\.com|twitter\.com|reddit\.com|redd\.it|vimeo\.com|threads\.com|threads\.net|soundcloud\.com)(?:\/[^\s<>"']*)?/i);
-    const generic=text.match(/https?:\/\/[^\s<>"']+/i);
+    const domains=[...new Set([...platformCatalogEntries().flatMap(platform=>platform.domains||[]),...PLATFORM_NAMES.map(([domain])=>domain)])]
+      .sort((a,b)=>b.length-a.length);
+    const escapedDomains=domains.map(domain=>String(domain).replace(/[.*+?^$()|[\]\\]/g,"\\$&")).join("|");
+    const social=escapedDomains?text.match(new RegExp("(?:https?:\\/\\/)?(?:[a-z0-9-]+\\.)*(?:"+escapedDomains+")(?:\\:[0-9]+)?(?:\\/[^\\s<>\"']*)?","i")):null;
+    const generic=text.match(/(?:https?:\/\/|www\.)[^\s<>"']+|(?:[a-z0-9-]+\.)+[a-z]{2,}(?::\d+)?(?:\/[^\s<>"']*)?/i);
     text=social?.[0]||generic?.[0]||text;
-    text=text.replace(/^[<("'\x60]+/,"").replace(/[> "'\x60]+$/,"").replace(/[),.;!?\]}]+$/,"");
+    text=text.replace(/^[<("'\u0060]+/,"").replace(/[>"'\u0060]+$/,"").replace(/[),.;!?}\]]+$/,"");
     if(!/^https?:\/\//i.test(text))text="https://"+text;
     const url=safeUrl(text);
-    if(url&&platformName(url)!=="Direct Media URL"&&url.protocol==="http:")url.protocol="https:";
+    if(url&&platformEntryForUrl(url)&&url.protocol==="http:")url.protocol="https:";
     return url;
   }
   function status(el, text, error) {
@@ -1572,13 +1595,13 @@ function socialNetworkPlan(selected=0){
       const selectedRaw=String(window.aryanzzSelectedPlatform?.()||$("platformPicker")?.getAttribute("data-selected-platform")||$("platformPicker")?.querySelector("[data-platform].active")?.dataset.platform||"youtube").toLowerCase();
       const aliases={tiktoklite:"tiktok",instagramlite:"instagram",facebooklite:"facebook",twitter:"x"};
       let selectedPlatform=aliases[selectedRaw]||selectedRaw;
-      const selectedNames=Object.fromEntries((window.ARYANZZ_PLATFORM_CATALOG||[]).map(platform=>[platform.id,platform.name]));
+      const selectedNames=Object.fromEntries(platformCatalogEntries().map(platform=>[platform.id,platform.name]));
       const detectedAliases={"idn app":"idnapp"};
       const knownSocialHost=url.hostname.toLowerCase().replace(/^www\\./,"");
       const explicitPlatform=knownSocialHost==="threads.com"||knownSocialHost.endsWith(".threads.com")||knownSocialHost==="threads.net"||knownSocialHost.endsWith(".threads.net")?"threads"
         :knownSocialHost==="x.com"||knownSocialHost.endsWith(".x.com")||knownSocialHost==="twitter.com"||knownSocialHost.endsWith(".twitter.com")?"x":"";
-      const detectedKey=explicitPlatform||window.aryanzzPlatformForUrl?.(url.href)||(detectedPlatform==="Direct Media URL"?"":(detectedAliases[detectedPlatform.toLowerCase()]||detectedPlatform.toLowerCase()));
-      const detectedEntry=(window.ARYANZZ_PLATFORM_CATALOG||[]).find(platform=>platform.id===detectedKey);
+      const detectedKey=explicitPlatform||window.aryanzzPlatformForUrl?.(url.href)||platformIdForUrl(url)||(detectedPlatform==="Direct Media URL"?"":(detectedAliases[detectedPlatform.toLowerCase()]||detectedPlatform.toLowerCase()));
+      const detectedEntry=platformEntryForUrl(url)||platformCatalogEntries().find(platform=>platform.id===detectedKey);
       if(!detectedKey||(!detectedEntry&&detectedKey!=="threads"&&detectedKey!=="x")){
         const message=detectedPlatform==="Direct Media URL"
           ?"Tautan ini merupakan URL file langsung atau CDN yang belum terdaftar sebagai tautan postingan platform."
@@ -1589,16 +1612,12 @@ function socialNetworkPlan(selected=0){
         return;
       }
       if(detectedKey!==selectedPlatform){
-        if(typeof window.aryanzzAutoSelectPlatform==="function"){
-          window.aryanzzAutoSelectPlatform(detectedKey);
-          selectedPlatform=detectedKey;
-          intro.textContent="Platform terdeteksi otomatis: "+(selectedNames[detectedKey]||detectedEntry.name||detectedPlatform)+". Memeriksa tautan video dan gambar…";
-        }else{
-          box.replaceChildren(make("b","","GAGAL — PLATFORM BELUM SIAP"),make("p","warning","Katalog platform masih dimuat. Tunggu sebentar lalu periksa tautan kembali."));
-          button.disabled=false;
-          button.textContent=oldText;
-          return;
-        }
+        // The offline 200-platform catalogue is enough to process the URL. The visual
+        // picker is optional here; a slow /api/platform/status response must not block
+        // a valid pasted link or turn a platform-load race into a false extraction error.
+        if(typeof window.aryanzzAutoSelectPlatform==="function")window.aryanzzAutoSelectPlatform(detectedKey);
+        selectedPlatform=detectedKey;
+        intro.textContent="Platform terdeteksi otomatis: "+(selectedNames[detectedKey]||detectedEntry?.name||detectedPlatform)+". Memeriksa tautan video dan gambar…";
       }
       const host=url.hostname.toLowerCase();
       const isYouTube=["youtube.com","www.youtube.com","m.youtube.com","music.youtube.com","youtu.be","www.youtu.be","youtube-nocookie.com","www.youtube-nocookie.com"].includes(host);
@@ -1608,7 +1627,7 @@ function socialNetworkPlan(selected=0){
       const isYouTubePhotoPost=isYouTube&&/\/(?:post|community)\//i.test(url.pathname);
       const isPhotoRoute=/\/(?:photo|photos|image|images|album|gallery|pin)\//i.test(url.pathname);
       const isExplicitVideoRoute=/\/(?:video|reel|reels|watch|shorts|live|clip)\//i.test(url.pathname);
-      const catalogPlatform=(window.ARYANZZ_PLATFORM_CATALOG||[]).find(platform=>platform.id===selectedPlatform);
+      const catalogPlatform=platformCatalogEntries().find(platform=>platform.id===selectedPlatform||platform.aliasOf===selectedPlatform);
       const shouldTryImageExtraction=isTikTokPhotoPost||isTikTokShortLink||isYouTubePhotoPost||isPhotoRoute||(!isYouTube&&!isExplicitVideoRoute&&selectedPlatform!=="soundcloud"&&!isTikTokPlatform&&catalogPlatform?.mediaModes?.includes("image"));
       const isSocialImagePostRoute=/\/(?:p|post|posts|status|pin|photo|photos|image|images|album|gallery|share)\//i.test(url.pathname);
       const isThreadsPlatform=selectedPlatform==="threads";

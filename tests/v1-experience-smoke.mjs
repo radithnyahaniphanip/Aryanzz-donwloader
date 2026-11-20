@@ -25,4 +25,4 @@ const checks=[
   ["Final stylesheet is included in production and offline cache",html.includes('/v1-experience.css?v=__ARYANZZ_VERSION__')&&sw.includes('"/v1-experience.css?v=__ARYANZZ_VERSION__"')&&css.includes("@media(max-width:420px)")]
 ];
 for(const [label,ok] of checks){assert.ok(ok,label);console.log("✔ "+label);}
-console.log("ARYANZZ V1 Home + Device Studio six-package smoke checks passed.");
+console.log("ARYANZZ V2 Home + Device Studio six-package smoke checks passed.");

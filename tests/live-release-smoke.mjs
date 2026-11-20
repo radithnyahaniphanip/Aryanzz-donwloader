@@ -16,8 +16,8 @@ for(let attempt=0;attempt<24;attempt++){
   await new Promise(resolve=>setTimeout(resolve,3000));
 }
 assert.match(String(health?.buildId||""),/^\d+\.\d+\.\d+$/,"Live Worker tidak melaporkan versi build: "+String(lastError?.message||""));
-assert.equal(health?.version,"V1","Public Worker version must remain V1");
-assert.equal(health?.publicVersion,"V1","Public release channel must remain V1");
+assert.equal(health?.version,"V2","Public Worker version must remain V2");
+assert.equal(health?.publicVersion,"V2","Public release channel must remain V2");
 assert.equal(health?.mode,"cloudflare-worker-zero-server-hybrid");
 assert.equal(health?.securityActive,true);
 const version=String(health.buildId);
@@ -54,7 +54,7 @@ for(let attempt=0;attempt<15;attempt++){
   await new Promise(resolve=>setTimeout(resolve,2000));
 }
 assert.ok(homepageReady,"Homepage belum menyajikan build ID "+version+" setelah menunggu propagasi aset; status HTTP "+lastHomepageStatus);
-assert.ok(html.includes('name="aryanzz-version" content="V1"'),"Public homepage version must be V1");
+assert.ok(html.includes('name="aryanzz-version" content="V2"'),"Public homepage version must be V2");
 for(const marker of [
   "/speed-test.js?v="+version,
   'id="networkProfile"',
@@ -166,13 +166,13 @@ assert.ok(Array.isArray(updateManifest.files)&&updateManifest.files.length>=80,"
 assert.equal(Number(updateManifest.totalBytes),updateManifest.files.reduce((sum,file)=>sum+(Number(file.bytes)||0),0),"Update manifest total byte size must match its file entries");
 assert.ok(updateManifest.files.some(file=>String(file.url||"").includes("update-manager.js")),"Update manifest must include the update manager");
 const manifest=await waitForVersionedJson("/manifest.webmanifest?v="+version,"PWA manifest");
-assert.equal(release.release,"V1","Public release label must remain V1");
+assert.equal(release.release,"V2","Public release label must remain V2");
 assert.equal(manifest.name,"ARYANZZ","Installed PWA name must use the ARYANZZ brand");
 assert.equal(manifest.short_name,"ARYANZZ","Installed PWA short name must use the ARYANZZ brand");
 const workspaceManifestResponse=await request("/workspace-manifest.json?v="+version);
 assert.equal(workspaceManifestResponse.status,200,"Workspace ownership manifest tidak tersedia");
 const workspaceManifest=await workspaceManifestResponse.json();
-assert.equal(workspaceManifest.release?.publicVersion,"V1","Live workspace manifest must identify the public V1 release");
+assert.equal(workspaceManifest.release?.publicVersion,"V2","Live workspace manifest must identify the public V2 release");
 for(const key of ["home","tools","library","owner","profile","navigation"])assert.ok(workspaceManifest.workspaces?.[key]?.root,"Workspace manifest kehilangan pemilik: "+key);
 const swResponse=await request("/sw.js");
 assert.equal(swResponse.status,200,"Service worker tidak tersedia");
