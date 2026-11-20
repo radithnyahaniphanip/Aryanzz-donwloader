@@ -116,6 +116,9 @@ function publicOrder(order) {
     createdAt: order.createdAt,
     paidAt: order.paidAt || null,
     expiresAt: order.expiryAt || null,
+    gatewayExpiresAt: order.expiryAt || null,
+    checkoutExpiresAt: order.checkoutExpiresAt || (Number(order.createdAt || Date.now()) + 10 * 60 * 1000),
+    checkoutExpired: order.status === "pending" && Date.now() >= Number(order.checkoutExpiresAt || (Number(order.createdAt || Date.now()) + 10 * 60 * 1000)),
     transactionId: order.transactionId || null,
     qrUrl: order.qrUrl || null,
     payUrl: order.payUrl || null,
@@ -384,6 +387,7 @@ export class MembershipStore {
       customerName,
       customerEmail,
       createdAt: now,
+      checkoutExpiresAt: now + 10 * 60 * 1000,
       transactionId: null,
       qrUrl: null,
       payUrl: null,
@@ -426,8 +430,8 @@ export class MembershipStore {
       const transactionId = String(invoice.transaction_id || invoice.id || "").trim();
       const qrUrl = safeHttpsUrl(invoice.qr_url);
       const payUrl = safeHttpsUrl(invoice.pay_url);
-      if (!transactionId || (!qrUrl && !payUrl)) {
-        throw new Error("Respons AirPay belum memuat transaction_id dan QR/link pembayaran yang valid.");
+      if (!transactionId || !qrUrl) {
+        throw new Error("AirPay harus mengembalikan transaction_id dan qr_url agar pembayaran dapat dipindai langsung di ARYANZZ.");
       }
       if (invoice.base_amount !== undefined && Number(invoice.base_amount) !== amount) {
         throw new Error("Nominal dasar invoice AirPay tidak cocok dengan harga paket.");
@@ -445,7 +449,7 @@ export class MembershipStore {
       if (!Number.isSafeInteger(order.feeAmount) || order.feeAmount < 0 || order.amount + order.feeAmount !== order.totalAmount) {
         throw new Error("Rincian biaya invoice AirPay tidak konsisten.");
       }
-      order.expiryAt = invoice.expiry_at || null;
+      order.expiryAt = invoice.expiry_at || new Date(now + 15 * 60 * 1000).toISOString();
       order.note = "Invoice QRIS dibuat. Menunggu pembayaran.";
       await this.ctx.storage.put("order:" + id, order);
       await this.saveOrderList(session.id, order);
