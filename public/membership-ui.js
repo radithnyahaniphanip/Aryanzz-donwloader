@@ -250,10 +250,11 @@
         const qr = byId("membershipQr");
         qr.removeAttribute("src");
         qr.hidden = true;
-        if (caption) caption.textContent = "Waktu checkout berakhir · menunggu status final AirPay";
-        byId("membershipPaymentExpiry").textContent = "Sesi checkout 10 menit telah berakhir. QR ditutup dan pesanan dikeluarkan dari keranjang.";
+        if (caption) caption.textContent = "Waktu checkout berakhir · status gateway tetap diperiksa";
+        byId("membershipPaymentExpiry").textContent = "Batas checkout 10 menit selesai. QR disembunyikan dan keranjang direset; status invoice tetap dicocokkan dengan AirPay agar pembayaran yang sudah masuk tidak hilang.";
+        byId("membershipPaymentBack").hidden = false;
         clearCart();
-        setMessage("Waktu checkout 10 menit habis. QR ditutup dan keranjang direset. Server tetap memeriksa status AirPay sampai hasil akhir; pembayaran yang benar-benar berhasil tetap akan mengaktifkan Membership.", "warning");
+        setMessage("Waktu checkout 10 menit habis. QR ditutup dan keranjang direset. Server tetap memeriksa status AirPay sampai hasil akhir untuk mencegah pembayaran ganda atau kehilangan transaksi.", "warning");
       }
     };
     update();
@@ -266,6 +267,7 @@
     byId("membershipPayment").hidden = false;
     byId("membershipCheckout").hidden = true;
     byId("membershipCart").hidden = true;
+    byId("membershipPaymentBack").hidden = false;
     byId("membershipCartToggle").setAttribute("aria-expanded", "false");
     byId("membershipPaymentTitle").textContent = "Selesaikan pembayaran " + (order.planName || "membership");
     byId("membershipPaymentAmount").textContent = money(data.totalAmount || order.totalAmount || order.amount);
@@ -292,6 +294,7 @@
 
     const checkButton = byId("membershipCheckStatus");
     checkButton.disabled = false;
+    byId("membershipPaymentBack").hidden = !checkoutExpired;
     startCheckoutCountdown(order);
     if (checkoutExpired) {
       const caption = document.querySelector(".ary-membership-countdown-caption");
@@ -370,6 +373,9 @@
       byId("membershipPaymentExpiry").textContent = "Membership aktif sampai " + formatDate(state.membership.expiresAt);
       byId("membershipPaymentCountdown").textContent = "LUNAS";
       state.activeOrderId = "";
+      byId("membershipPaymentBack").hidden = false;
+      renderCart();
+      renderPlans();
       return false;
     }
     if (order.status === "expired" || order.status === "failed" || order.status === "rejected") {
@@ -382,11 +388,15 @@
       setMessage("Invoice " + order.status + ". Keranjang dikosongkan; pilih paket kembali untuk membuat invoice baru.", "error");
       await refreshMe();
       state.activeOrderId = "";
+      byId("membershipPaymentBack").hidden = false;
+      renderCart();
+      renderPlans();
       return false;
     }
     const checkoutExpired = order.checkoutExpired === true ||
       Date.now() >= Number(order.checkoutExpiresAt || (Number(order.createdAt || Date.now()) + 10 * 60 * 1000));
     if (checkoutExpired) {
+      byId("membershipPaymentBack").hidden = false;
       setMessage("Batas checkout 10 menit berakhir. QR sudah ditutup dan keranjang direset. ARYANZZ masih memeriksa status AirPay agar pembayaran yang sudah masuk tetap tercatat.", "warning");
     } else {
       setMessage("Pembayaran belum terdeteksi. Jika sudah membayar, tunggu beberapa saat lalu periksa kembali.", "pending");
@@ -593,6 +603,17 @@
     stopPolling();
     const keepChecking = await pollOnce();
     if (keepChecking && state.activeOrderId) startPolling(state.activeOrderId);
+  });
+  byId("membershipPaymentBack").addEventListener("click", () => {
+    byId("membershipPayment").hidden = true;
+    byId("membershipCheckout").hidden = true;
+    byId("membershipCart").hidden = true;
+    if (state.activeOrderId) {
+      setMessage("Tampilan pembayaran ditutup. Status invoice lama tetap diperiksa di latar belakang; pesanan baru bisa dibuat setelah AirPay memberikan status akhir.", "warning");
+    } else {
+      setMessage("Pilih paket Membership dan periode pembayaran yang kamu inginkan.", "info");
+    }
+    byId("membershipPlans").scrollIntoView({ behavior: "smooth", block: "start" });
   });
 
   document.addEventListener("click", event => {
