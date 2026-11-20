@@ -1539,7 +1539,7 @@ async function searchSocial(request){
         const itemPlatform=platformIdForUrl(item.url);
         return !!itemPlatform&&canonicalPlatformId(itemPlatform)===canonicalPlatform&&platformSupportsSearchMode(itemPlatform,desiredMode)&&strictTitleIntentScore(query,item.title,item.snippet||"")>=0.7;
       });
-    const shouldRunYoutubeFallback=desiredMode!=="image"&&(platform==="all"?!hasRelevantYoutubeCandidate:platform!=="youtube"&&!hasRelevantSelectedCandidate);
+    const shouldRunYoutubeFallback=desiredMode!=="image"&&!hasRelevantSelectedCandidate;
     let youtubeFallbackAttempted=false,youtubeFallbackCandidateCount=0,youtubeFallbackCandidates=[];
     if(shouldRunYoutubeFallback){
       youtubeFallbackAttempted=true;
