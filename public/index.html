@@ -294,6 +294,187 @@ body{background-color:var(--ary-app-bg)}
 <link rel="stylesheet" href="/desktop-workspace.css?v=__ARYANZZ_VERSION__">
 <link rel="stylesheet" href="/arya-ui-overhaul.css?v=__ARYANZZ_VERSION__">
 <link rel="stylesheet" href="/arya-v2-refresh.css?v=__ARYANZZ_VERSION__">
+<style id="aryanzz-v22-force-visual">
+/* ARYANZZ V2.2 FORCE VISUAL LAYER — inline fallback, independent of cached CSS */
+:root{
+ --ary-v2-bg:#080813;--ary-v2-surface:#121329;--ary-v2-surface-2:#18213a;
+ --ary-v2-line:rgba(159,139,255,.34);--ary-v2-text:#f7f7ff;--ary-v2-muted:#a7abc9;
+ --ary-v2-cyan:#49e5e2;--ary-v2-blue:#6da7ff;--ary-v2-violet:#a78bfa;
+}
+html{background:#080813!important}
+body{
+ background:
+  radial-gradient(900px 520px at 92% -12%,rgba(145,91,255,.25),transparent 66%),
+  radial-gradient(760px 540px at -12% 58%,rgba(36,181,204,.14),transparent 68%),
+  radial-gradient(520px 420px at 70% 110%,rgba(78,75,190,.12),transparent 72%),
+  #080813!important;
+ color:#f7f7ff!important;
+}
+body:before{
+ opacity:.48!important;
+ background-image:linear-gradient(rgba(156,143,255,.055) 1px,transparent 1px),linear-gradient(90deg,rgba(156,143,255,.055) 1px,transparent 1px)!important;
+ background-size:38px 38px!important;
+ animation:aryV22Ambient 28s linear infinite!important;
+}
+body .app-shell.wrap{max-width:1220px!important;padding-top:18px!important}
+body #home>.v674-top{
+ min-height:76px!important;padding:12px 17px!important;border-radius:25px!important;
+ border:1px solid rgba(161,139,255,.48)!important;
+ background:linear-gradient(112deg,rgba(22,18,48,.97),rgba(12,31,48,.96) 60%,rgba(10,48,55,.94))!important;
+ box-shadow:0 18px 48px rgba(0,0,0,.38),0 0 28px rgba(132,94,255,.12),inset 0 1px rgba(255,255,255,.1)!important;
+}
+body #home>.v674-top:after{
+ content:"";position:absolute;inset:0;pointer-events:none;border-radius:inherit;
+ background:linear-gradient(105deg,transparent 18%,rgba(190,169,255,.12) 48%,transparent 70%);
+ transform:translateX(-120%);animation:aryV22Sweep 8s ease-in-out infinite!important;
+}
+body #home>.v674-top .v674-logo{
+ width:62px!important;height:62px!important;flex-basis:62px!important;border-radius:21px!important;
+ border:1px solid rgba(183,164,255,.72)!important;
+ background:linear-gradient(140deg,#7657ff 0%,#386bd9 48%,#19c7c9 100%)!important;
+ box-shadow:0 0 0 5px rgba(129,100,255,.09),0 12px 34px rgba(84,102,255,.32)!important;
+}
+body #home>.v674-top .v674-logo:before{inset:-8px!important;border-color:rgba(91,225,224,.45)!important;animation:aryV22Halo 3.8s ease-in-out infinite!important}
+body #home>.v674-top .v674-brand>span:last-child{font-size:19px!important;letter-spacing:.13em!important}
+body #home>.v674-top .v674-brand small{color:#b7c5e8!important;letter-spacing:.28em!important}
+body #home>.v674-top .v674-version{
+ border-color:rgba(161,139,255,.48)!important;background:rgba(93,69,174,.22)!important;
+ color:#e4ddff!important;box-shadow:inset 0 1px rgba(255,255,255,.08)!important;
+}
+body #home>.v89-welcome{
+ min-height:318px!important;grid-template-columns:minmax(0,1fr) 112px!important;gap:24px!important;
+ padding:clamp(28px,5vw,48px)!important;border-radius:34px!important;
+ border:1px solid rgba(161,139,255,.52)!important;
+ background:
+  radial-gradient(280px 250px at 92% 14%,rgba(73,229,226,.2),transparent 72%),
+  radial-gradient(440px 340px at 0% 110%,rgba(128,87,255,.25),transparent 72%),
+  linear-gradient(122deg,#191438 0%,#172440 54%,#10404a 100%)!important;
+ box-shadow:0 26px 76px rgba(0,0,0,.4),0 0 45px rgba(113,89,255,.12),inset 0 1px rgba(255,255,255,.1)!important;
+}
+body #home>.v89-welcome:before{
+ opacity:.75!important;
+ background:
+  linear-gradient(135deg,transparent 34%,rgba(173,157,255,.13) 34.2%,transparent 34.7%),
+  linear-gradient(135deg,transparent 66%,rgba(79,229,225,.11) 66.2%,transparent 66.7%)!important;
+ animation:aryV22PanelGlow 12s ease-in-out infinite alternate!important;
+}
+body #home>.v89-welcome:after{
+ width:380px!important;height:380px!important;right:-120px!important;bottom:-210px!important;
+ border-color:rgba(110,225,231,.36)!important;
+ box-shadow:0 0 0 26px rgba(116,99,255,.07),0 0 0 58px rgba(72,222,222,.045),0 0 75px rgba(64,204,214,.12)!important;
+}
+body #home>.v89-welcome .v89-welcome-kicker{
+ color:#9bf2e9!important;font-size:10px!important;letter-spacing:.23em!important;
+}
+body #home>.v89-welcome .v89-welcome-kicker:after{
+ content:"  /  INTERFACE 2.2";display:inline-flex;align-items:center;margin-left:7px;
+ padding:5px 8px;border:1px solid rgba(164,145,255,.48);border-radius:999px;
+ background:rgba(124,93,230,.2);color:#d6caff;font-size:8px;letter-spacing:.12em;
+}
+body #home>.v89-welcome .ary-v1-hero-title{
+ max-width:14ch!important;font-size:clamp(39px,7.2vw,68px)!important;
+ letter-spacing:-.075em!important;line-height:.98!important;
+}
+body #home>.v89-welcome .ary-v1-hero-gradient{
+ background:linear-gradient(95deg,#b9a5ff 0%,#70c6ff 48%,#75f0dd 100%)!important;
+ -webkit-background-clip:text!important;background-clip:text!important;color:transparent!important;
+ text-shadow:none!important;
+}
+body #home>.v89-welcome p{max-width:44ch!important;color:#c2cbe2!important;font-size:14px!important;line-height:1.8!important}
+body #home>.v89-welcome .v89-welcome-mark{
+ width:104px!important;height:104px!important;flex-basis:104px!important;padding:17px!important;
+ border:1px solid rgba(189,175,255,.72)!important;border-radius:31px!important;
+ background:linear-gradient(145deg,rgba(130,96,255,.42),rgba(26,178,190,.3))!important;
+ box-shadow:0 0 0 8px rgba(130,96,255,.08),0 20px 50px rgba(0,0,0,.3),inset 0 1px rgba(255,255,255,.18)!important;
+ animation:aryV22MarkFloat 5s ease-in-out infinite!important;
+}
+body #home>.v89-welcome .v89-welcome-mark svg{filter:drop-shadow(0 0 14px rgba(105,230,225,.7))!important}
+body #home .v674-download{
+ margin-top:22px!important;padding:clamp(20px,4vw,34px)!important;border-radius:31px!important;
+ border:1px solid rgba(140,145,255,.43)!important;
+ background:linear-gradient(145deg,rgba(20,21,43,.98),rgba(13,28,46,.98) 62%,rgba(10,42,49,.98))!important;
+ box-shadow:0 26px 70px rgba(0,0,0,.38),0 0 34px rgba(119,96,255,.09),inset 0 1px rgba(255,255,255,.08)!important;
+}
+body #home .v674-download:before{
+ background:radial-gradient(circle,rgba(136,105,255,.24),rgba(56,202,213,.06) 44%,transparent 72%)!important;
+}
+body #home .v674-download .v674-download-heading{border-bottom-color:rgba(159,143,255,.24)!important}
+body #home .v674-download .v674-download-heading h2{color:#f8f6ff!important}
+body #home .v674-download .v674-download-mark{
+ border-color:rgba(165,145,255,.5)!important;background:linear-gradient(145deg,rgba(117,83,255,.32),rgba(37,174,189,.24))!important;
+ color:#d8f8ff!important;box-shadow:0 0 22px rgba(116,100,255,.15)!important;
+}
+body #home .v674-download .v674-mode-switch{
+ border-color:rgba(155,143,255,.28)!important;background:rgba(7,10,25,.78)!important;
+}
+body #home .v674-download .v674-mode-switch button.active{
+ border-color:rgba(165,145,255,.58)!important;
+ background:linear-gradient(110deg,rgba(118,85,255,.42),rgba(28,173,190,.28))!important;
+ color:#fff!important;box-shadow:0 8px 24px rgba(98,87,222,.18),inset 0 1px rgba(255,255,255,.1)!important;
+}
+body #home .v674-download .field{
+ border-color:rgba(146,151,220,.36)!important;background:rgba(5,12,27,.9)!important;
+ border-radius:15px!important;color:#fff!important;
+}
+body #home .v674-download .field:focus{
+ border-color:#8f83ff!important;box-shadow:0 0 0 4px rgba(130,105,255,.17)!important;
+}
+body #home .v674-download button.primary,
+body #home .v674-download .primary{
+ border:1px solid rgba(194,181,255,.45)!important;
+ background:linear-gradient(105deg,#7858ff 0%,#477de9 52%,#17bfc4 100%)!important;
+ color:#fff!important;box-shadow:0 10px 28px rgba(86,91,235,.3)!important;
+}
+body #home .v674-download .v736-platform{
+ border:1px solid rgba(147,153,220,.24)!important;
+ background:linear-gradient(145deg,rgba(28,31,61,.96),rgba(13,33,50,.96))!important;
+ border-radius:16px!important;box-shadow:0 8px 22px rgba(0,0,0,.18)!important;
+}
+body #home .v674-download .v736-platform:focus-visible,
+body #home .v674-download .v736-platform:hover{
+ border-color:rgba(114,225,225,.65)!important;box-shadow:0 0 0 2px rgba(114,225,225,.1),0 12px 26px rgba(63,113,210,.18)!important;
+}
+body #toolsArea #allTools .tool{
+ border:1px solid rgba(147,139,231,.28)!important;
+ background:linear-gradient(145deg,rgba(25,26,54,.98),rgba(12,31,47,.98))!important;
+ box-shadow:0 12px 28px rgba(0,0,0,.22)!important;
+}
+body #toolsArea #allTools .tool:hover{border-color:rgba(90,222,222,.55)!important;transform:translateY(-3px)!important}
+body .nav{
+ border:1px solid rgba(165,145,255,.42)!important;
+ background:rgba(12,13,31,.94)!important;
+ box-shadow:0 18px 52px rgba(0,0,0,.48),0 0 28px rgba(125,96,255,.16),inset 0 1px rgba(255,255,255,.1)!important;
+}
+body .nav button.active{
+ border-color:rgba(163,144,255,.62)!important;
+ background:linear-gradient(120deg,rgba(121,83,255,.42),rgba(29,176,189,.28))!important;
+ color:#fff!important;
+}
+body .nav button.active .nav-icon{color:#9af4e8!important}
+@keyframes aryV22Ambient{to{background-position:38px 38px,38px 38px}}
+@keyframes aryV22Sweep{0%,72%,100%{transform:translateX(-120%)}86%{transform:translateX(120%)}}
+@keyframes aryV22Halo{0%,100%{opacity:.35;transform:scale(.96)}50%{opacity:.95;transform:scale(1.1)}}
+@keyframes aryV22PanelGlow{from{opacity:.3;transform:translateX(-1%)}to{opacity:.85;transform:translateX(1%)}}
+@keyframes aryV22MarkFloat{0%,100%{transform:translateY(0) rotate(-1deg)}50%{transform:translateY(-8px) rotate(2deg)}}
+@media(max-width:760px){
+ body .app-shell.wrap{padding:10px 12px calc(116px + env(safe-area-inset-bottom))!important}
+ body #home>.v89-welcome{min-height:230px!important;grid-template-columns:minmax(0,1fr) 68px!important;gap:9px!important;padding:24px 17px!important;border-radius:25px!important}
+ body #home>.v89-welcome .ary-v1-hero-title{font-size:clamp(33px,8.8vw,47px)!important}
+ body #home>.v89-welcome .v89-welcome-mark{width:63px!important;height:63px!important;flex-basis:63px!important;padding:10px!important;border-radius:20px!important}
+ body #home>.v89-welcome .v89-welcome-kicker:after{font-size:7px!important;padding:4px 6px!important}
+ body #home .v674-download{margin-top:14px!important;padding:17px!important;border-radius:24px!important}
+ body #home>.v674-top .v674-logo{width:49px!important;height:49px!important;flex-basis:49px!important}
+}
+@media(max-width:390px){
+ body #home>.v89-welcome{grid-template-columns:minmax(0,1fr) 55px!important;padding:20px 14px!important}
+ body #home>.v89-welcome .v89-welcome-mark{width:51px!important;height:51px!important;flex-basis:51px!important;padding:8px!important}
+ body #home>.v89-welcome .v89-welcome-kicker:after{margin-left:3px!important}
+}
+@media(prefers-reduced-motion:reduce){
+ body:before,body #home>.v674-top:after{animation:none!important}
+ body #home>.v89-welcome .v89-welcome-mark,body #home>.v674-top .v674-logo:before{animation:none!important}
+}
+</style>
 </head><body class="ary-motion-enabled arya-v2-enhanced" data-motion="on" data-view="home" data-arya-v2="on">
 <div class="app-shell wrap">
 <section id="home" class="v674-home">
@@ -1344,7 +1525,14 @@ $('checkSite').onclick=()=>{const o=$('siteResult');o.hidden=false;try{const u=n
 // V15.1 Speed Test is initialized from public/v15.js.
 let stream=null;$('camStart').onclick=async()=>{try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false});$('camera').srcObject=stream;$('camStart').hidden=true;$('camStop').hidden=false;$('heartResult').textContent='Kamera aktif. Demo ini belum mengestimasi BPM.';}catch{$('heartResult').textContent='Kamera perlu HTTPS dan izin browser.';}};function stop(){if(stream)stream.getTracks().forEach(t=>t.stop());stream=null;$('camera').srcObject=null;$('camStart').hidden=false;$('camStop').hidden=true;}$('camStop').onclick=stop;window.addEventListener('pagehide',stop);
 let deferred=null;window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferred=e;});$('installBtn').onclick=async()=>{if(deferred){deferred.prompt();await deferred.userChoice;deferred=null;}else $('installMsg').textContent='Gunakan menu Chrome ⋮ → Tambahkan ke layar utama.';};
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('/sw.js?v=__ARYANZZ_VERSION__',{updateViaCache:'none'}).catch(()=>{}));
+if('serviceWorker' in navigator)window.addEventListener('load',async()=>{
+ try{
+  const buildId=document.querySelector('meta[name="aryanzz-build-id"]')?.content||"current";
+  const registration=await navigator.serviceWorker.register('/sw.js?v='+encodeURIComponent(buildId),{updateViaCache:'none'});
+  await registration.update();
+  if(registration.waiting)registration.waiting.postMessage({type:"ARYANZZ_SKIP_WAITING"});
+ }catch(error){console.warn("ARYANZZ service worker update check failed",error);}
+},{once:true});
 
 </script><script src="/link-bypass.js?v=94.0" defer></script><script src="/audio-studio.js?v=92.5" defer></script><script src="/media-studio.js?v=92.0" defer></script>
 <script src="/download-queue.js?v=92.0" defer></script><script src="/image-studio.js?v=81.4" defer></script><script src="/advanced.js?v=92.5" defer></script><script src="/v15.js?v=59.5" defer></script><script src="/v25.js?v=__ARYANZZ_VERSION__" defer></script><script src="/owner.js?v=__ARYANZZ_VERSION__" defer></script><script src="/network-mode.js?v=__ARYANZZ_VERSION__" defer></script><script src="/downloader.js?v=__ARYANZZ_VERSION__&build=__ARYANZZ_VERSION__" defer></script><script src="/v59.js?v=59.5" defer></script><script src="/editor.js?v=65.0" defer></script><script src="/music-recognition.js?v=71.0" defer></script><script src="/platform-catalog-fallback.js?v=__ARYANZZ_VERSION__" defer></script><script src="/v674.js?v=__ARYANZZ_VERSION__" defer></script><script src="/v677.js?v=67.7" defer></script><script src="/v680.js?v=71.0" defer></script><script src="/theme-studio.js?v=__ARYANZZ_VERSION__" defer></script>
