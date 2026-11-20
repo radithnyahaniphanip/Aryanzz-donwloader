@@ -33,13 +33,15 @@ globalThis.fetch = async (input, init = {}) => {
   if (url.pathname === "/api/qris/create") {
     createCalls += 1;
     const body = JSON.parse(init.body || "{}");
+    const amount = Number(body.amount);
+    const fee = amount < 150000 ? Math.ceil(amount * 0.007 + 295) : Math.ceil(amount * 0.0095);
     invoice = {
-      transaction_id: "AIRPAY-SMOKE-001",
+      transaction_id: "AIRPAY-SMOKE-" + createCalls,
       external_id: body.external_id,
       status: gatewayStatus,
-      base_amount: Number(body.amount),
-      fee_amount: 25,
-      total_amount: Number(body.amount) + 25,
+      base_amount: amount,
+      fee_amount: fee,
+      total_amount: amount + fee,
       qr_url: "https://airpaygateway.site/qr/smoke.png",
       pay_url: "https://airpaygateway.site/invoice/smoke",
       expiry_at: new Date(Date.now() + 15 * 60 * 1000).toISOString()
@@ -87,7 +89,7 @@ try {
   assert.equal(created.ok, true);
   assert.match(created.order.id, /^ARYM-/);
   assert.equal(created.order.amount, 10000);
-  assert.equal(created.order.totalAmount, 10025);
+  assert.equal(created.order.totalAmount, 10365, "the Starter invoice includes the published AirPay fee");
   assert.equal(created.order.checkoutExpired, false);
   assert.equal(created.order.checkoutExpiresAt - created.order.createdAt, 10 * 60 * 1000);
   assert.equal(created.payment.qrUrl, "https://airpaygateway.site/qr/smoke.png");
@@ -124,7 +126,7 @@ try {
       transaction_id: invoice.transaction_id,
       status: "Success",
       base_amount: 10000,
-      total_amount: 10025
+      total_amount: invoice.total_amount
     }
   });
   const { createHmac } = await import("node:crypto");
@@ -148,6 +150,20 @@ try {
   assert.equal(statusData.membership.tier, "starter");
   assert.equal(statusData.membership.status, "active");
   assert.ok(statusData.membership.expiresAt > Date.now());
+
+  // The Pro yearly invoice has a published MDR above Rp999. It must still
+  // be accepted and its full payable total must be shown to the customer.
+  gatewayStatus = "Pending";
+  const proYearly = await store.fetch(new Request("https://aryanzz.test/api/membership/orders", {
+    method: "POST",
+    headers: { ...requestHeaders, "content-type": "application/json" },
+    body: JSON.stringify({ planId: "pro", billingPeriod: "yearly" })
+  }));
+  assert.equal(proYearly.status, 201);
+  const proYearlyData = await proYearly.json();
+  assert.equal(proYearlyData.order.amount, 127000);
+  assert.equal(proYearlyData.order.feeAmount, 1184);
+  assert.equal(proYearlyData.order.totalAmount, 128184);
 
   console.log("MembershipStore AirPay smoke test passed.");
 } finally {
