@@ -132,7 +132,7 @@ function renderPlatformPage(nextPage){
  if(!picker||!platformCatalog.length)return;
  const query=String(platformSearch?.value||"").normalize("NFKC").trim().toLocaleLowerCase("id-ID");
  const mode=searchType?.value==="image"?"image":"video";
- const catalogForMode=activeMode==="link"?platformCatalog:platformCatalog.filter(platform=>Array.isArray(platform.searchModes)&&platform.searchModes.includes(mode));
+ const catalogForMode=activeMode==="link"?platformCatalog:platformCatalog.filter(platform=>platform.id===selected||(Array.isArray(platform.searchModes)&&platform.searchModes.includes(mode)));
  let matches=catalogForMode;
  if(query){
   matches=catalogForMode.filter(platform=>String(platform.name||"").normalize("NFKC").toLocaleLowerCase("id-ID").includes(query));
