@@ -2609,7 +2609,7 @@ async function resolveSocialImagePost(rawUrl,requestUrl,options={}){
   const key=platformIdForUrl(rawUrl)||providerKey;
   if(!key)return null;
   const canonicalUrl=await resolveSocialShortLink(rawUrl,key);
-  let providerTitle="",providerImages=[],tikwmImages=[];
+  let providerTitle="",providerImages=[],tikwmImages=[],tikwmDiagnostic=null;
   const isTikTokPhotoRoute=key==="tiktok"&&(()=>{try{return /\/photo\//i.test(new URL(canonicalUrl).pathname)}catch{return false}})();
   const providerUrl=FREE_MEDIA_API+"/api/download/"+(providerKey||key)+"?url="+encodeURIComponent(canonicalUrl);
   // Experimental catalogue entries still get safe public-page metadata extraction;
@@ -2698,10 +2698,13 @@ async function resolveSocialImagePost(rawUrl,requestUrl,options={}){
       }
       return page;
     })(),
-    key==="tiktok"&&!isTikTokPhotoRoute?fetchTikwmData(canonicalUrl,9000).then(data=>{
-      providerTitle=providerTitle||String(data.title||"").slice(0,240);
-      tikwmImages=providerImageCandidates({normalized:{images:data.images,photos:data.photos,gallery:data.gallery}});
-    }).catch(()=>{}):Promise.resolve(),
+    key==="tiktok"?fetchTikwmData(canonicalUrl,isTikTokPhotoRoute?7000:9000).then(data=>{
+      providerTitle=providerTitle||String(data.title||data.text||data.desc||"").slice(0,240);
+      tikwmImages=providerImageCandidates({normalized:data}).filter(item=>item.type==="image").map(item=>({...item,source:"TikWM"}));
+      if(isTikTokPhotoRoute)tikwmDiagnostic={ok:tikwmImages.length>0,imageCount:tikwmImages.length};
+    }).catch(error=>{
+      if(isTikTokPhotoRoute)tikwmDiagnostic={ok:false,error:String(error?.message||error).slice(0,140)};
+    }):Promise.resolve(),
     Promise.resolve(),
     key==="instagram"?(async()=>{
       try{
@@ -2727,6 +2730,7 @@ async function resolveSocialImagePost(rawUrl,requestUrl,options={}){
   ];
   const page=await tasks[1];
   await Promise.all([tasks[0],tasks[2],tasks[3],tasks[4],tasks[5]]);
+  if(options.diagnostics&&isTikTokPhotoRoute)options.diagnostics.value={...(options.diagnostics.value||{}),tikwm:tikwmDiagnostic||{ok:false,error:"TikWM image fallback returned no gallery."}};
   const rawCandidates=[...(page?.images||[]).map(item=>({...item,type:"image",source:item.source||"post-page"})),...providerImages.map(item=>({...item,url:item.url,source:"provider",type:item.type||item.kind||item.media_type||"image",mime_type:item.mime_type||item.mime||item.content_type||"",width:item.width||item.w||0,height:item.height||item.h||0,ext:item.ext||item.extension||""})),...(oembedImage?[oembedImage]:[]),...weirdDlImages,...tikwmImages.map(item=>({...item,url:item.url,source:"TikWM",type:"image"}))];
   const seen=new Set(),images=[];
   for(const item of rawCandidates){
