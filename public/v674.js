@@ -506,7 +506,12 @@ if(shouldTryYoutube){
  }
  if(fallbackData){
   const fallbackItems=(Array.isArray(fallbackData.results)?fallbackData.results:[]).filter(item=>searchResultBelongsTo(item,"youtube"));
-  if(fallbackItems.length){mediaItems=fallbackItems;data.fallbackUsed=true;unavailable=Number(fallbackData.unavailableCount)||unavailable;}
+  if(fallbackItems.length){
+   mediaItems=selected==="all"
+    ?[...mediaItems,...fallbackItems.filter(item=>!mediaItems.some(existing=>existing?.url===item?.url))]
+    :fallbackItems;
+   data.fallbackUsed=true;unavailable=Number(fallbackData.unavailableCount)||unavailable;
+  }
  }
 }
 if(!mediaItems.length)throw searchFailure||new Error("Belum ada hasil publik yang cocok dari "+target.name+". YouTube akan ditawarkan sebagai pencarian cadangan.");
