@@ -1671,6 +1671,28 @@ function socialNetworkPlan(selected=0){
         info={ok:false,error:String(error?.message||error),title:"",formats:[],type:"image"};
       }
       if(runId!==analysisRunId)return;
+      // The quick TikTok provider may return only an official embed while the full
+      // provider cascade can still expose a real MP4. Retry automatically before
+      // presenting an embed-only result so the normal Periksa button gets the same
+      // extraction path as the full diagnostic.
+      if(fast&&isTikTokPlatform&&!isTikTokPhotoPost){
+        const hasQuickVideo=Array.isArray(info?.formats)&&info.formats.some(item=>item?.mode==="video"&&item?.downloadUrl&&["mp4","m4v","webm"].includes(String(item.ext||"").toLowerCase()));
+        let resolvedPhoto=false;
+        try{resolvedPhoto=/\/photo\//i.test(new URL(info?.canonicalUrl||url.href).pathname)}catch{}
+        if(!hasQuickVideo&&!resolvedPhoto){
+          intro.textContent="TikTok terdeteksi. Jalur cepat belum menemukan MP4; mencoba provider lengkap secara otomatis…";
+          try{
+            const deepInfo=await postJson("/api/platform/info",{url:url.href,expectedPlatform:selectedPlatform,fast:false},42000);
+            const hasDeepVideo=Array.isArray(deepInfo?.formats)&&deepInfo.formats.some(item=>item?.mode==="video"&&item?.downloadUrl&&["mp4","m4v","webm"].includes(String(item.ext||"").toLowerCase()));
+            if(hasDeepVideo)info=deepInfo;
+            else if(deepInfo?.embedUrl)info={...info,...deepInfo};
+            else if(deepInfo?.error&&!info?.error)info={...info,error:deepInfo.error};
+          }catch(error){
+            info={...info,deepFallbackError:String(error?.message||error).slice(0,240)};
+          }
+          if(runId!==analysisRunId)return;
+        }
+      }
       const hasVideoFormat=(info.formats||[]).some(item=>item?.mode==="video"||item?.type==="video"||/^video\//i.test(String(item?.mimeType||item?.mime_type||""))||["mp4","m4v","webm","mov","avi","3gp"].includes(String(item?.ext||"").toLowerCase()));
       // If Threads has an MP4, do not keep the result screen blocked on an unrelated photo request.
       const imageNeedsWait=shouldTryImageExtraction&&(!hasVideoFormat||isTikTokPhotoPost||isYouTubePhotoPost||isPhotoRoute||(!isThreadsPlatform&&isSocialImagePostRoute));
