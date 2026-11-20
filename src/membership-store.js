@@ -624,15 +624,22 @@ export class MembershipStore {
   }
 
   async alarm() {
-    let hasPending = false;
     try {
-      const entries = await this.ctx.storage.list({ prefix: "order:", limit: 100 });
-      let checked = 0;
-      for (const order of entries.values()) {
-        if (!order || order.status !== "pending") continue;
-        hasPending = true;
-        if (checked >= 20) continue;
-        checked++;
+      const entries = await this.ctx.storage.list({ prefix: "order:", limit: 1000 });
+      const pendingOrders = Array.from(entries.values()).filter(order => order && order.status === "pending");
+      if (!pendingOrders.length) {
+        await this.ctx.storage.deleteAlarm();
+        return;
+      }
+
+      // Rotate the batch cursor so pending orders beyond the first 20 are not starved.
+      const cursor = String(await this.ctx.storage.get("membership-alarm-cursor") || "");
+      let start = pendingOrders.findIndex(order => String(order.id) > cursor);
+      if (start < 0) start = 0;
+      const rotated = pendingOrders.slice(start).concat(pendingOrders.slice(0, start));
+      const batch = rotated.slice(0, 20);
+
+      for (const order of batch) {
         try {
           await this.checkOrderStatus(order);
         } catch (error) {
@@ -643,11 +650,8 @@ export class MembershipStore {
         }
       }
 
-      if (hasPending) {
-        await this.ctx.storage.setAlarm(Date.now() + STATUS_POLL_MS);
-      } else {
-        await this.ctx.storage.deleteAlarm();
-      }
+      if (batch.length) await this.ctx.storage.put("membership-alarm-cursor", String(batch[batch.length - 1].id));
+      await this.ctx.storage.setAlarm(Date.now() + STATUS_POLL_MS);
     } catch (error) {
       console.error("[ARYANZZ_MEMBERSHIP] alarm_failed", error && error.name || "unknown");
       await this.ctx.storage.setAlarm(Date.now() + STATUS_POLL_MS).catch(() => {});
