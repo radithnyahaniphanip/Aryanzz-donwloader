@@ -2092,16 +2092,31 @@ function extractTikTokPhotoProxyImages(text){
   }
   return images;
 }
+const TIKTOK_PHOTO_IMAGE_CACHE=new Map();
+function readTikTokPhotoCache(itemId){
+  const entry=TIKTOK_PHOTO_IMAGE_CACHE.get(itemId);
+  if(!entry)return null;
+  if(entry.expiresAt<=Date.now()){TIKTOK_PHOTO_IMAGE_CACHE.delete(itemId);return null;}
+  return {title:entry.value.title,images:entry.value.images.map(item=>({...item})),source:entry.value.source};
+}
+function writeTikTokPhotoCache(itemId,value){
+  TIKTOK_PHOTO_IMAGE_CACHE.set(itemId,{expiresAt:Date.now()+120000,value:{title:value.title,source:value.source,images:value.images.map(item=>({...item}))}});
+  while(TIKTOK_PHOTO_IMAGE_CACHE.size>100)TIKTOK_PHOTO_IMAGE_CACHE.delete(TIKTOK_PHOTO_IMAGE_CACHE.keys().next().value);
+}
 async function fetchTikTokPhotoEmbedProxy(canonicalUrl,timeoutMs=22000){
   const itemId=extractTikTokItemId(canonicalUrl);
   if(!itemId)throw new Error("ID Photo Mode tidak tersedia untuk jalur proxy.");
+  const cached=readTikTokPhotoCache(itemId);
+  if(cached)return cached;
   const target="https://www.tiktok.com/embed/v2/"+itemId;
   const encoded=encodeURIComponent(target);
-  const headers={"accept":"text/plain, text/markdown, */*","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"};
+  const headers={
+    "accept":"text/plain, text/markdown, */*",
+    "accept-language":"en-US,en;q=0.9,id;q=0.8",
+    "user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+    "referer":"https://www.tiktok.com/"
+  };
   const jina=[
-    // Latest live diagnostics recovered Photo Mode image URLs through the HTTP
-    // reader route and validated the resulting JPEG through our own image proxy.
-    // Try that route first; retain HTTPS and CORS.dev as independent fallbacks.
     {name:"Jina Reader Markdown HTTP",url:"https://r.jina.ai/http://www.tiktok.com/embed/v2/"+itemId,headers},
     {name:"Jina Reader Markdown HTTPS",url:"https://r.jina.ai/https://www.tiktok.com/embed/v2/"+itemId,headers},
     {name:"CORS.dev → Jina Reader",url:"https://proxy.cors.dev/https://r.jina.ai/https://www.tiktok.com/embed/v2/"+itemId,headers:{accept:"text/plain, text/markdown, */*"}}
@@ -2130,24 +2145,32 @@ async function fetchTikTokPhotoEmbedProxy(canonicalUrl,timeoutMs=22000){
     return {title:"TikTok Photo Mode",images,source:endpoint.name};
   };
   const errors=[];
-  // Jina is the only public route observed returning the full imagePostInfo gallery.
+  // Jina can temporarily rate-limit bursts. Retry with bounded backoff, then
+  // cache successful signed CDN URLs briefly to avoid repeated upstream calls.
   for(const endpoint of jina){
-    try{return await readEndpoint(endpoint)}
-    catch(error){
-      const message=String(error?.message||error);
-      errors.push(message.slice(0,100));
-      if(/HTTP 429/.test(message)&&Date.now()<deadline-900){
-        await new Promise(resolve=>setTimeout(resolve,650));
-        try{return await readEndpoint(endpoint)}
-        catch(retryError){errors.push(String(retryError?.message||retryError).slice(0,100))}
+    for(let attempt=0;attempt<3;attempt++){
+      try{
+        const result=await readEndpoint(endpoint);
+        writeTikTokPhotoCache(itemId,result);
+        return result;
+      }catch(error){
+        const message=String(error?.message||error);
+        errors.push(message.slice(0,100));
+        if(!/HTTP 429/.test(message)||attempt===2||Date.now()>=deadline-1800)break;
+        const delay=attempt===0?1200:2200;
+        if(Date.now()+delay>=deadline-700)break;
+        await new Promise(resolve=>setTimeout(resolve,delay));
       }
     }
   }
   const remaining=deadline-Date.now();
   if(remaining>500){
     const attempts=fallbacks.map(readEndpoint);
-    try{return await Promise.any(attempts)}
-    catch(error){
+    try{
+      const result=await Promise.any(attempts);
+      writeTikTokPhotoCache(itemId,result);
+      return result;
+    }catch(error){
       const details=Array.isArray(error?.errors)?error.errors.map(item=>String(item?.message||item).slice(0,90)).join(" | "):String(error?.message||error);
       errors.push(details);
     }
