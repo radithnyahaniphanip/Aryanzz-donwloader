@@ -92,7 +92,7 @@ function showNotice(version){
  progress.append(status,track,metaRow,files,file);
  bar.append(heading,message,button,progress);
  document.body.append(bar);
- currentNotice={version,bar,button,progress,status,track,fill,size,percent,files,file};
+ currentNotice={version,bar,button,progress,status,track,fill,size,percent,files,file,message};
  button.addEventListener("click",()=>startUpdate(currentNotice.version));
  if(lastProgress?.buildId===version)setProgress(lastProgress);
 }
@@ -213,7 +213,14 @@ async function startUpdate(version){
   ui.status.textContent=String(error?.message||"Pembaruan gagal. Periksa koneksi lalu coba lagi.");
  }
 }
-async function checkVersion(){
+const autoAttemptKey="aryanzz:auto-update-attempted-build:v1";
+function hasAutoAttempted(version){
+ try{return sessionStorage.getItem(autoAttemptKey)===version}catch{return false}
+}
+function markAutoAttempted(version){
+ try{sessionStorage.setItem(autoAttemptKey,version)}catch{}
+}
+async function checkVersion(autoUpdate=false){
  if(checking||updating)return;
  checking=true;
  try{
@@ -226,10 +233,22 @@ async function checkVersion(){
   if(readDismissedBuild()===latest){cleanUpdateParameters();return}
   if(currentNotice)currentNotice.version=latest;
   showNotice(latest);
+  // A visitor arriving on an old cached page should not have to find and press
+  // a hidden update button. Install the current release automatically once per
+  // tab/build on initial load; later background checks only show the retry UI.
+  if(autoUpdate&&!hasAutoAttempted(latest)&&currentNotice&&document.visibilityState!=="hidden"){
+   markAutoAttempted(latest);
+   messageUpdateStatus(latest);
+   await startUpdate(latest);
+  }
  }catch{}finally{checking=false}
 }
-window.addEventListener("load",()=>checkVersion(),{once:true});
-window.addEventListener("focus",()=>checkVersion());
-document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")checkVersion()});
-window.setInterval(checkVersion,90000);
+function messageUpdateStatus(version){
+ if(!currentNotice||currentNotice.version!==version)return;
+ currentNotice.message.textContent="Versi lama terdeteksi. ARYANZZ sedang memperbarui file website ke build "+version+" secara otomatis.";
+}
+window.addEventListener("load",()=>checkVersion(true),{once:true});
+window.addEventListener("focus",()=>checkVersion(false));
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")checkVersion(false)});
+window.setInterval(()=>checkVersion(false),90000);
 })();
