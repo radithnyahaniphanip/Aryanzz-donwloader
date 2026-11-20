@@ -12,6 +12,10 @@ run_worker_first = ["/api/*", "/", "/index.html", "/sw.js", "/release.json", "/r
 [observability]
 enabled = true
 
+[[durable_objects.bindings]]
+name = "MEMBERSHIP_STORE"
+class_name = "MembershipStore"
+
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["DownloaderContainer"]
