@@ -20,8 +20,8 @@
   ];
   let activeDownloadController=null,activeDownloadFfmpeg=null,analysisRunId=0,activeYouTubeLiveMonitor=null;
   function publishDownloadState(){
-    const active=!!activeDownloadController;
-    window.ARYANZZDownloadState={active,isActive:()=>!!activeDownloadController};
+    const active=!!activeDownloadController||!!activeDownloadFfmpeg;
+    window.ARYANZZDownloadState={active,isActive:()=>!!activeDownloadController||!!activeDownloadFfmpeg};
     document.documentElement.dataset.aryanzzDownloadActive=active?"true":"false";
     window.dispatchEvent(new CustomEvent("aryanzz:download-state",{detail:{active}}));
   }
@@ -561,7 +561,7 @@
             coreURL=await loadBlob(coreBases[index]+"/ffmpeg-core.js","text/javascript","CORE");
             wasmURL=await loadBlob(coreBases[index]+"/ffmpeg-core.wasm","application/wasm","WASM");
             assertActive();
-            ffmpeg=new mod.FFmpeg();activeDownloadFfmpeg=ffmpeg;
+            ffmpeg=new mod.FFmpeg();activeDownloadFfmpeg=ffmpeg;publishDownloadState();
             showEngine("Mesin MP4 · menyiapkan worker lokal…");
             await withTimeout(
               ffmpeg.load({coreURL,wasmURL,classWorkerURL:workerUrl}),
@@ -575,7 +575,7 @@
           }catch(error){
             lastError=error;
             try{ffmpeg?.terminate()}catch{}
-            if(activeDownloadFfmpeg===ffmpeg)activeDownloadFfmpeg=null;
+            if(activeDownloadFfmpeg===ffmpeg){activeDownloadFfmpeg=null;publishDownloadState();}
             if(activeDownloadController?.signal.aborted)throw new Error("Unduhan dibatalkan.");
           }finally{
             if(coreURL)URL.revokeObjectURL(coreURL);
@@ -2529,7 +2529,7 @@ function socialNetworkPlan(selected=0){
       box.append(progress, progressText, progressMeta, engineStatus, actions);
       cancel.addEventListener("click",()=>{
         if(activeDownloadController&&!activeDownloadController.signal.aborted)activeDownloadController.abort();
-        if(activeDownloadFfmpeg){try{activeDownloadFfmpeg.terminate()}catch{}activeDownloadFfmpeg=null;aryanzzFfmpegPromise=null;}
+        if(activeDownloadFfmpeg){try{activeDownloadFfmpeg.terminate()}catch{}activeDownloadFfmpeg=null;aryanzzFfmpegPromise=null;publishDownloadState();}
         cancel.disabled=true;cancel.textContent="Membatalkan…";
       });
       mode.addEventListener("change", () => {
