@@ -409,4 +409,5 @@
       history.replaceState({}, "", cleanUrl.pathname + cleanUrl.search + cleanUrl.hash);
     }
   }).catch(error => setMessage(error.message || "Gagal memuat Membership.", "error"));
+  window.addEventListener("aryanzz:auth-change",()=>{load().catch(()=>{});});
 })();
