@@ -2100,19 +2100,21 @@ async function fetchTikTokPhotoEmbedProxy(canonicalUrl,timeoutMs=22000){
   const headers={"accept":"text/plain, text/markdown, */*","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"};
   const readerHttps="https://r.jina.ai/https://www.tiktok.com/embed/v2/"+itemId;
   const readerHttp="https://r.jina.ai/http://www.tiktok.com/embed/v2/"+itemId;
+  const corsDevReader="https://proxy.cors.dev/"+readerHttps;
   const corsToolsReader="https://cors.tools/read?url="+encodeURIComponent(target)+"&render=true&format=markdown";
   const jina=[
-    // cors.tools can render the public TikTok embed itself before extracting
-    // Markdown. If that independent browser-rendered route is unavailable,
-    // fall back to the Jina reader relays and validate every extracted CDN URL.
-    {name:"cors.tools Rendered TikTok Embed Markdown",url:corsToolsReader,headers,timeoutMs:14000},
+    // cors.dev is a keyless GET relay; cors.tools can render the public TikTok
+    // embed itself. Both responses are treated as untrusted Markdown and only
+    // validated TikTok CDN image URLs are allowed into the gallery.
+    {name:"cors.dev → Jina Reader Markdown HTTPS",url:corsDevReader,headers,timeoutMs:8500},
+    {name:"cors.tools Rendered TikTok Embed Markdown",url:corsToolsReader,headers,timeoutMs:8500},
     // Cloudflare Worker egress can receive HTTP 429 from Jina even when the
-    // same reader URL works from a normal browser/CI runner. Relay the Markdown
-    // response through AllOrigins, then keep direct reader routes as fallbacks.
-    {name:"AllOrigins → Jina Reader Markdown HTTPS",url:"https://api.allorigins.win/raw?url="+encodeURIComponent(readerHttps),headers,timeoutMs:6500},
-    {name:"Jina Reader Markdown HTTPS",url:readerHttps,headers,timeoutMs:5500},
-    {name:"Jina Reader Markdown HTTP",url:readerHttp,headers,timeoutMs:4500},
-    {name:"AllOrigins → Jina Reader Markdown HTTP",url:"https://api.allorigins.win/raw?url="+encodeURIComponent(readerHttp),headers,timeoutMs:3500}
+    // same reader URL works from a normal browser/CI runner. Keep independent
+    // AllOrigins and direct-reader fallbacks after the no-key relays.
+    {name:"AllOrigins → Jina Reader Markdown HTTPS",url:"https://api.allorigins.win/raw?url="+encodeURIComponent(readerHttps),headers,timeoutMs:5000},
+    {name:"Jina Reader Markdown HTTPS",url:readerHttps,headers,timeoutMs:3500},
+    {name:"Jina Reader Markdown HTTP",url:readerHttp,headers,timeoutMs:2500},
+    {name:"AllOrigins → Jina Reader Markdown HTTP",url:"https://api.allorigins.win/raw?url="+encodeURIComponent(readerHttp),headers,timeoutMs:1500}
   ];
   const fallbacks=[
     {name:"AllOrigins",url:"https://api.allorigins.win/raw?url="+encoded,headers:{accept:"text/html,*/*"}},
