@@ -498,8 +498,12 @@ export class MembershipStore {
         throw new Error("Nominal dasar invoice AirPay tidak cocok dengan harga paket.");
       }
       const gatewayTotal = Number(invoice.total_amount || amount);
-      if (!Number.isSafeInteger(gatewayTotal) || gatewayTotal < amount || gatewayTotal > amount + 999) {
-        throw new Error("Total pembayaran AirPay tidak valid.");
+      // AirPay's published MDR can exceed Rp999 on larger plans (0.7% + Rp295
+      // below Rp150k, then 0.95%). Keep a conservative 1.5% + Rp500 ceiling
+      // for provider rounding/fee changes without accepting an arbitrary total.
+      const maxGatewayFee = Math.ceil(amount * 0.015 + 500);
+      if (!Number.isSafeInteger(gatewayTotal) || gatewayTotal < amount || gatewayTotal > amount + maxGatewayFee) {
+        throw new Error("Total pembayaran AirPay tidak valid atau biaya gateway melebihi batas wajar.");
       }
 
       order.transactionId = transactionId;
