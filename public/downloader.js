@@ -1433,7 +1433,8 @@ function socialNetworkPlan(selected=0){
       if(sourcePlatform!=="Direct Media URL")throw new Error("Provider "+sourcePlatform+" belum memberikan tautan file media yang valid. ARYANZZ menghentikan unduhan agar halaman atau respons JSON tidak tersimpan sebagai MP4.");
       const sourceExt=/^[a-z0-9]{2,8}$/i.test(info.extension||"")?info.extension.toLowerCase():"";
       const ext=sourceExt||(mode==="audio"?"mp3":"mp4");
-      const requestedName=safeFilename(info.outputName||info.filename||info.title||("aryanzz-"+(mode==="audio"?"audio":"video-"+quality+"p")));\n      const filename=requestedName.replace(/\\.[a-z0-9]{2,8}$/i,"")+"."+ext;
+      const requestedName=safeFilename(info.outputName||info.filename||info.title||("aryanzz-"+(mode==="audio"?"audio":"video-"+quality+"p")));
+      const filename=requestedName.replace(/\.[a-z0-9]{2,8}$/i,"")+"."+ext;
       const fileUrl="/api/direct-file?url="+encodeURIComponent(url),container=bar.parentElement?.parentElement;
       let directSize=0;
       try{
