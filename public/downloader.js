@@ -1707,22 +1707,16 @@ function socialNetworkPlan(selected=0){
         return;
       }
       if(isDirectMediaUrl)intro.textContent="File media langsung terdeteksi · memeriksa isi file sebelum menampilkan unduhan…";
-      if(!isDirectMediaUrl&&selectedPlatform!=="all"&&detectedKey!==selectedPlatform){
-        const expectedName=selectedNames[selectedPlatform]||selectedPlatform;
+      if(!isDirectMediaUrl&&detectedKey!==selectedPlatform){
+        // The pasted URL is the source of truth. Switch the picker to its
+        // detected provider even if a stale/specific platform was selected,
+        // preserving the pasted URL and the current result surface.
         const actualName=selectedNames[detectedKey]||detectedEntry?.name||detectedPlatform;
-        box.replaceChildren(
-          make("b","","GAGAL — PLATFORM TIDAK SESUAI"),
-          make("p","warning","Platform yang dipilih adalah "+expectedName+", tetapi tautan ini berasal dari "+actualName+". Tautan ditolak agar pemeriksaan tidak salah provider. Pilih "+actualName+" atau ubah pilihan ke Semua Platform.")
-        );
-        button.disabled=false;
-        button.textContent=oldText;
-        return;
-      }
-      if(!isDirectMediaUrl&&selectedPlatform==="all"&&detectedKey!==selectedPlatform){
-        // Auto-detect is only used in the explicit Semua Platform mode.
-        if(typeof window.aryanzzAutoSelectPlatform==="function")window.aryanzzAutoSelectPlatform(detectedKey);
+        if(typeof window.aryanzzAutoSelectPlatform==="function"){
+          window.aryanzzAutoSelectPlatform(detectedKey);
+        }
         selectedPlatform=detectedKey;
-        intro.textContent="Platform terdeteksi otomatis: "+(selectedNames[detectedKey]||detectedEntry?.name||detectedPlatform)+". Memeriksa video, foto, dan galeri…";
+        intro.textContent="Platform terdeteksi otomatis: "+actualName+". Memeriksa video, foto, dan galeri…";
       }
       const host=url.hostname.toLowerCase();
       const isYouTube=!isDirectMediaUrl&&["youtube.com","www.youtube.com","m.youtube.com","music.youtube.com","youtu.be","www.youtu.be","youtube-nocookie.com","www.youtube-nocookie.com"].includes(host);
