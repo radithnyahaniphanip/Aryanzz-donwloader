@@ -25,9 +25,9 @@ assert.match(html, /data-nav="membership"/);
 assert.match(html, /membership-ui\.js/);
 assert.match(ui, /\/api\/membership\/orders\/status/);
 assert.match(ui, /waitForGuestIdentity/);
-assert.match(ui, /DANA/);
-assert.match(ui, /GoPay/);
-assert.match(ui, /LinkAja/);
+assert.match(html, /DANA/);
+assert.match(html, /GoPay/);
+assert.match(html, /LinkAja/);
 assert.match(navigation, /candidate\.dataset\.membershipMin/);
 
 console.log("ARYANZZ AirPay membership smoke tests passed.");
