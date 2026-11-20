@@ -637,6 +637,8 @@ export class MembershipStore {
     }
 
     const data = event.data || event;
+    const eventKey = "airpay-event:" + await crypto.subtle.digest("SHA-256", new TextEncoder().encode(rawBody)).then(hex);
+    if (await this.ctx.storage.get(eventKey)) return json({ ok: true, duplicate: true });
     const orderId = String(data.external_id || data.externalId || "").trim();
     const order = orderId ? await this.ctx.storage.get("order:" + orderId) : null;
     if (!order) return json({ ok: false, error: "Pesanan ARYANZZ tidak ditemukan." }, 404);
@@ -660,7 +662,6 @@ export class MembershipStore {
       await this.saveOrderList(order.userId, order);
     }
 
-    const eventKey = "airpay-event:" + await crypto.subtle.digest("SHA-256", new TextEncoder().encode(rawBody)).then(hex);
     await this.ctx.storage.put(eventKey, { receivedAt: Date.now(), orderId });
     return json({ ok: true, status });
   }
