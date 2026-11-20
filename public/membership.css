@@ -57,3 +57,79 @@ body .nav{gap:4px}
 body .nav button{min-width:0;flex:1;max-width:112px;padding:7px 5px}
 body .nav button span:last-child{font-size:9px}
 @media(max-width:420px){body .nav{gap:2px;padding-left:5px;padding-right:5px}body .nav button{padding:7px 3px;min-width:0}body .nav button .nav-icon{font-size:15px}}
+
+/* ARYANZZ Membership checkout v2: private cart, countdown, receipts and tier locks. */
+.ary-membership-hero-actions{display:flex;align-items:center;justify-content:flex-end;gap:9px;flex:0 0 auto}
+.ary-membership-cart-toggle{display:inline-flex;align-items:center;gap:8px;min-height:39px;padding:8px 12px;border:1px solid #3c648c;border-radius:12px;background:linear-gradient(135deg,#172f4c,#101e34);color:#e5f3ff;font-size:11px;font-weight:850;white-space:nowrap}
+.ary-membership-cart-toggle b{display:inline-grid;min-width:21px;height:21px;place-items:center;border-radius:7px;background:#2b6c9c;color:#fff;font-size:10px}
+.ary-membership-cart{margin:0 0 18px;padding:17px;border:1px solid rgba(100,166,220,.3);border-radius:18px;background:radial-gradient(circle at 90% 0,rgba(59,139,204,.13),transparent 36%),linear-gradient(145deg,#12243b,#0b1729)}
+.ary-membership-cart[hidden]{display:none!important}
+.ary-membership-cart-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.ary-membership-cart-head h3{margin:4px 0;color:#edf6ff;font-size:17px;font-weight:900}
+.ary-membership-cart-head p{margin:0;color:#95abc4;font-size:10px;line-height:1.55}
+.ary-membership-cart-icon{display:grid;place-items:center;width:42px;height:42px;flex:0 0 42px;border:1px solid #385c7d;border-radius:13px;background:#18334f;color:#a9dcff;font-size:20px}
+.ary-membership-cart-empty{margin:13px 0 0;padding:17px;border:1px dashed #344d69;border-radius:12px;color:#91a9c3;font-size:11px;text-align:center}
+.ary-membership-cart-item{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:12px;margin-top:14px;padding:13px;border:1px solid #304968;border-radius:13px;background:#091729}
+.ary-membership-cart-item-copy{display:grid;gap:4px;min-width:0}
+.ary-membership-cart-item-copy strong{color:#eaf4ff;font-size:12px}
+.ary-membership-cart-item-copy small{color:#8ea7c2;font-size:10px}
+.ary-membership-cart-item-price{color:#c9ecff;font-size:13px;white-space:nowrap}
+.ary-membership-cart-remove{padding:7px 9px;border:1px solid #65404a;border-radius:9px;background:#291a25;color:#ffc2c7;font-size:10px;font-weight:800}
+.ary-membership-cart-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:14px;padding-top:13px;border-top:1px solid #2c405c}
+.ary-membership-cart-footer>strong{color:#f4f8ff;font-size:18px}
+.ary-membership-cart-footer>div{display:flex;gap:7px}
+.ary-membership-cart-clear,.ary-membership-cart-checkout{min-height:37px;padding:8px 12px;border-radius:10px;font-size:10px;font-weight:850}
+.ary-membership-cart-clear{border:1px solid #344a66;background:#10223a;color:#c0d2e7}
+.ary-membership-cart-checkout{border:0;background:linear-gradient(110deg,#397bff,#26bfd8);color:white}
+.ary-membership-cart-checkout:disabled{opacity:.45;cursor:not-allowed}
+.ary-membership-payment-layout{grid-template-columns:minmax(220px,280px) minmax(0,1fr);gap:22px}
+.ary-membership-qr-wrap{min-height:250px;padding:16px;border:1px solid #e6edf5;border-radius:18px;background:#fff;box-shadow:0 10px 30px rgba(0,0,0,.14)}
+.ary-membership-qr{width:100%;max-width:250px;aspect-ratio:1;object-fit:contain;background:#fff}
+.ary-membership-pay-link{display:none!important}
+/* Show QR only: remove the merchant-card background while retaining the white QR quiet zone. */
+.ary-membership-qr-wrap{min-height:0!important;padding:0!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important}
+.ary-membership-qr{display:block;width:100%;max-width:260px;aspect-ratio:1;object-fit:contain;padding:10px;border:0;border-radius:12px;background:#fff;box-shadow:0 0 0 1px rgba(170,190,215,.18)}
+.ary-membership-supported{margin:12px 0 5px}
+.ary-membership-supported>span{display:block;margin-bottom:7px;color:#91a9c3;font-size:9px;font-weight:900;letter-spacing:1.15px}
+.ary-membership-methods{display:flex!important;flex-wrap:wrap;gap:6px}
+.ary-membership-methods span{padding:6px 9px;border:1px solid rgba(106,153,199,.28);border-radius:8px;background:rgba(12,34,57,.6);color:#c9e5ff;font-size:9px;font-weight:850}
+.ary-membership-payment-back{display:block;margin-top:10px;padding:10px 13px;border:1px solid #3c5e80;border-radius:10px;background:rgba(16,35,58,.8);color:#c8e5ff;font-size:10px;font-weight:850}
+.ary-membership-payment-back[hidden]{display:none!important}
+.ary-membership-countdown{display:inline-flex;align-items:center;justify-content:center;min-width:116px;margin:7px 0 0;padding:9px 13px;border:1px solid rgba(242,176,91,.42);border-radius:11px;background:rgba(101,58,23,.24);color:#ffd28d;font:900 24px/1.1 ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:1px;font-variant-numeric:tabular-nums}
+.ary-membership-countdown-caption{display:block;margin:4px 0 10px;color:#9eb1c9;font-size:9px}
+.ary-membership-check-status{display:block;margin-top:8px}
+.ary-membership-orders{margin-top:18px}
+.ary-membership-order{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:10px}
+.ary-membership-order-copy{display:grid;gap:4px;min-width:0}
+.ary-membership-order-copy strong{color:#e6f0fc;font-size:11px}
+.ary-membership-order-copy small{color:#91a8c1;font-size:9px;overflow-wrap:anywhere}
+.ary-membership-order-status{white-space:nowrap}
+.ary-membership-order-status.status-paid{color:#70e0b7}
+.ary-membership-order-status.status-pending{color:#ffd28d}
+.ary-membership-order-status.status-expired,.ary-membership-order-status.status-failed,.ary-membership-order-status.status-rejected{color:#ff9ca6}
+.ary-membership-receipt{padding:7px 9px;border:1px solid #3b668a;border-radius:9px;background:#102a43;color:#bfe6ff;font-size:9px;font-weight:850;white-space:nowrap}
+.tool[data-membership-min]{position:relative}
+.tool .ary-membership-lock-tag{position:absolute;top:8px;right:8px;z-index:2;display:inline-flex;align-items:center;padding:5px 7px;border:1px solid rgba(242,190,112,.35);border-radius:8px;background:rgba(64,43,24,.94);color:#ffd69a;font-size:8px;font-weight:900;letter-spacing:.35px;pointer-events:none}
+.tool[data-membership-locked="true"]{border-color:rgba(223,173,105,.25)}
+@media(max-width:720px){
+ .ary-membership-plan-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .ary-membership-payment-layout{grid-template-columns:minmax(0,1fr);justify-items:center}
+ .ary-membership-payment-details{width:100%}
+ .ary-membership-qr-wrap{width:min(100%,310px);min-height:0}
+ .ary-membership-qr{max-width:270px}
+}
+@media(max-width:480px){
+ .ary-membership-hero{align-items:flex-start;flex-direction:column}
+ .ary-membership-hero-actions{width:100%;justify-content:space-between}
+ .ary-membership-plan-grid{grid-template-columns:minmax(0,1fr)}
+ .ary-membership-cart{padding:13px}
+ .ary-membership-cart-item{grid-template-columns:minmax(0,1fr) auto;gap:8px}
+ .ary-membership-cart-item-price{grid-column:2;grid-row:1}
+ .ary-membership-cart-remove{grid-column:1/-1;justify-self:end}
+ .ary-membership-cart-footer{align-items:flex-start;flex-direction:column}
+ .ary-membership-cart-footer>div{width:100%}
+ .ary-membership-cart-clear,.ary-membership-cart-checkout{flex:1}
+ .ary-membership-order{grid-template-columns:minmax(0,1fr) auto}
+ .ary-membership-order-status{grid-column:2;grid-row:1}
+ .ary-membership-receipt{grid-column:1/-1;justify-self:start}
+}

@@ -46,6 +46,40 @@ function refreshToVersion(version){
  next.searchParams.set("aryanzz_refresh",String(Date.now()));
  location.replace(next.href);
 }
+function hasActiveDownload(){
+ try{
+  const state=window.ARYANZZDownloadState;
+  if(typeof state?.isActive==="function"&&state.isActive())return true;
+  if(state?.active===true)return true;
+  return document.documentElement.dataset.aryanzzDownloadActive==="true";
+ }catch{return false}
+}
+let waitingRefreshVersion="",waitingRefreshTimer=0;
+function refreshWhenDownloadsFinish(version){
+ if(!hasActiveDownload()){
+  window.setTimeout(()=>{if(hasActiveDownload())refreshWhenDownloadsFinish(version);else refreshToVersion(version)},650);
+  return;
+ }
+ if(waitingRefreshVersion===version)return;
+ waitingRefreshVersion=version;
+ if(currentNotice){
+  currentNotice.message.textContent="File pembaruan sudah siap. ARYANZZ menunggu unduhan aktif selesai agar browser tidak memutus file yang sedang diunduh.";
+  currentNotice.status.textContent="Unduhan masih berlangsung · halaman akan diperbarui otomatis setelah selesai.";
+  currentNotice.button.textContent="Menunggu unduhan selesai…";
+  currentNotice.button.disabled=true;
+ }
+ const check=()=>{
+  if(hasActiveDownload())return;
+  window.clearInterval(waitingRefreshTimer);
+  waitingRefreshTimer=0;
+  window.removeEventListener("aryanzz:download-state",check);
+  waitingRefreshVersion="";
+  if(currentNotice)currentNotice.status.textContent="Unduhan selesai. Memuat versi terbaru…";
+  window.setTimeout(()=>{if(!hasActiveDownload())refreshToVersion(version);else refreshWhenDownloadsFinish(version)},650);
+ };
+ window.addEventListener("aryanzz:download-state",check);
+ waitingRefreshTimer=window.setInterval(check,850);
+}
 function showNotice(version){
  if(!version||readDismissedBuild()===version||document.getElementById("aryanzzUpdateNotice"))return;
  const bar=document.createElement("section");
@@ -155,7 +189,7 @@ async function showReadyAndRefresh(version){
   }
  }catch{}
  setProgress({phase:"ready",totalBytes,downloadedBytes:totalBytes,totalFiles,fileIndex:totalFiles});
- window.setTimeout(()=>refreshToVersion(version),650);
+ refreshWhenDownloadsFinish(version);
 }
 async function startUpdate(version){
  if(updating||!currentNotice)return;
@@ -204,7 +238,7 @@ async function startUpdate(version){
    }
   }
   await downloadWithProgress(version);
-  window.setTimeout(()=>refreshToVersion(version),650);
+  refreshWhenDownloadsFinish(version);
  }catch(error){
   updating=false;
   ui.button.disabled=false;

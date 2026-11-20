@@ -314,18 +314,46 @@ function extractThreadsVideoVersions(html){
   }
   return results.slice(0,12);
 }
+function detectPublicLiveState(pageUrl,html){
+  let pathname="";
+  try{pathname=new URL(pageUrl).pathname.toLowerCase()}catch{}
+  const source=String(html||"");
+  const explicitLive=/"(?:is_live|isLive|is_live_stream|isLiveStream|live_now|liveNow|isLiveBroadcast)"\s*:\s*(?:true|1|"true")/i.test(source)||
+    /"(?:live_status|liveStatus)"\s*:\s*(?:1|2|"live")/i.test(source);
+  const upcoming=/"(?:is_upcoming|isUpcoming|upcoming)"\s*:\s*(?:true|1|"true")/i.test(source);
+  const archive=/"(?:is_live_archive|isLiveArchive|live_replay|isReplay)"\s*:\s*(?:true|1|"true")/i.test(source)||
+    /"(?:live_status|liveStatus)"\s*:\s*(?:4|"replay"|"ended")/i.test(source);
+  const liveRoute=/\/(?:live|stream|streaming|broadcast)\/?$/i.test(pathname);
+  const active=explicitLive||(liveRoute&&!archive&&!upcoming&&/\b(live|stream|broadcast|siaran langsung)\b/i.test(source));
+  return {isLive:!!active,isUpcoming:!!upcoming&&!active,isLiveArchive:!!archive&&!active};
+}
+function genericPostMediaKind({media=[],images=[],liveState={}}={}){
+  const hasVideo=media.some(item=>String(item?.mode||item?.type||item?.kind||"").toLowerCase()==="video"||/^video\//i.test(String(item?.mime_type||item?.mime||"")));
+  const hasAudio=media.some(item=>String(item?.mode||item?.type||item?.kind||"").toLowerCase()==="audio"||/^audio\//i.test(String(item?.mime_type||item?.mime||"")));
+  const hasPhotos=images.length>0;
+  const carousel=hasPhotos&&(images.length>1||/carousel|sidecar|multi.?photo|carousel_media|edge_sidecar/i.test(String(images[0]?.source||"")));
+  const contentKind=liveState.isLive?"live":liveState.isUpcoming?"upcoming-live":liveState.isLiveArchive?"live-replay":hasVideo&&hasPhotos?"mixed-video-photo":hasVideo?"video":carousel?"photo-carousel":hasPhotos?"photo":hasAudio?"audio":"unknown";
+  const mediaKinds=[hasVideo?"video":"",hasPhotos?"photo":"",hasAudio?"audio":"",liveState.isLive?"live":"",liveState.isLiveArchive?"live-replay":""].filter(Boolean);
+  return {contentKind,mediaKinds,photoCount:images.length,isCarousel:!!carousel};
+}
 async function genericPublicPageMediaInfo(rawUrl,requestUrl,platformEntry,timeoutMs=11000){
   try{
     const page=await fetchSocialPostHtml(rawUrl,timeoutMs);
     const titleMatch=page.html.match(/<meta\b[^>]*property=["']og:title["'][^>]*content=["']([^"']{1,300})["']/i)||page.html.match(/<title[^>]*>([^<]{1,300})<\/title>/i);
     const title=String(titleMatch?.[1]||platformEntry.name+" media").replace(/&amp;/gi,"&").slice(0,300);
-    const thumbnail=extractSocialImageCandidates(page.html,page.url,platformEntry.id)[0]?.url||null;
+    const imageCandidates=extractSocialImageCandidates(page.html,page.url,platformEntry.id);
+    const thumbnail=imageCandidates[0]?.url||null;
     const media=extractGenericPublicMediaCandidates(page.html,page.url);
     if(platformEntry.id==="threads")for(const video of extractThreadsVideoVersions(page.html))if(!media.some(item=>item.url===video.url))media.push(video);
     const dimensions=extractSocialVideoDimensions(page.html);
+    const liveState=detectPublicLiveState(page.url,page.html);
+    const postKind=genericPostMediaKind({media,images:imageCandidates,liveState});
     const normalized=freeProviderMediaInfo({normalized:{title,thumbnail,media,...dimensions}},rawUrl,requestUrl);
-    if(!normalized)return json({ok:false,platform:platformEntry.id,title,thumbnail,providerName:"Public page metadata fallback",provider:"Generic public metadata",experimental:true,fallbackTried:true,directDownloadAvailable:false,error:platformEntry.name+" tidak mengekspos file video/audio langsung pada halaman publik. Konten privat, DRM, atau player streaming memerlukan extractor khusus."},502);
-    return json({...normalized,...dimensions,platform:platformEntry.id,providerName:"Public page metadata fallback",provider:"Generic public metadata",extractor:"Public page metadata",fallbackUsed:true,experimental:true,directDownloadAvailable:true,canonicalUrl:page.url},200);
+    if(!normalized&&liveState.isLive){
+      return json({ok:true,platform:platformEntry.id,title,thumbnail,formats:[],...dimensions,...liveState,...postKind,providerName:"Public live metadata",provider:"Generic public metadata",extractor:"Public live-state detection",fallbackUsed:true,experimental:true,directDownloadAvailable:false,error:"Siaran langsung sedang berlangsung. ARYANZZ mengenali halaman LIVE, tetapi tidak merekam atau mengunduh siaran aktif. Coba tautan arsip/replay setelah siaran selesai."},200);
+    }
+    if(!normalized)return json({ok:false,platform:platformEntry.id,title,thumbnail,...dimensions,...liveState,...postKind,providerName:"Public page metadata fallback",provider:"Generic public metadata",experimental:true,fallbackTried:true,directDownloadAvailable:false,error:platformEntry.name+" tidak mengekspos file video/audio langsung pada halaman publik. Postingan foto/galeri diperiksa melalui jalur gambar terpisah. Konten privat, DRM, atau player streaming memerlukan extractor yang kompatibel."},502);
+    return json({...normalized,...dimensions,...liveState,...postKind,platform:platformEntry.id,providerName:"Public page metadata fallback",provider:"Generic public metadata",extractor:"Public page metadata",fallbackUsed:true,experimental:true,directDownloadAvailable:true,canonicalUrl:page.url},200);
   }catch(error){
     return json({ok:false,platform:platformEntry.id,providerName:"Public page metadata fallback",provider:"Generic public metadata",experimental:true,fallbackTried:true,directDownloadAvailable:false,error:platformEntry.name+" belum dapat dibaca melalui jalur metadata publik: "+String(error?.message||error).slice(0,180)},502);
   }
@@ -357,6 +385,8 @@ async function threadsDirectMediaInfo(request){
   }));
   const found=tried.find(t=>t.status==="fulfilled"&&t.value.ok);
   if(found)return json({...found.value.data,canonicalUrl:canonical.href,providerName:"Threads direct public media",provider:"Threads post/embed",fallbackUsed:true,directDownloadAvailable:true});
+  const live=tried.find(t=>t.status==="fulfilled"&&t.value.data?.isLive);
+  if(live)return json({...live.value.data,canonicalUrl:canonical.href,providerName:"Threads live-state detector",provider:"Threads post/embed",fallbackUsed:true,directDownloadAvailable:false});
   const errors=tried.map(t=>t.status==="fulfilled"?String(t.value.data?.error||"Tidak ada stream publik"):String(t.reason?.message||t.reason)).slice(0,2);
   return json({ok:false,platform:"threads",canonicalUrl:canonical.href,providerName:"Threads direct public media",error:"Video/audio langsung belum ditemukan pada halaman Threads publik. Jika postingan berupa foto, ARYANZZ akan memeriksa galeri secara terpisah.",diagnostics:errors},404);
 }
@@ -1096,8 +1126,11 @@ function canonicalPlatformId(id){
 function platformSearchModes(id){
   const entry=PLATFORM_CATALOG_BY_ID.get(String(id||"").toLowerCase());
   const platform=entry?.aliasOf?PLATFORM_CATALOG_BY_ID.get(entry.aliasOf):entry;
-  if(!platform||platform.providerKey==="aio")return [];
-  return (platform.mediaModes||[]).filter(mode=>["video","image","audio"].includes(mode));
+  if(!platform)return [];
+  // Use the catalogue's verified search capability, not its broader link-media
+  // capability. Experimental AIO entries remain available for pasted-link
+  // extraction but must not be advertised as title-search providers.
+  return (platform.searchModes||[]).filter(mode=>["video","image","audio"].includes(mode));
 }
 function platformSupportsSearchMode(id,mode){
   return platformSearchModes(id).includes(String(mode||"").toLowerCase());
@@ -1138,21 +1171,28 @@ function socialSearchUrl(platform,query){
   url.searchParams.set("q",site+" "+query);
   return url;
 }
-function collectTikTokSearchItems(value,out,seen,depth=0){
+function collectTikTokSearchItems(value,out,seen,depth=0,desiredMode="video"){
   if(depth>14||!value||typeof value!=="object")return;
-  if(Array.isArray(value)){for(const item of value)collectTikTokSearchItems(item,out,seen,depth+1);return}
-  const id=String(value.id||value.video?.id||"");
-  const desc=String(value.desc||value.video?.desc||"").trim();
-  const author=value.author||value.authorInfo||value.video?.author||{};
+  if(Array.isArray(value)){for(const item of value)collectTikTokSearchItems(item,out,seen,depth+1,desiredMode);return}
+  const nestedVideo=value.video&&typeof value.video==="object"?value.video:{};
+  const id=String(value.id||value.aweme_id||value.awemeId||nestedVideo.id||"");
+  const desc=String(value.desc||nestedVideo.desc||value.title||"").trim();
+  const author=value.author||value.authorInfo||nestedVideo.author||{};
   const username=String(author.uniqueId||author.unique_id||author.username||"").trim();
-  if(/^\d{8,}$/.test(id)&&username&&desc){
-    const url="https://www.tiktok.com/@"+encodeURIComponent(username)+"/video/"+id;
-    if(!seen.has(url)){seen.add(url);out.push({title:desc,url,snippet:desc,platform:"tiktok",searchProvider:"TikTok public search"});}
+  const postType=String(value.postType||value.post_type||value.itemType||value.type||"").toLowerCase();
+  const imagePost=!!(value.imagePost||value.imagePostInfo||value.image_post||value.photoPost||value.photo_post||nestedVideo.imagePost)||
+    /photo|image/.test(postType)||(!nestedVideo.playAddr&&!nestedVideo.downloadAddr&&Array.isArray(value.images)&&value.images.length>1);
+  const mode=imagePost?"image":"video";
+  if(mode===desiredMode&&/^\d{8,}$/.test(id)&&username&&desc){
+    const route=imagePost?"photo":"video";
+    const url="https://www.tiktok.com/@"+encodeURIComponent(username)+"/"+route+"/"+id;
+    if(!seen.has(url)){seen.add(url);out.push({title:desc,url,snippet:desc,platform:"tiktok",mediaMode:mode,searchProvider:"TikTok public search"});}
   }
-  for(const [key,item] of Object.entries(value))if(item&&typeof item==="object"&&key!=="author"&&key!=="authorInfo")collectTikTokSearchItems(item,out,seen,depth+1);
+  for(const [key,item] of Object.entries(value))if(item&&typeof item==="object"&&key!=="author"&&key!=="authorInfo")collectTikTokSearchItems(item,out,seen,depth+1,desiredMode);
 }
-async function searchTikTokPublicPage(query){
-  const url=new URL("https://www.tiktok.com/search/video");url.searchParams.set("q",query);
+async function searchTikTokPublicPage(query,desiredMode="video"){
+  const route=desiredMode==="image"?"photo":"video";
+  const url=new URL("https://www.tiktok.com/search/"+route);url.searchParams.set("q",query);
   try{
     const response=await fetch(url.href,{headers:{accept:"text/html,application/xhtml+xml","accept-language":"en-US,en;q=0.9,id;q=0.8","user-agent":"Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 Chrome/130.0.0.0 Mobile Safari/537.36","referer":"https://www.tiktok.com/"},signal:AbortSignal.timeout(9000),cache:"no-store"});
     const html=response.ok?await response.text():"";const items=[],seen=new Set();let universalDiagnostics={rootKeys:[],scopeKeys:[],searchScope:null,preview:""};
@@ -1163,14 +1203,16 @@ async function searchTikTokPublicPage(query){
         const scope=parsed?.__DEFAULT_SCOPE__||{};universalDiagnostics.scopeKeys=Object.keys(scope).slice(0,60);
         const searchEntry=Object.entries(scope).find(([key])=>/search/i.test(key));
         if(searchEntry){universalDiagnostics.searchScope=searchEntry[0];universalDiagnostics.preview=JSON.stringify(searchEntry[1]).slice(0,2600)}
-        collectTikTokSearchItems(parsed,items,seen);
+        collectTikTokSearchItems(parsed,items,seen,0,desiredMode);
       }catch{}
     }
     if(!items.length){
-      for(const match of html.matchAll(/https?:\/\/www\.tiktok\.com\/@([A-Za-z0-9._-]+)\/video\/(\d{8,})/g)){
-        const url="https://www.tiktok.com/@"+match[1]+"/video/"+match[2];if(seen.has(url))continue;seen.add(url);
+      const routePattern=desiredMode==="image"?"photo":"video";
+      const pattern=new RegExp("https?:\\/\\/www\\.tiktok\\.com\\/@([A-Za-z0-9._-]+)\\/"+routePattern+"\\/(\\d{8,})","g");
+      for(const match of html.matchAll(pattern)){
+        const url="https://www.tiktok.com/@"+match[1]+"/"+routePattern+"/"+match[2];if(seen.has(url))continue;seen.add(url);
         const at=Math.max(0,match.index-700),snippet=decodeSearchHtml(html.slice(at,match.index+500).replace(/<[^>]+>/g," ")).slice(0,260);
-        items.push({title:snippet||"Video TikTok publik",url,snippet,platform:"tiktok",searchProvider:"TikTok public page"});
+        items.push({title:snippet||(desiredMode==="image"?"Foto TikTok publik":"Video TikTok publik"),url,snippet,platform:"tiktok",mediaMode:desiredMode,searchProvider:"TikTok public page"});
       }
     }
     const scriptIds=[...html.matchAll(/<script[^>]*id=["']([^"']+)["']/gi)].map(match=>match[1]).slice(0,20);
@@ -1189,7 +1231,7 @@ function decodeBingSocialResultUrl(raw){
   }
   return link;
 }
-function parseBingSocialVideoResults(html,platform,query,seen){
+function parseBingSocialVideoResults(html,platform,query,seen,desiredMode="video"){
   const domains=socialSearchDomains(platform),out=[];
   for(const match of String(html||"").matchAll(/<li\b[^>]*class=["'][^"']*\bb_algo\b[^"']*["'][^>]*>([\s\S]*?)<\/li>/gi)){
     const block=match[1]||"",anchor=block.match(/<h2[^>]*>\s*<a\b([^>]*)>([\s\S]*?)<\/a>/i);if(!anchor)continue;
@@ -1197,8 +1239,8 @@ function parseBingSocialVideoResults(html,platform,query,seen){
     const link=decodeBingSocialResultUrl(href);if(!link)continue;
     if(link.protocol!=="https:"||!domains.some(domain=>link.hostname===domain||link.hostname.endsWith("."+domain)))continue;
     const key=freePlatformKey(link.href);if(!key)continue;
-    if(key==="tiktok"&&!/\/video\//i.test(link.pathname))continue;
-    if(key==="instagram"&&!/\/(?:p|reel|tv|share)\//i.test(link.pathname))continue;
+    if(key==="tiktok"&&!(desiredMode==="image"?/\/photo\//i.test(link.pathname):/\/video\//i.test(link.pathname)))continue;
+    if(key==="instagram"&&!(desiredMode==="image"?/\/(?:p|share)\//i.test(link.pathname):/\/(?:p|reel|tv|share)\//i.test(link.pathname)))continue;
     if(key==="pinterest"&&!/\/pin\//i.test(link.pathname))continue;
     const url=link.href.split("#")[0];if(seen.has(url))continue;
     const title=decodeSearchHtml(anchor[2]);if(!title)continue;
@@ -1211,12 +1253,12 @@ function parseBingSocialVideoResults(html,platform,query,seen){
     const attrs=match[1]||"",href=attrs.match(/\bhref=["']([^"']+)["']/i)?.[1];if(!href)continue;
     const link=decodeBingSocialResultUrl(href);if(!link||link.protocol!=="https:"||!domains.some(domain=>link.hostname===domain||link.hostname.endsWith("."+domain)))continue;
     const key=freePlatformKey(link.href);if(!key)continue;
-    if(key==="tiktok"&&!/\/video\//i.test(link.pathname))continue;
-    if(key==="instagram"&&!/\/(?:p|reel|tv|share)\//i.test(link.pathname))continue;
+    if(key==="tiktok"&&!(desiredMode==="image"?/\/photo\//i.test(link.pathname):/\/video\//i.test(link.pathname)))continue;
+    if(key==="instagram"&&!(desiredMode==="image"?/\/(?:p|share)\//i.test(link.pathname):/\/(?:p|reel|tv|share)\//i.test(link.pathname)))continue;
     if(key==="pinterest"&&!/\/pin\//i.test(link.pathname))continue;
     const url=link.href.split("#")[0];if(seen.has(url))continue;
     const rawTitle=decodeSearchHtml((match[2]||"").replace(/<[^>]+>/g," ")).replace(/\s+/g," ").trim();
-    const title=rawTitle||decodeSearchHtml(attrs.match(/\btitle=["']([^"']+)["']/i)?.[1]||"")||((key==="tiktok"?"Video TikTok ":"Konten ")+query);
+    const title=rawTitle||decodeSearchHtml(attrs.match(/\btitle=["']([^"']+)["']/i)?.[1]||"")||((key==="tiktok"?(desiredMode==="image"?"Foto TikTok ":"Video TikTok "):"Konten ")+query);
     const context=String(html||"").slice(Math.max(0,match.index-350),Math.min(String(html||"").length,match.index+1300));
     const snippet=decodeSearchHtml(context.replace(/<[^>]+>/g," ").replace(/\s+/g," ")).slice(0,500);
     if(publicSearchRelevance(query,title+" "+snippet)<0.18)continue;
@@ -1280,7 +1322,7 @@ async function verifyYouTubeSearchResult(result,requestUrl,desiredMode="video"){
 }
 async function verifySocialSearchResult(result,requestUrl,desiredMode="video"){
   const key=freePlatformKey(result.url),platformId=platformIdForUrl(result.url);
-  const searchOnly=()=>({...result,platform:platformId||result.platform||"unknown",verified:false,downloadable:false,searchOnly:true,mediaMode:desiredMode==="audio"?"audio":"video",channel:"Hasil publik · unduhan belum diverifikasi"});
+  const searchOnly=()=>({...result,platform:platformId||result.platform||"unknown",verified:false,downloadable:false,searchOnly:true,mediaMode:desiredMode,channel:"Hasil publik · unduhan belum diverifikasi"});
   if(platformId==="youtube"||key==="youtube")return {...result,platform:"youtube",verified:false,downloadable:false,searchOnly:true,mediaMode:desiredMode,channel:result.channel||"YouTube · periksa saat dipilih"};
   if(!key||!platformSupportsSearchMode(platformId,desiredMode))return searchOnly();
   const endpoint=FREE_MEDIA_API+"/api/download/"+key+"?url="+encodeURIComponent(result.url);
@@ -1353,22 +1395,24 @@ async function enrichSocialSearchThumbnails(items,limit=12){
   await Promise.all(Array.from({length:Math.min(6,queue.length)},()=>worker()));
   return output;
 }
-function parseGoogleSocialVideoResults(html,platform,query,seen){
+function parseGoogleSocialVideoResults(html,platform,query,seen,desiredMode="video"){
   const domains=socialSearchDomains(platform),out=[];
   for(const match of String(html||"").matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/gi)){
     const attrs=match[1]||"",raw=attrs.match(/\bhref=["']([^"']+)["']/i)?.[1];
     if(!raw)continue;
     let link;try{link=new URL(decodeSearchHtml(raw),"https://www.google.com")}catch{continue}
     if(link.hostname==="www.google.com"||link.hostname==="google.com"){
-      if(!/^\/url\/?$/.test(link.pathname))continue;
-      const target=link.searchParams.get("q")||link.searchParams.get("url")||link.searchParams.get("adurl")||"";
+      if(!/^\/(?:url|imgres)\/?$/.test(link.pathname))continue;
+      const target=desiredMode==="image"
+        ?link.searchParams.get("imgrefurl")||link.searchParams.get("q")||link.searchParams.get("url")||""
+        :link.searchParams.get("q")||link.searchParams.get("url")||link.searchParams.get("adurl")||"";
       if(!target)continue;
       try{link=new URL(target)}catch{continue}
     }
     if(link.protocol!=="https:"||!domains.some(domain=>link.hostname===domain||link.hostname.endsWith("."+domain)))continue;
     const key=freePlatformKey(link.href);if(!key)continue;
-    if(key==="tiktok"&&!/\/video\//i.test(link.pathname))continue;
-    if(key==="instagram"&&!/\/(?:p|reel|tv|share)\//i.test(link.pathname))continue;
+    if(key==="tiktok"&&!(desiredMode==="image"?/\/photo\//i.test(link.pathname):/\/video\//i.test(link.pathname)))continue;
+    if(key==="instagram"&&!(desiredMode==="image"?/\/(?:p|share)\//i.test(link.pathname):/\/(?:p|reel|tv|share)\//i.test(link.pathname)))continue;
     if(key==="pinterest"&&!/\/pin\//i.test(link.pathname))continue;
     const href=link.href.split("#")[0];if(seen.has(href))continue;
     const title=decodeSearchHtml((match[2].match(/<h3\b[^>]*>([\s\S]*?)<\/h3>/i)?.[1]||match[2]).replace(/<[^>]+>/g," "));
@@ -1384,7 +1428,7 @@ async function searchSocial(request){
   let body;try{body=await request.json()}catch{return json({error:"Body JSON tidak valid."},400)}
   const platform=String(body?.platform||"").toLowerCase(),query=String(body?.query||"").replace(/\s+/g," ").trim();
   const requestedMode=String(body?.mediaType||"video").toLowerCase();
-  const desiredMode=requestedMode==="audio"?"audio":"video";
+  const desiredMode=["audio","image"].includes(requestedMode)?requestedMode:"video";
   const canonicalPlatform=platform==="all"?"all":canonicalPlatformId(platform);
   const domains=socialSearchDomains(platform);
   if(!domains.length)return json({ok:false,error:"Platform pencarian belum didukung."},400);
@@ -1398,9 +1442,11 @@ async function searchSocial(request){
   const searchTargets=platform==="all"
     ?PLATFORM_CATALOG.filter(item=>!item.aliasOf&&platformSupportsSearchMode(item.id,desiredMode))
     :[PLATFORM_CATALOG_BY_ID.get(canonicalPlatform)].filter(Boolean);
-  // Use the primary indexed domain per provider; OR-chains of site: operators were unreliable.
+  // In All Platforms mode, issue one bounded primary-domain query to every
+  // provider that has an explicit video/image search capability. The 200-link
+  // catalogue is not fanned out wholesale, and AIO-only entries are excluded.
   const searchSites=platform==="all"
-    ?searchTargets.slice(0,15).map(item=>item.domains?.[0]?"site:"+item.domains[0]:"").filter(Boolean)
+    ?searchTargets.map(item=>"site:"+item.domains[0])
     :domains.map(domain=>"site:"+domain);
   async function boundedLookup(inputs,task,parallel=6){
     const out=new Array(inputs.length);let cursor=0;
@@ -1410,12 +1456,12 @@ async function searchSocial(request){
     return out;
   }
   try{
-    const baseVariants=socialSearchQueryVariants(query);
+    const queryVariants=socialSearchQueryVariants(desiredMode==="image"?query+" photo":desiredMode==="audio"?query+" audio":query);
     const variants=(desiredMode==="audio"
-      ? [query,query+" audio",query+" song",query+" soundtrack",query+" instrumental",...baseVariants]
-      : desiredMode==="video"
-        ? [query,query+" video",query+" clip",query+" shorts",query+" DJ remix",query+" official video",...baseVariants]
-        : baseVariants).filter((value,index,array)=>array.indexOf(value)===index).slice(0,platform==="all"?3:12);
+      ? [query,query+" audio",query+" song",query+" soundtrack",query+" instrumental",...queryVariants]
+      : desiredMode==="image"
+        ? [query,query+" photo",query+" image",query+" picture",...queryVariants]
+        : [query,query+" video",query+" clip",query+" shorts",query+" DJ remix",query+" official video",...queryVariants]).filter((value,index,array)=>array.indexOf(value)===index).slice(0,platform==="all"?3:12);
     const searchTerms=platform==="all"?[query]:variants.slice(0,4);
     const pages=await boundedLookup(searchTerms.flatMap(term=>searchSites.map(searchSite=>({term,searchSite}))),async ({term,searchSite})=>{
       const url=new URL("https://html.duckduckgo.com/html/");url.searchParams.set("q",(searchSite?searchSite+" ":"")+term);
@@ -1432,8 +1478,8 @@ async function searchSocial(request){
         let link;try{link=new URL(decodeSearchHtml(hrefMatch[1]),"https://html.duckduckgo.com")}catch{continue}
         if(link.hostname.endsWith("duckduckgo.com")){const target=link.searchParams.get("uddg");if(target){try{link=new URL(target)}catch{continue}}}
         if(link.protocol!=="https:"||!domains.some(domain=>link.hostname===domain||link.hostname.endsWith("."+domain)))continue;
-        if(canonicalPlatform==="instagram"&&!/\/(?:p|reel|tv|share)\//i.test(link.pathname))continue;
-        if(canonicalPlatform==="tiktok"&&!/\/video\//i.test(link.pathname))continue;
+        if(canonicalPlatform==="instagram"&&!(desiredMode==="image"?/\/(?:p|share)\//i.test(link.pathname):/\/(?:p|reel|tv|share)\//i.test(link.pathname)))continue;
+        if(canonicalPlatform==="tiktok"&&!(desiredMode==="image"?/\/photo\//i.test(link.pathname):/\/video\//i.test(link.pathname)))continue;
         if(canonicalPlatform==="pinterest"&&!/\/pin\//i.test(link.pathname))continue;
         const href=link.href.split("#")[0];if(seen.has(href))continue;seen.add(href);
         const title=decodeSearchHtml(match[2].replace(/<[^>]+>/g," "));if(!title)continue;
@@ -1464,21 +1510,21 @@ async function searchSocial(request){
       return response.ok?await response.text():"";
     });
     let bingCandidateCount=0;
-    for(const page of bingPages){const parsed=parseBingSocialVideoResults(page,platform,query,seen);bingCandidateCount+=parsed.length;candidates.push(...parsed)}
+    for(const page of bingPages){const parsed=parseBingSocialVideoResults(page,platform,query,seen,desiredMode);bingCandidateCount+=parsed.length;candidates.push(...parsed)}
     const enoughSecondPass=platform==="all"?(candidates.length>=6&&new Set(candidates.map(item=>canonicalPlatformId(platformIdForUrl(item.url)||""))).size>=2):candidates.length>=4;
     const googleQueries=enoughSecondPass?[]:platform==="all"
       ?searchTargets.filter(item=>!candidates.some(candidate=>canonicalPlatformId(platformIdForUrl(candidate.url))===item.id)).slice(0,3).map(item=>({term:query,searchSite:"site:"+item.domains[0]}))
       :variants.slice(0,2).map(term=>({term,searchSite:site}));
     const googlePages=await boundedLookup(googleQueries,async ({term,searchSite})=>{
-      const url=new URL("https://www.google.com/search");url.searchParams.set("q",(searchSite?searchSite+" ":"")+term);url.searchParams.set("tbm","vid");url.searchParams.set("num","30");url.searchParams.set("filter","0");
+      const url=new URL("https://www.google.com/search");url.searchParams.set("q",(searchSite?searchSite+" ":"")+term);url.searchParams.set("tbm",desiredMode==="image"?"isch":"vid");url.searchParams.set("num","30");url.searchParams.set("filter","0");
       const response=await fetch(url.href,{headers:{accept:"text/html,application/xhtml+xml","user-agent":"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/131.0.0.0 Safari/537.36","accept-language":"id-ID,id;q=0.9,en-US;q=0.8"},signal:AbortSignal.timeout(4600),cache:"no-store"});
       return response.ok?await response.text():"";
     });
     let googleCandidateCount=0;
-    for(const page of googlePages){const parsed=parseGoogleSocialVideoResults(page,platform,query,seen);googleCandidateCount+=parsed.length;candidates.push(...parsed)}
+    for(const page of googlePages){const parsed=parseGoogleSocialVideoResults(page,platform,query,seen,desiredMode);googleCandidateCount+=parsed.length;candidates.push(...parsed)}
     let tiktokPageDiagnostics={status:null,bytes:0,count:0,queries:[]};
-    if((platform==="tiktok"||platform==="tiktoklite"||platform==="all")&&!candidates.some(item=>platformIdForUrl(item.url)==="tiktok")){
-      const directPages=await Promise.all(variants.slice(0,platform==="all"?1:3).map(term=>searchTikTokPublicPage(term)));
+    if((platform==="tiktok"||platform==="tiktoklite")||(platform==="all"&&!candidates.some(item=>platformIdForUrl(item.url)==="tiktok"))){
+      const directPages=await Promise.all(variants.slice(0,platform==="all"?1:3).map(term=>searchTikTokPublicPage(term,desiredMode)));
       for(let index=0;index<directPages.length;index++){
         const direct=directPages[index];
         tiktokPageDiagnostics.queries.push({query:variants[index],status:direct.status,bytes:direct.bytes,count:direct.items.length});
@@ -1486,26 +1532,38 @@ async function searchSocial(request){
         for(const item of direct.items){if(!seen.has(item.url)){seen.add(item.url);candidates.push(item)}}
       }
     }
-    if((platform==="all"||platform==="youtube")&&!candidates.some(item=>platformIdForUrl(item.url)==="youtube"&&strictTitleIntentScore(query,item.title,item.snippet||"")>=0.7)){
-      // Community YouTube providers are only used when the indexed search found no YouTube candidate.
+    const hasRelevantYoutubeCandidate=candidates.some(item=>platformIdForUrl(item.url)==="youtube"&&strictTitleIntentScore(query,item.title,item.snippet||"")>=0.7);
+    const hasRelevantSelectedCandidate=platform==="all"||platform==="youtube"
+      ?hasRelevantYoutubeCandidate
+      :candidates.some(item=>{
+        const itemPlatform=platformIdForUrl(item.url);
+        return !!itemPlatform&&canonicalPlatformId(itemPlatform)===canonicalPlatform&&platformSupportsSearchMode(itemPlatform,desiredMode)&&strictTitleIntentScore(query,item.title,item.snippet||"")>=0.7;
+      });
+    const shouldRunYoutubeFallback=desiredMode!=="image"&&!hasRelevantSelectedCandidate;
+    let youtubeFallbackAttempted=false,youtubeFallbackCandidateCount=0,youtubeFallbackCandidates=[];
+    if(shouldRunYoutubeFallback){
+      youtubeFallbackAttempted=true;
+      // If the selected social provider has no relevant public title result,
+      // search YouTube as an explicitly labelled alternative rather than
+      // returning unrelated content or pretending it came from that provider.
       const youtubeTerms=(desiredMode==="audio"
         ?[query,query+" official audio",query+" song",query+" lagu",query+" DJ remix",...variants]
         :[query,query+" official video",query+" video",query+" lagu",query+" song",query+" DJ remix",...variants])
         .map(value=>String(value||"").replace(/\s+/g," ").trim())
         .filter((value,index,array)=>value.length>=2&&array.indexOf(value)===index).slice(0,platform==="all"?4:6);
-      // For all-platform searches, retry YouTube with both the raw title and a video/audio intent.
-      // This avoids losing Indonesian song titles when public social indexes return unrelated posts.
       const [hybridPages,directYoutube]=await Promise.all([
         Promise.all(youtubeTerms.slice(0,2).map(term=>hybridYouTubeSearch(term))),
         freeYouTubeSearchItems(query,youtubeTerms.slice(0,platform==="all"?3:4),platform==="all"?7600:8500)
       ]);
+      const rawFallback=[];
       for(const page of hybridPages)for(const item of page?.results||[]){
-        if(!seen.has(item.url)){seen.add(item.url);candidates.push({...item,platform:"youtube",snippet:item.channel||"YouTube video",searchProvider:item.provider||"YouTube public search"});}
+        if(item?.url&&!seen.has(item.url)){seen.add(item.url);rawFallback.push({...item,platform:"youtube",snippet:item.channel||"YouTube video",searchProvider:item.provider||"YouTube public search"});}
       }
-      // Official/community search and public fallback already ran concurrently.
       for(const item of directYoutube){
-        if(!seen.has(item.url)){seen.add(item.url);candidates.push({...item,platform:"youtube",snippet:item.channel||"YouTube video",searchProvider:item.searchProvider||"YouTube public search"});}
+        if(item?.url&&!seen.has(item.url)){seen.add(item.url);rawFallback.push({...item,platform:"youtube",snippet:item.channel||"YouTube video",searchProvider:item.searchProvider||"YouTube public search"});}
       }
+      youtubeFallbackCandidates=rawFallback.filter(item=>strictTitleIntentScore(query,item.title,item.snippet||"")>=0.7);
+      youtubeFallbackCandidateCount=youtubeFallbackCandidates.length;
     }
     const platformScopedCandidates=platform==="all"
       ?candidates.filter(item=>platformSupportsSearchMode(platformIdForUrl(item.url),desiredMode))
@@ -1525,29 +1583,10 @@ async function searchSocial(request){
     const verificationCandidates=orderedCandidates.slice(0,verificationLimit);
     const checked=await Promise.all(verificationCandidates.map(item=>verifySocialSearchResult(item,request.url,desiredMode)));
     const verifiedResults=checked.filter(item=>item?.verified===true&&item?.downloadable===true&&item.mediaMode===desiredMode);
-    let youtubeFallbackAttempted=false,youtubeFallbackCandidateCount=0,youtubeFallbackCandidates=[],youtubeFallbackVerified=[];
-    if(!verifiedResults.length&&relevantCandidates.length===0&&platform!=="all"&&platform!=="youtube"&&(desiredMode==="video"||desiredMode==="audio")){
-      youtubeFallbackAttempted=true;
-      const youtubeTerms=[query,query+" lagu",query+" song",query+" official video",query+" official audio",...baseVariants]
-        .map(value=>String(value||"").replace(/\s+/g," ").trim())
-        .filter((value,index,array)=>value.length>=2&&array.indexOf(value)===index).slice(0,4);
-      const [youtubePages,directYoutube]=await Promise.all([
-        Promise.all(youtubeTerms.slice(0,2).map(term=>hybridYouTubeSearch(term))),
-        freeYouTubeSearchItems(query,youtubeTerms.slice(0,2),6500)
-      ]);
-      const youtubeCandidates=[],youtubeSeen=new Set();
-      for(const page of youtubePages)for(const item of page?.results||[]){
-        if(!youtubeSeen.has(item.url)){youtubeSeen.add(item.url);youtubeCandidates.push({...item,platform:"youtube",snippet:item.snippet||item.channel||"YouTube video",searchProvider:item.searchProvider||item.provider||"YouTube public search"});}
-      }
-      for(const item of directYoutube)if(!youtubeSeen.has(item.url)){youtubeSeen.add(item.url);youtubeCandidates.push({...item,platform:"youtube",snippet:item.snippet||item.channel||"YouTube video",searchProvider:item.searchProvider||"YouTube public search"});}
-      const relevantYoutube=youtubeCandidates.filter(item=>strictTitleIntentScore(query,item.title,item.snippet||"")>=0.7);
-      youtubeFallbackCandidates=relevantYoutube.slice(0,20);
-      youtubeFallbackCandidateCount=relevantYoutube.length;
-      // Penelusuran judul menampilkan kandidat publik terlebih dahulu; verifikasi media pada pemilihan hasil.
-      // Tidak perlu menunggu delapan pemeriksaan stream unduhan.
-    }
+    // Cross-provider results are appended only as explicit YouTube fallbacks
+    // after the selected provider has no relevant title result.
     const verifiedUrls=new Set(verifiedResults.map(item=>item.url));
-    const resultLimit=platform==="all"?36:20;
+    const resultLimit=100;
     const searchOnlyCandidates=orderedCandidates
       .filter(item=>item?.url&&!verifiedUrls.has(item.url))
       .slice(0,resultLimit)
@@ -2921,8 +2960,10 @@ async function socialImageSearch(request){
         const bucket=buckets.find(entry=>entry.platform===key);
         if(bucket&&!bucket.results.some(existing=>existing.url===item.url))bucket.results.push({...item,platform:key});
       }
-      // All supported image providers are searched concurrently in a bounded set.
-      const pending=targetedAllPlatforms.filter(key=>(buckets.find(entry=>entry.platform===key)?.results.length||0)<4);
+      // The global Bing Images query already covers every catalogued domain.
+      // Probe only a small supplementary batch so a 124-provider catalogue cannot
+      // exceed Cloudflare Worker subrequest/time limits on one search request.
+      const pending=targetedAllPlatforms.filter(key=>(buckets.find(entry=>entry.platform===key)?.results.length||0)<4).slice(0,10);
       const additional=await Promise.all(pending.map(async key=>{
         const site=socialSearchDomains(key).map(domain=>"site:"+domain).join(" OR ");
         return {platform:key,results:await fetchBing(site+" "+query,key)};

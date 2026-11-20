@@ -19,6 +19,13 @@
     ["ted.com","TED"],["archive.org","Internet Archive"],["snackvideo.com","SnackVideo"],["threads.net","Threads"],["threads.com","Threads"],["bluesky.app","Bluesky"],["kick.com","Kick"],["rumble.com","Rumble"],["odysee.com","Odysee"]
   ];
   let activeDownloadController=null,activeDownloadFfmpeg=null,analysisRunId=0,activeYouTubeLiveMonitor=null;
+  function publishDownloadState(){
+    const active=!!activeDownloadController||!!activeDownloadFfmpeg;
+    window.ARYANZZDownloadState={active,isActive:()=>!!activeDownloadController||!!activeDownloadFfmpeg};
+    document.documentElement.dataset.aryanzzDownloadActive=active?"true":"false";
+    window.dispatchEvent(new CustomEvent("aryanzz:download-state",{detail:{active}}));
+  }
+  publishDownloadState();
   function downloadTimeoutSignal(ms){
     const timeout=AbortSignal.timeout(ms),parent=activeDownloadController?.signal;
     return parent&&typeof AbortSignal.any==="function"?AbortSignal.any([parent,timeout]):parent||timeout;
@@ -554,7 +561,7 @@
             coreURL=await loadBlob(coreBases[index]+"/ffmpeg-core.js","text/javascript","CORE");
             wasmURL=await loadBlob(coreBases[index]+"/ffmpeg-core.wasm","application/wasm","WASM");
             assertActive();
-            ffmpeg=new mod.FFmpeg();activeDownloadFfmpeg=ffmpeg;
+            ffmpeg=new mod.FFmpeg();activeDownloadFfmpeg=ffmpeg;publishDownloadState();
             showEngine("Mesin MP4 · menyiapkan worker lokal…");
             await withTimeout(
               ffmpeg.load({coreURL,wasmURL,classWorkerURL:workerUrl}),
@@ -568,7 +575,7 @@
           }catch(error){
             lastError=error;
             try{ffmpeg?.terminate()}catch{}
-            if(activeDownloadFfmpeg===ffmpeg)activeDownloadFfmpeg=null;
+            if(activeDownloadFfmpeg===ffmpeg){activeDownloadFfmpeg=null;publishDownloadState();}
             if(activeDownloadController?.signal.aborted)throw new Error("Unduhan dibatalkan.");
           }finally{
             if(coreURL)URL.revokeObjectURL(coreURL);
@@ -1701,12 +1708,15 @@ function socialNetworkPlan(selected=0){
       }
       if(isDirectMediaUrl)intro.textContent="File media langsung terdeteksi · memeriksa isi file sebelum menampilkan unduhan…";
       if(!isDirectMediaUrl&&detectedKey!==selectedPlatform){
-        // The offline 200-platform catalogue is enough to process the URL. The visual
-        // picker is optional here; a slow /api/platform/status response must not block
-        // a valid pasted link or turn a platform-load race into a false extraction error.
-        if(typeof window.aryanzzAutoSelectPlatform==="function")window.aryanzzAutoSelectPlatform(detectedKey);
+        // The pasted URL is the source of truth. Switch the picker to its
+        // detected provider even if a stale/specific platform was selected,
+        // preserving the pasted URL and the current result surface.
+        const actualName=selectedNames[detectedKey]||detectedEntry?.name||detectedPlatform;
+        if(typeof window.aryanzzAutoSelectPlatform==="function"){
+          window.aryanzzAutoSelectPlatform(detectedKey);
+        }
         selectedPlatform=detectedKey;
-        intro.textContent="Platform terdeteksi otomatis: "+(selectedNames[detectedKey]||detectedEntry?.name||detectedPlatform)+". Memeriksa tautan video dan gambar…";
+        intro.textContent="Platform terdeteksi otomatis: "+actualName+". Memeriksa video, foto, dan galeri…";
       }
       const host=url.hostname.toLowerCase();
       const isYouTube=!isDirectMediaUrl&&["youtube.com","www.youtube.com","m.youtube.com","music.youtube.com","youtu.be","www.youtu.be","youtube-nocookie.com","www.youtube-nocookie.com"].includes(host);
@@ -1717,14 +1727,14 @@ function socialNetworkPlan(selected=0){
       const isPhotoRoute=!isDirectMediaUrl&&/\/(?:photo|photos|image|images|album|gallery|pin)\//i.test(url.pathname);
       const isExplicitVideoRoute=!isDirectMediaUrl&&/\/(?:video|reel|reels|watch|shorts|live|clip)\//i.test(url.pathname);
       const catalogPlatform=isDirectMediaUrl?null:platformCatalogEntries().find(platform=>platform.id===selectedPlatform||platform.aliasOf===selectedPlatform);
-      const shouldTryImageExtraction=!isDirectMediaUrl&&(isTikTokPhotoPost||isTikTokShortLink||isYouTubePhotoPost||isPhotoRoute||(!isYouTube&&!isExplicitVideoRoute&&selectedPlatform!=="soundcloud"&&!isTikTokPlatform&&catalogPlatform?.mediaModes?.includes("image")));
+      const shouldTryImageExtraction=!isDirectMediaUrl&&(selectedPlatform==="threads"||isTikTokPhotoPost||isTikTokShortLink||isYouTubePhotoPost||isPhotoRoute||(!isYouTube&&!isExplicitVideoRoute&&selectedPlatform!=="soundcloud"&&!isTikTokPlatform&&catalogPlatform?.mediaModes?.includes("image")));
       const isSocialImagePostRoute=!isDirectMediaUrl&&/\/(?:p|post|posts|status|pin|photo|photos|image|images|album|gallery|share)\//i.test(url.pathname);
       const isThreadsPlatform=!isDirectMediaUrl&&selectedPlatform==="threads";
       const slowSocialSource=isThreadsPlatform||selectedPlatform==="x";
       // Share-link resolution and image extraction may require multiple upstream requests.
       // Do not cancel those requests earlier than the backend's own fallback budget.
       const imageCheckTimeout=fast?9000
-        :(slowSocialSource?38000:((isTikTokPhotoPost||isTikTokShortLink)?34000:(isYouTubePhotoPost||isPhotoRoute||isSocialImagePostRoute)?20000:16000));
+        :(isThreadsPlatform?16000:(slowSocialSource?20000:((isTikTokPhotoPost||isTikTokShortLink)?28000:(isYouTubePhotoPost||isPhotoRoute||isSocialImagePostRoute)?18000:14000)));
       const imageExtractionPromise=shouldTryImageExtraction
         ?(async()=>{
           const endpoint="/api/image/extract?url="+encodeURIComponent(url.href);
@@ -1804,8 +1814,9 @@ function socialNetworkPlan(selected=0){
         }
       }
       const hasVideoFormat=(info.formats||[]).some(item=>item?.mode==="video"||item?.type==="video"||/^video\//i.test(String(item?.mimeType||item?.mime_type||""))||["mp4","m4v","webm","mov","avi","3gp"].includes(String(item?.ext||"").toLowerCase()));
-      // If Threads has an MP4, do not keep the result screen blocked on an unrelated photo request.
-      const imageNeedsWait=shouldTryImageExtraction&&(!hasVideoFormat||isTikTokPhotoPost||isYouTubePhotoPost||isPhotoRoute||(!isThreadsPlatform&&isSocialImagePostRoute));
+      // Threads posts may contain a video and a photo carousel in the same post.
+      // Wait for both branches so a valid MP4 never hides the attached photo gallery.
+      const imageNeedsWait=shouldTryImageExtraction&&(!hasVideoFormat||isThreadsPlatform||isTikTokPhotoPost||isYouTubePhotoPost||isPhotoRoute||isSocialImagePostRoute);
       const imageResult=imageNeedsWait?await imageExtractionPromise:null;
       if(runId!==analysisRunId)return;
       const imageData=imageResult?.data||{};
@@ -2037,6 +2048,20 @@ function socialNetworkPlan(selected=0){
         box.append(title,meta,wrap,status,note,source);
         return;
       }
+      if(info.isLive&&!hasVideoFormat&&!imageGallery){
+        box.replaceChildren(
+          make("b","youtube-title","● LIVE TERDETEKSI"),
+          make("p","warning",info.error||"Siaran langsung sedang berlangsung. ARYANZZ mengenali halaman LIVE, tetapi tidak merekam siaran aktif."),
+          make("p","muted","Setelah siaran selesai dan platform menerbitkan arsip/replay, tempel tautan arsip tersebut untuk memeriksa unduhan.")
+        );
+        const source=make("a","tag","Buka siaran di platform ↗");source.href=url.href;source.target="_blank";source.rel="noopener noreferrer";box.append(source);
+        return;
+      }
+      if(info.isUpcoming&&!hasVideoFormat&&!imageGallery){
+        box.replaceChildren(make("b","youtube-title","◷ SIARAN AKAN DIMULAI"),make("p","muted",info.error||"Halaman siaran terjadwal terdeteksi. File video belum tersedia untuk diunduh."));
+        const source=make("a","tag","Buka halaman siaran ↗");source.href=url.href;source.target="_blank";source.rel="noopener noreferrer";box.append(source);
+        return;
+      }
       if(!hasAnyFormat&&!imageGallery){
         box.replaceChildren(make("b","youtube-title","Media belum dapat diambil"),make("p","warning",info.error||"Provider tidak mengirim format video/audio yang dapat diunduh. Tidak ada file yang disiapkan."));
         return;
@@ -2045,8 +2070,12 @@ function socialNetworkPlan(selected=0){
       const header = make("div", "youtube-heading");
       const details = make("div", "youtube-details");
       details.append(make("b", "youtube-title", info.title || info.filename || "Media siap diunduh"));
-      const mediaMetaLine=make("small","muted",[info.extractor||info.sourceLabel||platformName(url),info.isLiveArchive?"Arsip siaran langsung":"",duration(info.duration),info.size?(info.size/1048576).toFixed(1)+" MB":""].filter(Boolean).join(" · "));
+      const detectedKindLabel=info.contentKind==="mixed-video-photo"?"Video + galeri foto":info.contentKind==="photo-carousel"?"Galeri foto":info.contentKind==="live-replay"?"Arsip siaran langsung":info.contentKind==="live"?"Siaran langsung":"";
+      const mediaMetaLine=make("small","muted",[info.extractor||info.sourceLabel||platformName(url),detectedKindLabel,info.isLiveArchive?"Arsip siaran langsung":"",duration(info.duration),info.size?(info.size/1048576).toFixed(1)+" MB":""].filter(Boolean).join(" · "));
       details.append(mediaMetaLine);
+      if(info.isLive)details.append(make("small","warning","● Siaran LIVE terdeteksi · unduhan file aktif tidak tersedia."));
+      else if(info.isUpcoming)details.append(make("small","muted","◷ Siaran belum dimulai."));
+      else if(info.isLiveArchive&&!hasVideoFormat)details.append(make("small","muted","Arsip siaran langsung sedang diproses oleh platform."));
       if(isYouTube&&info.thumbnail){
         try{
           const imageUrl=new URL(info.thumbnail);
@@ -2494,7 +2523,7 @@ function socialNetworkPlan(selected=0){
       box.append(progress, progressText, progressMeta, engineStatus, actions);
       cancel.addEventListener("click",()=>{
         if(activeDownloadController&&!activeDownloadController.signal.aborted)activeDownloadController.abort();
-        if(activeDownloadFfmpeg){try{activeDownloadFfmpeg.terminate()}catch{}activeDownloadFfmpeg=null;aryanzzFfmpegPromise=null;}
+        if(activeDownloadFfmpeg){try{activeDownloadFfmpeg.terminate()}catch{}activeDownloadFfmpeg=null;aryanzzFfmpegPromise=null;publishDownloadState();}
         cancel.disabled=true;cancel.textContent="Membatalkan…";
       });
       mode.addEventListener("change", () => {
@@ -2514,7 +2543,7 @@ function socialNetworkPlan(selected=0){
       start.addEventListener("click", async () => {
         box.querySelector(".v851-complete-panel")?.remove();box.classList.remove("v851-download-complete");
         resetDownloadRate(progressMeta);
-        const runController=new AbortController();activeDownloadController=runController;activeDownloadFfmpeg=null;
+        const runController=new AbortController();activeDownloadController=runController;activeDownloadFfmpeg=null;publishDownloadState();
         cancel.hidden=false;cancel.disabled=false;cancel.textContent="Batalkan";
         start.disabled = true;
         mode.disabled = true;
@@ -2542,7 +2571,7 @@ function socialNetworkPlan(selected=0){
           start.disabled=false;mode.disabled=false;quality.disabled=mode.value==="audio"||directMedia;audioBitrate.disabled=false;speedSelect.disabled=false;start.textContent="Coba lagi";
         } finally {
           if(activeDownloadController===runController)activeDownloadController=null;
-          activeDownloadFfmpeg=null;cancel.hidden=true;cancel.disabled=false;cancel.textContent="Batalkan";
+          activeDownloadFfmpeg=null;publishDownloadState();cancel.hidden=true;cancel.disabled=false;cancel.textContent="Batalkan";
         }
       });
     } catch (error) {

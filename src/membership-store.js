@@ -89,10 +89,12 @@ function readCookie(request, name = "aryanzz_device_lock") {
   return part ? part.slice(prefix.length) : "";
 }
 
-function safeHttpsUrl(value) {
+function safeAirPayUrl(value) {
   try {
     const url = new URL(String(value || ""));
-    if (url.protocol !== "https:" || url.username || url.password) return "";
+    const host = url.hostname.toLowerCase();
+    if (url.protocol !== "https:" || url.username || url.password ||
+        !(host === "airpaygateway.site" || host.endsWith(".airpaygateway.site"))) return "";
     return url.href;
   } catch {
     return "";
@@ -116,6 +118,9 @@ function publicOrder(order) {
     createdAt: order.createdAt,
     paidAt: order.paidAt || null,
     expiresAt: order.expiryAt || null,
+    gatewayExpiresAt: order.expiryAt || null,
+    checkoutExpiresAt: order.checkoutExpiresAt || (Number(order.createdAt || Date.now()) + 10 * 60 * 1000),
+    checkoutExpired: order.status === "pending" && Date.now() >= Number(order.checkoutExpiresAt || (Number(order.createdAt || Date.now()) + 10 * 60 * 1000)),
     transactionId: order.transactionId || null,
     qrUrl: order.qrUrl || null,
     payUrl: order.payUrl || null,
@@ -164,16 +169,43 @@ export class MembershipStore {
   async session(request) {
     const deviceToken = readCookie(request, "aryanzz_device_lock");
     if (!/^[a-f0-9]{64}$/i.test(deviceToken)) return null;
+    const lockHash = hex(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(deviceToken.toLowerCase())));
+    const deviceId = "device-" + lockHash;
     const db = this.env.AUTH_DB;
-    if (!db || typeof db.prepare !== "function" || String(this.env.AUTH_SESSION_SECRET || "").length < 32) return null;
+    if (!db || typeof db.prepare !== "function" || String(this.env.AUTH_SESSION_SECRET || "").length < 32) {
+      return { id: deviceId, cookie: null, deviceBound: true };
+    }
     try {
-      const lockHash = hex(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(deviceToken.toLowerCase())));
       const row = await db.prepare("SELECT user_id FROM auth_device_lock_accounts WHERE lock_hash=?1 LIMIT 1").bind(lockHash).first();
-      if (!row || !row.user_id) return null;
-      return { id: String(row.user_id), cookie: null };
+      if (!row || !row.user_id) return { id: deviceId, cookie: null, deviceBound: true };
+      const accountId = String(row.user_id);
+      if (accountId !== deviceId) await this.migrateDeviceIdentity(deviceId, accountId);
+      return { id: accountId, cookie: null, deviceBound: false };
     } catch (error) {
       console.warn("[ARYANZZ_MEMBERSHIP] identity_lookup_failed", error && error.name || "unknown");
-      return null;
+      return { id: deviceId, cookie: null, deviceBound: true };
+    }
+  }
+
+  async migrateDeviceIdentity(deviceId, accountId) {
+    try {
+      const deviceMembership = await this.ctx.storage.get("membership:" + deviceId);
+      const accountMembership = await this.ctx.storage.get("membership:" + accountId);
+      if (deviceMembership && (!accountMembership || accountMembership.status !== "active")) {
+        await this.ctx.storage.put("membership:" + accountId, deviceMembership);
+      }
+      const deviceOrders = await this.ctx.storage.get("orders:" + deviceId) || [];
+      if (deviceOrders.length) {
+        const accountOrders = await this.ctx.storage.get("orders:" + accountId) || [];
+        const known = new Set(accountOrders.map(order => order.id));
+        for (const order of deviceOrders) {
+          order.userId = accountId;
+          await this.ctx.storage.put("order:" + order.id, order);
+          if (!known.has(order.id)) await this.saveOrderList(accountId, order);
+        }
+      }
+    } catch (error) {
+      console.warn("[ARYANZZ_MEMBERSHIP] device_membership_migration_failed", error && error.name || "unknown");
     }
   }
 
@@ -206,13 +238,15 @@ export class MembershipStore {
 
     if (path === "/api/membership/payment-config" && method === "GET") {
       const apiKeyReady = !!this.apiKey();
-      const identityReady = !!(await this.session(request));
+      const session = await this.session(request);
+      const identityReady = !!session;
       const authReady = !!this.env.AUTH_DB && typeof this.env.AUTH_DB.prepare === "function" && String(this.env.AUTH_SESSION_SECRET || "").length >= 32;
-      const ready = apiKeyReady && authReady && identityReady;
+      const ready = apiKeyReady && identityReady;
       const missing = [];
+      const optionalMissing = [];
       if (!apiKeyReady) missing.push("AIRPAY_API_KEY · Secret API Key AirPay pada Cloudflare Worker");
-      if (!authReady) missing.push("AUTH_DB + AUTH_SESSION_SECRET · layanan identitas ARYANZZ");
-      if (authReady && !identityReady) missing.push("ID ARYANZZ belum tersinkron pada perangkat ini");
+      if (!identityReady) missing.push("ID perangkat ARYANZZ belum tersedia; muat ulang halaman");
+      if (!authReady) optionalMissing.push("AUTH_DB + AUTH_SESSION_SECRET · sinkronisasi Membership lintas perangkat");
       return json({
         ok: true,
         enabled: ready,
@@ -220,15 +254,19 @@ export class MembershipStore {
         apiKeyReady,
         authReady,
         identityReady,
+        identityMode: session?.deviceBound ? "device" : identityReady ? "account" : "unavailable",
         provider: "AirPay QRIS",
         mode: this.apiKey().startsWith("ak_test_") ? "sandbox" : apiKeyReady ? "live" : "not-configured",
         statusVerification: "webhook-and-server-side-polling",
         webhookAvailable: true,
         webhookUrl: new URL("/api/membership/webhook", url.origin).href,
         missing,
+        optionalMissing,
         message: ready
-          ? "Checkout QRIS siap. Webhook dan pemeriksaan status server memverifikasi pembayaran sebelum membership aktif."
-          : "Checkout menunggu konfigurasi API AirPay dan identitas ID ARYANZZ yang valid."
+          ? authReady
+            ? "Checkout QRIS siap. Pembayaran diverifikasi server dan Membership tersimpan pada akun ARYANZZ."
+            : "Checkout QRIS siap pada perangkat ini. Membership terikat ke ID perangkat; aktifkan D1 dan AUTH_SESSION_SECRET untuk sinkronisasi lintas perangkat."
+          : "Checkout menunggu API Key AirPay dan ID perangkat ARYANZZ."
       });
     }
 
@@ -348,21 +386,43 @@ export class MembershipStore {
     }
 
     const priorOrders = await this.ctx.storage.get("orders:" + session.id) || [];
-    const pending = priorOrders.find(order =>
-      order.status === "pending" &&
-      (!order.expiryAt || new Date(order.expiryAt).getTime() > Date.now())
-    );
+    let pending = null;
+    for (const candidate of priorOrders.filter(order => order.status === "pending")) {
+      if (candidate.transactionId) {
+        try {
+          // Reconcile with AirPay before allowing another invoice. The local
+          // 10-minute checkout timer must never create a duplicate payable QR.
+          await this.checkOrderStatus(candidate);
+        } catch (error) {
+          console.warn("[ARYANZZ_MEMBERSHIP] pending_order_reconcile_failed", error && error.name || "unknown");
+        }
+      }
+      const latest = await this.ctx.storage.get("order:" + candidate.id) || candidate;
+      if (latest.status !== "pending") continue;
+      if (!latest.transactionId && Date.now() - Number(latest.createdAt || 0) > 2 * 60 * 1000) {
+        latest.status = "rejected";
+        latest.note = "Invoice tidak selesai dibuat oleh gateway dan ditutup otomatis.";
+        await this.ctx.storage.put("order:" + latest.id, latest);
+        await this.saveOrderList(session.id, latest);
+        continue;
+      }
+      pending = latest;
+      break;
+    }
     if (pending) {
       return json({
         ok: false,
         code: "PENDING_ORDER_EXISTS",
-        error: "Masih ada invoice yang menunggu pembayaran. Lanjutkan pembayaran sebelumnya terlebih dahulu.",
+        error: pending.checkoutExpiresAt && Date.now() >= Number(pending.checkoutExpiresAt)
+          ? "Waktu checkout 10 menit sudah habis. ARYANZZ menutup QR dari halaman, tetapi tetap mencocokkan status invoice AirPay sampai gateway menyatakan transaksi berakhir agar tidak terjadi pembayaran ganda."
+          : "Masih ada invoice yang menunggu pembayaran. Lanjutkan pembayaran sebelumnya terlebih dahulu.",
         order: publicOrder(pending),
         payment: {
           provider: "AirPay QRIS",
           qrUrl: pending.qrUrl || null,
           payUrl: pending.payUrl || null,
           totalAmount: pending.totalAmount || pending.amount,
+          feeAmount: pending.feeAmount || 0,
           expiryAt: pending.expiryAt || null
         }
       }, 409);
@@ -384,6 +444,7 @@ export class MembershipStore {
       customerName,
       customerEmail,
       createdAt: now,
+      checkoutExpiresAt: now + 10 * 60 * 1000,
       transactionId: null,
       qrUrl: null,
       payUrl: null,
@@ -424,17 +485,25 @@ export class MembershipStore {
 
       const invoice = payload.data || payload;
       const transactionId = String(invoice.transaction_id || invoice.id || "").trim();
-      const qrUrl = safeHttpsUrl(invoice.qr_url);
-      const payUrl = safeHttpsUrl(invoice.pay_url);
-      if (!transactionId || (!qrUrl && !payUrl)) {
-        throw new Error("Respons AirPay belum memuat transaction_id dan QR/link pembayaran yang valid.");
+      const returnedExternalId = String(invoice.external_id || "").trim();
+      const qrUrl = safeAirPayUrl(invoice.qr_url);
+      const payUrl = safeAirPayUrl(invoice.pay_url);
+      if (returnedExternalId && returnedExternalId !== id) {
+        throw new Error("Referensi invoice yang dikembalikan AirPay tidak cocok dengan pesanan ARYANZZ.");
+      }
+      if (!transactionId || !qrUrl) {
+        throw new Error("AirPay harus mengembalikan transaction_id dan qr_url resmi agar QR pembayaran dapat dipindai langsung di ARYANZZ.");
       }
       if (invoice.base_amount !== undefined && Number(invoice.base_amount) !== amount) {
         throw new Error("Nominal dasar invoice AirPay tidak cocok dengan harga paket.");
       }
       const gatewayTotal = Number(invoice.total_amount || amount);
-      if (!Number.isSafeInteger(gatewayTotal) || gatewayTotal < amount || gatewayTotal > amount + 999) {
-        throw new Error("Total pembayaran AirPay tidak valid.");
+      // AirPay's published MDR can exceed Rp999 on larger plans (0.7% + Rp295
+      // below Rp150k, then 0.95%). Keep a conservative 1.5% + Rp500 ceiling
+      // for provider rounding/fee changes without accepting an arbitrary total.
+      const maxGatewayFee = Math.ceil(amount * 0.015 + 500);
+      if (!Number.isSafeInteger(gatewayTotal) || gatewayTotal < amount || gatewayTotal > amount + maxGatewayFee) {
+        throw new Error("Total pembayaran AirPay tidak valid atau biaya gateway melebihi batas wajar.");
       }
 
       order.transactionId = transactionId;
@@ -445,8 +514,12 @@ export class MembershipStore {
       if (!Number.isSafeInteger(order.feeAmount) || order.feeAmount < 0 || order.amount + order.feeAmount !== order.totalAmount) {
         throw new Error("Rincian biaya invoice AirPay tidak konsisten.");
       }
-      order.expiryAt = invoice.expiry_at || null;
-      order.note = "Invoice QRIS dibuat. Menunggu pembayaran.";
+      order.expiryAt = invoice.expiry_at || new Date(now + 15 * 60 * 1000).toISOString();
+      const gatewayExpiry = Date.parse(order.expiryAt);
+      order.checkoutExpiresAt = Number.isFinite(gatewayExpiry)
+        ? Math.min(now + 10 * 60 * 1000, gatewayExpiry)
+        : now + 10 * 60 * 1000;
+      order.note = "Invoice QRIS dibuat. Sesi checkout ARYANZZ berlaku 10 menit; status gateway tetap direkonsiliasi sampai final.";
       await this.ctx.storage.put("order:" + id, order);
       await this.saveOrderList(session.id, order);
       await this.scheduleStatusCheck();

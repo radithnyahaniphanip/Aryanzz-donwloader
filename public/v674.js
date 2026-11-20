@@ -18,7 +18,7 @@ const platforms={
  x:{name:"X",url:q=>"https://x.com/search?q="+encodeURIComponent(q)},
  reddit:{name:"Reddit",url:q=>"https://www.reddit.com/search/?q="+encodeURIComponent(q)},
  vimeo:{name:"Vimeo",url:q=>"https://vimeo.com/search?q="+encodeURIComponent(q)},
- threads:{name:"Threads",url:q=>"https://www.google.com/search?q="+encodeURIComponent("site:threads.net "+q)},
+ threads:{name:"Threads",url:q=>"https://www.google.com/search?q="+encodeURIComponent("(site:threads.com OR site:threads.net) "+q)},
  soundcloud:{name:"SoundCloud",url:q=>"https://soundcloud.com/search?q="+encodeURIComponent(q)},
  capcut:{name:"CapCut",url:q=>"https://www.google.com/search?q="+encodeURIComponent("site:capcut.com "+q)},
  tiktoklite:{name:"TikTok Lite",url:q=>"https://www.tiktok.com/search?q="+encodeURIComponent(q)},
@@ -159,10 +159,10 @@ const updateSearchHelp=()=>{
  const guide=PLATFORM_GUIDES[selected]||{};
  const entry=platformCatalog.find(platform=>platform.id===selected);
  const supported=selected==="all"||((entry?.searchModes||[]).includes(mode));
- if(selected==="all")help.textContent=mode==="image"?"Pencarian judul memeriksa "+count+" provider gambar. Hanya file gambar yang lolos verifikasi yang ditampilkan.":"Pencarian judul memeriksa provider video yang tersedia dan turut mencari YouTube sebagai pencarian cadangan otomatis jika sumber pilihan kosong.";
- else if(!supported)help.textContent=(platforms[selected]?.name||entry?.name||selected)+" belum mendukung pencarian "+(mode==="image"?"gambar":mode==="audio"?"audio":"video")+" secara langsung. Untuk video/audio, ARYANZZ akan otomatis mencoba YouTube sebagai cadangan.";
+ if(selected==="all")help.textContent=mode==="image"?"Pencarian judul memeriksa "+count+" provider gambar. Hanya file gambar yang lolos verifikasi yang ditampilkan.":"Pencarian judul mencari hasil pada seluruh domain platform yang terdaftar; YouTube hanya tambahan dalam mode Semua Platform.";
+ else if(!supported)help.textContent=(platforms[selected]?.name||entry?.name||selected)+" belum mendukung pencarian "+(mode==="image"?"gambar":mode==="audio"?"audio":"video")+" secara langsung. Gunakan pencarian resmi platform atau tempel tautan publiknya.";
  else if(mode==="image")help.textContent=guide.imageHelp||"Foto dan gambar publik dari "+name+". Hanya file gambar yang berhasil diverifikasi yang akan ditampilkan.";
- else help.textContent=guide.videoHelp||"Cari video publik di "+name+". Jika sumber pilihan tidak memberikan hasil, ARYANZZ akan mencoba YouTube sebagai cadangan.";
+ else help.textContent=guide.videoHelp||"Cari video publik langsung dari "+name+". Hasil dari platform lain tidak akan dicampurkan.";
 };
 searchType?.addEventListener("change",()=>{
  updateSearchHelp();
@@ -176,7 +176,7 @@ const SEARCH_PLATFORM_ALIASES={tiktoklite:"tiktok",instagramlite:"instagram",fac
 let SEARCH_PLATFORM_DOMAINS={
 youtube:["youtube.com","youtu.be"],tiktok:["tiktok.com"],instagram:["instagram.com","instagr.am"],snackvideo:["snackvideo.com"],
 capcut:["capcut.com"],pinterest:["pinterest.com","pin.it"],facebook:["facebook.com","fb.watch"],x:["x.com","twitter.com"],
-reddit:["reddit.com","redd.it"],vimeo:["vimeo.com"],threads:["threads.net"],soundcloud:["soundcloud.com"],
+reddit:["reddit.com","redd.it"],vimeo:["vimeo.com"],threads:["threads.com","threads.net"],soundcloud:["soundcloud.com"],
 snapchat:["snapchat.com"],idnapp:["idntimes.com"],linkedin:["linkedin.com"],wechat:["wechat.com","weixin.qq.com"],kakaotalk:["kakao.com"]
 };
 const platformTemplates=new Map();
@@ -364,10 +364,10 @@ function searchResultBelongsTo(item,platform){
 }
 function showFallback(target,q,kind="video"){
 const card=document.createElement("article");card.className="v674-search-result v736-search-handoff";
-const useYoutube=kind!=="image"&&selected!=="youtube";
+const useYoutube=kind!=="image"&&selected==="all";
 const title=document.createElement("h3");title.textContent=useYoutube?"Pencarian YouTube sebagai cadangan":"Pencarian "+target.name+" belum mengirim hasil";
 const note=document.createElement("p");note.textContent=useYoutube
- ?"Pencarian platform pilihan belum memberikan media yang bisa diverifikasi. YouTube digunakan sebagai sumber cadangan untuk menemukan judul atau konten yang sama. Buka hasil YouTube, lalu tempel tautan publiknya di ARYANZZ untuk memeriksa format unduhan."
+ ?"Pencarian semua platform belum memberikan hasil. YouTube ditawarkan sebagai sumber tambahan; hasil tetap harus diperiksa sebelum diunduh."
  :"Hasil internal belum tersedia atau sedang dibatasi. Buka pencarian sumber eksternal, lalu tempel tautan postingan publik di ARYANZZ untuk memeriksa format media yang benar-benar tersedia.";
 const fallbackQuery=selected==="all"?"":searchDomainsForPlatform(selected).map(domain=>"site:"+domain).join(" OR ");
 const href=kind==="image"
@@ -454,10 +454,10 @@ searchController?.abort();searchController=new AbortController();currentPage=1;
 results.hidden=false;results.replaceChildren();
 const kind=["image","audio"].includes(searchType?.value)?searchType.value:"video";
 const supportedCount=platformCatalog.filter(platform=>(platform.searchModes||[]).includes(kind)&&!platform.aliasOf).length;
-const target=selected==="all"?{name:"Semua "+supportedCount+" platform "+(kind==="image"?"gambar":"video"),url:q=>"https://www.google.com/search?q="+encodeURIComponent(q)}:platforms[selected];
+const target=selected==="all"?{name:"Semua "+supportedCount+" platform "+(kind==="image"?"gambar":"video"),url:q=>"https://www.google.com/search?q="+encodeURIComponent(q)}:(platforms[selected]||{name:platformDisplayName(selected),url:q=>{const domains=searchDomainsForPlatform(selected);const site=domains.map(domain=>"site:"+domain).join(" OR ");return "https://www.google.com/search?q="+encodeURIComponent((site?site+" ":"")+q)}});
 const loading=document.createElement("div");loading.className="v674-search-loading";loading.textContent=kind==="image"?"Mencari gambar dari "+target.name+"…":kind==="audio"?"Mencari musik dan video sumber untuk dibuat MP3 dari "+target.name+"…":selected==="all"?"Mencari judul satu per satu di semua platform video yang didukung…":"Mencari judul dari "+target.name+"…";results.append(loading);
 const btn=$("titleSearchBtn");if(btn){btn.disabled=true;btn.textContent="Mencari…"}
-if(help)help.textContent=selected==="all"?(kind==="image"?"Pencarian judul memeriksa provider gambar yang didukung.":"Pencarian judul mencari secara terpisah di "+supportedCount+" platform video. Hasil judul publik tetap ditampilkan; status unduhan diperiksa saat hasil dipilih."):kind==="image"?"Mode gambar: hasil gambar publik dari "+target.name+" akan diperiksa sebelum ditampilkan.":kind==="audio"?"Mode audio: hasil audio publik dari "+target.name+" akan diperiksa sebelum dibuat MP3.":"Mode video: hasil judul publik dari "+target.name+" tetap ditampilkan meski stream belum terverifikasi. Pemeriksaan unduhan berjalan saat hasil dipilih.";
+if(help)help.textContent=selected==="all"?(kind==="image"?"Pencarian judul memeriksa provider gambar yang didukung.":"Pencarian judul mencari hasil pada seluruh domain platform yang terdaftar; YouTube hanya tambahan dalam mode Semua Platform."):kind==="image"?"Mode gambar: hasil gambar publik dari "+target.name+" akan diperiksa sebelum ditampilkan.":kind==="audio"?"Mode audio: hasil audio publik dari "+target.name+" akan diperiksa sebelum dibuat MP3.":"Mode video: hasil judul hanya berasal dari "+target.name+". Tautan diperiksa saat dipilih.";
 try{
 const endpoint=kind==="image"?"/api/image/search":"/api/social/search";
 const options={method:"POST",headers:{"content-type":"application/json"},cache:"no-store"};
@@ -514,7 +514,7 @@ if(shouldTryYoutube){
   }
  }
 }
-if(!mediaItems.length)throw searchFailure||new Error("Belum ada hasil publik yang cocok dari "+target.name+". YouTube akan ditawarkan sebagai pencarian cadangan.");
+if(!mediaItems.length)throw searchFailure||new Error("Belum ada hasil publik yang cocok dari "+target.name+". Hasil dari platform lain tidak akan ditampilkan.");
 }
 render(mediaItems,target,q,unavailable,imageItems);
 const resultCards=[...results.querySelectorAll(".v674-search-result,.v674-audio-inline-result,.aryanzz-inline-image-card")];

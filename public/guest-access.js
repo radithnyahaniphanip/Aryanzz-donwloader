@@ -7,14 +7,22 @@
   const RESTORE_KEY = "aryanzz.public.guest.restore.v1";
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   const randomId = () => "ARY-" + Array.from(crypto.getRandomValues(new Uint8Array(10)), v => alphabet[v % alphabet.length]).join("");
+  function ensureDeviceLockCookie() {
+    const existing = document.cookie.split(";").map(value => value.trim()).find(value => value.startsWith("aryanzz_device_lock="))?.slice("aryanzz_device_lock=".length) || "";
+    if (/^[a-f0-9]{64}$/i.test(existing)) return existing;
+    const token = Array.from(crypto.getRandomValues(new Uint8Array(32)), value => value.toString(16).padStart(2, "0")).join("");
+    document.cookie = "aryanzz_device_lock=" + token + "; Max-Age=31536000; Path=/; Secure; SameSite=Lax";
+    return token;
+  }
   function setIdentity(user, localOnly = false) {
     if (!user || !/^ARY-[A-Z0-9]{10}$/i.test(String(user.id || ""))) return;
+    if (localOnly || user.guest) { try { ensureDeviceLockCookie(); } catch {} }
     if (!localOnly) { try { localStorage.setItem(LOCAL_ID_KEY, String(user.id)); } catch {} }
     const role = String(user.role || "guest").toLowerCase();
     const isAdmin = ["owner", "admin", "developer"].includes(role) || String(user.id).toUpperCase() === "ARY-ZFTLQPEX92";
     window.aryanzzAuthUser = user;
     window.aryanzzIsDeveloper = isAdmin;
-    const id = $("profileRandomId"), copy = $("profileCopyId"), logout = $("accountLogout");
+    const id = $("profileRandomId"), copy = $("profileCopyId"), logout = $("accountLogout"), accountButton=$("aryAccountOpen"),accountStatus=$("aryAccountStatus");
     if (id) {
       id.textContent = user.id;
       id.classList.toggle("ary-developer-id", isAdmin);
@@ -30,10 +38,12 @@
         });
       }
     }
-    if (logout) logout.hidden = true;
-    if ($("profileIdDescription")) $("profileIdDescription").textContent = "ID otomatis untuk mengenali perangkat dan status Membership ARYANZZ.";
-    if ($("profileAccountEmail")) $("profileAccountEmail").textContent = user.guest || localOnly ? "Tidak diperlukan" : (user.email || "Tidak diperlukan");
-    if ($("profileAccountNote")) $("profileAccountNote").textContent = "● " + (localOnly ? "ID otomatis tersimpan di perangkat ini" : "Akses publik · ID otomatis tersimpan di server");
+    if (logout) logout.hidden = !!user.guest;
+    if(accountButton){accountButton.textContent=user.guest?"Masuk / Daftar":"Akun aktif";accountButton.disabled=!user.guest;}
+    if(accountStatus)accountStatus.textContent=user.guest?"Pengunjung · ID perangkat aktif":localOnly?"Akun lokal · browser ini":"Akun tersinkron";
+    if ($("profileIdDescription")) $("profileIdDescription").textContent = "ID akun ARYANZZ untuk profil dan status Membership.";
+    if ($("profileAccountEmail")) $("profileAccountEmail").textContent = user.guest ? "Tidak diperlukan" : (user.email || "Email belum tercatat");
+    if ($("profileAccountNote")) $("profileAccountNote").textContent = "● " + (localOnly ? "Akun lokal tersimpan di perangkat ini" : user.guest ? "ID pengunjung otomatis tersimpan di server" : "Akun tersimpan di server ARYANZZ");
     if ($("profileSummary")) $("profileSummary").textContent = user.fullName || "Pengunjung ARYANZZ";
     if ($("profileName") && !String($("profileName").value || "").trim()) $("profileName").value = user.fullName || "Pengunjung ARYANZZ";
     for (const id of ["ownerLinkEditor", "securityCenter", "ownerEditProfile"]) if ($(id)) $(id).hidden = !isAdmin;
@@ -67,10 +77,11 @@
     const title = document.createElement("h1"); title.textContent = "ID kamu telah di-banned";
     const detail = document.createElement("p"); detail.textContent = (message || "Akses ARYANZZ dihentikan oleh administrator.") + (id ? " ID: " + id : "");
     const help = document.createElement("a"); help.className = "ary-auth-blocked-contact"; help.href = "https://wa.me/6282110767071?text=" + encodeURIComponent("Halo dukungan ARYANZZ, saya ingin meminta peninjauan pemblokiran ID " + (id || "saya") + "."); help.target = "_blank"; help.rel = "noopener noreferrer"; help.textContent = "Hubungi dukungan WhatsApp · 082110767071";
-    card.append(mark, title, detail, help); gate.append(card); gate.hidden = false;
+    card.append(mark, title, detail, help); gate.append(card); gate.style.removeProperty("display");gate.hidden = false;gate.setAttribute("aria-hidden","false");
     document.body.classList.remove("ary-authenticated");
   }
   function localFallback(_message = "", _error = false) {
+    try { ensureDeviceLockCookie(); } catch {}
     let id = "";
     try { id = localStorage.getItem(LOCAL_ID_KEY) || ""; } catch {}
     if (!/^ARY-[A-Z0-9]{10}$/i.test(id)) {
@@ -83,6 +94,7 @@
     return { ok: false, localOnly: true, user: window.aryanzzAuthUser };
   }
   async function bootstrap() {
+    try { ensureDeviceLockCookie(); } catch {}
     const response = await fetch("/api/auth/guest/bootstrap", { method: "GET", credentials: "same-origin", cache: "no-store", headers: { accept: "application/json" } });
     const data = await response.json().catch(() => ({}));
     if (!response.ok || !data.ok) {
@@ -106,16 +118,22 @@
     }
     return data;
   }
+  window.ARYANZZGuestAccess=Object.freeze({restoreGuest:bootstrap,localFallback});
   window.aryanzzGuestReady = new Promise(resolve => {
-    const start = () => {
+    const start = async () => {
+      try { await window.aryanzzAuthReady; } catch {}
+      const account=window.aryanzzAuthUser;
+      if(account&&!account.guest){
+        setIdentity(account,account.localOnly===true);
+        resolve({ok:true,authenticated:true,user:window.aryanzzAuthUser});
+        return;
+      }
       bootstrap().catch(error => {
         console.warn("[ARYANZZ] Guest identity fallback:", error?.message || "unavailable");
         if(error?.code==="ADMIN_SESSION_REQUIRED")return localFallback("Akses publik tetap tersedia. Sesi administrator berakhir; gunakan /?owner=1 untuk masuk kembali ke panel admin.",false);
         return localFallback();
       }).then(resolve);
     };
-    // auth-gate.js registers its DOMContentLoaded handler first; wait for it
-    // so the public guest identity cannot be overwritten by setUser(null).
     if (document.readyState === "loading" || document.readyState === "interactive") {
       document.addEventListener("DOMContentLoaded", start, { once: true });
     } else start();

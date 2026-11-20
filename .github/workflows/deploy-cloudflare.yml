@@ -109,7 +109,7 @@ jobs:
           DB_ID="$ARYANZZ_AUTH_DB_ID"
           if [ -z "$DB_ID" ]; then
             if ! DB_LIST="$(curl -fsS --retry 3 -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/d1/database" 2>&1)"; then
-              echo "::notice::D1 is not accessible with the current Cloudflare token. Public guest access remains available, but membership checkout stays disabled until AUTH_DB and AUTH_SESSION_SECRET are configured. AirPay checkout also requires AIRPAY_API_KEY as a Worker Secret."
+              echo "::notice::D1 is not accessible with the current Cloudflare token. Public guest access and device-bound Membership checkout remain available when AIRPAY_API_KEY is configured. AUTH_DB and AUTH_SESSION_SECRET are required only for cross-device account/Membership synchronization."
               exit 0
             fi
             DB_ID="$(printf '%s' "$DB_LIST" | jq -r '.result[]? | select(.name == "aryanzz-auth-db") | .uuid' | head -n 1)"
@@ -117,13 +117,13 @@ jobs:
           if [ -z "$DB_ID" ] || [ "$DB_ID" = "null" ]; then
             echo "No existing aryanzz-auth-db found; attempting to create it."
             if ! CREATE_OUTPUT="$(wrangler d1 create aryanzz-auth-db 2>&1)"; then
-              echo "::notice::Could not create the account database with the current token. Continuing with public V2 access; ID-bound Membership checkout remains disabled until AUTH_DB and AUTH_SESSION_SECRET are configured."
+              echo "::notice::Could not create the account database with the current token. Continuing with public V2 access; device-bound Membership checkout remains available when AIRPAY_API_KEY is configured. AUTH_DB and AUTH_SESSION_SECRET enable cross-device account/Membership synchronization."
               exit 0
             fi
             DB_ID="$(printf '%s\\n' "$CREATE_OUTPUT" | sed -nE 's/.*database_id[[:space:]]*=[[:space:]]*"([^"]+)".*/\\1/p' | head -n 1)"
           fi
           if [ -z "$DB_ID" ] || [ "$DB_ID" = "null" ]; then
-            echo "::notice::The D1 database ID is not available. Continuing with public V2 access; configure ARYANZZ_AUTH_DB_ID and Account > D1 > Edit. Membership checkout remains disabled until the ARYANZZ identity database is ready."
+            echo "::notice::The D1 database ID is not available. Continuing with public V2 access; configure ARYANZZ_AUTH_DB_ID and Account > D1 > Edit to enable cross-device account/Membership synchronization. Device-bound checkout still requires AIRPAY_API_KEY."
             exit 0
           fi
           cp wrangler.toml /tmp/aryanzz-wrangler-before-d1.toml
@@ -132,20 +132,21 @@ jobs:
           fi
           if ! wrangler d1 migrations apply aryanzz-auth-db --remote; then
             cp /tmp/aryanzz-wrangler-before-d1.toml wrangler.toml
-            echo "::notice::D1 migrations could not be applied with the current token. Continuing with public V2 access; ID-bound Membership checkout remains disabled until the database migrations complete."
+            echo "::notice::D1 migrations could not be applied with the current token. Continuing with public V2 access; device-bound Membership checkout remains available when AIRPAY_API_KEY is configured. Cross-device account/Membership synchronization requires successful D1 migrations."
             exit 0
           fi
           echo "ARYANZZ_D1_READY=true" >> "$GITHUB_ENV"
           echo "ARYANZZ D1 account database is ready and AUTH_DB is included in this deployment."
-      - name: Sync ARYANZZ account email and CAPTCHA secrets when configured
+      - name: Sync ARYANZZ account, CAPTCHA and AirPay secrets when configured
         env:
           AUTH_SESSION_SECRET: ${{ secrets.AUTH_SESSION_SECRET }}
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           AUTH_EMAIL_FROM: ${{ secrets.AUTH_EMAIL_FROM }}
           TURNSTILE_SECRET_KEY: ${{ secrets.TURNSTILE_SECRET_KEY || secrets.TURNSTILE_SECRET || secrets.CF_TURNSTILE_SECRET_KEY }}
           AUTH_TURNSTILE_SITE_KEY: ${{ secrets.AUTH_TURNSTILE_SITE_KEY || secrets.TURNSTILE_SITE_KEY || secrets.CF_TURNSTILE_SITE_KEY }}
+          AIRPAY_API_KEY: ${{ secrets.AIRPAY_API_KEY }}
         run: |
-          for name in AUTH_SESSION_SECRET RESEND_API_KEY AUTH_EMAIL_FROM TURNSTILE_SECRET_KEY AUTH_TURNSTILE_SITE_KEY; do
+          for name in AUTH_SESSION_SECRET RESEND_API_KEY AUTH_EMAIL_FROM TURNSTILE_SECRET_KEY AUTH_TURNSTILE_SITE_KEY AIRPAY_API_KEY; do
             value="$(printenv "$name" || true)"
             if [ -n "$value" ]; then
               printf '%s' "$value" | wrangler secret put "$name"
@@ -179,6 +180,7 @@ jobs:
           AUTH_EMAIL_FROM: ${{ secrets.AUTH_EMAIL_FROM }}
           TURNSTILE_SECRET_KEY: ${{ secrets.TURNSTILE_SECRET_KEY || secrets.TURNSTILE_SECRET || secrets.CF_TURNSTILE_SECRET_KEY }}
           AUTH_TURNSTILE_SITE_KEY: ${{ secrets.AUTH_TURNSTILE_SITE_KEY || secrets.TURNSTILE_SITE_KEY || secrets.CF_TURNSTILE_SITE_KEY }}
+          AIRPAY_API_KEY: ${{ secrets.AIRPAY_API_KEY }}
         run: |
           set -euo pipefail
           cp wrangler.toml wrangler-backup.toml
@@ -187,7 +189,7 @@ jobs:
           sed -i 's#ARYANZZ_PUBLIC_ORIGIN = "https://aryanzz-donwloader.aryanz.workers.dev"#ARYANZZ_PUBLIC_ORIGIN = "https://aryanzz-backup.aryanz.workers.dev"#' wrangler-backup.toml
           grep -q 'name = "aryanzz-backup"' wrangler-backup.toml
           grep -q 'ARYANZZ_PUBLIC_ORIGIN = "https://aryanzz-backup.aryanz.workers.dev"' wrangler-backup.toml
-          node --input-type=module -e 'import fs from "node:fs"; const names=["AUDD_API_TOKEN","AUTH_SESSION_SECRET","RESEND_API_KEY","AUTH_EMAIL_FROM","TURNSTILE_SECRET_KEY","AUTH_TURNSTILE_SITE_KEY"]; const secrets=Object.fromEntries(names.map(name=>[name,process.env[name]||""]).filter(([,value])=>value)); if(Object.keys(secrets).length)fs.writeFileSync("/tmp/aryanzz-backup-secrets.json",JSON.stringify(secrets));'
+          node --input-type=module -e 'import fs from "node:fs"; const names=["AUDD_API_TOKEN","AUTH_SESSION_SECRET","RESEND_API_KEY","AUTH_EMAIL_FROM","TURNSTILE_SECRET_KEY","AUTH_TURNSTILE_SITE_KEY","AIRPAY_API_KEY"]; const secrets=Object.fromEntries(names.map(name=>[name,process.env[name]||""]).filter(([,value])=>value)); if(Object.keys(secrets).length)fs.writeFileSync("/tmp/aryanzz-backup-secrets.json",JSON.stringify(secrets));'
           if [ -s /tmp/aryanzz-backup-secrets.json ]; then
             wrangler --config wrangler-backup.toml deploy --keep-vars --secrets-file /tmp/aryanzz-backup-secrets.json 2>&1 | tee /tmp/aryanzz-backup-deploy.log
           else
