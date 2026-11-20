@@ -97,8 +97,10 @@ async function testDownload(page, test, deviceLabel) {
 async function testInvalidMedia(page) {
   await page.locator("#url").fill("https://httpbin.org/anything/not-a-video.mp4");
   await page.locator("#analyze").click();
-  await page.locator("#downloadResult").waitFor({ state: "visible", timeout: 90000 });
-  await page.waitForTimeout(1200);
+  await page.waitForFunction(() => {
+    const result = document.querySelector("#downloadResult");
+    return !!result && !result.hidden && /bukan file media|tidak cocok dengan tanda tangan|tanda tangan.*media|file tidak cocok/i.test(result.innerText || "");
+  }, null, { timeout: 90000 });
   const text = await page.locator("#downloadResult").innerText();
   const hasDownload = await page.getByRole("button", { name: /Unduh file asli/i }).count();
   assert.equal(hasDownload, 0, "A JSON/HTML response with an .mp4 suffix must not produce a download action.");
