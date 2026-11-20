@@ -205,13 +205,14 @@ body[data-motion="on"] #toolsArea #allTools .v674-tools-orb{animation:aryOrbFloa
 }
 #profile .ary-v1-device-specs>div{min-width:0}
 #profile .ary-v1-device-specs dd{overflow-wrap:anywhere}
-#owner .owner-developer-title{
+#owner.ary-owner-v2 #ownerDeveloperBadge.owner-developer-title{
  position:relative;isolation:isolate;overflow:hidden;
- border-color:rgba(231,199,119,.48)!important;
- background:linear-gradient(110deg,#3a301c,#4b3d22,#2c321f)!important;
- box-shadow:0 7px 22px rgba(0,0,0,.18)!important;
+ border-color:rgba(244,211,135,.72)!important;
+ background:linear-gradient(110deg,#c49b4e 0%,#f4d990 48%,#d6b15e 100%)!important;
+ color:#2b1703!important;
+ box-shadow:0 7px 22px rgba(205,164,76,.18)!important;
+ animation:developerBadgeShimmer 4s ease-in-out infinite,aryDeveloperBadge 3.8s ease-in-out infinite;
 }
-body[data-motion="on"] #owner .owner-developer-title{animation:aryDeveloperBadge 3.8s ease-in-out infinite}
 @keyframes aryDeveloperBadge{0%,100%{transform:translateY(0);filter:saturate(1)}50%{transform:translateY(-2px);filter:saturate(1.2)}}
 #owner .ary-owner2-social-card{
  position:relative;overflow:hidden;isolation:isolate;
