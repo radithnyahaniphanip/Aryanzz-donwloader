@@ -24,16 +24,19 @@ const storage = new MemoryStorage();
 const ctx = { storage };
 const env = { AIRPAY_API_KEY: "ak_test_aryanzz-membership-smoke" };
 let invoice = null;
+let gatewayStatus = "Pending";
+let createCalls = 0;
 const originalFetch = globalThis.fetch;
 
 globalThis.fetch = async (input, init = {}) => {
   const url = new URL(String(input));
   if (url.pathname === "/api/qris/create") {
+    createCalls += 1;
     const body = JSON.parse(init.body || "{}");
     invoice = {
       transaction_id: "AIRPAY-SMOKE-001",
       external_id: body.external_id,
-      status: "Pending",
+      status: gatewayStatus,
       base_amount: Number(body.amount),
       fee_amount: 25,
       total_amount: Number(body.amount) + 25,
@@ -47,7 +50,7 @@ globalThis.fetch = async (input, init = {}) => {
     assert.equal(url.searchParams.get("transaction_id"), invoice.transaction_id);
     return new Response(JSON.stringify({
       success: true,
-      data: { ...invoice, status: "Success" }
+      data: { ...invoice, status: gatewayStatus }
     }), { status: 200 });
   }
   throw new Error("Unexpected mocked URL: " + url.href);
@@ -88,6 +91,55 @@ try {
   assert.equal(created.order.checkoutExpired, false);
   assert.equal(created.order.checkoutExpiresAt - created.order.createdAt, 10 * 60 * 1000);
   assert.equal(created.payment.qrUrl, "https://airpaygateway.site/qr/smoke.png");
+
+  const methods = await store.fetch(request("/api/membership/payment-methods"));
+  const methodsData = await methods.json();
+  assert.deepEqual(methodsData.methods.map(method => method.id), ["qris"]);
+  assert.match(methodsData.methods[0].description, /DANA.*GoPay.*LinkAja.*OVO.*mobile banking/i);
+
+  const duplicate = await store.fetch(new Request("https://aryanzz.test/api/membership/orders", {
+    method: "POST",
+    headers: { ...requestHeaders, "content-type": "application/json" },
+    body: JSON.stringify({ planId: "starter", billingPeriod: "monthly" })
+  }));
+  assert.equal(duplicate.status, 409, "a second invoice must not be created while the first QR is still pending");
+  const duplicateData = await duplicate.json();
+  assert.equal(duplicateData.code, "PENDING_ORDER_EXISTS");
+  assert.equal(duplicateData.order.id, created.order.id);
+  assert.equal(createCalls, 1, "AirPay should receive only one create request for the pending order");
+
+  const storedOrder = await storage.get("order:" + created.order.id);
+  storedOrder.checkoutExpiresAt = Date.now() - 1;
+  await storage.put("order:" + storedOrder.id, storedOrder);
+  const expiredCheckout = await store.fetch(request("/api/membership/orders/status?orderId=" + encodeURIComponent(created.order.id)));
+  const expiredCheckoutData = await expiredCheckout.json();
+  assert.equal(expiredCheckoutData.order.status, "pending", "the backend keeps reconciling the real AirPay invoice after the local 10-minute checkout closes");
+  assert.equal(expiredCheckoutData.order.checkoutExpired, true, "the 10-minute checkout must be hidden from the customer after timeout");
+
+  gatewayStatus = "Success";
+  const rawWebhook = JSON.stringify({
+    event: "payment.success",
+    data: {
+      external_id: created.order.id,
+      transaction_id: invoice.transaction_id,
+      status: "Success",
+      base_amount: 10000,
+      total_amount: 10025
+    }
+  });
+  const { createHmac } = await import("node:crypto");
+  const signature = createHmac("sha256", env.AIRPAY_API_KEY).update(rawWebhook).digest("hex");
+  const webhookRequest = () => new Request("https://aryanzz.test/api/membership/webhook", {
+    method: "POST",
+    headers: { "content-type": "application/json", "X-AirPay-Signature": signature },
+    body: rawWebhook
+  });
+  const webhook = await store.fetch(webhookRequest());
+  assert.equal(webhook.status, 200);
+  const webhookData = await webhook.json();
+  assert.equal(webhookData.status, "paid");
+  const duplicateWebhook = await store.fetch(webhookRequest());
+  assert.equal((await duplicateWebhook.json()).duplicate, true, "replayed webhook payloads must be idempotent");
 
   const status = await store.fetch(request("/api/membership/orders/status?orderId=" + encodeURIComponent(created.order.id)));
   assert.equal(status.status, 200);
