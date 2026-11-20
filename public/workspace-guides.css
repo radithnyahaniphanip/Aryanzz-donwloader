@@ -116,3 +116,18 @@
  .ary-guide-sidebar{padding-top:8px}
  .ary-guide-item{min-height:86px}
 }
+
+/* Keep the interactive guide above every workspace card, modal and tutorial layer. */
+.ary-guide-overlay{
+  position:fixed!important;inset:0!important;z-index:100010!important;isolation:isolate!important;
+  display:grid!important;place-items:center!important;padding:clamp(8px,2vw,20px)!important;
+  background:rgba(3,8,17,.96)!important;backdrop-filter:blur(18px)!important;-webkit-backdrop-filter:blur(18px)!important
+}
+.ary-guide-overlay[hidden]{display:none!important}
+.ary-guide-dialog{position:relative!important;z-index:100011!important;max-height:calc(100dvh - 24px)!important;max-height:calc(100vh - 24px)!important;overflow:hidden!important;isolation:isolate!important}
+.ary-guide-header,.ary-guide-body,.ary-guide-footer{position:relative;z-index:1}
+.ary-guide-sidebar,.ary-guide-detail{min-width:0}
+@media(max-width:620px){
+ .ary-guide-overlay{padding:6px!important}
+ .ary-guide-dialog{width:100%!important;max-height:calc(100dvh - 12px)!important;border-radius:16px!important}
+}
