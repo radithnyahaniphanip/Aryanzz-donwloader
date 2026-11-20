@@ -160,7 +160,7 @@ const updateSearchHelp=()=>{
  const entry=platformCatalog.find(platform=>platform.id===selected);
  const supported=selected==="all"||((entry?.searchModes||[]).includes(mode));
  if(selected==="all")help.textContent=mode==="image"?"Pencarian judul memeriksa "+count+" provider gambar. Hanya file gambar yang lolos verifikasi yang ditampilkan.":"Pencarian judul memeriksa provider video yang tersedia dan turut mencari YouTube sebagai pencarian cadangan otomatis jika sumber pilihan kosong.";
- else if(!supported)help.textContent=(platforms[selected]?.name||entry?.name||selected)+" belum mendukung pencarian "+(mode==="image"?"gambar":"video")+" secara langsung. Untuk pencarian video, ARYANZZ akan otomatis mencoba YouTube sebagai cadangan.";
+ else if(!supported)help.textContent=(platforms[selected]?.name||entry?.name||selected)+" belum mendukung pencarian "+(mode==="image"?"gambar":mode==="audio"?"audio":"video")+" secara langsung. Untuk video/audio, ARYANZZ akan otomatis mencoba YouTube sebagai cadangan.";
  else if(mode==="image")help.textContent=guide.imageHelp||"Foto dan gambar publik dari "+name+". Hanya file gambar yang berhasil diverifikasi yang akan ditampilkan.";
  else help.textContent=guide.videoHelp||"Cari video publik di "+name+". Jika sumber pilihan tidak memberikan hasil, ARYANZZ akan mencoba YouTube sebagai cadangan.";
 };
@@ -472,7 +472,7 @@ if(saved&&Date.now()-saved.at<45000){
   data=await response.json().catch(()=>({}));
   if(!response.ok||data.ok===false){
    searchFailure=new Error(data.error||"Pencarian "+target.name+" belum tersedia.");
-   if(kind==="image"||selected==="all"||selected==="youtube")throw searchFailure;
+   if(kind==="image"||selected==="youtube")throw searchFailure;
    data={results:[]};
   }else{
    if(recentTitleSearch.size>=20)recentTitleSearch.delete(recentTitleSearch.keys().next().value);
@@ -481,7 +481,7 @@ if(saved&&Date.now()-saved.at<45000){
 }
 if(data.ok===false){
  searchFailure=new Error(data.error||"Pencarian "+target.name+" belum tersedia.");
- if(kind==="image"||selected==="all"||selected==="youtube")throw searchFailure;
+ if(kind==="image"||selected==="youtube")throw searchFailure;
  data={results:[]};
 }
 let mediaItems=[],imageItems=[],unavailable=Number(data.unavailableCount)||0;
@@ -490,12 +490,14 @@ imageItems=(data.results||[]).flatMap(group=>(Array.isArray(group?.images)?group
 if(!imageItems.length)throw new Error("Belum ada gambar yang cocok dari "+target.name+". Tidak ada hasil dari platform lain yang akan ditampilkan.");
 }else{
 mediaItems=(Array.isArray(data.results)?data.results:[]).filter(item=>searchResultBelongsTo(item,selected)||(data.fallbackUsed===true&&item?.platform==="youtube"&&searchResultBelongsTo(item,"youtube")));
-if(!mediaItems.length&&selected!=="all"&&selected!=="youtube"&&kind==="video"){
- const fallbackKey=JSON.stringify(["video","youtube",q.toLocaleLowerCase("id-ID")]);
+const hasYoutubeResult=mediaItems.some(item=>searchResultBelongsTo(item,"youtube"));
+const shouldTryYoutube=kind!=="image"&&selected!=="youtube"&&(!mediaItems.length||(selected==="all"&&!hasYoutubeResult));
+if(shouldTryYoutube){
+ const fallbackKey=JSON.stringify([kind,"youtube",q.toLocaleLowerCase("id-ID")]);
  const cachedFallback=recentTitleSearch.get(fallbackKey);
  let fallbackData=cachedFallback&&Date.now()-cachedFallback.at<45000?cachedFallback.data:null;
  if(!fallbackData){
-  const fallbackResponse=await fetch(endpoint,{...options,body:JSON.stringify({query:q,platform:"youtube",mediaType:"video"}),signal});
+  const fallbackResponse=await fetch(endpoint,{...options,body:JSON.stringify({query:q,platform:"youtube",mediaType:kind}),signal});
   fallbackData=await fallbackResponse.json().catch(()=>({}));
   if(fallbackResponse.ok&&fallbackData.ok!==false){
    if(recentTitleSearch.size>=20)recentTitleSearch.delete(recentTitleSearch.keys().next().value);
