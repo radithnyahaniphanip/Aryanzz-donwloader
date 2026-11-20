@@ -1,8 +1,85 @@
-/* Library styles are scoped to the Library panel; no global card selectors. */
-#history.ary-library-panel{width:100%;min-width:0}
+/* ARYANZZ V2 Library — unified history, favorites and responsive media cards. */
+#history.ary-library-panel{width:100%;min-width:0;padding:clamp(14px,2.5vw,24px);overflow:hidden}
+#history .ary-library-hero{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:clamp(17px,3vw,26px);border:1px solid rgba(126,169,230,.2);border-radius:20px;background:radial-gradient(circle at 88% 10%,rgba(83,142,255,.2),transparent 36%),linear-gradient(125deg,#142843,#101a31 66%,#1c2443)}
+#history .ary-library-hero .section-kicker{display:block;color:#82c5ef;font-size:9px;font-weight:900;letter-spacing:1.8px}
+#history .ary-library-hero h2{margin:7px 0 4px;color:#f5f8ff;font-size:clamp(24px,3vw,31px);line-height:1.15;letter-spacing:-.7px}
+#history .ary-library-hero p{max-width:560px;margin:0;color:#a9bbd4;font-size:12px;line-height:1.55}
+#history .ary-library-mark{display:grid;place-items:center;width:52px;height:52px;flex:0 0 52px;border:1px solid rgba(160,199,255,.2);border-radius:16px;background:rgba(91,147,228,.13);color:#a9d7ff;font-size:25px}
+#history .ary-library-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:13px 0}
+#history .ary-library-stats>div{display:grid;gap:4px;min-width:0;padding:13px 15px;border:1px solid rgba(126,164,213,.16);border-radius:15px;background:linear-gradient(145deg,rgba(19,35,57,.92),rgba(9,19,34,.92))}
+#history .ary-library-stats span{color:#91a9c6;font-size:9px;font-weight:850;letter-spacing:1px}
+#history .ary-library-stats b{color:#f0f6ff;font-size:20px;font-weight:900;font-variant-numeric:tabular-nums}
+#history .ary-library-switch{display:flex;gap:8px;padding:5px;border:1px solid rgba(126,164,213,.15);border-radius:14px;background:rgba(5,14,27,.55)}
+#history .ary-library-switch button{display:flex;align-items:center;justify-content:center;gap:8px;min-width:0;min-height:42px;flex:1;padding:8px 12px;border:1px solid transparent;border-radius:10px;background:transparent;color:#9db1cc;font-size:11px;font-weight:850;cursor:pointer}
+#history .ary-library-switch button.active{border-color:rgba(112,164,255,.34);background:linear-gradient(110deg,rgba(68,105,185,.32),rgba(40,128,174,.18));color:#edf6ff;box-shadow:inset 0 1px rgba(255,255,255,.06)}
+#history .ary-library-switch button span{display:grid;min-width:22px;height:22px;place-items:center;padding:0 5px;border-radius:7px;background:rgba(255,255,255,.08);color:#c9dcf4;font-size:9px;font-variant-numeric:tabular-nums}
+#history .ary-library-controls{display:grid;grid-template-columns:minmax(0,1fr) 142px;gap:9px;margin:13px 0}
+#history .ary-library-search{display:flex;align-items:center;gap:9px;min-width:0;min-height:44px;padding:0 12px;border:1px solid rgba(126,164,213,.19);border-radius:12px;background:#081526;color:#8fb8e8}
+#history .ary-library-search>span{font-size:20px;line-height:1}
+#history .ary-library-search input{width:100%;min-width:0;border:0;outline:0;background:transparent;color:#eff6ff;font-size:12px}
+#history .ary-library-search input::placeholder{color:#7187a4}
+#history .ary-library-controls select{width:100%;min-width:0;min-height:44px;padding:8px 10px;border:1px solid rgba(126,164,213,.19);border-radius:12px;background:#081526;color:#dce9f8;font-size:11px}
 #history .ary-library-view[hidden]{display:none!important;visibility:hidden!important}
 #history .ary-library-view.active:not([hidden]){display:block!important;visibility:visible!important}
-#history .ary-library-list{width:100%;min-width:0}
-#history .ary-library-item{min-width:0}
-#history .ary-library-item-main{min-width:0;overflow-wrap:anywhere}
-#history .ary-library-item-main a{overflow-wrap:anywhere;word-break:break-word}
+#history .ary-library-section-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:16px 0 9px}
+#history .ary-library-section-head h3{margin:0;color:#eaf2ff;font-size:15px;font-weight:850}
+#history .ary-library-section-head p{margin:3px 0 0;color:#849bb8;font-size:10px;line-height:1.45}
+#history .ary-library-section-head .tag{min-height:34px;padding:7px 10px;border-radius:9px;font-size:10px}
+#history .ary-library-list{display:grid;gap:8px;width:100%;min-width:0;margin:0;padding:0;border:0;background:transparent}
+#history .ary-library-item{display:grid;grid-template-columns:42px minmax(0,1fr) auto;align-items:center;gap:11px;min-width:0;padding:12px;border:1px solid rgba(126,164,213,.15);border-radius:14px;background:linear-gradient(145deg,rgba(16,31,51,.92),rgba(8,18,32,.96));transition:border-color .16s ease,transform .16s ease}
+#history .ary-library-item:hover{border-color:rgba(112,164,255,.38);transform:translateY(-1px)}
+#history .ary-library-item-icon{display:grid;width:42px;height:42px;place-items:center;border:1px solid rgba(119,171,229,.2);border-radius:12px;background:rgba(70,126,197,.13);color:#a7d8ff;font-size:19px}
+#history .ary-library-kind-audio{background:rgba(122,95,214,.14);color:#c7b8ff}
+#history .ary-library-kind-image{background:rgba(51,170,151,.13);color:#9be8d8}
+#history .ary-library-item-main{display:grid;gap:3px;min-width:0;overflow-wrap:anywhere}
+#history .ary-library-item-title{overflow:hidden;color:#edf5ff;font-size:12px;font-weight:800;line-height:1.4;text-overflow:ellipsis;white-space:nowrap}
+#history .ary-library-item-meta{color:#8fb6dc;font-size:9px;font-weight:750;line-height:1.4}
+#history .ary-library-item-date{color:#758ba7;font-size:9px;line-height:1.4}
+#history .ary-library-item-actions{display:flex;align-items:center;gap:6px}
+#history .ary-library-item-open{display:inline-flex;align-items:center;justify-content:center;min-height:32px;padding:6px 9px;border:1px solid rgba(103,158,222,.24);border-radius:9px;background:rgba(49,105,169,.13);color:#b9dcff;font-size:9px;font-weight:850;text-decoration:none;white-space:nowrap}
+#history .ary-library-item-action{display:grid;width:32px;height:32px;place-items:center;border:1px solid rgba(130,164,207,.18);border-radius:9px;background:rgba(255,255,255,.035);color:#d5e5f8;font-size:15px;font-weight:850;cursor:pointer}
+#history .ary-library-item-history .ary-library-item-action{color:#f4d38b}
+#history .ary-library-empty-state{display:grid;justify-items:center;gap:7px;padding:30px 15px;border:1px dashed rgba(126,164,213,.22);border-radius:15px;background:rgba(7,17,31,.42);text-align:center}
+#history .ary-library-empty-icon{display:grid;width:42px;height:42px;place-items:center;border-radius:13px;background:rgba(76,131,202,.13);color:#a5d1ff;font-size:23px}
+#history .ary-library-empty-state b{color:#e5effc;font-size:12px}
+#history .ary-library-empty-state small{max-width:340px;color:#8198b5;font-size:10px;line-height:1.55}
+#history .ary-library-note{margin-top:14px;padding:12px 14px;border:1px solid rgba(126,164,213,.13);border-radius:12px;background:rgba(7,17,31,.36)}
+#history .ary-library-note b{color:#b9d6f4;font-size:10px}
+#history .ary-library-note p{margin:4px 0 0;color:#8299b5;font-size:10px;line-height:1.5}
+#history .v25-backup-card{margin-top:14px;padding:16px;border:1px solid rgba(126,164,213,.16);border-radius:16px;background:linear-gradient(145deg,rgba(17,32,52,.88),rgba(8,17,30,.94))}
+#history .v25-backup-card h3{font-size:14px}
+#history .v25-backup-actions{display:flex;flex-wrap:wrap;gap:8px}
+#history .v25-backup-actions>*{min-height:36px;border-radius:9px;font-size:10px}
+#history .ary-library-empty{color:#91a6c1;font-size:11px}
+@media(max-width:600px){
+ #history.ary-library-panel{padding:12px}
+ #history .ary-library-hero{padding:16px;border-radius:16px}
+ #history .ary-library-hero h2{font-size:24px}
+ #history .ary-library-hero p{font-size:10px}
+ #history .ary-library-mark{width:42px;height:42px;flex-basis:42px;border-radius:13px}
+ #history .ary-library-stats{gap:7px}
+ #history .ary-library-stats>div{padding:10px 9px;border-radius:12px}
+ #history .ary-library-stats span{font-size:8px}
+ #history .ary-library-stats b{font-size:17px}
+ #history .ary-library-switch button{min-height:39px;padding:7px 6px;font-size:10px}
+ #history .ary-library-controls{grid-template-columns:minmax(0,1fr) 112px;gap:7px}
+ #history .ary-library-search{min-height:41px;padding:0 9px}
+ #history .ary-library-search input{font-size:10px}
+ #history .ary-library-controls select{min-height:41px;font-size:10px}
+ #history .ary-library-item{grid-template-columns:36px minmax(0,1fr) auto;gap:8px;padding:10px}
+ #history .ary-library-item-icon{width:36px;height:36px;font-size:17px}
+ #history .ary-library-item-title{font-size:10px}
+ #history .ary-library-item-meta,#history .ary-library-item-date{font-size:8px}
+ #history .ary-library-item-actions{gap:4px}
+ #history .ary-library-item-open{min-height:29px;padding:5px 7px;font-size:8px}
+ #history .ary-library-item-action{width:29px;height:29px}
+ #history .ary-library-section-head h3{font-size:13px}
+}
+@media(max-width:380px){
+ #history .ary-library-controls{grid-template-columns:1fr}
+ #history .ary-library-item{grid-template-columns:34px minmax(0,1fr) auto;gap:7px;padding:9px}
+ #history .ary-library-item-icon{width:34px;height:34px}
+ #history .ary-library-item-open{font-size:0}
+ #history .ary-library-item-open::before{content:"↗";font-size:13px}
+}
+@media(prefers-reduced-motion:reduce){#history .ary-library-item{transition:none}}
