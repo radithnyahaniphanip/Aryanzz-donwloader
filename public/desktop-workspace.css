@@ -432,3 +432,48 @@
     transition: none !important;
   }
 }
+
+
+/* ARYANZZ V1.1 — persistent platform workspace and clearer control spacing. */
+#home .v674-download .v674-mode-unavailable{
+  margin:10px 0 14px!important;
+  padding:11px 13px!important;
+  border:1px solid rgba(100,155,230,.3)!important;
+  border-radius:13px!important;
+  background:rgba(8,19,35,.78)!important;
+  color:#b8cce9!important;
+  font-size:11px!important;
+  line-height:1.6!important;
+}
+#home .v674-download .v674-mode-switch{
+  margin-bottom:22px!important;
+}
+#home .v674-download .v736-platform-search-heading{
+  margin:26px 0 12px!important;
+  padding-top:18px!important;
+  border-top:1px solid rgba(139,169,211,.17)!important;
+}
+#home .v674-download .v736-platform-search-wrap{
+  margin-bottom:14px!important;
+}
+#home .v674-download #platformPager{
+  margin:12px 0 20px!important;
+}
+#home .v674-download #linkModePanel,
+#home .v674-download #titleModePanel{
+  margin-top:18px!important;
+}
+@media(max-width:899px){
+  #home .v674-download .v736-platform-search-heading{
+    gap:12px!important;
+    margin-top:24px!important;
+    padding-top:16px!important;
+  }
+  #home .v674-download .v736-platform-search-wrap{
+    margin:0 0 14px!important;
+  }
+  #home .v674-download #platformPager{
+    gap:7px!important;
+    margin:10px 0 18px!important;
+  }
+}
