@@ -33,9 +33,9 @@ const platforms={
 const PLATFORM_SESSION_KEY="aryanzz:platform-session:v1";
 let restoredPlatformSession=null;
 try{const raw=sessionStorage.getItem(PLATFORM_SESSION_KEY);if(raw){const parsed=JSON.parse(raw);if(parsed&&typeof parsed==="object")restoredPlatformSession=parsed;}}catch{}
-let selected=typeof restoredPlatformSession?.selected==="string"?restoredPlatformSession.selected:"all";
-let activeMode=restoredPlatformSession?.activeMode==="title"?"title":"link";
-let searchController=null,pageSize=10,currentPage=1;
+let selected="all",activeMode="link",searchController=null,pageSize=10,currentPage=1;
+if(typeof restoredPlatformSession?.selected==="string")selected=restoredPlatformSession.selected;
+if(restoredPlatformSession?.activeMode==="title")activeMode="title";
 const restoredPage=Math.max(1,Math.min(50,Number(restoredPlatformSession?.platformPage)||1));
 let platformPageLink=Math.max(1,Math.min(50,Number(restoredPlatformSession?.platformPageLink)||restoredPage));
 let platformPageTitle=Math.max(1,Math.min(50,Number(restoredPlatformSession?.platformPageTitle)||restoredPage));
@@ -188,7 +188,7 @@ function renderPlatformPage(nextPage){
  if(!picker||!platformCatalog.length)return;
  const query=String(platformSearch?.value||"").normalize("NFKC").trim().toLocaleLowerCase("id-ID");
  const mode=searchType?.value==="image"?"image":"video";
- const catalogForMode=activeMode==="link"?platformCatalog:platformCatalog.filter(platform=>platform.id===selected||(Array.isArray(platform.searchModes)&&platform.searchModes.includes(mode)));
+ const catalogForMode=activeMode==="link"?platformCatalog:platformCatalog.filter(platform=>Array.isArray(platform.searchModes)&&platform.searchModes.includes(mode));
  let matches=catalogForMode;
  if(query){
   matches=catalogForMode.filter(platform=>String(platform.name||"").normalize("NFKC").toLocaleLowerCase("id-ID").includes(query));
