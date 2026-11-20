@@ -1532,26 +1532,38 @@ async function searchSocial(request){
         for(const item of direct.items){if(!seen.has(item.url)){seen.add(item.url);candidates.push(item)}}
       }
     }
-    if(desiredMode!=="image"&&(platform==="all"||platform==="youtube")&&!candidates.some(item=>platformIdForUrl(item.url)==="youtube"&&strictTitleIntentScore(query,item.title,item.snippet||"")>=0.7)){
-      // Community YouTube providers are only used when the indexed search found no YouTube candidate.
+    const hasRelevantYoutubeCandidate=candidates.some(item=>platformIdForUrl(item.url)==="youtube"&&strictTitleIntentScore(query,item.title,item.snippet||"")>=0.7);
+    const hasRelevantSelectedCandidate=platform==="all"||platform==="youtube"
+      ?hasRelevantYoutubeCandidate
+      :candidates.some(item=>{
+        const itemPlatform=platformIdForUrl(item.url);
+        return !!itemPlatform&&canonicalPlatformId(itemPlatform)===canonicalPlatform&&platformSupportsSearchMode(itemPlatform,desiredMode)&&strictTitleIntentScore(query,item.title,item.snippet||"")>=0.7;
+      });
+    const shouldRunYoutubeFallback=desiredMode!=="image"&&(platform==="all"?!hasRelevantYoutubeCandidate:platform!=="youtube"&&!hasRelevantSelectedCandidate);
+    let youtubeFallbackAttempted=false,youtubeFallbackCandidateCount=0,youtubeFallbackCandidates=[];
+    if(shouldRunYoutubeFallback){
+      youtubeFallbackAttempted=true;
+      // If the selected social provider has no relevant public title result,
+      // search YouTube as an explicitly labelled alternative rather than
+      // returning unrelated content or pretending it came from that provider.
       const youtubeTerms=(desiredMode==="audio"
         ?[query,query+" official audio",query+" song",query+" lagu",query+" DJ remix",...variants]
         :[query,query+" official video",query+" video",query+" lagu",query+" song",query+" DJ remix",...variants])
         .map(value=>String(value||"").replace(/\s+/g," ").trim())
         .filter((value,index,array)=>value.length>=2&&array.indexOf(value)===index).slice(0,platform==="all"?4:6);
-      // For all-platform searches, retry YouTube with both the raw title and a video/audio intent.
-      // This avoids losing Indonesian song titles when public social indexes return unrelated posts.
       const [hybridPages,directYoutube]=await Promise.all([
         Promise.all(youtubeTerms.slice(0,2).map(term=>hybridYouTubeSearch(term))),
         freeYouTubeSearchItems(query,youtubeTerms.slice(0,platform==="all"?3:4),platform==="all"?7600:8500)
       ]);
+      const rawFallback=[];
       for(const page of hybridPages)for(const item of page?.results||[]){
-        if(!seen.has(item.url)){seen.add(item.url);candidates.push({...item,platform:"youtube",snippet:item.channel||"YouTube video",searchProvider:item.provider||"YouTube public search"});}
+        if(item?.url&&!seen.has(item.url)){seen.add(item.url);rawFallback.push({...item,platform:"youtube",snippet:item.channel||"YouTube video",searchProvider:item.provider||"YouTube public search"});}
       }
-      // Official/community search and public fallback already ran concurrently.
       for(const item of directYoutube){
-        if(!seen.has(item.url)){seen.add(item.url);candidates.push({...item,platform:"youtube",snippet:item.channel||"YouTube video",searchProvider:item.searchProvider||"YouTube public search"});}
+        if(item?.url&&!seen.has(item.url)){seen.add(item.url);rawFallback.push({...item,platform:"youtube",snippet:item.channel||"YouTube video",searchProvider:item.searchProvider||"YouTube public search"});}
       }
+      youtubeFallbackCandidates=rawFallback.filter(item=>strictTitleIntentScore(query,item.title,item.snippet||"")>=0.7);
+      youtubeFallbackCandidateCount=youtubeFallbackCandidates.length;
     }
     const platformScopedCandidates=platform==="all"
       ?candidates.filter(item=>platformSupportsSearchMode(platformIdForUrl(item.url),desiredMode))
@@ -1571,9 +1583,8 @@ async function searchSocial(request){
     const verificationCandidates=orderedCandidates.slice(0,verificationLimit);
     const checked=await Promise.all(verificationCandidates.map(item=>verifySocialSearchResult(item,request.url,desiredMode)));
     const verifiedResults=checked.filter(item=>item?.verified===true&&item?.downloadable===true&&item.mediaMode===desiredMode);
-    // A selected platform must never silently receive results from another provider.
-    // YouTube discovery is reserved for the explicit "Semua platform" scope above.
-    const youtubeFallbackAttempted=false,youtubeFallbackCandidateCount=0,youtubeFallbackCandidates=[];
+    // Cross-provider results are appended only as explicit YouTube fallbacks
+    // after the selected provider has no relevant title result.
     const verifiedUrls=new Set(verifiedResults.map(item=>item.url));
     const resultLimit=100;
     const searchOnlyCandidates=orderedCandidates
