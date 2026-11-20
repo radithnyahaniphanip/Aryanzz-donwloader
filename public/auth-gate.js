@@ -489,7 +489,13 @@
     }
     const saved=localSession(),localUsers=readUsers();
     const localUser=Array.isArray(localUsers)&&saved?.id?localUsers.find(item=>item.id===saved.id):null;
-    if(localUser){setUser(localUser,true);return;}
+    // Old local account records remain available for an explicit, verified
+    // migration, but a browser-stored session is not trusted as proof of identity.
+    // Never silently restore a local-only login after a reload.
+    if(saved?.id){
+      try{localStorage.removeItem(SESSION_KEY);}catch{}
+      if(localUser)say("Login lokal dinonaktifkan untuk pemulihan sesi otomatis. Data akun lama tetap tersedia untuk login dan migrasi ke akun server.");
+    }
     if($("aryLoginSubmit"))$("aryLoginSubmit").disabled=false;
     if($("aryRegisterSubmit"))$("aryRegisterSubmit").disabled=false;
     if($("aryAuthFoot"))$("aryAuthFoot").textContent=config.registrationReady
