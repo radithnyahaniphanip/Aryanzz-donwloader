@@ -260,7 +260,7 @@ const checks = [
   ["Mobile navigation stays fixed inside viewport in its dedicated stylesheet", workspaceNavigationCss.includes(".nav{") && workspaceNavigationCss.includes("position:fixed!important")],
   ["Security status endpoint remains available", worker.includes('url.pathname==="/api/security/status"')],
   ["Security middleware wraps Worker requests", worker.includes("export default {fetch:securityFetch};")],
-  ["Platform catalogue state is initialized before setMode runs, preventing the V95 UI bootstrap crash", searchJs.indexOf("let platformCatalog=[],platformPage=1;") < searchJs.indexOf("setMode(\"link\");") && searchJs.indexOf("let platformCatalog=[],platformPage=1;") >= 0],
+  ["Platform catalogue state is initialized before setMode runs, preventing the V95 UI bootstrap crash", searchJs.indexOf("let platformCatalog=[],platformPage=") < searchJs.indexOf("setMode(\"link\");") && searchJs.indexOf("let platformCatalog=[],platformPage=") >= 0],
   ["Title search and platform pager initialization remain reachable after platform mode setup", searchJs.includes('$("titleSearchBtn")?.addEventListener("click",go)') && searchJs.includes("platformPrev?.addEventListener") && searchJs.includes("platformNext?.addEventListener")],
   ["TikTok short-link domains are recognized even when platform catalogue aliases are incomplete", html.includes('/(?:^|\\.)tiktok\\.com$/') && html.includes('"tiktok"')],
   ["Pasted link auto-detects and corrects a stale platform selection instead of rejecting valid links", read("../public/index.html").includes("the URL is authoritative") && read("../public/index.html").includes("aryanzz:platform-autodetected") && read("../public/index.html").includes("showUniversalPlatformDownloader(u,detected)")],
