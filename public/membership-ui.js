@@ -215,12 +215,14 @@
       setMessage("Pembayaran berhasil diverifikasi. Membership " + (order.planName || "") + " sudah aktif!", "success");
       await refreshMe();
       byId("membershipPaymentExpiry").textContent = "Membership aktif sampai " + formatDate(state.membership.expiresAt);
+      state.activeOrderId = "";
       return false;
     }
     if (order.status === "expired" || order.status === "failed" || order.status === "rejected") {
       stopPolling();
       setMessage("Invoice " + order.status + ". Pilih paket kembali untuk membuat invoice baru.", "error");
       await refreshMe();
+      state.activeOrderId = "";
       return false;
     }
     setMessage("Pembayaran belum terdeteksi. Jika sudah membayar, tunggu beberapa saat lalu periksa kembali.", "pending");
@@ -323,8 +325,8 @@
   byId("membershipCheckStatus").addEventListener("click", async () => {
     if (!state.activeOrderId) return;
     stopPolling();
-    await pollOnce();
-    if (state.activeOrderId) startPolling(state.activeOrderId);
+    const keepChecking = await pollOnce();
+    if (keepChecking && state.activeOrderId) startPolling(state.activeOrderId);
   });
 
   document.addEventListener("click", event => {
