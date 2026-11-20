@@ -1481,7 +1481,7 @@ async function searchSocial(request){
         for(const item of direct.items){if(!seen.has(item.url)){seen.add(item.url);candidates.push(item)}}
       }
     }
-    if((platform==="all"||platform==="youtube")&&!candidates.some(item=>platformIdForUrl(item.url)==="youtube"&&publicSearchRelevance(query,item.title+" "+(item.snippet||""))>=0.16)){
+    if((platform==="all"||platform==="youtube")&&!candidates.some(item=>platformIdForUrl(item.url)==="youtube"&&strictTitleIntentScore(query,item.title,item.snippet||"")>=0.7)){
       // Community YouTube providers are only used when the indexed search found no YouTube candidate.
       const youtubeTerms=[query,query+" lagu",query+" song",query+" official audio",query+" DJ remix",...variants]
         .map(value=>String(value||"").replace(/\s+/g," ").trim())
