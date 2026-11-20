@@ -33,6 +33,7 @@
 <link rel="stylesheet" href="/v674.css?v=__ARYANZZ_VERSION__">
 <link rel="stylesheet" href="/v677.css?v=85.3">
 <link rel="stylesheet" href="/v680.css?v=71.0">
+<link rel="stylesheet" href="/membership.css?v=__ARYANZZ_VERSION__">
 <link rel="stylesheet" href="/v690.css?v=71.0">
 <link rel="stylesheet" href="/audio-studio.css?v=92.0">
 <link rel="stylesheet" href="/media-studio.css?v=92.0">
@@ -1151,6 +1152,23 @@ body .nav button.active .nav-icon{color:#9af4e8!important}
   <div class="ary-theme-motion"><div><b>Animasi antarmuka</b><small>Efek gerak dan transisi untuk pengalaman ARYANZZ.</small></div><label class="ary-motion-switch"><input id="aryMotionToggle" type="checkbox"><span></span><b id="aryMotionState">Aktif</b></label></div>
   <div class="ary-theme-actions"><button class="primary" id="aryThemeApply" type="button">Terapkan ke seluruh website</button><button class="tag" id="aryThemeReset" type="button">Kembalikan warna awal</button></div><p class="ary-theme-status" id="aryThemeStatus" role="status" aria-live="polite">Pilih preset atau atur warna sendiri.</p>
 </div>
+<section class="panel card ary-membership-panel" id="membership" aria-labelledby="aryMembershipHeading">
+  <div class="ary-membership-hero">
+    <div><span class="ary-membership-kicker">ARYANZZ MEMBERSHIP</span><h1 id="aryMembershipHeading">Pilih level pengalamanmu</h1><p>Nikmati fasilitas keanggotaan sesuai paket. Pembayaran diproses melalui QRIS AirPay dan status lunas diverifikasi oleh server ARYANZZ.</p></div>
+    <span class="ary-membership-hero-mark" aria-hidden="true">✦</span>
+  </div>
+  <div class="ary-membership-current" id="aryMembershipCurrent" aria-live="polite"><div><b>Memeriksa Membership…</b><small>Status akun sedang dimuat.</small></div></div>
+  <div class="ary-membership-period" id="aryMembershipPeriods" role="group" aria-label="Periode Membership">
+    <button type="button" class="active" data-membership-period="monthly" aria-pressed="true">Bulanan</button>
+    <button type="button" data-membership-period="yearly" aria-pressed="false">Tahunan</button>
+  </div>
+  <div class="ary-membership-grid" id="aryMembershipPlans" aria-live="polite"></div>
+  <div class="ary-membership-notice">Pembayaran menggunakan QRIS dinamis. QRIS dapat dipindai dari aplikasi e-wallet atau mobile banking yang mendukung QRIS. Tidak perlu memasukkan nomor rekening atau nama pemilik rekening untuk membayar.</div>
+  <section class="ary-membership-payment" id="aryMembershipPayment" hidden aria-live="polite"></section>
+  <p class="ary-membership-status" id="aryMembershipStatus" role="status" aria-live="polite"></p>
+  <section class="ary-membership-history" id="aryMembershipHistory"></section>
+</section>
+
 <div class="panel card v25-profile-panel ary-profile-v2" id="profile">
   <header class="ary-profile2-header">
     <div>
@@ -1368,7 +1386,7 @@ body .nav button.active .nav-icon{color:#9af4e8!important}
 </section>
 
 <footer>© <span id="year"></span> ARYANZZ</footer></div>
-<nav class="nav" aria-label="Navigasi utama"><button class="active" data-nav="home"><span class="nav-icon">⌂</span><span>Beranda</span></button><button data-nav="allTools"><span class="nav-icon">✦</span><span>Alat</span></button><button data-nav="history"><span class="nav-icon">◷</span><span>Pustaka</span></button><button data-nav="owner"><span class="nav-icon">♛</span><span>Pemilik</span></button><button data-nav="profile"><span class="nav-icon">◉</span><span>Profil</span></button></nav>
+<nav class="nav" aria-label="Navigasi utama"><button class="active" data-nav="home"><span class="nav-icon">⌂</span><span>Beranda</span></button><button data-nav="allTools"><span class="nav-icon">✦</span><span>Alat</span></button><button data-nav="history"><span class="nav-icon">◷</span><span>Pustaka</span></button><button data-nav="membership"><span class="nav-icon">✦</span><span>Member</span></button><button data-nav="owner"><span class="nav-icon">♛</span><span>Pemilik</span></button><button data-nav="profile"><span class="nav-icon">◉</span><span>Profil</span></button></nav>
 <script src="/workspace-home.js?v=__ARYANZZ_VERSION__"></script>
 <script src="/workspace-layout.js?v=__ARYANZZ_VERSION__"></script>
 <script src="/toolbox-100.js?v=__ARYANZZ_VERSION__"></script>
@@ -1376,6 +1394,7 @@ body .nav button.active .nav-icon{color:#9af4e8!important}
 <script src="/workspace-tools.js?v=__ARYANZZ_VERSION__"></script>
 <script src="/wa-quote-generator.js?v=__ARYANZZ_VERSION__"></script>
 <script src="/workspace-navigation.js?v=__ARYANZZ_VERSION__"></script>
+<script src="/membership.js?v=__ARYANZZ_VERSION__" defer></script>
 <script src="/workspace-guides.js?v=__ARYANZZ_VERSION__"></script>
 <script src="/emote-studio.js?v=__ARYANZZ_VERSION__"></script>
 <script>
