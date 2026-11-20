@@ -106,16 +106,9 @@ const setMode=v=>{
   :"Platform "+platformName+" belum menyediakan pencarian judul terverifikasi. Untuk video, ARYANZZ akan mencoba YouTube sebagai cadangan.");
  persistPlatformSession();
 };
-a?.addEventListener("click",()=>{setMode(activeMode);renderPlatformPage(platformPage)});
+a?.addEventListener("click",()=>{setMode("link");renderPlatformPage(platformPage)});
 b?.addEventListener("click",()=>{setMode("title");updateSearchHelp();renderPlatformPage(platformPage)});
-a?.addEventListener("click",()=>{setMode("link");renderPlatformPage(1)});
-b?.addEventListener("click",()=>{
- setMode("title");
- const mode=searchType?.value==="image"?"image":"video";
- const entry=platformCatalog.find(platform=>platform.id===selected);
- if(selected!=="all"&&!(entry?.searchModes||[]).includes(mode))setPlatform("all",{preserveLink:true,preserveOutput:true,silent:true});
- renderPlatformPage(1);
-});
+
 const setPlatform=(id,options={})=>{
  const next=(id==="all"||platforms[id])?id:"youtube";
  const preserveLink=options.preserveLink===true,preserveOutput=options.preserveOutput===true,silent=options.silent===true;
@@ -157,7 +150,7 @@ const setPlatform=(id,options={})=>{
 };
 picker?.addEventListener("click",e=>{const btn=e.target.closest("[data-platform]");if(btn)setPlatform(btn.dataset.platform)});
 window.aryanzzSelectedPlatform=()=>selected;window.aryanzzAutoSelectPlatform=id=>setPlatform(id,{preserveLink:true,preserveOutput:true,silent:true});picker?.setAttribute("data-selected-platform",selected);
-setMode("link");
+setMode(activeMode);
 const updateSearchHelp=()=>{
  if(!help)return;
  const mode=searchType?.value==="image"?"image":"video";
