@@ -17,10 +17,13 @@ const markdown=[
 ].join("\n");
 let relayCalls=0;
 let readerCalls=0;
+let tikwmCalls=0;
 let firstRelayTarget=null;
 let firstReaderUrl=null;
 let readerHeaders=null;
 let failRelay=false;
+let failReader=false;
+let tikwmMode="empty";
 
 try{
   globalThis.fetch=async(input,init={})=>{
@@ -35,8 +38,24 @@ try{
       readerCalls++;
       firstReaderUrl=url.href;
       readerHeaders=new Headers(init.headers||{});
+      if(failReader)return new Response("rate limited",{status:429});
       return new Response(markdown,{status:200,headers:{"content-type":"text/plain; charset=utf-8"}});
     }
+    if(url.hostname==="www.tikwm.com"&&url.pathname==="/api/"){
+      tikwmCalls++;
+      const data=tikwmMode==="gallery"
+        ?{code:0,data:{title:"TikWM Photo Gallery",images}}
+        :{code:0,data:{title:"TikWM no gallery",images:[]}};
+      return new Response(JSON.stringify(data),{status:200,headers:{"content-type":"application/json"}});
+    }
+    if(url.hostname==="www.tiktok.com"&&(url.pathname==="/api/item/detail/"||url.pathname==="/api/post/item_list/")){
+      return new Response(JSON.stringify({statusCode:10216}),{status:403,headers:{"content-type":"application/json"}});
+    }
+    if(url.hostname==="api16-normal-c-useast1a.tiktokv.com"||url.hostname==="api16-normal-c-alisg.tiktokv.com"){
+      return new Response(JSON.stringify({status_code:10216}),{status:403,headers:{"content-type":"application/json"}});
+    }
+    if(url.hostname==="api.codetabs.com")return new Response("proxy unavailable",{status:504});
+    if(url.hostname==="corsproxy.io")return new Response(JSON.stringify({error:"proxy unavailable"}),{status:401,headers:{"content-type":"application/json"}});
     throw new Error("Unexpected mocked fetch: "+url.href);
   };
 
@@ -51,6 +70,7 @@ try{
   assert.deepEqual(data.images.map(item=>item.url),images);
   assert.equal(relayCalls,1,"the independent AllOrigins relay should be attempted first");
   assert.equal(readerCalls,0,"direct Jina should not be called when the relay succeeds");
+  assert.equal(tikwmCalls,1,"TikWM image fallback should be checked in parallel without entering the video-provider cascade");
   assert.ok(firstRelayTarget.includes("https://r.jina.ai/https://www.tiktok.com/embed/v2/"),"the relay must fetch the verified Jina HTTPS Markdown endpoint");
   assert.ok(data.images.every(item=>item.previewUrl.includes("/api/social-image-file")));
   assert.ok(data.images.every(item=>item.downloadUrl.includes("/api/social-image-file")));
@@ -66,7 +86,21 @@ try{
   assert.ok(firstReaderUrl.includes("/https://www.tiktok.com/embed/v2/"),"the verified HTTPS reader route should be used before the HTTP variant");
   assert.equal(readerHeaders.get("x-return-format"),null,"Jina must not be forced into HTML mode, which hides the Markdown image URLs");
   assert.match(readerHeaders.get("accept")||"",/text\/markdown/i);
-  console.log("ARYANZZ TikTok Photo Mode relay, direct-reader fallback, gallery extraction and image-proxy URL regression passed.");
+
+  failReader=true;
+  tikwmMode="gallery";
+  const tikwmUrl=new URL("https://aryanzz.example/api/image/extract");
+  tikwmUrl.searchParams.set("url",photoUrl);
+  const tikwmResponse=await worker.fetch(new Request(tikwmUrl.href),{});
+  assert.equal(tikwmResponse.status,200,"TikWM image-only metadata must rescue a public Photo Mode gallery when Jina is rate-limited");
+  const tikwmData=await tikwmResponse.json();
+  assert.equal(tikwmData.title,"TikWM Photo Gallery");
+  assert.equal(tikwmData.images.length,2);
+  assert.deepEqual(tikwmData.images.map(item=>item.url),images);
+  assert.ok(tikwmData.images.every(item=>item.previewUrl.includes("/api/social-image-file")));
+  assert.ok(tikwmData.images.every(item=>item.downloadUrl.includes("/api/social-image-file")));
+  assert.equal(tikwmCalls,3,"TikWM should be queried once per Photo Mode extraction attempt");
+  console.log("ARYANZZ TikTok Photo Mode relay, direct-reader fallback, TikWM image-only rescue, gallery extraction and image-proxy URL regression passed.");
 }finally{
   globalThis.fetch=originalFetch;
 }
