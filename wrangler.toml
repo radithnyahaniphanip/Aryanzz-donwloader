@@ -6,7 +6,7 @@ keep_vars = true
 [assets]
 directory = "./public"
 binding = "ASSETS"
-run_worker_first = ["/api/*"]
+run_worker_first = ["/api/*", "/", "/index.html", "/sw.js", "/release.json", "/release-manifest.json", "/manifest.webmanifest", "/robots.txt", "/sitemap.xml", "/panduan", "/download-video", "/download-mp3", "/download-gambar"]
 
 
 [observability]
