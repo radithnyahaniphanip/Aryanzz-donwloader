@@ -2949,8 +2949,10 @@ async function socialImageSearch(request){
         const bucket=buckets.find(entry=>entry.platform===key);
         if(bucket&&!bucket.results.some(existing=>existing.url===item.url))bucket.results.push({...item,platform:key});
       }
-      // All supported image providers are searched concurrently in a bounded set.
-      const pending=targetedAllPlatforms.filter(key=>(buckets.find(entry=>entry.platform===key)?.results.length||0)<4);
+      // The global Bing Images query already covers every catalogued domain.
+      // Probe only a small supplementary batch so a 124-provider catalogue cannot
+      // exceed Cloudflare Worker subrequest/time limits on one search request.
+      const pending=targetedAllPlatforms.filter(key=>(buckets.find(entry=>entry.platform===key)?.results.length||0)<4).slice(0,10);
       const additional=await Promise.all(pending.map(async key=>{
         const site=socialSearchDomains(key).map(domain=>"site:"+domain).join(" OR ");
         return {platform:key,results:await fetchBing(site+" "+query,key)};
