@@ -93,8 +93,8 @@ function showNotice(version){
  bar.append(heading,message,button,progress);
  document.body.append(bar);
  currentNotice={version,bar,button,progress,status,track,fill,size,percent,files,file};
- button.addEventListener("click",()=>startUpdate(version));
- if(lastProgress)setProgress(lastProgress);
+ button.addEventListener("click",()=>startUpdate(currentNotice.version));
+ if(lastProgress?.buildId===version)setProgress(lastProgress);
 }
 async function readWorkerVersion(worker){
  if(!worker||typeof MessageChannel==="undefined")return "";
