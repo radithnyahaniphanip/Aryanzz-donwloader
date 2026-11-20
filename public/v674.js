@@ -491,7 +491,7 @@ if(!imageItems.length)throw new Error("Belum ada gambar yang cocok dari "+target
 }else{
 mediaItems=(Array.isArray(data.results)?data.results:[]).filter(item=>searchResultBelongsTo(item,selected)||(data.fallbackUsed===true&&item?.platform==="youtube"&&searchResultBelongsTo(item,"youtube")));
 const hasYoutubeResult=mediaItems.some(item=>searchResultBelongsTo(item,"youtube"));
-const shouldTryYoutube=kind!=="image"&&selected==="all"&&!hasYoutubeResult;
+const shouldTryYoutube=kind!=="image"&&selected!=="youtube"&&(!mediaItems.length||(selected==="all"&&!hasYoutubeResult));
 if(shouldTryYoutube){
  const fallbackKey=JSON.stringify([kind,"youtube",q.toLocaleLowerCase("id-ID")]);
  const cachedFallback=recentTitleSearch.get(fallbackKey);
