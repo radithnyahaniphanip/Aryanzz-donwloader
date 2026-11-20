@@ -23,9 +23,12 @@ function showPanel(id){
  if(panelId){
   const candidate=document.getElementById(panelId);
   if(!candidate||candidate.parentElement!==toolsArea||!candidate.classList.contains("panel"))panelId="allTools";
-  else if(candidate.dataset.membershipMin&&window.ARYANZZMembership&&!window.ARYANZZMembership.canAccess(candidate.dataset.membershipMin)){
-   window.ARYANZZMembership.setNotice("Fitur ini membutuhkan Membership "+String(candidate.dataset.membershipMin).toUpperCase()+". Pilih paket untuk membuka aksesnya.");
-   panelId="membership";
+  else if(candidate.dataset.membershipMin){
+   const membership=window.ARYANZZMembership;
+   if(!membership||!membership.canAccess(candidate.dataset.membershipMin)){
+    membership?.setNotice("Fitur ini membutuhkan Membership "+String(candidate.dataset.membershipMin).toUpperCase()+". Pilih paket untuk membuka aksesnya.");
+    panelId="membership";
+   }
   }
  }
  const isHome=!panelId;
