@@ -3,6 +3,8 @@ import { readFileSync } from "node:fs";
 
 const read=path=>readFileSync(new URL("../"+path,import.meta.url),"utf8");
 const html=read("public/index.html");
+const emoteHtml=read("public/emote-studio.html");
+const toolsPanelHtml=read("public/stage1-tools-panel.html");
 const css=read("public/arya-ui-overhaul.css");
 const theme=read("public/theme-studio.js");
 const owner=read("public/owner.js");
@@ -38,11 +40,13 @@ assert.ok(search.includes('const shouldTryYoutube=kind!=="image"&&selected!=="yo
 assert.ok(regression.includes('query:"Tabola Bale",platform:"all",mediaType:"video"'),"A Tabola Bale all-platform regression test must remain in the suite");
 assert.ok(worker.includes('query+" official video"')&&worker.includes('youtubeFallbackAttempted&&youtubeFallbackCandidateCount>0'),"The Worker should retry YouTube with video intent and report all-platform fallback");
 assert.ok(html.includes('/arya-v2-refresh.css?v=__ARYANZZ_VERSION__')&&html.includes('/arya-v2-refresh.js?v=__ARYANZZ_VERSION__'),"The V2.1 visual layer and interaction script must be loaded by the live page");
-assert.ok(html.includes('id="homeReleaseVersion" aria-live="polite"')&&html.includes("BUILD MEMUAT"),"The home badge must display the active deployment build instead of a hardcoded V2 label");
+assert.ok(html.includes('id="homeReleaseVersion" aria-live="polite" title="ARYANZZ V2 GRATIS">V2 GRATIS</span>')&&html.includes("V2 · OWNER ACCESS")&&!html.includes("V1 · MEMBER ACCESS"),"The public V2 free-release and owner-access labels must not display stale V1 branding");
+assert.ok(emoteHtml.includes("ARYANZZ V2 · CREATIVE LAB")&&!emoteHtml.includes("ARYANZZ V1"),"Emote Studio must use the V2 release label");
+assert.ok(toolsPanelHtml.includes("ARYANZZ V2 · LIGHTWEIGHT LAB")&&toolsPanelHtml.includes("ARYANZZ V2 · Tools berjalan secara modular.")&&!toolsPanelHtml.includes("ARYANZZ V1"),"Tools Studio must use V2 labels throughout its visible interface");
 assert.ok(sw.includes("/arya-v2-refresh.css?v=__ARYANZZ_VERSION__")&&sw.includes("/arya-v2-refresh.js?v=__ARYANZZ_VERSION__"),"Both V2.1 assets must be included in the versioned service-worker update shell");
 assert.ok(refreshCss.includes("#home>.v89-welcome")&&refreshCss.includes("#toolsArea #allTools .tool")&&refreshCss.includes("#profile .ary-v1-device-specs"),"The new visual layer must refresh home, tool cards, and live device specifications");
 assert.ok(refreshCss.includes("aryV2LogoFloat")&&refreshCss.includes("aryV2PhoneFloat")&&refreshCss.includes("ary-guide-dialog"),"The new visual layer must animate the brand/device and restyle the interactive guide");
 assert.ok(refreshCss.includes("@media(max-width:760px)")&&refreshCss.includes("prefers-reduced-motion"),"The V2.1 visual layer must remain responsive and respect reduced-motion preferences");
-assert.ok(refreshJs.includes('fetch("/release.json?ui="+Date.now()')&&refreshJs.includes('badge.textContent="BUILD "+shortBuild'),"The header badge must show the actual live build returned by the release manifest");
+assert.ok(refreshJs.includes('fetch("/release.json?ui="+Date.now()')&&refreshJs.includes('badge.textContent="V2 GRATIS"')&&refreshJs.includes('badge.title="ARYANZZ V2 GRATIS · Build "+build'),"The header badge must show the V2 free release and expose the exact live build in its title");
 assert.ok(refreshJs.includes("IntersectionObserver")&&refreshJs.includes("arya-v2-pending"),"The new interface should reveal content as the user navigates without hiding content when motion is disabled");
 console.log("✔ ARYANZZ visual overhaul preserves all 38 tools and verifies device, owner, theme, and YouTube fallback behavior");
