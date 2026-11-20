@@ -314,18 +314,46 @@ function extractThreadsVideoVersions(html){
   }
   return results.slice(0,12);
 }
+function detectPublicLiveState(pageUrl,html){
+  let pathname="";
+  try{pathname=new URL(pageUrl).pathname.toLowerCase()}catch{}
+  const source=String(html||"");
+  const explicitLive=/"(?:is_live|isLive|is_live_stream|isLiveStream|live_now|liveNow|isLiveBroadcast)"\s*:\s*(?:true|1|"true")/i.test(source)||
+    /"(?:live_status|liveStatus)"\s*:\s*(?:1|2|"live")/i.test(source);
+  const upcoming=/"(?:is_upcoming|isUpcoming|upcoming)"\s*:\s*(?:true|1|"true")/i.test(source);
+  const archive=/"(?:is_live_archive|isLiveArchive|live_replay|isReplay)"\s*:\s*(?:true|1|"true")/i.test(source)||
+    /"(?:live_status|liveStatus)"\s*:\s*(?:4|"replay"|"ended")/i.test(source);
+  const liveRoute=/\/(?:live|stream|streaming|broadcast)\/?$/i.test(pathname);
+  const active=explicitLive||(liveRoute&&!archive&&!upcoming&&/\b(live|stream|broadcast|siaran langsung)\b/i.test(source));
+  return {isLive:!!active,isUpcoming:!!upcoming&&!active,isLiveArchive:!!archive&&!active};
+}
+function genericPostMediaKind({media=[],images=[],liveState={}}={}){
+  const hasVideo=media.some(item=>String(item?.mode||item?.type||item?.kind||"").toLowerCase()==="video"||/^video\//i.test(String(item?.mime_type||item?.mime||"")));
+  const hasAudio=media.some(item=>String(item?.mode||item?.type||item?.kind||"").toLowerCase()==="audio"||/^audio\//i.test(String(item?.mime_type||item?.mime||"")));
+  const hasPhotos=images.length>0;
+  const carousel=hasPhotos&&(images.length>1||/carousel|sidecar|multi.?photo|carousel_media|edge_sidecar/i.test(String(images[0]?.source||"")));
+  const contentKind=liveState.isLive?"live":liveState.isUpcoming?"upcoming-live":liveState.isLiveArchive?"live-replay":hasVideo&&hasPhotos?"mixed-video-photo":hasVideo?"video":carousel?"photo-carousel":hasPhotos?"photo":hasAudio?"audio":"unknown";
+  const mediaKinds=[hasVideo?"video":"",hasPhotos?"photo":"",hasAudio?"audio":"",liveState.isLive?"live":"",liveState.isLiveArchive?"live-replay":""].filter(Boolean);
+  return {contentKind,mediaKinds,photoCount:images.length,isCarousel:!!carousel};
+}
 async function genericPublicPageMediaInfo(rawUrl,requestUrl,platformEntry,timeoutMs=11000){
   try{
     const page=await fetchSocialPostHtml(rawUrl,timeoutMs);
     const titleMatch=page.html.match(/<meta\b[^>]*property=["']og:title["'][^>]*content=["']([^"']{1,300})["']/i)||page.html.match(/<title[^>]*>([^<]{1,300})<\/title>/i);
     const title=String(titleMatch?.[1]||platformEntry.name+" media").replace(/&amp;/gi,"&").slice(0,300);
-    const thumbnail=extractSocialImageCandidates(page.html,page.url,platformEntry.id)[0]?.url||null;
+    const imageCandidates=extractSocialImageCandidates(page.html,page.url,platformEntry.id);
+    const thumbnail=imageCandidates[0]?.url||null;
     const media=extractGenericPublicMediaCandidates(page.html,page.url);
     if(platformEntry.id==="threads")for(const video of extractThreadsVideoVersions(page.html))if(!media.some(item=>item.url===video.url))media.push(video);
     const dimensions=extractSocialVideoDimensions(page.html);
+    const liveState=detectPublicLiveState(page.url,page.html);
+    const postKind=genericPostMediaKind({media,images:imageCandidates,liveState});
     const normalized=freeProviderMediaInfo({normalized:{title,thumbnail,media,...dimensions}},rawUrl,requestUrl);
-    if(!normalized)return json({ok:false,platform:platformEntry.id,title,thumbnail,providerName:"Public page metadata fallback",provider:"Generic public metadata",experimental:true,fallbackTried:true,directDownloadAvailable:false,error:platformEntry.name+" tidak mengekspos file video/audio langsung pada halaman publik. Konten privat, DRM, atau player streaming memerlukan extractor khusus."},502);
-    return json({...normalized,...dimensions,platform:platformEntry.id,providerName:"Public page metadata fallback",provider:"Generic public metadata",extractor:"Public page metadata",fallbackUsed:true,experimental:true,directDownloadAvailable:true,canonicalUrl:page.url},200);
+    if(!normalized&&liveState.isLive){
+      return json({ok:true,platform:platformEntry.id,title,thumbnail,formats:[],...dimensions,...liveState,...postKind,providerName:"Public live metadata",provider:"Generic public metadata",extractor:"Public live-state detection",fallbackUsed:true,experimental:true,directDownloadAvailable:false,error:"Siaran langsung sedang berlangsung. ARYANZZ mengenali halaman LIVE, tetapi tidak merekam atau mengunduh siaran aktif. Coba tautan arsip/replay setelah siaran selesai."},200);
+    }
+    if(!normalized)return json({ok:false,platform:platformEntry.id,title,thumbnail,...dimensions,...liveState,...postKind,providerName:"Public page metadata fallback",provider:"Generic public metadata",experimental:true,fallbackTried:true,directDownloadAvailable:false,error:platformEntry.name+" tidak mengekspos file video/audio langsung pada halaman publik. Postingan foto/galeri diperiksa melalui jalur gambar terpisah. Konten privat, DRM, atau player streaming memerlukan extractor yang kompatibel."},502);
+    return json({...normalized,...dimensions,...liveState,...postKind,platform:platformEntry.id,providerName:"Public page metadata fallback",provider:"Generic public metadata",extractor:"Public page metadata",fallbackUsed:true,experimental:true,directDownloadAvailable:true,canonicalUrl:page.url},200);
   }catch(error){
     return json({ok:false,platform:platformEntry.id,providerName:"Public page metadata fallback",provider:"Generic public metadata",experimental:true,fallbackTried:true,directDownloadAvailable:false,error:platformEntry.name+" belum dapat dibaca melalui jalur metadata publik: "+String(error?.message||error).slice(0,180)},502);
   }
@@ -357,6 +385,8 @@ async function threadsDirectMediaInfo(request){
   }));
   const found=tried.find(t=>t.status==="fulfilled"&&t.value.ok);
   if(found)return json({...found.value.data,canonicalUrl:canonical.href,providerName:"Threads direct public media",provider:"Threads post/embed",fallbackUsed:true,directDownloadAvailable:true});
+  const live=tried.find(t=>t.status==="fulfilled"&&t.value.data?.isLive);
+  if(live)return json({...live.value.data,canonicalUrl:canonical.href,providerName:"Threads live-state detector",provider:"Threads post/embed",fallbackUsed:true,directDownloadAvailable:false});
   const errors=tried.map(t=>t.status==="fulfilled"?String(t.value.data?.error||"Tidak ada stream publik"):String(t.reason?.message||t.reason)).slice(0,2);
   return json({ok:false,platform:"threads",canonicalUrl:canonical.href,providerName:"Threads direct public media",error:"Video/audio langsung belum ditemukan pada halaman Threads publik. Jika postingan berupa foto, ARYANZZ akan memeriksa galeri secara terpisah.",diagnostics:errors},404);
 }
@@ -1398,9 +1428,11 @@ async function searchSocial(request){
   const searchTargets=platform==="all"
     ?PLATFORM_CATALOG.filter(item=>!item.aliasOf&&platformSupportsSearchMode(item.id,desiredMode))
     :[PLATFORM_CATALOG_BY_ID.get(canonicalPlatform)].filter(Boolean);
-  // Use the primary indexed domain per provider; OR-chains of site: operators were unreliable.
+  // A global indexed query is more reliable for the 200-platform view than
+  // querying only the first 15 catalog domains. Results are still filtered
+  // against the exact supported-domain catalog before they are returned.
   const searchSites=platform==="all"
-    ?searchTargets.slice(0,15).map(item=>item.domains?.[0]?"site:"+item.domains[0]:"").filter(Boolean)
+    ?[""]
     :domains.map(domain=>"site:"+domain);
   async function boundedLookup(inputs,task,parallel=6){
     const out=new Array(inputs.length);let cursor=0;
@@ -1416,7 +1448,7 @@ async function searchSocial(request){
       : desiredMode==="video"
         ? [query,query+" video",query+" clip",query+" shorts",query+" DJ remix",query+" official video",...baseVariants]
         : baseVariants).filter((value,index,array)=>array.indexOf(value)===index).slice(0,platform==="all"?3:12);
-    const searchTerms=platform==="all"?[query]:variants.slice(0,4);
+    const searchTerms=platform==="all"?variants.slice(0,3):variants.slice(0,4);
     const pages=await boundedLookup(searchTerms.flatMap(term=>searchSites.map(searchSite=>({term,searchSite}))),async ({term,searchSite})=>{
       const url=new URL("https://html.duckduckgo.com/html/");url.searchParams.set("q",(searchSite?searchSite+" ":"")+term);
       const response=await fetch(url.href,{headers:{accept:"text/html","user-agent":"Mozilla/5.0 (compatible; ARYANZZ/86.2; +https://aryanzz-donwloader.aryanz.workers.dev)"},signal:AbortSignal.timeout(4600),cache:"no-store"});
@@ -1477,7 +1509,7 @@ async function searchSocial(request){
     let googleCandidateCount=0;
     for(const page of googlePages){const parsed=parseGoogleSocialVideoResults(page,platform,query,seen);googleCandidateCount+=parsed.length;candidates.push(...parsed)}
     let tiktokPageDiagnostics={status:null,bytes:0,count:0,queries:[]};
-    if((platform==="tiktok"||platform==="tiktoklite"||platform==="all")&&!candidates.some(item=>platformIdForUrl(item.url)==="tiktok")){
+    if((platform==="tiktok"||platform==="tiktoklite")||(platform==="all"&&!candidates.some(item=>platformIdForUrl(item.url)==="tiktok"))){
       const directPages=await Promise.all(variants.slice(0,platform==="all"?1:3).map(term=>searchTikTokPublicPage(term)));
       for(let index=0;index<directPages.length;index++){
         const direct=directPages[index];
@@ -1525,29 +1557,11 @@ async function searchSocial(request){
     const verificationCandidates=orderedCandidates.slice(0,verificationLimit);
     const checked=await Promise.all(verificationCandidates.map(item=>verifySocialSearchResult(item,request.url,desiredMode)));
     const verifiedResults=checked.filter(item=>item?.verified===true&&item?.downloadable===true&&item.mediaMode===desiredMode);
-    let youtubeFallbackAttempted=false,youtubeFallbackCandidateCount=0,youtubeFallbackCandidates=[],youtubeFallbackVerified=[];
-    if(!verifiedResults.length&&relevantCandidates.length===0&&platform!=="all"&&platform!=="youtube"&&(desiredMode==="video"||desiredMode==="audio")){
-      youtubeFallbackAttempted=true;
-      const youtubeTerms=[query,query+" lagu",query+" song",query+" official video",query+" official audio",...baseVariants]
-        .map(value=>String(value||"").replace(/\s+/g," ").trim())
-        .filter((value,index,array)=>value.length>=2&&array.indexOf(value)===index).slice(0,4);
-      const [youtubePages,directYoutube]=await Promise.all([
-        Promise.all(youtubeTerms.slice(0,2).map(term=>hybridYouTubeSearch(term))),
-        freeYouTubeSearchItems(query,youtubeTerms.slice(0,2),6500)
-      ]);
-      const youtubeCandidates=[],youtubeSeen=new Set();
-      for(const page of youtubePages)for(const item of page?.results||[]){
-        if(!youtubeSeen.has(item.url)){youtubeSeen.add(item.url);youtubeCandidates.push({...item,platform:"youtube",snippet:item.snippet||item.channel||"YouTube video",searchProvider:item.searchProvider||item.provider||"YouTube public search"});}
-      }
-      for(const item of directYoutube)if(!youtubeSeen.has(item.url)){youtubeSeen.add(item.url);youtubeCandidates.push({...item,platform:"youtube",snippet:item.snippet||item.channel||"YouTube video",searchProvider:item.searchProvider||"YouTube public search"});}
-      const relevantYoutube=youtubeCandidates.filter(item=>strictTitleIntentScore(query,item.title,item.snippet||"")>=0.7);
-      youtubeFallbackCandidates=relevantYoutube.slice(0,20);
-      youtubeFallbackCandidateCount=relevantYoutube.length;
-      // Penelusuran judul menampilkan kandidat publik terlebih dahulu; verifikasi media pada pemilihan hasil.
-      // Tidak perlu menunggu delapan pemeriksaan stream unduhan.
-    }
+    // A selected platform must never silently receive results from another provider.
+    // YouTube discovery is reserved for the explicit "Semua platform" scope above.
+    const youtubeFallbackAttempted=false,youtubeFallbackCandidateCount=0,youtubeFallbackCandidates=[];
     const verifiedUrls=new Set(verifiedResults.map(item=>item.url));
-    const resultLimit=platform==="all"?36:20;
+    const resultLimit=100;
     const searchOnlyCandidates=orderedCandidates
       .filter(item=>item?.url&&!verifiedUrls.has(item.url))
       .slice(0,resultLimit)
