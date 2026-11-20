@@ -131,7 +131,17 @@ try{
   assert.equal(tikwmData.title,"TikWM Photo Gallery");
   assertGallery(tikwmData);
   assert.equal(tikwmCalls,5);
-  console.log("ARYANZZ TikTok Photo Mode cors.dev, cors.tools, AllOrigins/Jina, direct-reader and TikWM fallback regression passed.");
+
+  tikwmMode="empty";
+  const unavailableResponse=await extract();
+  assert.equal(unavailableResponse.status,503,"temporary provider limits must not be mislabeled as a missing public gallery (404)");
+  const unavailable=await unavailableResponse.json();
+  assert.equal(unavailable.code,"PROVIDER_TEMPORARILY_UNAVAILABLE");
+  assert.equal(unavailable.retryable,true);
+  assert.ok(unavailable.error.includes("membatasi permintaan"));
+  assert.equal(unavailable.sourceUrl,photoUrl);
+  assert.equal(tikwmCalls,6);
+  console.log("ARYANZZ TikTok Photo Mode layered relays, TikWM fallback and honest retryable provider-outage response regression passed.");
 }finally{
   globalThis.fetch=originalFetch;
 }
