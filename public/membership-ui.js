@@ -116,7 +116,7 @@
       const inCart = state.cart && state.cart.planId === plan.id && state.cart.period === state.period;
       const button = make("button", "ary-membership-select", inCart ? "✓ Di keranjang" : "＋ Tambah ke keranjang");
       button.type = "button";
-      button.disabled = !state.checkoutEnabled;
+      button.disabled = false;
       button.addEventListener("click", () => addToCart(plan));
       card.append(button);
       grid.append(card);
@@ -519,6 +519,7 @@
     ]);
     if (catalogResult.response.ok && catalogResult.data.ok) state.catalog = catalogResult.data;
     const config = configResult.data || {};
+    if (state.catalog) restoreCart();
     state.checkoutEnabled = !!(configResult.response.ok && config.checkoutEnabled && config.identityReady);
     if (!state.catalog) {
       setMessage("Katalog membership belum dapat dimuat.", "error");
@@ -530,6 +531,8 @@
     if (!state.identityReady) {
       state.checkoutEnabled = false;
       renderPlans();
+      renderCart();
+      renderFeatureLocks();
       setMessage(window.aryanzzAuthUser?.localOnly
         ? "Akun lokal ini hanya tersimpan di browser. Checkout Membership memerlukan akun server ARYANZZ yang terverifikasi; layanan database akun dan keamanan server perlu diaktifkan terlebih dahulu."
         : "ID ARYANZZ belum tersinkron. Tunggu sebentar lalu muat ulang halaman agar membership terhubung ke ID perangkatmu.", "warning");
@@ -554,6 +557,11 @@
 
   function setPeriod(period) {
     state.period = period;
+    if (state.cart) {
+      state.cart.period = period;
+      persistCart();
+      renderCart();
+    }
     byId("membershipMonthly").classList.toggle("active", period === "monthly");
     byId("membershipYearly").classList.toggle("active", period === "yearly");
     if (state.selectedPlan) {
@@ -567,6 +575,13 @@
 
   byId("membershipMonthly").addEventListener("click", () => setPeriod("monthly"));
   byId("membershipYearly").addEventListener("click", () => setPeriod("yearly"));
+  byId("membershipCartToggle").addEventListener("click", () => {
+    const cart = byId("membershipCart");
+    cart.hidden = !cart.hidden;
+    byId("membershipCartToggle").setAttribute("aria-expanded", String(!cart.hidden));
+  });
+  byId("membershipCartClear").addEventListener("click", clearCart);
+  byId("membershipCartCheckout").addEventListener("click", openCheckout);
   byId("membershipCheckoutForm").addEventListener("submit", submitCheckout);
   byId("membershipCheckStatus").addEventListener("click", async () => {
     if (!state.activeOrderId) return;
@@ -585,10 +600,7 @@
   window.ARYANZZMembership = {
     refresh: load,
     canAccess(requiredTier) {
-      const current = state.membership && state.membership.status === "active"
-        ? String(state.membership.tier || "free").toLowerCase()
-        : "free";
-      return (rank[current] || 0) >= (rank[String(requiredTier || "free").toLowerCase()] || 0);
+      return canAccessTier(requiredTier);
     },
     setNotice(message) {
       setMessage(message, "warning");
