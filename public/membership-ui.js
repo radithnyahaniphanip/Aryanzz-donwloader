@@ -321,7 +321,9 @@
     if (!state.identityReady) {
       state.checkoutEnabled = false;
       renderPlans();
-      setMessage("ID ARYANZZ belum tersinkron. Tunggu sebentar lalu muat ulang halaman agar membership terhubung ke ID perangkatmu.", "warning");
+      setMessage(window.aryanzzAuthUser?.localOnly
+        ? "Akun lokal ini hanya tersimpan di browser. Checkout Membership memerlukan akun server ARYANZZ yang terverifikasi; layanan database akun dan keamanan server perlu diaktifkan terlebih dahulu."
+        : "ID ARYANZZ belum tersinkron. Tunggu sebentar lalu muat ulang halaman agar membership terhubung ke ID perangkatmu.", "warning");
       return;
     }
     if (!state.checkoutEnabled) {
