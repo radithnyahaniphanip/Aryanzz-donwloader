@@ -241,9 +241,10 @@ export class MembershipStore {
       const authReady = !!this.env.AUTH_DB && typeof this.env.AUTH_DB.prepare === "function" && String(this.env.AUTH_SESSION_SECRET || "").length >= 32;
       const ready = apiKeyReady && identityReady;
       const missing = [];
+      const optionalMissing = [];
       if (!apiKeyReady) missing.push("AIRPAY_API_KEY · Secret API Key AirPay pada Cloudflare Worker");
       if (!identityReady) missing.push("ID perangkat ARYANZZ belum tersedia; muat ulang halaman");
-      if (!authReady) missing.push("AUTH_DB + AUTH_SESSION_SECRET · opsional untuk sinkronisasi Membership lintas perangkat");
+      if (!authReady) optionalMissing.push("AUTH_DB + AUTH_SESSION_SECRET · sinkronisasi Membership lintas perangkat");
       return json({
         ok: true,
         enabled: ready,
@@ -258,6 +259,7 @@ export class MembershipStore {
         webhookAvailable: true,
         webhookUrl: new URL("/api/membership/webhook", url.origin).href,
         missing,
+        optionalMissing,
         message: ready
           ? authReady
             ? "Checkout QRIS siap. Pembayaran diverifikasi server dan Membership tersimpan pada akun ARYANZZ."
