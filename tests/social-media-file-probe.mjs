@@ -63,6 +63,25 @@ try{
   assert.equal(headerFallback.data?.valid,true,"the alternate header profile must validate the MP4 signature");
   assert.ok(headerAttempts.includes("https://www.tiktok.com/"),"the source-referer profile must be attempted first");
   assert.ok(headerAttempts.includes("https://cdn.example/"),"the CDN-referer fallback profile must be attempted");
+  assert.equal(headerAttempts.length,2,"a fast preflight must stop after the two most useful header profiles instead of waiting on the third profile");
+
+  const boundedProfiles=[];
+  const boundedFallbackRanges=[];
+  const bounded=await run("1",async(input,init={})=>{
+    const url=new URL(typeof input==="string"?input:input instanceof URL?input.href:input.url);
+    if(url.hostname==="cdn.example"){
+      boundedProfiles.push(new Headers(init?.headers||{}).get("referer")||"");
+      return new Response("blocked",{status:403,headers:{"content-type":"text/plain"}});
+    }
+    if(url.hostname==="btch-downloader-api-green.vercel.app"){
+      boundedFallbackRanges.push(new Headers(init?.headers||{}).get("range"));
+      return new Response("fallback unavailable",{status:502,headers:{"content-type":"text/plain"}});
+    }
+    throw new Error("Unexpected fast-probe fallback request: "+url.href);
+  });
+  assert.equal(bounded.response.status,502,"a failed fast preflight must return a bounded error when all public sources reject the request");
+  assert.equal(boundedProfiles.length,2,"fast preflight must not wait for the low-value third CDN header profile");
+  assert.deepEqual(boundedFallbackRanges,["bytes=0-65535",null],"the public media fallback must try a byte range and then a full response");
 
   const stalled=await run("1",async()=>{
     return new Response(new ReadableStream({start(){}}),{status:200,headers:{"content-type":"video/mp4"}});
