@@ -20,7 +20,7 @@ const workspaceToolsJs = read("public/workspace-tools.js");
 const workspaceLayoutJs = read("public/workspace-layout.js");
 const navigationJs = read("public/workspace-navigation.js");
 const homeJs = read("public/workspace-home.js");
-const assetCount = pattern => (html.match(pattern) || []).length;
+const countLiteral = value => html.split(value).length - 1;
 const workspaceScriptOrder = [
   html.indexOf('/workspace-layout.js?v=__ARYANZZ_VERSION__'),
   html.indexOf('/toolbox-100.js?v=__ARYANZZ_VERSION__'),
@@ -43,18 +43,18 @@ const checks = [
   ["Package metadata and workspace manifest identify the single public V2 release", packageJson.release === "V2" && workspace.release?.publicVersion === "V2" && workspace.release?.status === "full-release"],
   ["Release JSON keeps a stable public release label beside the internal build identifier", build.includes('const publicRelease = String(packageJson.release || "V2")') && build.includes("release: publicRelease") && build.includes("version, commit, builtAt")],
   ["V2 loads each Profile, Workspace and Toolbox asset exactly once with one shared build token",
-    assetCount(/<link rel="stylesheet" href="\\/workspace-tools\\.css\\?v=__ARYANZZ_VERSION__">/g) === 1 &&
-    assetCount(/<link rel="stylesheet" href="\\/toolbox-100\\.css\\?v=__ARYANZZ_VERSION__">/g) === 1 &&
-    assetCount(/<link rel="stylesheet" href="\\/v25\\.css\\?v=__ARYANZZ_VERSION__">/g) === 1 &&
-    assetCount(/<script src="\\/workspace-tools\\.js\\?v=__ARYANZZ_VERSION__">/g) === 1 &&
-    assetCount(/<script src="\\/toolbox-100\\.js\\?v=__ARYANZZ_VERSION__">/g) === 1 &&
-    assetCount(/<script src="\\/v25\\.js\\?v=__ARYANZZ_VERSION__" defer>/g) === 1],
+    countLiteral('<link rel="stylesheet" href="/workspace-tools.css?v=__ARYANZZ_VERSION__">') === 1 &&
+    countLiteral('<link rel="stylesheet" href="/toolbox-100.css?v=__ARYANZZ_VERSION__">') === 1 &&
+    countLiteral('<link rel="stylesheet" href="/v25.css?v=__ARYANZZ_VERSION__">') === 1 &&
+    countLiteral('<script src="/workspace-tools.js?v=__ARYANZZ_VERSION__">') === 1 &&
+    countLiteral('<script src="/toolbox-100.js?v=__ARYANZZ_VERSION__">') === 1 &&
+    countLiteral('<script src="/v25.js?v=__ARYANZZ_VERSION__" defer>') === 1],
   ["Service Worker precaches the same V2 Profile and Workspace assets served by the homepage",
     ["/workspace-tools.css", "/toolbox-100.css", "/toolbox-100.js", "/v25.css", "/v25.js", "/arya-v2-refresh.css", "/arya-v2-refresh.js"].every(asset => sw.includes(asset + "?v=__ARYANZZ_VERSION__"))],
   ["Workspace layout mounts Toolbox before search/back navigation initializes",
     workspaceScriptOrder.every(index => index >= 0) && workspaceScriptOrder.every((index, i) => i === 0 || workspaceScriptOrder[i - 1] < index) &&
     toolboxJs.includes('panel.id="toolbox100"') && toolboxJs.includes("toolsArea.insertBefore(panel,profilePanel||null)") &&
-    workspaceToolsJs.includes("root.insertBefore(backbar,root.firstChild)") && navigationJs.includes("candidate.parentElement!==toolsArea")],
+    workspaceLayoutJs.includes("normalizeWorkspaceLayout();") && workspaceToolsJs.includes("root.insertBefore(backbar,root.firstChild)") && navigationJs.includes("candidate.parentElement!==toolsArea")],
   ["Profile, Tools and Toolbox keep independent ownership inside the single V2 release",
     workspace.workspaces.profile.root === "#profile" && workspace.workspaces.profile.js.includes("/v25.js") &&
     workspace.workspaces.tools.root === "#toolsArea" && workspace.workspaces.tools.js.includes("/workspace-tools.js") &&
