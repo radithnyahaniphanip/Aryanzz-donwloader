@@ -430,6 +430,9 @@ const checks = [
   ["Owner WhatsApp migration preserves an intentionally cleared contact and always uses a private public-facing label", ownerJs.includes('const hasSavedWhatsapp = Object.prototype.hasOwnProperty.call(stored, "whatsapp")') && ownerJs.includes('if (hasSavedWhatsapp && savedWhatsapp.includes("6282110767071"))') && ownerJs.includes('action.textContent = key === "whatsapp"') && ownerJs.includes('"Chat WhatsApp"') && !ownerJs.includes("Chat · +62")],
   ["Buttons and platform tiles receive a click glow animation while respecting OS reduced-motion settings", workspaceNavigationJs.includes("pointerdown") && workspaceNavigationJs.includes("ary-click-fx") && v1ExperienceCss.includes("@keyframes aryTapPulse") && v1ExperienceCss.includes("body:not(.ary-motion-enabled) button.ary-click-fx") && v1ExperienceCss.includes("@media(prefers-reduced-motion:reduce)")],
 
+  ["V2.2 redesign is embedded after external styles so the refreshed interface is visible even when a CSS cache is stale", html.includes("ARYANZZ V2.2 FORCE VISUAL LAYER") && html.includes("INTERFACE 2.2") && html.includes("aryanzz-v22-force-visual")],
+  ["Service worker is explicitly checked for a new build on every page load", html.includes("await registration.update()") && html.includes("updateViaCache:'none'") && html.includes("ARYANZZ_SKIP_WAITING")],
+  ["HTML, service worker and release manifests are sent with no-store cache headers", read("../public/_headers").includes("/sw.js") && read("../public/_headers").includes("/index.html") && read("../public/_headers").includes("Cache-Control: no-store")],
 ];
 
 for (const [name, ok] of checks) {
