@@ -32,7 +32,7 @@ function jsonLd(html) {
 }
 
 assert.equal(canonical(home), ORIGIN + "/", "Homepage canonical must use the official production origin");
-assert.match(title(home), /ARYANZZ Downloader V1|ARYANZZ Downloader/i);
+assert.match(title(home), /ARYANZZ Downloader V2|ARYANZZ Downloader/i);
 assert.ok(title(home).length >= 45 && title(home).length <= 65, "Homepage title should be concise");
 assert.equal(meta(home, "application-name"), "ARYANZZ");
 assert.equal(meta(home, "apple-mobile-web-app-title"), "ARYANZZ");
@@ -40,7 +40,7 @@ assert.equal(meta(home, "og:site_name", "property"), "ARYANZZ");
 assert.ok(home.includes('rel="icon" type="image/svg+xml" href="/favicon.svg'), "Google and browsers receive the custom ARYANZZ SVG favicon");
 const homeDescription = meta(home, "description");
 assert.ok(homeDescription.length >= 120 && homeDescription.length <= 165, "Homepage meta description should be a useful search snippet");
-assert.ok(home.includes('class="ary-v1-hero-title"')&&home.includes("Semua berawal")&&home.includes("dari satu tautan"),"Homepage must display the approved V1 hero headline.");
+assert.ok(home.includes('class="ary-v1-hero-title"')&&home.includes("Semua berawal")&&home.includes("dari satu tautan"),"Homepage must display the approved V2 hero headline.");
 assert.ok(home.includes('href="/panduan"'), "Homepage should link to the general guide");
 for (const path of ["/download-video", "/download-mp3", "/download-gambar"]) {
   assert.ok(home.includes('href="' + path + '"'), "Homepage should link to " + path);
@@ -55,7 +55,7 @@ assert.equal(websiteSchema.name, "ARYANZZ");
 assert.equal(websiteSchema.alternateName, "ARYANZZ Downloader");
 const appSchema = homeSchemas.find(schema => schema["@type"] === "SoftwareApplication");
 assert.ok(appSchema, "SoftwareApplication schema is required");
-assert.equal(appSchema.softwareVersion, "V1");
+assert.equal(appSchema.softwareVersion, "V2");
 assert.equal(appSchema.isAccessibleForFree, true);
 assert.ok(Array.isArray(appSchema.featureList) && appSchema.featureList.length >= 4);
 
