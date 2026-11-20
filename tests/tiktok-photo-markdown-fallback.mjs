@@ -15,12 +15,15 @@ const markdown=[
   "![Image 2: img]("+images[1]+")",
   "![Image 3: img](blob:http://localhost/placeholder)"
 ].join("\n");
+let corsToolsCalls=0;
 let relayCalls=0;
 let readerCalls=0;
 let tikwmCalls=0;
+let corsToolsTarget=null;
 let firstRelayTarget=null;
 let firstReaderUrl=null;
 let readerHeaders=null;
+let failCorsTools=false;
 let failRelay=false;
 let failReader=false;
 let tikwmMode="empty";
@@ -28,6 +31,15 @@ let tikwmMode="empty";
 try{
   globalThis.fetch=async(input,init={})=>{
     const url=new URL(typeof input==="string"?input:input instanceof URL?input.href:input.url);
+    if(url.hostname==="cors.tools"&&url.pathname==="/read"){
+      corsToolsCalls++;
+      corsToolsTarget=url.searchParams.get("url");
+      assert.equal(corsToolsTarget,"https://www.tiktok.com/embed/v2/1234567890123456789","rendered relay must read the public TikTok embed URL");
+      assert.equal(url.searchParams.get("render"),"true","rendered relay must execute the embed page");
+      assert.equal(url.searchParams.get("format"),"markdown","rendered relay must return Markdown");
+      if(failCorsTools)return new Response("reader unavailable",{status:502});
+      return new Response(markdown,{status:200,headers:{"content-type":"text/plain; charset=utf-8"}});
+    }
     if(url.hostname==="api.allorigins.win"&&url.pathname==="/raw"){
       relayCalls++;
       firstRelayTarget=url.searchParams.get("url");
@@ -59,48 +71,54 @@ try{
     throw new Error("Unexpected mocked fetch: "+url.href);
   };
 
-  const requestUrl=new URL("https://aryanzz.example/api/image/extract");
-  requestUrl.searchParams.set("url",photoUrl);
-  const response=await worker.fetch(new Request(requestUrl.href),{});
-  assert.equal(response.status,200,"public TikTok Photo Mode should return its available gallery images through the AllOrigins/Jina relay");
-  const data=await response.json();
-  assert.equal(data.ok,true);
-  assert.equal(data.platform,"tiktok");
-  assert.equal(data.images.length,2,"real CDN images must be extracted while blob placeholders are ignored");
-  assert.deepEqual(data.images.map(item=>item.url),images);
-  assert.equal(relayCalls,1,"the independent AllOrigins relay should be attempted first");
-  assert.equal(readerCalls,0,"direct Jina should not be called when the relay succeeds");
+  async function extract(){
+    const requestUrl=new URL("https://aryanzz.example/api/image/extract");
+    requestUrl.searchParams.set("url",photoUrl);
+    return worker.fetch(new Request(requestUrl.href),{});
+  }
+  function assertGallery(data){
+    assert.equal(data.ok,true);
+    assert.equal(data.platform,"tiktok");
+    assert.equal(data.images.length,2);
+    assert.deepEqual(data.images.map(item=>item.url),images);
+    assert.ok(data.images.every(item=>item.previewUrl.includes("/api/social-image-file")));
+    assert.ok(data.images.every(item=>item.downloadUrl.includes("/api/social-image-file")));
+  }
+
+  const renderedResponse=await extract();
+  assert.equal(renderedResponse.status,200,"public TikTok Photo Mode should use the rendered cors.tools reader first");
+  assertGallery(await renderedResponse.json());
+  assert.equal(corsToolsCalls,1,"the rendered public-page relay should be attempted first");
+  assert.equal(relayCalls,0);
+  assert.equal(readerCalls,0);
   assert.equal(tikwmCalls,1,"TikWM image fallback should be checked in parallel without entering the video-provider cascade");
-  assert.ok(firstRelayTarget.includes("https://r.jina.ai/https://www.tiktok.com/embed/v2/"),"the relay must fetch the verified Jina HTTPS Markdown endpoint");
-  assert.ok(data.images.every(item=>item.previewUrl.includes("/api/social-image-file")));
-  assert.ok(data.images.every(item=>item.downloadUrl.includes("/api/social-image-file")));
+
+  failCorsTools=true;
+  const relayResponse=await extract();
+  assert.equal(relayResponse.status,200,"AllOrigins/Jina relay should remain available when rendered cors.tools is unavailable");
+  assertGallery(await relayResponse.json());
+  assert.equal(relayCalls,1);
+  assert.equal(readerCalls,0);
+  assert.ok(firstRelayTarget.includes("https://r.jina.ai/https://www.tiktok.com/embed/v2/"));
 
   failRelay=true;
-  const fallbackUrl=new URL("https://aryanzz.example/api/image/extract");
-  fallbackUrl.searchParams.set("url",photoUrl);
-  const fallbackResponse=await worker.fetch(new Request(fallbackUrl.href),{});
-  assert.equal(fallbackResponse.status,200,"direct Jina HTTPS must remain available when the independent relay is unavailable");
-  const fallbackData=await fallbackResponse.json();
-  assert.equal(fallbackData.images.length,2);
-  assert.equal(readerCalls,1,"direct Jina should be used exactly once after relay failure");
-  assert.ok(firstReaderUrl.includes("/https://www.tiktok.com/embed/v2/"),"the verified HTTPS reader route should be used before the HTTP variant");
-  assert.equal(readerHeaders.get("x-return-format"),null,"Jina must not be forced into HTML mode, which hides the Markdown image URLs");
+  const directResponse=await extract();
+  assert.equal(directResponse.status,200,"direct Jina HTTPS must remain available when both independent relays are unavailable");
+  assertGallery(await directResponse.json());
+  assert.equal(readerCalls,1);
+  assert.ok(firstReaderUrl.includes("/https://www.tiktok.com/embed/v2/"));
+  assert.equal(readerHeaders.get("x-return-format"),null);
   assert.match(readerHeaders.get("accept")||"",/text\/markdown/i);
 
   failReader=true;
   tikwmMode="gallery";
-  const tikwmUrl=new URL("https://aryanzz.example/api/image/extract");
-  tikwmUrl.searchParams.set("url",photoUrl);
-  const tikwmResponse=await worker.fetch(new Request(tikwmUrl.href),{});
-  assert.equal(tikwmResponse.status,200,"TikWM image-only metadata must rescue a public Photo Mode gallery when Jina is rate-limited");
+  const tikwmResponse=await extract();
+  assert.equal(tikwmResponse.status,200,"TikWM image-only metadata must rescue a public Photo Mode gallery when reader services are rate-limited");
   const tikwmData=await tikwmResponse.json();
   assert.equal(tikwmData.title,"TikWM Photo Gallery");
-  assert.equal(tikwmData.images.length,2);
-  assert.deepEqual(tikwmData.images.map(item=>item.url),images);
-  assert.ok(tikwmData.images.every(item=>item.previewUrl.includes("/api/social-image-file")));
-  assert.ok(tikwmData.images.every(item=>item.downloadUrl.includes("/api/social-image-file")));
-  assert.equal(tikwmCalls,3,"TikWM should be queried once per Photo Mode extraction attempt");
-  console.log("ARYANZZ TikTok Photo Mode relay, direct-reader fallback, TikWM image-only rescue, gallery extraction and image-proxy URL regression passed.");
+  assertGallery(tikwmData);
+  assert.equal(tikwmCalls,4,"TikWM should be queried once per Photo Mode extraction attempt");
+  console.log("ARYANZZ TikTok Photo Mode rendered relay, AllOrigins/Jina relay, direct-reader fallback, TikWM image-only rescue and image-proxy regression passed.");
 }finally{
   globalThis.fetch=originalFetch;
 }
