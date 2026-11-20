@@ -853,19 +853,22 @@ async function fetchSocialHeaders(url,init,timeoutMs=25000){
 async function fetchSocialUpstream(mediaUrl,sourceUrl,rangeHeader,options={}){
   const sourceOrigin=new URL(sourceUrl).origin,mediaOrigin=mediaUrl.origin;
   const baseHeaders={"user-agent":"Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36","accept":"video/*,audio/*,application/octet-stream;q=0.9,*/*;q=0.8"};
+  const fastProbe=options.fastProbe===true;
   const profiles=[
     {name:"source-referer",headers:{referer:sourceOrigin+"/",origin:sourceOrigin}},
     {name:"cdn-referer",headers:{referer:mediaOrigin+"/",origin:mediaOrigin}},
     {name:"no-referer",headers:{}}
   ];
-  const uniqueProfiles=profiles.filter((profile,index,array)=>array.findIndex(item=>JSON.stringify(item.headers)===JSON.stringify(profile.headers))===index);
+  // A preflight only checks the first bytes. Bound retries so a slow CDN cannot hold the preview UI open.
+  const uniqueProfiles=profiles.filter((profile,index,array)=>array.findIndex(item=>JSON.stringify(item.headers)===JSON.stringify(profile.headers))===index).slice(0,fastProbe?2:3);
+  const requestTimeout=fastProbe?3200:7500;
   const diagnostics=[];
   const attempt=async(profile,requestedRange)=>{
     let current=mediaUrl;
     for(let hop=0;hop<6;hop++){
       const headers={...baseHeaders,...profile.headers};
       if(requestedRange)headers.range=requestedRange;
-      const response=await fetchSocialHeaders(current.href,{method:"GET",headers,redirect:"manual",cache:"no-store"},7500);
+      const response=await fetchSocialHeaders(current.href,{method:"GET",headers,redirect:"manual",cache:"no-store"},requestTimeout);
       if([301,302,303,307,308].includes(response.status)){
         const location=response.headers.get("location");
         if(!location){await response.body?.cancel().catch(()=>{});throw new Error("CDN media mengirim pengalihan tanpa alamat tujuan.");}
@@ -921,7 +924,7 @@ async function socialMediaFile(request){
   const expectedHint=Math.floor(Number(u.searchParams.get("expected"))||0);
   if(expectedHint<0||expectedHint>500*1024*1024)return json({error:"Ukuran file yang diminta tidak valid."},400);
   let upstream=null,lastError="",lastStatus=0;
-  try{upstream=await fetchSocialUpstream(mediaUrl,source,rangeToRequest,{allowFullFallback:probe&&probeMode!=="full"});}catch(error){lastError=String(error?.message||error).slice(0,420);}
+  try{upstream=await fetchSocialUpstream(mediaUrl,source,rangeToRequest,{allowFullFallback:probe&&probeMode!=="full"&&probeMode!=="1",fastProbe:probeMode==="1"});}catch(error){lastError=String(error?.message||error).slice(0,420);}
   if(!upstream||![200,206].includes(upstream.status)||!upstream.body){
     if(upstream?.body)await upstream.body.cancel().catch(()=>{});
     const fallback=new URL("/api/fetch-media",FREE_MEDIA_API);
@@ -932,7 +935,7 @@ async function socialMediaFile(request){
       const fallbackHeaders={accept:"*/*","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0.0.0 Safari/537.36"};
       if(fallbackRange)fallbackHeaders.range=fallbackRange;
       try{
-        const response=await fetchSocialHeaders(fallback.href,{headers:fallbackHeaders,cache:"no-store"},7500);
+        const response=await fetchSocialHeaders(fallback.href,{headers:fallbackHeaders,cache:"no-store"},probeMode==="1"?4000:7500);
         const contentType=String(response.headers.get("content-type")||"").split(";")[0].trim().toLowerCase();
         const validPartial=response.status!==206||!!String(response.headers.get("content-range")||"").match(/^bytes\s+\d+-\d+\/\d+$/i);
         if([200,206].includes(response.status)&&response.body&&!/^(text\/|application\/(?:json|xml|x-mpegurl))/i.test(contentType)&&validPartial&&(response.status!==206||fallbackRange)){
