@@ -305,6 +305,8 @@ body[data-ary-design-effect="scan"][data-motion="on"] #toolsArea #allTools .tool
 @keyframes aryDesignPulse{50%{filter:brightness(1.08)}}
 @keyframes aryDesignShimmer{0%,100%{transform:translateX(-90%)}50%{transform:translateX(90%)}}
 @keyframes aryDesignScan{0%,100%{opacity:.55}50%{opacity:1;transform:translateY(-2px)}}
+body[data-motion="on"] #toolsArea #allTools .tool{animation:arySurfaceEnter .46s cubic-bezier(.2,.75,.25,1) both}
+body[data-motion="on"] #toolsArea #allTools .tool.ary-guide-hub-card{animation:arySurfaceEnter .5s cubic-bezier(.2,.75,.25,1) both!important}
 body[data-motion="on"] .panel.card,
 body[data-motion="on"] .ary-profile2-card,
 body[data-motion="on"] .ary-owner2-social-card{animation:arySurfaceEnter .48s cubic-bezier(.2,.75,.25,1) both}
