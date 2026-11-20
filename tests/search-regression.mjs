@@ -194,6 +194,17 @@ try{
   console.log("✔ All 15 eligible video providers receive separate, bounded title-search queries");
 
   console.log("✔ All-platform video search keeps real public platform candidates and labels unverified streams");
+  const allTabolaSearch=await worker.fetch(new Request("https://aryanzz.example/api/social/search",{
+    method:"POST",
+    headers:{"content-type":"application/json","cf-connecting-ip":"198.51.100.42"},
+    body:JSON.stringify({query:"Tabola Bale",platform:"all",mediaType:"video"})
+  }),{});
+  assert.equal(allTabolaSearch.status,200,"All-platform search must recover with YouTube when other public indexes return unrelated candidates");
+  const allTabolaData=await allTabolaSearch.json();
+  assert.ok(allTabolaData.results.some(item=>item.platform==="youtube"&&/tabola bale/i.test(item.title)),"A weak or unrelated YouTube index result must not suppress the exact YouTube fallback for Tabola Bale");
+  assert.ok(allTabolaData.results.every(item=>item.searchOnly===true||item.verified===true),"YouTube fallback results must keep their unverified/downloadable status explicit");
+  console.log("✔ All-platform title search falls back to exact YouTube results when indexed candidates are irrelevant");
+
 
   const expansionSearch=await worker.fetch(new Request("https://aryanzz.example/api/social/search",{
     method:"POST",
