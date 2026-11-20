@@ -1639,6 +1639,15 @@ async function imagePostMetadata(rawUrl,requestUrl){
     return {ok:true,title,platform,sourceUrl:finalUrl.href,images};
   }catch(error){return {ok:false,error:"Platform tidak mengizinkan pembacaan otomatis atau sedang membatasi akses. "+String(error?.message||error).slice(0,100)}}
 }
+function socialImageProviderFailure(diagnostics,sourceUrl){
+  const details=diagnostics||null;
+  const serialized=JSON.stringify(details||{});
+  const retryable=/HTTP\\s*429|Free Api Limit|quota|timed.?out|timeout|aborted|HTTP\\s*5\\d\\d|upstream_timeout/i.test(serialized);
+  const error=retryable
+    ?"Layanan pembaca publik sedang membatasi permintaan atau tidak merespons. Tautan sumber belum bisa diproses sekarang; coba lagi nanti."
+    :"Belum ditemukan file gambar asli pada postingan publik ini. Postingan mungkin berisi video, privat, memerlukan login, atau tidak menyediakan galeri gambar.";
+  return json({ok:false,code:retryable?"PROVIDER_TEMPORARILY_UNAVAILABLE":"PUBLIC_IMAGES_NOT_FOUND",retryable,error,sourceUrl:sourceUrl||null,diagnostics:details},retryable?503:404);
+}
 async function imageExtractV81(request){
   const raw=new URL(request.url).searchParams.get("url")||"";
   const parsedInput=(()=>{try{const u=new URL(raw);if(u.protocol==="http:"&&isPlatformLink(u.href))u.protocol="https:";return safePublicMediaUrl(u.href)}catch{return null}})();
@@ -1650,7 +1659,7 @@ async function imageExtractV81(request){
   }
   const diagnostics={};
   const post=await resolveSocialImagePost(input.href,request.url,{diagnostics});
-  if(!post)return json({ok:false,error:"Belum ditemukan file gambar asli pada postingan publik ini. Postingan mungkin berisi video, privat, memerlukan login, atau membatasi akses gambar.",diagnostics:diagnostics.value||null},404);
+  if(!post)return socialImageProviderFailure(diagnostics.value||null,input.href);
   const canonicalSourceUrl=post.url||input.href;
   const images=post.images.map(image=>({...image,sourceUrl:canonicalSourceUrl,platform:post.platform,title:post.title}));
   return json({ok:true,title:post.title,platform:post.platform,sourceUrl:canonicalSourceUrl,images});
@@ -2773,7 +2782,7 @@ async function socialImageInfo(request){
   try{
     const diagnostics={};
     const post=await resolveSocialImagePost(raw,request.url,{diagnostics});
-    if(!post)return json({error:"Belum ditemukan file gambar asli pada postingan ini. Bisa jadi postingan berisi video, privat, memerlukan login, atau platform membatasi akses publik.",diagnostics:diagnostics.value||null},404);
+    if(!post)return socialImageProviderFailure(diagnostics.value||null,raw);
     return json({ok:true,...post});
   }catch(error){return json({error:"Gagal mengambil gambar postingan: "+String(error?.message||error).slice(0,150)},502)}
 }
