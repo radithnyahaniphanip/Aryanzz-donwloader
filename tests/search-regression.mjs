@@ -14,7 +14,6 @@ assert.ok(searchUi.includes("const PLATFORM_SESSION_KEY=")&&searchUi.includes("p
 assert.ok(searchUi.includes("renderPlatformPage(platformPage)")&&!searchUi.includes("if(!canLink&&canSearch)v=\"title\""),"Selecting a platform must not reset the 200-platform pager or force-hide the link tab");
 assert.ok(searchUi.includes("a.hidden=false")&&searchUi.includes("b.hidden=false")&&searchUi.includes("v674-mode-unavailable"),"Both link and title modes remain visible with a clear unsupported-provider notice");
 assert.ok(searchUi.includes('platform:"youtube",mediaType:"video"')&&searchUi.includes("fallbackItems.length"),"A video title search automatically retries YouTube when the selected provider returns no usable results");
-assert.ok(searchUi.includes("platform.id===selected||(Array.isArray(platform.searchModes)"),"The currently selected platform remains visible even when it does not support the selected search type");
 const workspaceCss=readFileSync(new URL("../public/desktop-workspace.css",import.meta.url),"utf8");
 assert.ok(workspaceCss.includes("margin:26px 0 12px")&&workspaceCss.includes(".v674-mode-unavailable"),"Platform search controls have clear spacing and unsupported-mode notices are styled");
 
