@@ -4277,7 +4277,16 @@ const workerHandler = {async fetch(request,env){
       return membershipNamespace.get(membershipId).fetch(request);
     }
     if(url.pathname.startsWith("/api/cosmetics/")||url.pathname.startsWith("/api/redeem/"))return json({ok:false,error:"Fitur ini belum tersedia."},410);
-  if(url.pathname.startsWith("/api/auth/"))return handleAuthRequest(request,env);
+  if(url.pathname.startsWith("/api/auth/")){
+    try{return await handleAuthRequest(request,env);}
+    catch(error){
+      // An allocated D1 binding is not evidence that remote auth migrations
+      // ran. Missing tables should return a safe, actionable 503 instead
+      // of a raw 500 JSON failure or a false login-success banner.
+      console.error("[ARYANZZ_AUTH] database_request_failed",error instanceof Error?error.name:"unknown");
+      return json({ok:false,code:"AUTH_DATABASE_UNAVAILABLE",error:"Layanan akun belum siap karena tabel database D1 belum tersedia. Pengelola perlu menjalankan migrasi D1 melalui Cloudflare dengan izin D1 Edit."},503);
+    }
+  }
   if(url.pathname==="/api/health"&&request.method==="GET")return json({ok:true,service:"ARYANZZ",version:"V2",publicVersion:"V2",buildId:env.ARYANZZ_BUILD_VERSION||BUILD_VERSION,securityActive:true,mode:"cloudflare-worker-zero-server-hybrid",directMediaDownload:true,selfHostedDownloader:false,youtubeDownloader:true,youtubeApiKeyConfigured:false,cobalt:false,paidYoutubeProvider:false,musicRecognitionConfigured:!!env.AUDD_API_TOKEN,musicFallbackReady:false,musicVideoRecognitionReady:false,platformExtraction:true,platformBackend:"public-free-community-api"});
   if(url.pathname==="/api/social-file"&&request.method==="GET")return socialMediaFile(request);
   if(url.pathname==="/api/threads/direct"&&request.method==="GET")return threadsDirectMediaInfo(request);
