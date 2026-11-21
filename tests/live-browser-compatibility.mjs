@@ -82,8 +82,12 @@ async function openHome(context, label) {
       });
       assert.equal(libraryGeometry.title,"Pustaka",label+" Pustaka must not inherit duplicate 'Your Library • 05' header text");
       assert.equal(libraryGeometry.legacyHeader,false,label+" Pustaka must not have a second header injected by V67.7");
-      assert.ok(libraryGeometry.hero.top>=libraryGeometry.panel.top+8,
+      assert.ok(libraryGeometry.hero.top>=libraryGeometry.panel.top+12,
         label+" Pustaka hero overlaps panel border: "+JSON.stringify(libraryGeometry));
+      assert.ok(libraryGeometry.hero.left>=libraryGeometry.panel.left+10,
+        label+" Pustaka hero touches the left panel border: "+JSON.stringify(libraryGeometry));
+      assert.ok(libraryGeometry.filter.left>=libraryGeometry.panel.left+10,
+        label+" Pustaka filter row touches the left panel border: "+JSON.stringify(libraryGeometry));
       assert.ok(libraryGeometry.hero.left>=libraryGeometry.panel.left-2&&libraryGeometry.hero.right<=libraryGeometry.panel.right+2,
         label+" Pustaka hero overflows its container");
       assert.ok(libraryGeometry.filter.left>=libraryGeometry.panel.left-2&&libraryGeometry.filter.right<=libraryGeometry.panel.right+2,
