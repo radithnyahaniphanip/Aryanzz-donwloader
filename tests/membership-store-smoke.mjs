@@ -247,7 +247,8 @@ try {
   // AirPay documents HTTP 403 as banned merchant. This must never become a
   // misleading "try QR again" status or grant membership.
   rejectMerchant = true;
-  const blockedStore = new MembershipStore({storage:new MemoryStorage()},env);
+  const blockedStorage = new MemoryStorage();
+  const blockedStore = new MembershipStore({storage:blockedStorage},env);
   const blockedResponse = await blockedStore.fetch(new Request("https://aryanzz.test/api/membership/orders",{
     method:"POST",headers:{...requestHeaders,"content-type":"application/json"},
     body:JSON.stringify({planId:"starter",billingPeriod:"monthly",paymentMethod:"qris"})
@@ -258,7 +259,38 @@ try {
   assert.match(blockedData.error,/403/);
   const blockedAccount = await blockedStore.fetch(request("/api/membership/me"));
   assert.notEqual((await blockedAccount.json()).membership?.status,"active");
+
+  // One remote HTTP 403 should pause ALL fresh checkout attempts on this
+  // merchant Worker for two minutes, while leaving catalog and plan access.
+  const blockedConfig = await (await blockedStore.fetch(request("/api/membership/payment-config"))).json();
+  assert.equal(blockedConfig.merchantBlocked,true);
+  assert.equal(blockedConfig.gatewayAuthorization,"merchant-blocked");
+  assert.equal(blockedConfig.checkoutEnabled,false);
+  const blockedCatalog = await (await blockedStore.fetch(request("/api/membership/catalog"))).json();
+  assert.equal(blockedCatalog.paymentEnabled,false);
+  const blockedCalls = createCalls;
+  const blockedAgain = await blockedStore.fetch(new Request("https://aryanzz.test/api/membership/orders",{
+    method:"POST",headers:{...requestHeaders,"content-type":"application/json"},
+    body:JSON.stringify({planId:"pro",billingPeriod:"yearly",paymentMethod:"gopay"})
+  }));
+  assert.equal(blockedAgain.status,503);
+  assert.equal((await blockedAgain.json()).code,"AIRPAY_MERCHANT_BLOCKED");
+  assert.equal(createCalls,blockedCalls,"403 circuit breaker must prevent repeated remote invoice requests");
+
+  // When AirPay restores the account and the short hold expires, the same
+  // Worker must resume real checkout automatically without redeploying.
   rejectMerchant = false;
+  const hold = await blockedStorage.get("airpay-merchant-block");
+  assert.ok(hold.blockedUntil > Date.now());
+  await blockedStorage.put("airpay-merchant-block",{...hold,blockedUntil:Date.now()-1});
+  const recoveredFromBlock = await blockedStore.fetch(new Request("https://aryanzz.test/api/membership/orders",{
+    method:"POST",headers:{...requestHeaders,"content-type":"application/json"},
+    body:JSON.stringify({planId:"starter",billingPeriod:"monthly",paymentMethod:"qris"})
+  }));
+  assert.equal(recoveredFromBlock.status,201,"Checkout should recover after block expires and merchant permission is restored");
+  const recoveredConfig = await (await blockedStore.fetch(request("/api/membership/payment-config"))).json();
+  assert.equal(recoveredConfig.merchantBlocked,false);
+  assert.equal(recoveredConfig.checkoutEnabled,true);
 
   // A sandbox credential accidentally configured on the *production* Worker
   // must never be allowed to issue an invoice or activate paid privileges.
