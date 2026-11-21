@@ -165,6 +165,38 @@ try {
   assert.equal(proYearlyData.order.feeAmount, 1184);
   assert.equal(proYearlyData.order.totalAmount, 128184);
 
+  // Every UI option represents a QRIS scanner preference, not a separate
+  // wallet direct-transfer API. Verify one authentic AirPay invoice is created
+  // per new device-bound checkout, with no additional sensitive banking data.
+  for (const paymentMethod of ["qris","dana","gopay","linkaja","ovo","shopeepay","mobile_banking"]) {
+    gatewayStatus = "Pending";
+    const isolatedStore = new MembershipStore({storage:new MemoryStorage()},env);
+    const before = createCalls;
+    const testOrder = await isolatedStore.fetch(new Request("https://aryanzz.test/api/membership/orders",{
+      method:"POST",
+      headers:{...requestHeaders,"content-type":"application/json"},
+      body:JSON.stringify({planId:"starter",billingPeriod:"monthly",paymentMethod})
+    }));
+    const data = await testOrder.json();
+    assert.equal(testOrder.status,201,"Method "+paymentMethod+" must create a QRIS invoice: "+JSON.stringify(data));
+    assert.equal(data.order.paymentMethod,paymentMethod);
+    assert.equal(data.payment.provider,"AirPay QRIS");
+    assert.ok(data.payment.qrUrl.startsWith("https://airpaygateway.site/qr/"));
+    assert.equal(createCalls,before+1,"Only one AirPay invoice must be created per method click");
+  }
+
+  // Reject unsupported methods before calling the live gateway.
+  const beforeInvalid = createCalls;
+  const invalidMethod = await new MembershipStore({storage:new MemoryStorage()},env).fetch(
+    new Request("https://aryanzz.test/api/membership/orders",{
+      method:"POST",
+      headers:{...requestHeaders,"content-type":"application/json"},
+      body:JSON.stringify({planId:"starter",billingPeriod:"monthly",paymentMethod:"bank_transfer_direct",bankAccount:"123456"})
+    })
+  );
+  assert.equal(invalidMethod.status,400);
+  assert.equal(createCalls,beforeInvalid,"Unsupported payment rails must never reach AirPay");
+
   console.log("MembershipStore AirPay smoke test passed.");
 } finally {
   globalThis.fetch = originalFetch;

@@ -125,7 +125,21 @@ assert.ok(v15Asset.includes("controller=window.aryanzzShowPanel"),"Navigation le
 assert.ok(!v15Asset.includes("window.aryanzzShowPanel=goto"),"Navigation legacy masih menimpa controller utama.");
 assert.ok(!v15Asset.includes("Tema & pengalaman")&&!v15Asset.includes("setupProfile()"),"Kontrol tema lama masih disuntikkan ke Profil.");
 assert.ok(v15Asset.includes('parent.querySelector("#toolSearch")||parent.querySelector("#toolFilters")'),"Pusat Alat belum mencegah search/filter ganda.");
-assert.ok(workspaceLibraryAsset.includes("aryLibraryHistoryTab")&&workspaceLibraryAsset.includes("clearHistoryV2")&&workspaceLibraryAsset.includes("aryLibraryExport")&&workspaceLibraryAsset.includes("aryLibraryImport"),"Kontrol dan cadangan Pustaka belum terhubung pada modul workspace-library.");
+// Worker health can switch to the new build before the static asset edge has
+// propagated. Re-fetch the exact versioned Pustaka module on cache-busted URLs
+// before concluding that a production deployment is broken. Never skip the
+// required handlers; a persistently stale asset must still fail deployment QA.
+const libraryMarkers=["aryLibraryHistoryTab","clearHistoryV2","aryLibraryExport","aryLibraryImport"];
+for(let attempt=0;attempt<15&&!libraryMarkers.every(marker=>workspaceLibraryAsset.includes(marker));attempt++){
+  await new Promise(resolve=>setTimeout(resolve,2000));
+  const url="/workspace-library.js?v="+encodeURIComponent(version)+"&verify="+attempt;
+  const response=await request(url,{headers:{"Cache-Control":"no-cache","Pragma":"no-cache"}});
+  if(response.ok)workspaceLibraryAsset=await response.text();
+}
+assert.ok(libraryMarkers.every(marker=>workspaceLibraryAsset.includes(marker)),
+  "Kontrol/cadangan Pustaka belum lengkap setelah propagasi aset: "+
+  libraryMarkers.filter(marker=>!workspaceLibraryAsset.includes(marker)).join(", ")+
+  "; ukuran aset: "+workspaceLibraryAsset.length+" bytes.");
 const homeRoot=html.indexOf('<section id="home"');
 const toolsRoot=html.indexOf('<section id="toolsArea"');
 const brandHeader=html.indexOf('id="homeBrandHeader"');

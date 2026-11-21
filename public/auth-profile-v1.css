@@ -104,3 +104,10 @@
  #profile.ary-profile-v2 .ary-profile2-location-actions button,#profile.ary-profile-v2 .ary-profile2-location-actions a{flex:1}
 }
 @media(prefers-reduced-motion:reduce){#profile.ary-profile-v2 .ary-profile2-hero,#profile.ary-profile-v2 .ary-profile2-stat{transition:none!important}}
+
+
+#profile.ary-profile-v2 .ary-profile-data-status{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 12px;padding:10px 13px;border:1px solid rgba(107,168,218,.34);border-radius:12px;background:rgba(15,43,68,.73)}
+#profile.ary-profile-v2 .ary-profile-data-status span{font-size:10px;line-height:1.55;color:#b9d5ea;flex:1}
+#profile.ary-profile-v2 .ary-profile-data-status button{flex:0 0 auto;min-height:34px;border:1px solid #4189b5;border-radius:10px;background:#123f60;color:#e1f6ff;padding:8px 11px;font-size:10px;font-weight:800;cursor:pointer}
+#profile.ary-profile-v2 .ary-profile-data-status button:focus-visible{outline:2px solid #6adff1;outline-offset:2px}
+@media(max-width:520px){#profile.ary-profile-v2 .ary-profile-data-status{flex-direction:column;align-items:stretch;padding:11px}#profile.ary-profile-v2 .ary-profile-data-status button{width:100%}}
