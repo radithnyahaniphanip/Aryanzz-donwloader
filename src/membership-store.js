@@ -489,7 +489,20 @@ export class MembershipStore {
 
       const payload = await response.json().catch(() => null);
       if (!response.ok || !payload || payload.success === false) {
-        throw new Error(payload && payload.message || "AirPay gagal membuat invoice QRIS (HTTP " + response.status + ").");
+        const gatewayMessage = String(payload?.message || payload?.error || "");
+        if (response.status === 401 || /invalid[\\s_-]*(?:api[\\s_-]*)?key|unauthori[sz]ed|kunci.*tidak.*valid/i.test(gatewayMessage)) {
+          const error = new Error("Kunci API AirPay ditolak. Pemilik website perlu mengganti Secret AIRPAY_API_KEY dengan key aktif dari dashboard AirPay, lalu deploy ulang. Jangan kirim key melalui chat.");
+          error.code = "AIRPAY_INVALID_API_KEY";
+          throw error;
+        }
+        if (response.status === 403) {
+          const error = new Error("Akun merchant AirPay tidak diizinkan membuat QRIS. Periksa status akun di dashboard AirPay.");
+          error.code = "AIRPAY_ACCOUNT_RESTRICTED";
+          throw error;
+        }
+        throw new Error(response.status >= 500
+          ? "Server AirPay sedang bermasalah. Coba lagi atau hubungi pengelola."
+          : gatewayMessage.slice(0,180) || "AirPay gagal membuat invoice QRIS (HTTP " + response.status + ").");
       }
 
       const invoice = payload.data || payload;
@@ -554,7 +567,12 @@ export class MembershipStore {
       order.note = String(error && error.message || error).slice(0, 260);
       await this.ctx.storage.put("order:" + id, order);
       await this.saveOrderList(session.id, order);
-      return json({ ok: false, error: "Invoice AirPay gagal dibuat. " + order.note }, 502);
+      const code = error?.code || "AIRPAY_CREATE_FAILED";
+      return json({
+        ok: false,
+        code,
+        error: code === "AIRPAY_INVALID_API_KEY" ? order.note : "Invoice AirPay gagal dibuat. " + order.note
+      }, code === "AIRPAY_INVALID_API_KEY" || code === "AIRPAY_ACCOUNT_RESTRICTED" ? 503 : 502);
     }
   }
 
