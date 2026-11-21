@@ -229,6 +229,14 @@ export class MembershipStore {
     return "";
   }
 
+  async activeMerchantBlock() {
+    // A real HTTP 403 is an AirPay merchant-account problem, not a QR render
+    // failure. Stop repeated invoice requests for two minutes; this is only
+    // a short-lived safety circuit, not a permanent account ban diagnosis.
+    const record = await this.ctx.storage.get("airpay-merchant-block");
+    return record && Number(record.blockedUntil) > Date.now() ? record : null;
+  }
+
   async fetch(request) {
     const url = new URL(request.url);
     const path = url.pathname;
@@ -241,7 +249,7 @@ export class MembershipStore {
         ok: true,
         pricingStatus: "active",
         provider: "AirPay QRIS",
-        paymentEnabled: !!this.apiKey() && !this.sandboxBlocked(),
+        paymentEnabled: !!this.apiKey() && !this.sandboxBlocked() && !await this.activeMerchantBlock(),
         plans: PLANS,
         free: {
           id: "free",
@@ -258,11 +266,13 @@ export class MembershipStore {
       const identityReady = !!session;
       const authReady = !!this.env.AUTH_DB && typeof this.env.AUTH_DB.prepare === "function" && String(this.env.AUTH_SESSION_SECRET || "").length >= 32;
       const sandboxBlocked = this.sandboxBlocked();
-      const ready = apiKeyReady && identityReady && !sandboxBlocked;
+      const merchantBlocked = !!await this.activeMerchantBlock();
+      const ready = apiKeyReady && identityReady && !sandboxBlocked && !merchantBlocked;
       const missing = [];
       const optionalMissing = [];
       if (!apiKeyReady) missing.push("AIRPAY_API_KEY · Secret API Key AirPay pada Cloudflare Worker");
       if (sandboxBlocked) missing.push("API Key sandbox tidak diizinkan di website produksi");
+      if (merchantBlocked) missing.push("Akun merchant AirPay menolak permintaan (HTTP 403)");
       if (!identityReady) missing.push("ID perangkat ARYANZZ belum tersedia; muat ulang halaman");
       if (!authReady) optionalMissing.push("AUTH_DB + AUTH_SESSION_SECRET · sinkronisasi Membership lintas perangkat");
       return json({
@@ -271,7 +281,8 @@ export class MembershipStore {
         checkoutEnabled: ready,
         apiKeyReady,
         keyInstalledNotValidated: apiKeyReady,
-        gatewayAuthorization: "not-verified",
+        gatewayAuthorization: merchantBlocked ? "merchant-blocked" : "not-verified",
+        merchantBlocked,
         sandboxBlocked,
         authReady,
         identityReady,
@@ -287,9 +298,11 @@ export class MembershipStore {
           ? authReady
             ? "Kunci AirPay terpasang, tetapi status merchant belum diverifikasi oleh gateway. Jika invoice sukses, status pembayaran akan diverifikasi server dan tersimpan pada akun."
             : "Kunci AirPay terpasang, tetapi izin merchant belum diverifikasi. Jika invoice sukses, Membership terikat ke perangkat ini; D1 diperlukan untuk sinkronisasi lintas perangkat."
-          : sandboxBlocked
-            ? "Checkout produksi dinonaktifkan: API Key sandbox hanya untuk lingkungan uji yang terisolasi."
-            : "Checkout menunggu konfigurasi AirPay dan ID perangkat ARYANZZ."
+          : merchantBlocked
+            ? "Checkout sementara ditutup karena AirPay mengembalikan HTTP 403. Pengelola perlu memulihkan akun merchant melalui dukungan AirPay."
+            : sandboxBlocked
+              ? "Checkout produksi dinonaktifkan: API Key sandbox hanya untuk lingkungan uji yang terisolasi."
+              : "Checkout menunggu konfigurasi AirPay dan ID perangkat ARYANZZ."
       });
     }
 
@@ -375,6 +388,13 @@ export class MembershipStore {
     const session = await this.session(request);
     if (!session) {
       return json({ ok: false, error: "ID ARYANZZ belum tersinkron. Muat ulang halaman dan tunggu identitas perangkat siap." }, 401);
+    }
+    if (await this.activeMerchantBlock()) {
+      return json({
+        ok: false,
+        code: "AIRPAY_MERCHANT_BLOCKED",
+        error: "Checkout sementara ditutup: AirPay menolak akun merchant (403). Hubungi dukungan resmi AirPay; jangan membuat invoice berulang kali."
+      }, 503);
     }
 
     let body;
@@ -585,6 +605,7 @@ export class MembershipStore {
         ? Math.min(now + 10 * 60 * 1000, gatewayExpiry)
         : now + 10 * 60 * 1000;
       order.note = "Invoice QRIS dibuat. Sesi checkout ARYANZZ berlaku 10 menit; status gateway tetap direkonsiliasi sampai final.";
+      await this.ctx.storage.delete("airpay-merchant-block");
       await this.ctx.storage.put("order:" + id, order);
       await this.saveOrderList(session.id, order);
       await this.scheduleStatusCheck();
@@ -606,6 +627,12 @@ export class MembershipStore {
         message: "Invoice QRIS otomatis dibuat berdasarkan metode yang dipilih. Membership aktif setelah status lunas diverifikasi AirPay."
       }, 201);
     } catch (error) {
+      if (error?.code === "AIRPAY_MERCHANT_BLOCKED") {
+        await this.ctx.storage.put("airpay-merchant-block", {
+          blockedUntil: Date.now() + 2 * 60 * 1000,
+          recordedAt: Date.now()
+        });
+      }
       order.status = "rejected";
       order.note = String(error && error.message || error).slice(0, 260);
       await this.ctx.storage.put("order:" + id, order);
