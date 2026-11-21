@@ -35,8 +35,10 @@ const unavailable=await handleAuthRequest(new Request("https://aryanzz.example/a
 assert.equal(unavailable.status,503);
 assert.equal((await unavailable.json()).code,"AUTH_NOT_CONFIGURED");
 
+const requiredAuthTables=["auth_users","auth_sessions","auth_verifications","auth_device_lock_accounts","auth_user_bans"];
+const mockMigratedDB={prepare(){return {all:async()=>({results:requiredAuthTables.map(name=>({name}))})}}};
 const readyEnv={
-  AUTH_DB:{prepare(){return {}}},
+  AUTH_DB:mockMigratedDB,
   AUTH_SESSION_SECRET:"s".repeat(40),
   TURNSTILE_SECRET_KEY:"turnstile-secret",
   AUTH_TURNSTILE_SITE_KEY:"turnstile-site"
@@ -44,6 +46,16 @@ const readyEnv={
 const loginReady=await handleAuthRequest(new Request("https://aryanzz.example/api/auth/config"),readyEnv);
 const loginBody=await loginReady.json();
 assert.equal(loginBody.loginReady,true,"D1, session secret and Turnstile should enable server login");
+assert.equal(loginBody.schemaReady,true,"Login must inspect existing migration tables rather than the D1 binding alone");
+assert.deepEqual(loginBody.missingTables,[]);
+const missingTablesEnv={...readyEnv,AUTH_DB:{prepare(){return {all:async()=>({results:[{name:"auth_users"}]})}}}};
+const schemaMissingResponse=await handleAuthRequest(new Request("https://aryanzz.example/api/auth/config"),missingTablesEnv);
+const schemaMissingBody=await schemaMissingResponse.json();
+assert.equal(schemaMissingBody.loginReady,false,"D1 binding without required tables must not be reported as working login");
+assert.equal(schemaMissingBody.schemaReady,false);
+assert.ok(schemaMissingBody.missingLogin.includes("AUTH_DB_MIGRATIONS"));
+assert.ok(schemaMissingBody.missingTables.includes("auth_device_lock_accounts"));
+
 assert.equal(loginBody.registrationReady,false,"Online registration must wait for the email sender");
 assert.equal(loginBody.registrationEnabled,false);
 assert.equal(loginBody.publicAccess,true);
@@ -64,7 +76,7 @@ const disabledRegistration=await handleAuthRequest(new Request("https://aryanzz.
 assert.equal((await disabledRegistration.json()).registrationReady,false,"The public registration kill switch must be respected");
 
 const aliasReady=await handleAuthRequest(new Request("https://aryanzz.example/api/auth/config"),{
-  AUTH_DB:{prepare(){return {}}},AUTH_SESSION_SECRET:"s".repeat(40),
+  AUTH_DB:mockMigratedDB,AUTH_SESSION_SECRET:"s".repeat(40),
   CF_TURNSTILE_SECRET_KEY:"turnstile-secret-alias",TURNSTILE_SITE_KEY:"turnstile-site-alias",
   RESEND_API_KEY:"resend-secret",AUTH_EMAIL_FROM:"ARYANZZ <auth@example.com>"
 });
@@ -133,4 +145,9 @@ assert.equal((await protectedRequest.json()).code,"AUTH_DATABASE_UNAVAILABLE");
 const noCookiePage=await edgeWorker.fetch(new Request("https://aryanzz.example/",{}),brokenDBEnv);
 assert.equal(noCookiePage.status,200,"Public pages should load without a device cookie as before");
 
+
+const brokenConfigEnv={...readyEnv,AUTH_DB:{prepare(){throw new Error("D1_ERROR: no such table");}}};
+const brokenConfig=await handleAuthRequest(new Request("https://aryanzz.example/api/auth/config"),brokenConfigEnv);
+assert.equal((await brokenConfig.json()).schemaReady,false,
+  "Auth config must be safe when D1 schema introspection fails");
 console.log("ARYANZZ V2 public account backend, email verification and fail-closed security checks passed.");
