@@ -446,8 +446,38 @@
     }
     return null;
   }
-  async function inspectMp4Blob(blob,expectedDuration=0){
-    let offset=0,boxes=0,hasFtyp=false,hasMoov=false,hasMdat=false,duration=null;
+  function mp4VideoDimensions(moov){
+    // Read track display dimensions from ISO BMFF tkhd (16.16 fixed-point).
+    // This is independent of provider labels like "2K" or "1080p".
+    const view=new DataView(moov.buffer,moov.byteOffset,moov.byteLength);
+    const readBoxes=(start,end,callback)=>{
+      let pos=start,count=0;
+      while(pos+8<=end&&count++<512){
+        let size=view.getUint32(pos),header=8;
+        if(size===1){if(pos+16>end)break;size=Number(view.getBigUint64(pos+8));header=16;}
+        else if(size===0)size=end-pos;
+        if(!Number.isSafeInteger(size)||size<header||pos+size>end)break;
+        callback(mp4FourCC(moov,pos+4),pos+header,pos+size);
+        pos+=size;
+      }
+    };
+    let dimensions=null;
+    readBoxes(0,moov.length,(type,start,end)=>{
+      if(type!=="trak"||dimensions)return;
+      readBoxes(start,end,(child,dataStart,dataEnd)=>{
+        if(child!=="tkhd"||dimensions||dataStart+4>dataEnd)return;
+        const version=view.getUint8(dataStart);
+        const offset=version===1?88:76;
+        if(dataStart+offset+8>dataEnd)return;
+        const width=Math.round(view.getUint32(dataStart+offset)/65536);
+        const height=Math.round(view.getUint32(dataStart+offset+4)/65536);
+        if(width>=100&&height>=100&&width<=16384&&height<=16384)dimensions={width,height};
+      });
+    });
+    return dimensions;
+  }
+  async function inspectMp4Blob(blob,expectedDuration=0,expectedHeight=0){
+    let offset=0,boxes=0,hasFtyp=false,hasMoov=false,hasMdat=false,duration=null,dimensions=null;
     while(offset+8<=blob.size&&boxes++<4096){
       const head=new Uint8Array(await blob.slice(offset,Math.min(blob.size,offset+16)).arrayBuffer());
       if(head.length<8)break;
@@ -462,6 +492,7 @@
         hasMoov=true;
         const moov=new Uint8Array(await blob.slice(offset+header,offset+size).arrayBuffer());
         duration=mp4ReadMvhdDuration(moov);
+        dimensions=mp4VideoDimensions(moov);
       }
       offset+=size;
     }
@@ -471,7 +502,10 @@
       if(Math.abs(duration-expectedDuration)>tolerance)throw new Error("Durasi MP4 hasil unduhan ("+duration.toFixed(1)+" detik) berbeda jauh dari durasi sumber ("+expectedDuration.toFixed(1)+" detik). File ditahan agar tidak menyimpan video yang terpotong.");
     }
     if(expectedDuration>5&&duration!==null&&duration<1)throw new Error("Metadata MP4 menunjukkan durasi kurang dari 1 detik, bukan video utuh.");
-    return {duration,hasFtyp,hasMoov,hasMdat};
+    if(expectedHeight>0&&dimensions&&Math.abs(dimensions.height-expectedHeight)>3&&Math.abs(dimensions.width-expectedHeight)>3){
+      throw new Error("Resolusi file MP4 sesungguhnya "+dimensions.width+"×"+dimensions.height+" px, tidak sesuai kualitas "+expectedHeight+"p yang dipilih. File ditahan agar video SD tidak disamarkan sebagai HD/2K/4K/8K.");
+    }
+    return {duration,dimensions,hasFtyp,hasMoov,hasMdat};
   }
 
   let aryanzzFfmpegPromise=null;
@@ -821,6 +855,7 @@
       const result=await ffmpeg.readFile(output);
       if(!result||result.length<1024)throw new Error("Hasil MP4 kosong atau tidak lengkap.");
       const blob=new Blob([result],{type:outputExt==="webm"?"video/webm":"video/mp4"}),filename=safeFilename((info.outputName||info.title||"aryanzz-youtube").replace(/\.(?:mp4|mp3|m4a|webm|mov)$/i,"")+"."+outputExt);
+      if(outputExt==="mp4")await inspectMp4Blob(blob,info.duration,Number(videoItem.height)||0);
       progressText.textContent=outputExt.toUpperCase()+" selesai dirakit.";
       progressMeta.textContent="Ukuran file "+formatDownloadSize(blob.size)+" · tekan tombol unduh di bawah.";
       await saveBrowserBlob(blob,filename,progressText.parentElement);
@@ -898,7 +933,7 @@
         if(mode==="video"&&selected.ext==="mp4"){
           progressText.textContent="Memeriksa struktur MP4…";
           progressMeta.textContent="Transfer selesai · memvalidasi file "+formatDownloadSize(blob.size)+".";
-          try{await inspectMp4Blob(blob,info.duration);}catch(error){error.code="MEDIA_VALIDATION_FAILED";throw error;}
+          try{await inspectMp4Blob(blob,info.duration,actualQuality);}catch(error){error.code="MEDIA_VALIDATION_FAILED";throw error;}
         }
         await saveBrowserBlob(blob,filename,progressText.parentElement,"⬇ Simpan "+(mode==="video"?"MP4":"audio")+" sekarang");
         bar.style.width="100%";bar.parentElement?.classList.remove("is-indeterminate");bar.parentElement?.setAttribute("aria-valuenow","100");
