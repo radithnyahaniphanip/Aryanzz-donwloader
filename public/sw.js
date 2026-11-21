@@ -210,7 +210,31 @@ self.addEventListener("fetch",e=>{
  if(u.pathname.startsWith("/api/"))return;
  const critical=e.request.mode==="navigate"||["/","/index.html","/sw.js","/release.json","/release-manifest.json","/manifest.webmanifest"].includes(u.pathname);
  if(critical){
-  e.respondWith(fetch(new Request(e.request,{cache:"no-store"})).catch(()=>caches.match(e.request).then(r=>r||(/navigate/.test(e.request.mode)?caches.match("/?v=__ARYANZZ_VERSION__"):Response.error()))));
+  if(e.request.mode==="navigate"){
+   // On mobile networks a workers.dev navigation can remain pending indefinitely
+   // even though a complete offline shell is already installed. After a short
+   // timeout, serve only the previously installed release (not arbitrary HTML).
+   // Private /api routes are excluded above and never cached by this handler.
+   e.respondWith((async()=>{
+    const installed=await caches.open(CACHE).then(c=>c.match("/?v=__ARYANZZ_VERSION__")).catch(()=>null);
+    const controller=new AbortController();
+    const fallbackAfterMs=installed?6500:12000;
+    const timeout=setTimeout(()=>controller.abort(),fallbackAfterMs);
+    try{
+     const live=await fetch(new Request(e.request,{cache:"no-store",signal:controller.signal}));
+     return live;
+    }catch(error){
+     if(installed){
+      const response=new Response(installed.body,{status:200,headers:installed.headers});
+      response.headers.set("x-aryanzz-offline-fallback","1");
+      return response;
+     }
+     return new Response('<!doctype html><html lang="id"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#080d18"><title>Koneksi ARYANZZ terhambat</title><style>body{background:#080d18;color:#eef5ff;font:16px/1.6 system-ui,sans-serif;margin:0;min-height:100vh;display:grid;place-items:center;padding:20px}.card{max-width:420px;padding:25px;border-radius:18px;border:1px solid #324866;background:#111d31}h1{font-size:22px}p{color:#b5c7df}button{background:#488fff;color:#fff;border:0;border-radius:10px;padding:12px 18px;font:inherit;font-weight:700}</style><main class="card"><h1>ARYANZZ belum terhubung</h1><p>Halaman tidak mendapat respons dari jaringan. Coba buka lagi atau beralih sementara ke jaringan lain. Data Pustaka di browser tidak dihapus.</p><button onclick="location.reload()">Coba lagi</button></main></html>',{status:504,headers:{"content-type":"text/html; charset=utf-8","cache-control":"no-store"}});
+    }finally{clearTimeout(timeout)}
+   })());
+   return;
+  }
+  e.respondWith(fetch(new Request(e.request,{cache:"no-store"})).catch(()=>caches.match(e.request).then(r=>r||Response.error())));
   return;
  }
  // Cache-first ONLY for exact, release-versioned static assets. They
