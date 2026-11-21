@@ -125,7 +125,7 @@ assert.ok(v15Asset.includes("controller=window.aryanzzShowPanel"),"Navigation le
 assert.ok(!v15Asset.includes("window.aryanzzShowPanel=goto"),"Navigation legacy masih menimpa controller utama.");
 assert.ok(!v15Asset.includes("Tema & pengalaman")&&!v15Asset.includes("setupProfile()"),"Kontrol tema lama masih disuntikkan ke Profil.");
 assert.ok(v15Asset.includes('parent.querySelector("#toolSearch")||parent.querySelector("#toolFilters")'),"Pusat Alat belum mencegah search/filter ganda.");
-assert.ok(v15Asset.includes("aryLibraryHistoryTab")&&v15Asset.includes("clearHistoryV2"),"Kontrol Pustaka belum terhubung.");
+assert.ok(workspaceLibraryAsset.includes("aryLibraryHistoryTab")&&workspaceLibraryAsset.includes("clearHistoryV2")&&workspaceLibraryAsset.includes("aryLibraryExport")&&workspaceLibraryAsset.includes("aryLibraryImport"),"Kontrol dan cadangan Pustaka belum terhubung pada modul workspace-library.");
 const homeRoot=html.indexOf('<section id="home"');
 const toolsRoot=html.indexOf('<section id="toolsArea"');
 const brandHeader=html.indexOf('id="homeBrandHeader"');
