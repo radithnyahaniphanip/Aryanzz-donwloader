@@ -46,3 +46,35 @@ Setelah `apiKeyReady` dan `identityReady` bernilai true, buka kembali halaman Me
 ## Pengujian pembayaran
 
 Gunakan API Key sandbox terlebih dahulu bila tersedia. Jangan melakukan pembayaran produksi untuk menguji alur. Pastikan webhook `/api/membership/webhook` dan pemeriksaan status server merespons sebelum mengaktifkan pembayaran untuk pengguna.
+
+
+## Uji tombol "Kirim tes" AirPay (HTTP 401)
+
+Di dashboard AirPay, tombol **Kirim tes** mengirim event `webhook.test` yang
+ditandatangani dengan **API key sandbox**, meskipun Worker produksi memakai
+`AIRPAY_API_KEY` **live**. Perbedaan kunci membuat signature HMAC tidak cocok
+dan endpoint lama mengembalikan HTTP 401. Kesalahan ini **tidak otomatis berarti
+akun AirPay diblokir** atau pembayaran live gagal.
+
+1. Buat/rotasi API key sandbox khusus pengujian melalui dashboard AirPay.
+   Jangan gunakan ulang key sandbox yang pernah dikirim dalam chat atau screenshot.
+2. Di Cloudflare → Workers & Pages → `aryanzz-donwloader` →
+   **Settings → Variables and Secrets**, tambahkan Secret
+   `AIRPAY_WEBHOOK_TEST_KEY` dengan nilai key sandbox yang digunakan AirPay
+   untuk webhook tes (harus berawalan `ak_test_`).
+3. **Pertahankan** `AIRPAY_API_KEY` sebagai key LIVE untuk transaksi sungguhan.
+   Jangan menggantinya dengan sandbox di Worker produksi.
+4. Pastikan URL webhook di AirPay adalah
+   `https://aryanzz-donwloader.aryanz.workers.dev/api/membership/webhook`.
+5. Deploy perubahan Worker, lalu klik **Kirim tes**. Hasil yang diharapkan:
+   HTTP 200 dengan `event: webhook.test`. Event ini hanya diakui; tidak
+   mencari pesanan, mengubah saldo, atau mengaktifkan Membership.
+
+Jika masih HTTP 401, periksa apakah sandbox key yang dipakai **sama persis**
+dengan kunci penanda tangan tes AirPay dan apakah deployment memakai versi
+Worker baru. Jangan pernah menonaktifkan validasi signature untuk memaksakan
+HTTP 200.
+
+**Batas pengujian:** Keberhasilan `webhook.test` tidak membuktikan bahwa
+invoice LIVE dapat dibuat. Validasi invoice secara terpisah melalui gateway,
+kemudian cocokkan status transaksi `Success` melalui server.
