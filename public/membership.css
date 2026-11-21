@@ -222,3 +222,56 @@ body .nav button span:last-child{font-size:9px}
 #membership .ary-checkout-support[hidden]{display:none!important}
 #membership .ary-checkout-error{gap:8px;max-width:100%}
 #membership .ary-checkout-error p{max-width:55ch;line-height:1.55}
+
+
+/* ARYANZZ V2 · membership clarity and clean QRIS checkout */
+#membership .ary-membership-plan-duration {
+  color:#8ee9dc;font-size:10px;font-weight:850;
+  margin:9px 0 2px;letter-spacing:.03em;
+}
+#membership .ary-membership-methods-note {
+  margin:9px 0 5px!important;
+  color:#a6cce2!important;
+  font-size:11px!important;
+  line-height:1.5!important;
+}
+#membership #membershipPayLink,
+#membership .ary-pay-on-device-note,
+#membership #membershipOrderReference,
+#membership .ary-membership-supported {
+  display:none!important;
+}
+#membership .ary-membership-payment-details {
+  display:flex;flex-direction:column;align-items:flex-start;
+  gap:4px;min-width:0;
+}
+#membership #membershipPaymentAmount {margin:2px 0 4px}
+#membership #membershipPaymentExpiry {margin:4px 0 0!important}
+#membership #membershipSelectedMethod {margin:7px 0 0!important;font-size:11px!important}
+#membership .ary-membership-orders-heading {
+  display:flex;align-items:center;justify-content:space-between;
+  flex-wrap:wrap;gap:10px;margin:0 0 9px;
+}
+#membership .ary-membership-orders-heading h3 {margin:0}
+#membership .ary-membership-clear-failed {
+  min-height:36px;padding:7px 12px;border:1px solid rgba(241,151,147,.42);
+  border-radius:10px;background:rgba(81,35,46,.48);
+  color:#ffd0cb;font-size:10px;font-weight:850;cursor:pointer;
+}
+#membership .ary-membership-clear-failed[hidden]{display:none!important}
+#membership .ary-membership-clear-failed:focus-visible{outline:2px solid #f8afa6;outline-offset:2px}
+#membership .ary-membership-clear-failed:disabled{opacity:.5;cursor:wait}
+#membership .ary-membership-order-status.status-cancelled {
+  color:#f1abaf!important;letter-spacing:.07em;
+}
+#membership .ary-membership-order {
+  min-width:0;gap:9px;overflow-wrap:anywhere;
+}
+#membership .ary-membership-order-copy {min-width:0}
+#membership #membershipQrDownload {min-height:40px}
+@media(max-width:600px) {
+  #membership .ary-membership-payment-layout{gap:14px!important}
+  #membership .ary-membership-check-status,
+  #membership .ary-qris-download{max-width:100%;width:100%;text-align:center}
+  #membership .ary-membership-orders-heading{align-items:flex-start}
+}
