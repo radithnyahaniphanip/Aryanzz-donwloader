@@ -557,17 +557,17 @@ body .nav button.active .nav-icon{color:#9af4e8!important}
 <button class="tool" data-panel="mediaStudio" data-membership-min="pro" data-category="media"><div class="ico">▣</div><b>Media Studio Pro</b><small>Pustaka media lokal, pemutar video, antrean unduhan, dan penyimpanan.</small><span class="v674-tool-category">MEDIA · PRO</span></button>
 <button class="tool" data-panel="queue" data-membership-min="pro" data-category="media"><div class="ico">⇄</div><b>Smart Queue</b><small>Atur beberapa unduhan dalam antrean.</small><span class="v674-tool-category">MEDIA</span></button>
 <button class="tool" data-panel="editor" data-membership-min="ultra" data-category="video"><div class="ico">▶</div><b>Video Editor Studio</b><small>Trim, filter, teks, audio, subtitle, dan ekspor.</small><span class="v674-tool-category">CREATIVE</span></button>
-<button class="tool" data-panel="musicFinder" data-category="media"><div class="ico">♫</div><b>Music Finder</b><small>Kenali lagu dari audio, video, atau mikrofon.</small><span class="v674-tool-category">MEDIA</span></button>
-<button class="tool" data-panel="audioStudio" data-category="media"><div class="ico">♫</div><b>MP4 ke MP3 Converter</b><small>Ubah video MP4 menjadi audio MP3 langsung di perangkat.</small><span class="v674-tool-category">MEDIA</span></button>
+<button class="tool" data-panel="musicFinder" data-membership-min="pro" data-category="media"><div class="ico">♫</div><b>Music Finder</b><small>Kenali lagu dari audio, video, atau mikrofon.</small><span class="v674-tool-category">MEDIA</span></button>
+<button class="tool" data-panel="audioStudio" data-membership-min="ultra" data-category="media"><div class="ico">♫</div><b>MP4 ke MP3 Converter</b><small>Ubah video MP4 menjadi audio MP3 langsung di perangkat.</small><span class="v674-tool-category">MEDIA</span></button>
 <button class="tool" data-panel="history" data-category="media"><div class="ico">◷</div><b>Library</b><small>Riwayat unduhan dan daftar favorit.</small><span class="v674-tool-category">MEDIA</span></button>
 <button class="tool" data-panel="waQuoteTools" data-category="creative"><div class="ico">☏</div><b>WA Quote Generator</b><small>Buat mockup chat WhatsApp Android dan iPhone, ekspor PNG.</small><span class="v674-tool-category">CREATIVE</span></button>
 <button class="tool" data-panel="toolbox100" data-category="utility"><div class="ico">✣</div><b>100 Tools Lab</b><small>100 alat lokal untuk teks, data, angka, warna, validasi, file, dan konten.</small><span class="v674-tool-category">100 TOOLS · LOCAL</span></button>
 <button class="tool" data-panel="emoteStudio" data-membership-min="max" data-category="creative"><div class="ico">✧</div><b>Emote Studio</b><small>Edit stiker secara manual, ekspor PNG dan WebP, buat GIF, serta tambahkan stiker ke video MP4.</small><span class="v674-tool-category">CREATIVE · AI + LOCAL</span></button>
-<button class="tool" data-panel="imageTools" data-category="image"><div class="ico">▧</div><b>Image Studio</b><small>Unduh, edit, atur rasio, resolusi, dan ekspor gambar.</small><span class="v674-tool-category">CREATIVE</span></button>
+<button class="tool" data-panel="imageTools" data-membership-min="max" data-category="image"><div class="ico">▧</div><b>Image Studio</b><small>Unduh, edit, atur rasio, resolusi, dan ekspor gambar.</small><span class="v674-tool-category">CREATIVE</span></button>
 <button class="tool" data-panel="pdfTools" data-category="file"><div class="ico">▤</div><b>PDF & Text Tools</b><small>Alat dokumen dan pengolah teks.</small><span class="v674-tool-category">CREATIVE</span></button>
 <button class="tool" data-panel="qrTools" data-category="utility"><div class="ico">▦</div><b>QR Generator</b><small>Buat dan unduh kode QR.</small><span class="v674-tool-category">UTILITY</span></button>
 <button class="tool" data-panel="securityTools" data-category="utility"><div class="ico">⌘</div><b>Password Generator</b><small>Buat password acak secara lokal.</small><span class="v674-tool-category">UTILITY</span></button>
-<button class="tool" data-panel="gradientStudio" data-category="creative"><div class="ico">◈</div><b>Gradient Studio</b><small>Buat gradasi warna, salin CSS, dan ekspor PNG.</small><span class="v674-tool-category">CREATIVE</span></button>
+<button class="tool" data-panel="gradientStudio" data-membership-min="starter" data-category="creative"><div class="ico">◈</div><b>Gradient Studio</b><small>Buat gradasi warna, salin CSS, dan ekspor PNG.</small><span class="v674-tool-category">CREATIVE</span></button>
 <button class="tool" data-panel="fileHash" data-category="file"><div class="ico">⌗</div><b>File Hash Checker</b><small>Periksa fingerprint SHA-256/384/512 secara lokal.</small><span class="v674-tool-category">UTILITY</span></button>
 <button class="tool" data-panel="colorStudio" data-category="creative"><div class="ico">◈</div><b>Tema &amp; pengalaman</b><small>Color Studio · warna, animasi, dan tampilan ARYANZZ.</small><span class="v674-tool-category">CREATIVE</span></button>
 <button class="tool" data-panel="profile" data-category="personal"><div class="ico">◉</div><b>My Profile</b><small>Profil, ID akun, dan data pribadi.</small><span class="v674-tool-category">PERSONAL</span></button>
@@ -779,6 +779,11 @@ body .nav button.active .nav-icon{color:#9af4e8!important}
     </div>
   </div>
   <div class="speed-active"><span class="speed-active-pulse"></span><div><small>JARINGAN PERANGKAT</small><b id="speedNetworkName">Mendeteksi koneksi…</b><span id="speedNetworkDetail">Tes memakai Wi-Fi atau data seluler yang sedang aktif.</span></div><span class="speed-online" id="speedOnline">ONLINE</span></div>
+  <div class="speed-connection-insight" id="speedConnectionInsight" role="status" aria-live="polite">
+    <strong id="speedSignalLevel">Memeriksa informasi koneksi…</strong>
+    <span id="speedSignalConfidence">Belum ada estimasi jaringan dari browser.</span>
+    <p id="speedSignalUse">Penggunaan aplikasi akan diperkirakan dari informasi jaringan; hasil sebenarnya perlu Speed Test.</p>
+  </div>
   <div class="speed-main">
     <div class="speed-main-label">DOWNLOAD SPEED</div>
     <div class="speed-main-value"><strong id="downVal">—</strong><span>Mbps</span></div>
@@ -885,7 +890,7 @@ body .nav button.active .nav-icon{color:#9af4e8!important}
 <p>Pengaturan profil, riwayat, dan favorit tertentu disimpan pada browser perangkat. Jangan mengirimkan kata sandi, token API, data keuangan, atau dokumen identitas melalui laporan bug. Jika menggunakan perangkat bersama, hapus data lokal setelah selesai dan simpan cadangan dengan aman.</p>
 </section>
   <footer class="ary-editorial-footer">Terima kasih telah menggunakan ARYANZZ.</footer>
-</div><div class="panel card music-panel" id="musicFinder">
+</div><div class="panel card music-panel" id="musicFinder" data-membership-min="pro">
   <div class="music-head">
     <div><span class="section-kicker">ARYANZZ MUSIC LAB</span><h2>Music Finder </h2>
       <p class="muted">Kenali lagu dari video, audio, tautan, atau mikrofon. Coba juga versi DJ/remix, slowed, atau sped up; hasil bergantung pada kecocokan katalog.</p></div>
@@ -938,7 +943,7 @@ body .nav button.active .nav-icon{color:#9af4e8!important}
   <p class="music-disclaimer">Mode satu lagu mencoba AudD terlebih dahulu, lalu otomatis memakai Shazam fallback jika kuota atau autentikasi AudD gagal. Mode DJ memindai beberapa segmen melalui AudD Enterprise, lalu memakai Shazam fallback jika perlu. Pemindaian fallback dibatasi maksimal 30 segmen per proses. File sementara dihapus setelah diproses; Shazam adalah layanan pihak ketiga dengan batas penggunaan tersendiri.</p>
 </div>
 
-<div class="panel card audio-studio-panel" id="audioStudio">
+<div class="panel card audio-studio-panel" id="audioStudio" data-membership-min="ultra">
   <div class="audio-studio-head"><div><span class="section-kicker">ARYANZZ MEDIA TOOLS · LOCAL PROCESSING</span><h2>Converter Pro · MP4 ke MP3</h2><p>Ekstrak audio dari video MP4 menjadi file MP3. Semua proses dilakukan langsung di perangkat, tanpa mengunggah video ke server.</p></div><span class="audio-studio-mark">♫</span></div>
   <label class="audio-file-drop" for="audioStudioFile"><span class="audio-file-icon">＋</span><b>Pilih video MP4</b><small>MP4 · Maksimal 100 MB · Proses lokal di browser</small></label>
   <input id="audioStudioFile" type="file" accept="video/mp4,.mp4,.m4v" hidden>
@@ -1087,7 +1092,7 @@ body .nav button.active .nav-icon{color:#9af4e8!important}
       <div class="ary-membership-qr-wrap">
         <div class="ary-qris-loading" id="membershipQrLoading" role="status"><span>▦</span><b>Menyiapkan QRIS…</b><small>QR pembayaran akan muncul setelah tagihan diterbitkan AirPay.</small></div>
         <img class="ary-membership-qr" id="membershipQr" alt="QRIS pembayaran ARYANZZ" hidden>
-        <p class="ary-qris-image-error" id="membershipQrError" hidden>Gambar QRIS gagal dimuat. Gunakan halaman pembayaran AirPay di bawah ini.</p>
+        <p class="ary-qris-image-error" id="membershipQrError" hidden>Gambar QRIS tidak dapat ditampilkan. Periksa status transaksi atau coba simpan gambar QRIS.</p>
       </div>
       <div class="ary-membership-payment-details">
         <span class="ary-membership-plan-label">TOTAL PEMBAYARAN</span>
@@ -1096,12 +1101,11 @@ body .nav button.active .nav-icon{color:#9af4e8!important}
         <p id="membershipPaymentExpiry">Menunggu pembayaran.</p>
         <div class="ary-membership-countdown" id="membershipPaymentCountdown" role="timer" aria-live="off">10:00</div>
         <small class="ary-membership-countdown-caption">Sisa waktu checkout · 10 menit</small>
-        <div class="ary-membership-supported"><span>SCAN QRIS MELALUI</span><div class="ary-membership-methods"><span>DANA</span><span>GoPay</span><span>LinkAja</span><span>OVO</span><span>ShopeePay</span><span>Mobile Banking</span></div></div>
+        <p class="ary-membership-methods-note">Bayar melalui aplikasi apa pun yang mendukung QRIS.</p>
         <p class="ary-pay-selected-method" id="membershipSelectedMethod">Metode: QRIS</p>
         <p class="ary-qris-order-id" id="membershipOrderReference" aria-live="polite"></p>
         <a id="membershipQrDownload" class="ary-qris-download" href="#" target="_blank" rel="noopener noreferrer" hidden>↗ Buka / Simpan gambar QRIS</a>
-        <a class="ary-membership-check-status ary-pay-open-link" id="membershipPayLink" target="_blank" rel="noopener noreferrer" hidden>Buka halaman pembayaran resmi AirPay</a>
-        <p class="ary-pay-on-device-note">Di HP yang sama, buka halaman pembayaran AirPay atau simpan QR untuk dipindai lewat fitur galeri/QRIS aplikasi pembayaran yang mendukungnya.</p>
+        <a class="ary-membership-check-status ary-pay-open-link" id="membershipPayLink" target="_blank" rel="noopener noreferrer" hidden aria-hidden="true" tabindex="-1"></a>
         <button class="ary-membership-check-status" id="membershipCheckStatus" type="button">Periksa status pembayaran</button>
         <button class="ary-membership-payment-back" id="membershipPaymentBack" type="button" hidden>← Kembali ke paket Membership</button>
       </div>
@@ -1114,7 +1118,7 @@ body .nav button.active .nav-icon{color:#9af4e8!important}
   </section>
   <p class="ary-membership-status" id="membershipStatus" role="status" aria-live="polite">Memuat katalog membership…</p>
   <div class="ary-membership-orders">
-    <h3>Riwayat membership</h3>
+    <div class="ary-membership-orders-heading"><h3>Riwayat membership</h3><button id="membershipClearFailed" type="button" class="ary-membership-clear-failed" hidden>Hapus riwayat gagal</button></div>
     <div id="membershipOrdersList"><p>Belum ada transaksi membership.</p></div>
   </div>
   <button class="ary-membership-back" type="button" data-panel="allTools">← Kembali ke Pusat Alat</button>
@@ -1164,7 +1168,7 @@ body .nav button.active .nav-icon{color:#9af4e8!important}
       <div class="v25-backup-actions"><button class="tag" id="exportData" type="button">↓ Ekspor data lengkap</button><label class="tag v25-import-label">↑ Pulihkan data lengkap<input id="importData" type="file" accept="application/json" hidden></label><button class="tag" id="restoreAutoBackup" type="button">↺ Pulihkan otomatis</button></div>
     </section>
   </details>
-</div><div class="panel card image-studio-panel" id="imageTools">
+</div><div class="panel card image-studio-panel" id="imageTools" data-membership-min="max">
   <div class="image-studio-heading"><div><span class="section-kicker">ARYANZZ CREATIVE LAB</span><h3>▧ Image Studio</h3></div><span class="image-studio-mark">✦</span></div>
   <div class="image-studio-tabs" role="tablist" aria-label="Mode Image Studio"><button type="button" class="active" id="imageEditTab" aria-selected="true">✦ Editor gambar</button><button type="button" id="imageDownloadTab" aria-selected="false">↓ Image Downloader</button></div>
   <section class="image-studio-view active" id="imageEditView">
@@ -1200,7 +1204,7 @@ body .nav button.active .nav-icon{color:#9af4e8!important}
 <div class="panel card" id="pdfTools"><h3>▤ PDF & Text Tools</h3><h4>Image to PDF</h4><p class="muted">Buka gambar di jendela cetak lalu pilih Save as PDF.</p><input id="imagePdfFile" class="field tool-input" type="file" accept="image/*"><button class="tag" id="imagePdfBtn">Jadikan PDF</button><p class="muted">Buat PDF dari teks melalui fitur Print browser (pilih Save as PDF). Tidak perlu mengunggah dokumen.</p><textarea id="pdfText" class="field tool-input" rows="5" placeholder="Tulis atau tempel isi dokumen…"></textarea><button class="primary" id="pdfPrint">Cetak / Simpan sebagai PDF</button><h4>Text Converter</h4><textarea id="textInput" class="field tool-input" rows="3" placeholder="Masukkan teks…"></textarea><select id="textMode" class="field"><option value="upper">UPPERCASE</option><option value="lower">lowercase</option><option value="title">Title Case</option><option value="trim">Rapikan spasi dan baris</option><option value="space">Gabungkan spasi</option></select><button class="primary" id="textConvert" style="margin-top:9px">Proses teks</button><textarea id="textOutput" class="field tool-input tool-output" rows="3" readonly placeholder="Hasil akan muncul di sini"></textarea><button class="tag" id="textCopy">Salin hasil</button><span id="textMsg" class="muted"></span></div>
 <div class="panel card" id="qrTools"><h3>▦ QR Code Generator</h3><p class="muted">QR dibuat di browser. Teks atau tautan tidak dikirim ke server QR pihak ketiga.</p><textarea id="qrText" class="field tool-input" rows="3" placeholder="Masukkan teks atau URL…"></textarea><button class="primary" id="qrGenerate">Buat QR Code</button><div id="qrCanvas" class="result" style="display:grid;place-items:center;min-height:180px"></div><button class="tag" id="qrDownload" disabled>Unduh PNG</button></div>
 <div class="panel card" id="securityTools"><h3>⌘ Password Generator</h3><p class="muted">Password dibuat menggunakan crypto.getRandomValues di perangkat.</p><label class="label">Panjang password (8–64)</label><input id="passwordLength" class="field" type="number" min="8" max="64" value="20"><button class="primary" id="passwordBtn" style="margin-top:10px">Buat password</button><input id="passwordOutput" class="field tool-input" readonly placeholder="Password akan muncul di sini"><button class="tag" id="passwordCopy">Salin password</button><span id="passwordMsg" class="muted"></span></div>
-<div class="panel card v680-tool-panel" id="gradientStudio">
+<div class="panel card v680-tool-panel" id="gradientStudio" data-membership-min="starter">
   <h3>Gradient Studio</h3><p class="muted">Rancang gradasi warna, lihat pratinjau langsung, salin CSS, atau ekspor PNG.</p>
   <div class="v680-tool-layout">
     <div class="v680-tool-card">
