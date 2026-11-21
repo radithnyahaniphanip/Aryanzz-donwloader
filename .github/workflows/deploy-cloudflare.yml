@@ -162,7 +162,7 @@ jobs:
         run: |
           npm run build:version
           set -o pipefail
-          wrangler deploy --keep-vars 2>&1 | tee /tmp/aryanzz-wrangler-deploy.log
+          wrangler deploy --keep-vars 2>&1 | awk '/AIRPAY_API_KEY|AUTH_SESSION_SECRET|TURNSTILE_SECRET_KEY|RESEND_API_KEY|AUDD_API_TOKEN|ak_live_|ak_test_/ { print "[ARYANZZ] Secret configuration redacted"; next } { print }' | tee /tmp/aryanzz-wrangler-deploy.log
           VERSION_ID=$(grep -oE 'Current Version ID: [0-9a-f-]+' /tmp/aryanzz-wrangler-deploy.log | tail -n 1 | awk '{print $4}')
           test -n "$VERSION_ID" || { echo "::error::Wrangler did not report the newly uploaded Worker version ID."; exit 1; }
           echo "wrangler deploy has already activated Worker version $VERSION_ID on production traffic."
@@ -191,9 +191,9 @@ jobs:
           grep -q 'ARYANZZ_PUBLIC_ORIGIN = "https://aryanzz-backup.aryanz.workers.dev"' wrangler-backup.toml
           node --input-type=module -e 'import fs from "node:fs"; const names=["AUDD_API_TOKEN","AUTH_SESSION_SECRET","RESEND_API_KEY","AUTH_EMAIL_FROM","TURNSTILE_SECRET_KEY","AUTH_TURNSTILE_SITE_KEY","AIRPAY_API_KEY"]; const secrets=Object.fromEntries(names.map(name=>[name,process.env[name]||""]).filter(([,value])=>value)); if(Object.keys(secrets).length)fs.writeFileSync("/tmp/aryanzz-backup-secrets.json",JSON.stringify(secrets));'
           if [ -s /tmp/aryanzz-backup-secrets.json ]; then
-            wrangler --config wrangler-backup.toml deploy --keep-vars --secrets-file /tmp/aryanzz-backup-secrets.json 2>&1 | tee /tmp/aryanzz-backup-deploy.log
+            wrangler --config wrangler-backup.toml deploy --keep-vars --secrets-file /tmp/aryanzz-backup-secrets.json 2>&1 | awk '/AIRPAY_API_KEY|AUTH_SESSION_SECRET|TURNSTILE_SECRET_KEY|RESEND_API_KEY|AUDD_API_TOKEN|ak_live_|ak_test_/ { print "[ARYANZZ] Secret configuration redacted"; next } { print }' | tee /tmp/aryanzz-backup-deploy.log
           else
-            wrangler --config wrangler-backup.toml deploy --keep-vars 2>&1 | tee /tmp/aryanzz-backup-deploy.log
+            wrangler --config wrangler-backup.toml deploy --keep-vars 2>&1 | awk '/AIRPAY_API_KEY|AUTH_SESSION_SECRET|TURNSTILE_SECRET_KEY|RESEND_API_KEY|AUDD_API_TOKEN|ak_live_|ak_test_/ { print "[ARYANZZ] Secret configuration redacted"; next } { print }' | tee /tmp/aryanzz-backup-deploy.log
           fi
           VERSION_ID=$(grep -oE 'Current Version ID: [0-9a-f-]+' /tmp/aryanzz-backup-deploy.log | tail -n 1 | awk '{print $4}')
           test -n "$VERSION_ID" || { echo "::error::Wrangler did not report the backup Worker version ID."; exit 1; }
