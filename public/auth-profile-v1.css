@@ -701,3 +701,39 @@ body .nav button>span:last-child{font-size:clamp(9px,1.8vw,11px)!important}
   body #history .ary-library-mark{flex-basis:36px!important;width:36px!important;height:36px!important}
   body .nav{width:calc(100% - 10px)!important;padding:5px!important;gap:2px!important}
 }
+
+
+/* Real Android QA correction: older !important profile panel padding still
+   leaves child rectangles almost against the border. Inset direct children
+   so the title, cover, stats, form and device card line up consistently. */
+@media (max-width:767px){
+  body #profile.ary-profile-v2 > header.ary-profile2-header{
+    display:block!important;
+    padding:17px 16px 4px!important;
+    margin:0 0 17px!important;
+    box-sizing:border-box!important;
+  }
+  body #profile.ary-profile-v2 > header.ary-profile2-header h1{
+    display:block!important;
+    margin:0!important;
+    line-height:1.25!important;
+  }
+  body #profile.ary-profile-v2 > section.ary-profile2-hero,
+  body #profile.ary-profile-v2 > section.ary-profile2-stats,
+  body #profile.ary-profile-v2 > div.ary-profile2-grid,
+  body #profile.ary-profile-v2 > section.ary-profile2-device{
+    width:calc(100% - 24px)!important;
+    max-width:calc(100% - 24px)!important;
+    min-width:0!important;
+    margin-left:12px!important;
+    margin-right:12px!important;
+    box-sizing:border-box!important;
+  }
+  body #profile.ary-profile-v2 > section.ary-profile2-hero{margin-bottom:15px!important}
+  body #profile.ary-profile-v2 > section.ary-profile2-stats{margin-top:15px!important;margin-bottom:15px!important}
+  body #profile.ary-profile-v2 > section.ary-profile2-device{margin-top:15px!important}
+  body #profile.ary-profile-v2 > section.ary-profile2-device .ary-profile-signin-row{
+    min-width:0!important;
+    max-width:100%!important;
+  }
+}
