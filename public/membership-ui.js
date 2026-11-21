@@ -52,14 +52,24 @@
     if (!panel) return;
     const error = String(message || "");
     const invalidKey = code === "AIRPAY_INVALID_API_KEY" || /invalid api key|kunci API AirPay ditolak/i.test(error);
-    byId("membershipCheckoutErrorTitle").textContent = invalidKey
-      ? "QRIS gagal dibuat: API Key AirPay tidak valid"
-      : "Invoice belum berhasil dibuat";
-    byId("membershipCheckoutErrorText").textContent = invalidKey
-      ? "AirPay menolak kunci pembayaran server. Pengelola website perlu mengganti AIRPAY_API_KEY pada Secret Cloudflare dengan key baru yang aktif di akun AirPay. QR dan timer baru dapat ditampilkan setelah tagihan valid berhasil dibuat."
-      : (error || "Ada kendala saat menghubungkan layanan pembayaran.");
+    const merchantBlocked = code === "AIRPAY_MERCHANT_BLOCKED";
+    const sandboxBlocked = code === "AIRPAY_SANDBOX_PRODUCTION_BLOCKED";
+    byId("membershipCheckoutErrorTitle").textContent = merchantBlocked
+      ? "Akun merchant AirPay diblokir (403)"
+      : sandboxBlocked
+        ? "Key sandbox tidak boleh dipakai untuk Membership live"
+        : invalidKey
+          ? "API Key AirPay tidak valid (401)"
+          : "Invoice belum berhasil dibuat";
+    byId("membershipCheckoutErrorText").textContent = merchantBlocked
+      ? "AirPay menolak izin akun merchant membuat QRIS. Buka dashboard AirPay, periksa status merchant, lalu hubungi dukungan AirPay untuk meminta pemulihan akun. Mengganti API Key atau menekan tombol berulang kali tidak menghapus blokir."
+      : sandboxBlocked
+        ? "Kunci ak_test_ hanya untuk pengujian tanpa uang sungguhan pada Worker staging. Jangan menggunakannya untuk membership produksi."
+        : invalidKey
+          ? "AirPay menolak kunci server. Pengelola website perlu memasang API Key live valid melalui Secret Cloudflare. Jangan kirim kunci lewat chat."
+          : (error || "Ada kendala saat menghubungkan layanan pembayaran.");
     panel.hidden = !error;
-    byId("membershipCheckoutRetry").hidden = invalidKey;
+    byId("membershipCheckoutRetry").hidden = invalidKey || merchantBlocked || sandboxBlocked;
   }
 
   function formatDate(value) {
@@ -416,7 +426,9 @@
     } catch (error) {
       const code = error?.code || "AIRPAY_CREATE_FAILED";
       setCheckoutError(error?.message || "Tidak dapat membuat invoice.", code);
-      setMessage(error.message || "Tidak dapat membuat invoice.", "error");
+      // The descriptive error lives in the checkout card. Avoid repeating the
+      // same text underneath the card, as observed in the user's screenshots.
+      setMessage("", "error");
     } finally {
       state.checkoutBusy = false;
       button.disabled = false;
