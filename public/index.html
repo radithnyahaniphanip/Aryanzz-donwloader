@@ -275,7 +275,6 @@ body{background-color:var(--ary-app-bg)}
 <link rel="stylesheet" href="/workspace-guides.css?v=__ARYANZZ_VERSION__">
 <link rel="stylesheet" href="/stage1-tools.css?v=__ARYANZZ_VERSION__">
 <link rel="stylesheet" href="/emote-studio.css?v=__ARYANZZ_VERSION__">
-<link rel="stylesheet" href="/auth-profile-v1.css?v=__ARYANZZ_VERSION__">
 <link rel="stylesheet" href="/auth-reset-v1.css?v=2">
 <link rel="stylesheet" href="/text-protection.css?v=__ARYANZZ_VERSION__">
 <link rel="stylesheet" href="/workspace-tools.css?v=__ARYANZZ_VERSION__">
@@ -472,6 +471,7 @@ body .nav button.active .nav-icon{color:#9af4e8!important}
  body #home>.v89-welcome .v89-welcome-mark,body #home>.v674-top .v674-logo:before{animation:none!important}
 }
 </style>
+<link rel="stylesheet" href="/auth-profile-v1.css?v=__ARYANZZ_VERSION__">
 </head><body class="ary-motion-enabled arya-v2-enhanced" data-motion="on" data-view="home" data-arya-v2="on">
 <div class="app-shell wrap">
 <section id="home" class="v674-home">
@@ -1119,7 +1119,7 @@ body .nav button.active .nav-icon{color:#9af4e8!important}
   <div class="ary-members-empty">Belum ada data anggota online. Tidak ada data pengunjung yang ditampilkan sebelum penyimpanan dan pemberitahuan privasi diaktifkan.</div>
 </div>
 <div class="panel card ary-library-panel" id="history">
-  <div class="ary-library-hero"><div><span class="section-kicker">KOLEKSI PRIBADI</span><h2>Pustaka Saya</h2><p>Riwayat media dan favorit tersimpan rapi di perangkatmu.</p></div><div class="ary-library-mark">▤</div></div>
+  <div class="ary-library-hero"><div><span class="section-kicker">KOLEKSI PRIBADI</span><h2>Pustaka</h2><p>Riwayat dan favoritmu.</p></div><div class="ary-library-mark">▤</div></div>
   <div class="ary-library-stats"><div><span>RIWAYAT</span><b id="aryLibraryHistoryCount">0</b></div><div><span>FAVORIT</span><b id="aryLibraryFavoriteCount">0</b></div><div><span>PENYIMPANAN</span><b>LOKAL</b></div></div>
   <div class="ary-library-switch" role="tablist" aria-label="Kategori pustaka">
     <button type="button" class="active" id="aryLibraryHistoryTab" role="tab" aria-selected="true" aria-controls="aryLibraryHistoryView">◷ Riwayat <span id="aryLibraryHistoryBadge">0</span></button>
@@ -1132,7 +1132,7 @@ body .nav button.active .nav-icon{color:#9af4e8!important}
       <label for="aryLibrarySort">Urutkan <select id="aryLibrarySort"><option value="newest">Terbaru</option><option value="oldest">Terlama</option><option value="name">Nama A–Z</option></select></label>
       <button id="aryLibraryClearSearch" type="button" class="ary-library-clear-filter">Reset filter</button>
     </div>
-    <span class="ary-library-storage"><i></i> Tersimpan di perangkat ini</span>
+    <span class="ary-library-storage"><i></i> Tersimpan lokal</span>
   </div>
   <section class="ary-library-view active" id="aryLibraryHistoryView" role="tabpanel" aria-labelledby="aryLibraryHistoryTab">
     <div class="ary-library-section-head"><div><h3>Aktivitas terbaru</h3><p>Riwayat pada perangkat ini.</p></div><button class="tag" id="clearHistoryV2" type="button">Hapus semua</button></div>
@@ -1253,26 +1253,10 @@ body .nav button.active .nav-icon{color:#9af4e8!important}
 <div class="panel card v25-profile-panel ary-profile-v2" id="profile">
   <header class="ary-profile2-header">
     <div>
-      <span class="ary-profile-kicker">AKUN & IDENTITAS</span>
       <h1>Profil Saya</h1>
-      <p>Foto, akun, koleksi, dan privasi dalam satu tempat.</p>
-    </div>
-    <div class="ary-profile-account-actions">
-      <button id="aryAccountOpen" type="button" class="ary-profile2-primary">Masuk / Daftar</button>
-      <button id="accountLogout" type="button" class="ary-profile2-secondary" hidden>Keluar akun</button>
-      <span id="aryAccountStatus" role="status">Pengunjung · ID perangkat aktif</span>
     </div>
   </header>
 
-  <nav class="ary-profile-shortcuts" aria-label="Akses cepat profil">
-    <button type="button" data-panel="history">♡ Pustaka saya</button>
-    <button type="button" data-panel="membership">♛ Membership</button>
-    <button type="button" id="aryProfileDeviceJump">▣ Perangkat</button>
-  </nav>
-  <div class="ary-profile-data-status" role="note">
-    <span id="aryProfileStorageNotice">Riwayat dan foto profil saat ini disimpan di browser perangkat ini.</span>
-    <button type="button" data-panel="history">Lihat Pustaka & Cadangan →</button>
-  </div>
   <section class="ary-profile2-hero v25-profile-card" aria-label="Kartu profil">
     <div class="ary-profile2-cover" id="profileBannerPreview"><span class="ary-profile2-cover-orbit"></span></div>
     <div class="ary-profile2-cover-actions">
@@ -1287,7 +1271,7 @@ body .nav button.active .nav-icon{color:#9af4e8!important}
       </div>
       <div class="ary-profile2-identity-copy">
         <h2 id="profileSummary">Anggota ARYANZZ</h2>
-        <p id="profileBioPreview">Selamat datang di ruang personal ARYANZZ.</p>
+        <p id="profileBioPreview">Profil pribadi.</p>
       </div>
     </div>
   </section>
@@ -1378,8 +1362,12 @@ body .nav button.active .nav-icon{color:#9af4e8!important}
           <div><dt>Terakhir dipindai</dt><dd data-map-detail="time">—</dd></div>
         </dl>
       </div>
-      <p class="ary-v1-location-privacy">Lokasi hanya diminta setelah tombol Pindai ditekan dan disimpan di browser ini. Untuk menampilkan peta, koordinat dikirim ke OpenStreetMap. Hapus lokasi kapan saja.</p>
     </section>
+    <div class="ary-profile-account-actions ary-profile-signin-row">
+      <button id="aryAccountOpen" type="button" class="ary-profile2-primary">Masuk / Daftar</button>
+      <button id="accountLogout" type="button" class="ary-profile2-secondary" hidden>Keluar akun</button>
+      <span id="aryAccountStatus" role="status">Pengunjung</span>
+    </div>
     <div class="ary-profile2-device-footer">
       <button class="ary-profile2-text-button" id="deviceClearHistory" type="button">Hapus riwayat perangkat</button>
     </div>

@@ -175,11 +175,7 @@
     const joined=isOnlineAccount&&accountTime&&!Number.isNaN(accountTime.getTime())?accountTime:localTime;
     if($("profileSince"))$("profileSince").textContent=(Number.isNaN(joined.getTime())?new Date():joined).toLocaleDateString("id-ID",{day:"2-digit",month:"short",year:"numeric"});
     if($("profileSinceLabel"))$("profileSinceLabel").textContent=isOnlineAccount&&accountTime&&!Number.isNaN(accountTime.getTime())?"Akun sejak":"Menggunakan sejak";
-    if($("aryProfileStorageNotice"))$("aryProfileStorageNotice").textContent=isOnlineAccount
-      ?"Akun online aktif. Pustaka, riwayat dan favorit masih disimpan lokal pada browser ini; gunakan cadangan untuk pindah perangkat."
-      :user?.localOnly
-        ?"Akun lokal aktif. Profil dan Pustaka tersimpan pada browser ini, belum tersinkron ke server."
-        :"Mode pengunjung. Profil, riwayat dan favorit tersimpan pada browser perangkat ini, bukan akun online.";
+
   }
   function setupProfilePreview(){
     const name=$("profileName"),bio=$("profileBio"),saved=read(PROFILE_KEY,{});
@@ -191,7 +187,7 @@
     const update=()=>{
       const profile={name:String(name?.value||"").trim().slice(0,40),bio:String(bio?.value||"").trim().slice(0,160),updatedAt:Date.now()};
       if($("profileSummary"))$("profileSummary").textContent=profile.name||accountName;
-      if($("profileBioPreview"))$("profileBioPreview").textContent=profile.bio||"Selamat datang di ruang personal ARYANZZ.";
+      if($("profileBioPreview"))$("profileBioPreview").textContent=profile.bio||"Profil pribadi.";
       if($("profileCharCount")&&bio)$("profileCharCount").textContent=bio.value.length+"/160 karakter";
       if(!write(PROFILE_KEY,profile)){setAutoSaveStatus("Penyimpanan perangkat penuh.",true);return;}
       const design=readDesign();if(!design.avatar&&$("profileAvatar"))$("profileAvatar").textContent=(profile.name.charAt(0)||"A").toUpperCase();
@@ -442,7 +438,7 @@
       if(status)status.textContent="Peta lokasi terakhir ditampilkan dari penyimpanan browser.";
     });
     let locationBusy=false;
-    locate?.addEventListener("click",()=>{
+    const requestDeviceLocation=()=>{
       if(locationBusy)return;
       if(!navigator.geolocation){if(status)status.textContent="Browser tidak mendukung geolokasi.";return;}
       locationBusy=true;
@@ -477,7 +473,25 @@
           navigator.geolocation.getCurrentPosition(accept,fail,{enableHighAccuracy:true,timeout:22000,maximumAge:60000});
         }else fail(err);
       },{enableHighAccuracy:false,timeout:12000,maximumAge:120000});
-    });
+    };
+    locate?.addEventListener("click",requestDeviceLocation);
+    // Geolocation is automatic only after the browser has already granted consent.
+    // Do not invoke a new permission prompt without the user's own action.
+    if(navigator.geolocation && navigator.permissions?.query){
+      navigator.permissions.query({name:"geolocation"}).then(permission=>{
+        let lastAutoScan=0;
+        const scanIfAllowed=()=>{
+          if(permission.state!=="granted" || document.visibilityState!=="visible" || locationBusy)return;
+          if(Date.now()-lastAutoScan<30000)return;
+          lastAutoScan=Date.now();
+          requestDeviceLocation();
+        };
+        scanIfAllowed();
+        permission.addEventListener?.("change",scanIfAllowed);
+        window.addEventListener("focus",scanIfAllowed);
+        document.addEventListener("visibilitychange",scanIfAllowed);
+      }).catch(()=>{/* Manual scan remains available. */});
+    }
     remove?.addEventListener("click",()=>{
       try{localStorage.removeItem(LOCATION_KEY);}catch{}
       hideLocationMap();
@@ -594,10 +608,6 @@
     setupSurface();setupProfilePreview();setupBackupActions();profileCounts();setupReveal();setupPremiumEffects();initRandomProfileId();
     window.addEventListener("storage",()=>{profileCounts();applyDesign();});
     window.addEventListener("aryanzz:auth-change",profileCounts);
-    $("aryProfileDeviceJump")?.addEventListener("click",()=>{
-      const device=document.querySelector("#profile .ary-profile2-device");
-      device?.scrollIntoView({behavior:window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches?"auto":"smooth",block:"start"});
-    });
     window.addEventListener("aryanzz:profile-assets-updated",applyDesign);
     window.addEventListener("aryanzz:history-updated",profileCounts);
     queueAutoSnapshot();
