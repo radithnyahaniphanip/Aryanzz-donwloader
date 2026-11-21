@@ -220,7 +220,7 @@
       const missing = Array.isArray(config.missing) ? config.missing.slice() : [];
       if (!config.apiKeyReady && !missing.includes("AIRPAY_API_KEY")) missing.push("AIRPAY_API_KEY");
       if (!state.identityReady && !missing.includes("ID perangkat/sesi")) missing.push("ID perangkat/sesi");
-      if (createButton) createButton.disabled = true;
+      if (createButton) createButton.disabled = false;
       setMessage("Checkout terbuka, tetapi invoice belum dapat dibuat. Konfigurasi server yang belum siap: " + (missing.join(", ") || "layanan pembayaran AirPay") + ". Setelah admin mengaktifkannya di Cloudflare Worker, tombol Buat invoice QRIS akan aktif. API Key tidak perlu dikirim melalui chat.", "warning");
     } else {
       if (createButton) createButton.disabled = false;
