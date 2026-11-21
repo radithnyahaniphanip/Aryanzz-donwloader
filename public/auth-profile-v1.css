@@ -741,3 +741,41 @@ body .nav button>span:last-child{font-size:clamp(9px,1.8vw,11px)!important}
 /* Hide any stale V67.7 injected library heading if old SW cache mixes assets.
    The current Pustaka panel's own .ary-library-hero remains visible. */
 body #history.ary-library-panel > .v677-feature-hero{display:none!important}
+
+
+/* Real mobile Chromium regression: old panel shell has an overriding
+   zero-padding layer. Inset direct Pustaka sections independently so
+   the hero and filters can never touch the panel's one-pixel border. */
+@media(max-width:767px){
+  body #history.ary-library-panel > .ary-library-hero,
+  body #history.ary-library-panel > .ary-library-stats,
+  body #history.ary-library-panel > .ary-library-switch,
+  body #history.ary-library-panel > .ary-library-toolbar,
+  body #history.ary-library-panel > .ary-library-view,
+  body #history.ary-library-panel > .ary-library-backup,
+  body #history.ary-library-panel > .ary-library-note,
+  body #history.ary-library-panel > .ary-library-advanced-backup{
+    box-sizing:border-box!important;
+    width:calc(100% - 24px)!important;
+    max-width:calc(100% - 24px)!important;
+    min-width:0!important;
+    margin-left:12px!important;
+    margin-right:12px!important;
+  }
+  body #history.ary-library-panel > .ary-library-hero{
+    margin-top:18px!important;
+    margin-bottom:16px!important;
+  }
+  body #history.ary-library-panel > .ary-library-stats{margin-top:0!important;margin-bottom:16px!important}
+  body #history.ary-library-panel > .ary-library-switch{margin-top:0!important;margin-bottom:14px!important}
+  body #history.ary-library-panel > .ary-library-toolbar{margin-top:0!important;margin-bottom:12px!important}
+  body #history.ary-library-panel > .ary-library-backup,
+  body #history.ary-library-panel > .ary-library-note{
+    margin-top:17px!important;
+    margin-bottom:0!important;
+  }
+  body #history.ary-library-panel > .ary-library-advanced-backup{
+    margin-top:16px!important;
+    margin-bottom:18px!important;
+  }
+}
