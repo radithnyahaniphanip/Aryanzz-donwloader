@@ -147,37 +147,48 @@ async function installReleaseAssets(){
  let downloadedBytes=0;
  const cache=await caches.open(CACHE);
  await notifyUpdateProgress({phase:"start",downloadedBytes,totalBytes,totalFiles,fileIndex:0});
- for(let index=0;index<manifest.files.length;index++){
-  const file=manifest.files[index];
-  if(!SHELL.includes(file.url))throw new Error("Unexpected release asset: "+file.url);
-  const response=await fetch(file.url,{cache:"reload",credentials:"same-origin"});
-  if(!response.ok)throw new Error("Asset "+file.url+" returned HTTP "+response.status);
-  const chunks=[];
-  let fileBytes=0;
-  if(response.body&&response.body.getReader){
-   const reader=response.body.getReader();
-   while(true){
-    const part=await reader.read();
-    if(part.done)break;
-    chunks.push(part.value);
-    fileBytes+=part.value.byteLength;
-    totalBytes=Math.max(totalBytes,downloadedBytes+fileBytes);
-    await notifyUpdateProgress({phase:"download",downloadedBytes:downloadedBytes+fileBytes,totalBytes,totalFiles,fileIndex:index+1,currentFile:file.name||file.url});
+ // Version-scoped offline release remains atomic, but four bounded
+ // downloads avoid serially waiting for every network round-trip.
+ if(manifest.files.some(file=>!SHELL.includes(file.url)))throw new Error("Release manifest includes unexpected files.");
+ let cursor=0,completedFiles=0,lastProgressAt=0;
+ const installNext=async()=>{
+  while(true){
+   const index=cursor++;
+   if(index>=manifest.files.length)return;
+   const file=manifest.files[index];
+   const response=await fetch(file.url,{cache:"reload",credentials:"same-origin"});
+   if(!response.ok)throw new Error("Asset "+file.url+" returned HTTP "+response.status);
+   const chunks=[];
+   let fileBytes=0;
+   if(response.body&&response.body.getReader){
+    const reader=response.body.getReader();
+    while(true){
+     const part=await reader.read();
+     if(part.done)break;
+     chunks.push(part.value);
+     fileBytes+=part.value.byteLength;
+     // Per-chunk progress messaging can block low-end Android rendering.
+     if(Date.now()-lastProgressAt>=350){
+      lastProgressAt=Date.now();
+      await notifyUpdateProgress({phase:"download",downloadedBytes:downloadedBytes+fileBytes,totalBytes,totalFiles,fileIndex:completedFiles,currentFile:file.name||file.url});
+     }
+    }
+   }else{
+    const buffer=await response.arrayBuffer();
+    chunks.push(new Uint8Array(buffer));
+    fileBytes=buffer.byteLength;
    }
-  }else{
-   const buffer=await response.arrayBuffer();
-   chunks.push(new Uint8Array(buffer));
-   fileBytes=buffer.byteLength;
-   totalBytes=Math.max(totalBytes,downloadedBytes+fileBytes);
-   await notifyUpdateProgress({phase:"download",downloadedBytes:downloadedBytes+fileBytes,totalBytes,totalFiles,fileIndex:index+1,currentFile:file.name||file.url});
+   const headers=new Headers(response.headers);
+   headers.delete("content-length");
+   headers.delete("content-encoding");
+   await cache.put(file.url,new Response(new Blob(chunks),{status:response.status,statusText:response.statusText,headers}));
+   downloadedBytes+=fileBytes;
+   completedFiles++;
+   totalBytes=Math.max(totalBytes,downloadedBytes);
+   await notifyUpdateProgress({phase:"download",downloadedBytes,totalBytes,totalFiles,fileIndex:completedFiles,currentFile:file.name||file.url});
   }
-  const headers=new Headers(response.headers);
-  headers.delete("content-length");
-  headers.delete("content-encoding");
-  await cache.put(file.url,new Response(new Blob(chunks),{status:response.status,statusText:response.statusText,headers}));
-  downloadedBytes+=fileBytes;
-  await notifyUpdateProgress({phase:"download",downloadedBytes,totalBytes:Math.max(totalBytes,downloadedBytes),totalFiles,fileIndex:index+1,currentFile:file.name||file.url});
- }
+ };
+ await Promise.all(Array.from({length:Math.min(4,manifest.files.length)},()=>installNext()));
  await notifyUpdateProgress({phase:"ready",downloadedBytes,totalBytes:Math.max(totalBytes,downloadedBytes),totalFiles,fileIndex:totalFiles});
 }
 self.addEventListener("install",e=>e.waitUntil(installReleaseAssets().then(()=>self.skipWaiting())));
@@ -200,6 +211,22 @@ self.addEventListener("fetch",e=>{
  const critical=e.request.mode==="navigate"||["/","/index.html","/sw.js","/release.json","/release-manifest.json","/manifest.webmanifest"].includes(u.pathname);
  if(critical){
   e.respondWith(fetch(new Request(e.request,{cache:"no-store"})).catch(()=>caches.match(e.request).then(r=>r||(/navigate/.test(e.request.mode)?caches.match("/?v=__ARYANZZ_VERSION__"):Response.error()))));
+  return;
+ }
+ // Cache-first ONLY for exact, release-versioned static assets. They
+ // cannot contain account data; private API, HTML and release metadata remain
+ // network-first. Build-scoped cache names prevent stale assets after upgrades.
+ const versionedAsset=SHELL.includes(u.pathname+u.search)&&/\.(?:js|css|svg|png|jpe?g|webp|gif|woff2?|ico|json)$/i.test(u.pathname);
+ if(versionedAsset){
+  e.respondWith(caches.open(CACHE).then(async cache=>{
+   const cached=await cache.match(e.request);
+   if(cached)return cached;
+   const response=await fetch(e.request);
+   if(response.ok&&response.headers.get("cache-control")!=="no-store"){
+    e.waitUntil(cache.put(e.request,response.clone()).catch(()=>{}));
+   }
+   return response;
+  }).catch(()=>fetch(e.request)));
   return;
  }
  e.respondWith(fetch(e.request).then(r=>{

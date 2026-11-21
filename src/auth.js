@@ -184,8 +184,14 @@ export async function moderationGate(request,env){
   const lockToken=deviceLockTokenFrom(request);
   if(!lockToken)return null;
   const deviceHash=await digest(lockToken.toLowerCase());
-  const lockOwner=await env.AUTH_DB.prepare("SELECT d.user_id FROM auth_device_lock_accounts d JOIN auth_user_bans b ON b.user_id=d.user_id WHERE d.lock_hash=?1 LIMIT 1").bind(deviceHash).first();
-  if(!lockOwner&&!await isDeviceBanned(deviceHash,env))return null;
+  // Both bans are independent. Checking them in parallel saves a D1
+  // round-trip on every returning visitor's HTML navigation while still
+  // enforcing both checks before any page or protected API response.
+  const [lockOwner,deviceBanned]=await Promise.all([
+    env.AUTH_DB.prepare("SELECT d.user_id FROM auth_device_lock_accounts d JOIN auth_user_bans b ON b.user_id=d.user_id WHERE d.lock_hash=?1 LIMIT 1").bind(deviceHash).first(),
+    isDeviceBanned(deviceHash,env)
+  ]);
+  if(!lockOwner&&!deviceBanned)return null;
   const blockedId=String(lockOwner?.user_id||"");
   const url=new URL(request.url);
   if(url.pathname.startsWith("/api/"))return reply({ok:false,code:"DEVICE_BANNED",userId:blockedId,error:"ID kamu telah di-banned. Silakan hubungi dukungan WhatsApp 082110767071. ID: "+blockedId},403);
