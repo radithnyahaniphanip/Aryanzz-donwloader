@@ -44,7 +44,43 @@ async function openHome(context, label) {
   assert.ok(layout.button.width >= 60 && layout.button.height >= 24, label + " Analyze button is too small.");
   assert.ok(layout.input.left >= -2 && layout.input.right <= layout.width + 2, label + " URL input is clipped outside viewport.");
   assert.ok(layout.button.left >= -2 && layout.button.right <= layout.width + 2, label + " Analyze button is clipped outside viewport.");
-  console.log("PASS " + label + " layout: viewport=" + layout.width + "px, document=" + layout.documentWidth + "px, controls visible.");
+
+  // Regression for real Android screenshot: a five-column legacy grid put the
+  // sixth "Member" tab on a second row and obscured the QRIS checkout.
+  const navigation = await page.evaluate(() => {
+    const element = document.querySelector("nav.nav");
+    const outer = element.getBoundingClientRect();
+    const tabs = Array.from(element.querySelectorAll("button")).map(button => {
+      const rect = button.getBoundingClientRect();
+      return { key: button.dataset.nav, left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom };
+    });
+    return {
+      display: getComputedStyle(element).display,
+      outer: { left: outer.left, right: outer.right, top: outer.top, bottom: outer.bottom, height: outer.height },
+      tabs
+    };
+  });
+  assert.equal(navigation.tabs.length, 6, label + " must preserve all six navigation tabs.");
+  if (layout.width < 900) {
+    assert.equal(navigation.display, "grid", label + " must use a six-column bottom nav.");
+    assert.ok(navigation.tabs.every(t => Math.abs(t.top - navigation.tabs[0].top) <= 3),
+      label + " Member nav wrapped to a second row: " + JSON.stringify(navigation.tabs));
+    assert.ok(navigation.tabs.every(t => t.left >= navigation.outer.left - 2 && t.right <= navigation.outer.right + 2),
+      label + " navigation tab overflows its dock.");
+    assert.ok(navigation.outer.height < 110, label + " mobile dock is too tall.");
+    await page.locator('nav.nav button[data-nav="membership"]').click();
+    await page.locator("#membership").waitFor({ state: "visible", timeout: 15000 });
+    await page.locator('nav.nav button[data-nav="home"]').click();
+    await page.locator("#url").waitFor({ state: "visible", timeout: 15000 });
+  } else {
+    assert.equal(navigation.display, "flex", label + " should retain the desktop vertical sidebar.");
+    assert.ok(navigation.tabs.every((t,i) => i===0 || t.top >= navigation.tabs[i-1].bottom - 2),
+      label + " desktop navigation is not a vertical rail.");
+    assert.ok(navigation.outer.left >= 0 && navigation.outer.left <= 42,
+      label + " desktop navigation rail is not left-aligned.");
+  }
+
+  console.log("PASS " + label + " layout: viewport=" + layout.width + "px, document=" + layout.documentWidth + "px, controls and all six nav tabs visible.");
   return page;
 }
 
@@ -191,6 +227,18 @@ try {
   await testDownload(mobilePage, tests[0], "Android-like");
   await testDownload(mobilePage, tests[3], "Android-like");
   await mobile.close();
+
+  // Additional narrow-screen QA for Android WebView sizes like the screenshot.
+  const narrowMobile = await browser.newContext({
+    viewport: { width: 360, height: 780 },
+    deviceScaleFactor: 2,
+    isMobile: true,
+    hasTouch: true,
+    serviceWorkers: "allow"
+  });
+  await openHome(narrowMobile, "Narrow Android 360px");
+  await narrowMobile.close();
+
   console.log("All live browser compatibility checks passed for build " + EXPECTED_BUILD_VERSION + ".");
 } finally {
   await browser.close();
