@@ -107,6 +107,14 @@ jobs:
           set -euo pipefail
           echo "ARYANZZ_D1_READY=false" >> "$GITHUB_ENV"
           DB_ID="$ARYANZZ_AUTH_DB_ID"
+          # The owner's existing D1 UUID is already bound in wrangler.toml.
+          # Reuse it; a redundant GitHub Actions DB_ID secret is not required.
+          if [ -z "$DB_ID" ] && grep -q 'binding = "AUTH_DB"' wrangler.toml; then
+            DB_ID="$(sed -nE 's/^[[:space:]]*database_id[[:space:]]*=[[:space:]]*"([0-9a-fA-F-]+)".*/\1/p' wrangler.toml | head -n 1)"
+            if [ -n "$DB_ID" ]; then
+              echo "Using existing AUTH_DB binding from wrangler.toml."
+            fi
+          fi
           if [ -z "$DB_ID" ]; then
             if ! DB_LIST="$(curl -fsS --retry 3 -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/d1/database" 2>&1)"; then
               echo "::notice::D1 is not accessible with the current Cloudflare token. Public guest access and device-bound Membership checkout remain available when AIRPAY_API_KEY is configured. AUTH_DB and AUTH_SESSION_SECRET are required only for cross-device account/Membership synchronization."
@@ -132,7 +140,7 @@ jobs:
           fi
           if ! wrangler d1 migrations apply aryanzz-auth-db --remote; then
             cp /tmp/aryanzz-wrangler-before-d1.toml wrangler.toml
-            echo "::notice::D1 migrations could not be applied with the current token. Continuing with public V2 access; device-bound Membership checkout remains available when AIRPAY_API_KEY is configured. Cross-device account/Membership synchronization requires successful D1 migrations."
+            echo "::notice::Remote D1 migration not allowed by the current Cloudflare token. The AUTH_DB binding remains configured; grant Account > D1 > Edit and rerun to migrate the database."
             exit 0
           fi
           echo "ARYANZZ_D1_READY=true" >> "$GITHUB_ENV"
