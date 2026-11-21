@@ -44,7 +44,10 @@ globalThis.fetch=async(input,init={})=>{
     const searchQuery=String(url.searchParams.get("q")||"");
     if(/site:youtube\.com/i.test(searchQuery)&&/tabola bale/i.test(searchQuery))
       return new Response('<a class="result__a" href="https://www.youtube.com/watch?v=dQw4w9WgXcQ">Completely unrelated cooking recipe</a><div class="result__snippet">Not the requested song</div>',{status:200,headers:{"content-type":"text/html; charset=utf-8"}});
-    if(/site:instagram\.com/i.test(searchQuery))return new Response('<a class="result__a" href="https://www.instagram.com/reel/ABC123xyz/">Green screen meme kucing Instagram reel</a><div class="result__snippet">Green screen meme kucing public Instagram reel</div>',{status:200,headers:{"content-type":"text/html; charset=utf-8"}});
+    if(/site:instagram\.com/i.test(searchQuery)){
+      const title=/green screen meme kucing/i.test(searchQuery)?"Green screen meme kucing Instagram reel":"Cat video Instagram reel";
+      return new Response('<a class="result__a" href="https://www.instagram.com/reel/ABC123xyz/">'+title+'</a><div class="result__snippet">'+title+' public Instagram reel</div>',{status:200,headers:{"content-type":"text/html; charset=utf-8"}});
+    }
     if(/site:tiktok\.com/i.test(searchQuery))return new Response('<a class="result__a" href="https://www.tiktok.com/@demo/video/1234567890123456789">Cat video TikTok</a><div class="result__snippet">Cat video public TikTok</div>',{status:200,headers:{"content-type":"text/html; charset=utf-8"}});
     if(/green screen meme kucing/i.test(searchQuery))return new Response(videoSearchHtml,{status:200,headers:{"content-type":"text/html; charset=utf-8"}});
     return new Response(videoSearchHtml,{status:200,headers:{"content-type":"text/html; charset=utf-8"}});
