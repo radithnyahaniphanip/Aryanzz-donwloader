@@ -26,11 +26,13 @@ const env = { AIRPAY_API_KEY: "ak_test_aryanzz-membership-smoke" };
 let invoice = null;
 let gatewayStatus = "Pending";
 let createCalls = 0;
+let rejectApiKey = false;
 const originalFetch = globalThis.fetch;
 
 globalThis.fetch = async (input, init = {}) => {
   const url = new URL(String(input));
   if (url.pathname === "/api/qris/create") {
+    if (rejectApiKey) return new Response(JSON.stringify({success:false,message:"Invalid API key"}),{status:401,headers:{"content-type":"application/json"}});
     createCalls += 1;
     const body = JSON.parse(init.body || "{}");
     const amount = Number(body.amount);
@@ -196,6 +198,24 @@ try {
   );
   assert.equal(invalidMethod.status,400);
   assert.equal(createCalls,beforeInvalid,"Unsupported payment rails must never reach AirPay");
+
+  rejectApiKey=true;
+  const rejectedKeyStore=new MembershipStore({storage:new MemoryStorage()},env);
+  const priorCreates=createCalls;
+  const failedInvoice=await rejectedKeyStore.fetch(new Request("https://aryanzz.test/api/membership/orders",{
+    method:"POST",headers:{...requestHeaders,"content-type":"application/json"},
+    body:JSON.stringify({planId:"starter",billingPeriod:"monthly",paymentMethod:"qris"})
+  }));
+  const failedData=await failedInvoice.json();
+  assert.equal(failedInvoice.status,503,"Invalid AirPay key must fail without a QRIS invoice");
+  assert.equal(failedData.ok,false);
+  assert.equal(failedData.code,"AIRPAY_INVALID_API_KEY");
+  assert.match(failedData.error,/AIRPAY_API_KEY/);
+  assert.equal(createCalls,priorCreates,"Rejected gateway authorization must not create a valid invoice");
+  const failedMember=await rejectedKeyStore.fetch(request("/api/membership/me"));
+  const failedMemberData=await failedMember.json();
+  assert.notEqual(failedMemberData.membership?.status,"active","Rejected API key must never grant membership");
+  rejectApiKey=false;
 
   console.log("MembershipStore AirPay smoke test passed.");
 } finally {

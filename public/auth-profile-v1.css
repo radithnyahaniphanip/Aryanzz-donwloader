@@ -111,3 +111,56 @@
 #profile.ary-profile-v2 .ary-profile-data-status button{flex:0 0 auto;min-height:34px;border:1px solid #4189b5;border-radius:10px;background:#123f60;color:#e1f6ff;padding:8px 11px;font-size:10px;font-weight:800;cursor:pointer}
 #profile.ary-profile-v2 .ary-profile-data-status button:focus-visible{outline:2px solid #6adff1;outline-offset:2px}
 @media(max-width:520px){#profile.ary-profile-v2 .ary-profile-data-status{flex-direction:column;align-items:stretch;padding:11px}#profile.ary-profile-v2 .ary-profile-data-status button{width:100%}}
+
+
+/* Profile V3 — unified account workspace, compact on mobile. */
+#profile.ary-profile-v2{max-width:920px!important;margin-inline:auto!important;padding:clamp(11px,2.5vw,22px)!important;background:linear-gradient(160deg,#111d34,#08182b)!important;border-radius:22px!important}
+#profile.ary-profile-v2 .ary-profile2-header{padding:8px 2px 15px!important;border-bottom:1px solid rgba(128,174,220,.15);margin-bottom:14px!important}
+#profile.ary-profile-v2 .ary-profile-kicker{display:block;margin-bottom:4px;color:#6fe2df;font-size:9px;letter-spacing:2px;font-weight:900}
+#profile.ary-profile-v2 .ary-profile2-header h1{margin:0!important;font-size:clamp(24px,5vw,32px)!important;line-height:1.15!important}
+#profile.ary-profile-v2 .ary-profile2-header p{margin-top:6px!important;font-size:11px!important;color:#a7bcd4!important}
+#profile.ary-profile-v2 .ary-profile-account-actions{display:flex!important;flex-wrap:wrap;gap:8px!important;align-items:center}
+#profile.ary-profile-v2 .ary-profile-account-actions button{min-height:39px!important;padding:10px 15px!important;border-radius:11px!important;font-size:11px!important}
+#profile.ary-profile-v2 #aryAccountStatus{font-size:10px!important;color:#9fcae3!important}
+#profile.ary-profile-v2 .ary-profile-shortcuts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-bottom:13px}
+#profile.ary-profile-v2 .ary-profile-shortcuts button{min-height:44px;border:1px solid rgba(99,159,212,.27);border-radius:12px;background:#152c45;color:#deefff;font-size:11px;font-weight:800;padding:9px;cursor:pointer}
+#profile.ary-profile-v2 .ary-profile-shortcuts button:focus-visible{outline:2px solid #80e8ed;outline-offset:2px}
+#profile.ary-profile-v2 .ary-profile2-hero{overflow:hidden!important;border:1px solid rgba(107,176,226,.3)!important;border-radius:18px!important;background:#0d223a!important}
+#profile.ary-profile-v2 .ary-profile2-cover{height:116px!important;background-size:cover!important;background-position:center!important}
+#profile.ary-profile-v2 .ary-profile2-identity{align-items:center!important;padding:13px 14px 17px!important}
+#profile.ary-profile-v2 .ary-profile2-identity-copy h2{font-size:19px!important;overflow-wrap:anywhere}
+#profile.ary-profile-v2 .ary-profile2-identity-copy p{font-size:11px!important}
+#profile.ary-profile-v2 .ary-profile2-stats{gap:9px!important;margin:13px 0!important}
+#profile.ary-profile-v2 .ary-profile2-stat{min-height:85px!important;padding:12px!important;display:flex!important;flex-direction:column;gap:3px;align-items:flex-start}
+#profile.ary-profile-v2 .ary-profile2-stat b{font-size:20px!important;line-height:1.15}
+#profile.ary-profile-v2 .ary-profile2-stat small{font-size:10px!important;color:#a5bfd6}
+#profile.ary-profile-v2 .ary-profile2-grid{display:grid!important;grid-template-columns:minmax(0,1fr)!important}
+#profile.ary-profile-v2 .ary-profile2-details{max-width:none!important}
+#profile.ary-profile-v2 .ary-profile2-card-heading{margin-bottom:11px!important}
+#profile.ary-profile-v2 .ary-profile2-device{margin-top:12px!important}
+#profile.ary-profile-v2 .ary-profile2-device-grid{grid-template-columns:minmax(0,1fr)!important;gap:9px!important}
+#profile.ary-profile-v2 .ary-profile2-current-device{padding:12px!important}
+#profile.ary-profile-v2 .ary-v1-phone-visual{transform:scale(.86);transform-origin:left center}
+#profile.ary-profile-v2 .ary-profile-device-details,#profile.ary-profile-v2 .ary-profile2-history-device{padding:10px!important;border:1px solid rgba(103,155,201,.25)!important;border-radius:12px!important;background:rgba(7,24,41,.63)!important}
+#profile.ary-profile-v2 .ary-profile-device-details summary,#profile.ary-profile-v2 .ary-profile2-history-device summary{cursor:pointer;color:#c2e9fb;font-size:11px;font-weight:850;line-height:1.5}
+#profile.ary-profile-v2 .ary-profile-device-details[open] summary,#profile.ary-profile-v2 .ary-profile2-history-device[open] summary{padding-bottom:10px}
+#profile.ary-profile-v2 .ary-profile2-location{display:grid;gap:10px;margin-top:10px!important;padding:13px!important;border-radius:14px!important}
+#profile.ary-profile-v2 .ary-v1-location-actions{display:flex;flex-wrap:wrap;gap:7px}
+#profile.ary-profile-v2 .ary-profile2-device-footer{margin-top:8px!important}
+@media(max-width:600px){
+ #profile.ary-profile-v2{padding:10px!important;border-radius:18px!important}
+ #profile.ary-profile-v2 .ary-profile2-header{display:grid!important;grid-template-columns:1fr!important;gap:11px!important}
+ #profile.ary-profile-v2 .ary-profile-account-actions{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;gap:7px!important}
+ #profile.ary-profile-v2 #aryAccountOpen{width:100%!important}
+ #profile.ary-profile-v2 #aryAccountStatus{grid-column:1/-1}
+ #profile.ary-profile-v2 .ary-profile-shortcuts{gap:6px}
+ #profile.ary-profile-v2 .ary-profile-shortcuts button{min-height:44px;padding:7px 4px;font-size:9px}
+ #profile.ary-profile-v2 .ary-profile2-cover{height:105px!important}
+ #profile.ary-profile-v2 .ary-profile2-identity{gap:11px!important}
+ #profile.ary-profile-v2 .ary-profile2-identity-copy h2{font-size:17px!important}
+ #profile.ary-profile-v2 .ary-profile2-stats{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:6px!important}
+ #profile.ary-profile-v2 .ary-profile2-stat{min-height:75px!important;padding:9px 7px!important}
+ #profile.ary-profile-v2 .ary-profile2-stat b{font-size:16px!important}
+ #profile.ary-profile-v2 .ary-profile2-stat small{font-size:8px!important}
+ #profile.ary-profile-v2 .ary-v1-phone-visual{display:none}
+}

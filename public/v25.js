@@ -594,6 +594,10 @@
     setupSurface();setupProfilePreview();setupBackupActions();profileCounts();setupReveal();setupPremiumEffects();initRandomProfileId();
     window.addEventListener("storage",()=>{profileCounts();applyDesign();});
     window.addEventListener("aryanzz:auth-change",profileCounts);
+    $("aryProfileDeviceJump")?.addEventListener("click",()=>{
+      const device=document.querySelector("#profile .ary-profile2-device");
+      device?.scrollIntoView({behavior:window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches?"auto":"smooth",block:"start"});
+    });
     window.addEventListener("aryanzz:profile-assets-updated",applyDesign);
     window.addEventListener("aryanzz:history-updated",profileCounts);
     queueAutoSnapshot();

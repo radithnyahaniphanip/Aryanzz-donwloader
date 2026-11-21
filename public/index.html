@@ -1068,12 +1068,20 @@ body .nav button.active .nav-icon{color:#9af4e8!important}
         <button class="ary-membership-submit" id="membershipCreateInvoice" type="submit" hidden style="display:none!important">Buat invoice QRIS</button>
       </form>
     </details>
-    <div class="ary-membership-note">AirPay yang terpasang mendukung QRIS, bukan transfer langsung ke nomor DANA atau rekening pembeli. Pilih aplikasi di atas untuk membuat tagihan QRIS otomatis. Rekening pencairan merchant diatur terpisah pada akun AirPay.</div>
+    <div class="ary-checkout-error" id="membershipCheckoutError" role="alert" hidden>
+      <strong id="membershipCheckoutErrorTitle">Pembayaran belum tersedia</strong>
+      <p id="membershipCheckoutErrorText">Tagihan belum berhasil diterbitkan.</p>
+      <button type="button" id="membershipCheckoutRetry">Coba buat QRIS lagi</button>
+    </div>
   </section>
   <section class="ary-membership-payment" id="membershipPayment" hidden>
     <h3 id="membershipPaymentTitle">Selesaikan pembayaran</h3>
     <div class="ary-membership-payment-layout">
-      <div class="ary-membership-qr-wrap"><img class="ary-membership-qr" id="membershipQr" alt="QRIS pembayaran ARYANZZ" hidden></div>
+      <div class="ary-membership-qr-wrap">
+        <div class="ary-qris-loading" id="membershipQrLoading" role="status"><span>▦</span><b>Menyiapkan QRIS…</b><small>QR pembayaran akan muncul setelah tagihan diterbitkan AirPay.</small></div>
+        <img class="ary-membership-qr" id="membershipQr" alt="QRIS pembayaran ARYANZZ" hidden>
+        <p class="ary-qris-image-error" id="membershipQrError" hidden>Gambar QRIS gagal dimuat. Gunakan halaman pembayaran AirPay di bawah ini.</p>
+      </div>
       <div class="ary-membership-payment-details">
         <span class="ary-membership-plan-label">TOTAL PEMBAYARAN</span>
         <div class="ary-membership-amount" id="membershipPaymentAmount">Rp0</div>
@@ -1083,6 +1091,8 @@ body .nav button.active .nav-icon{color:#9af4e8!important}
         <small class="ary-membership-countdown-caption">Sisa waktu checkout · 10 menit</small>
         <div class="ary-membership-supported"><span>SCAN QRIS MELALUI</span><div class="ary-membership-methods"><span>DANA</span><span>GoPay</span><span>LinkAja</span><span>OVO</span><span>ShopeePay</span><span>Mobile Banking</span></div></div>
         <p class="ary-pay-selected-method" id="membershipSelectedMethod">Metode: QRIS</p>
+        <p class="ary-qris-order-id" id="membershipOrderReference" aria-live="polite"></p>
+        <a id="membershipQrDownload" class="ary-qris-download" href="#" target="_blank" rel="noopener noreferrer" hidden>↗ Buka / Simpan gambar QRIS</a>
         <a class="ary-membership-check-status ary-pay-open-link" id="membershipPayLink" target="_blank" rel="noopener noreferrer" hidden>Buka halaman pembayaran resmi AirPay</a>
         <p class="ary-pay-on-device-note">Di HP yang sama, buka halaman pembayaran AirPay atau simpan QR untuk dipindai lewat fitur galeri/QRIS aplikasi pembayaran yang mendukungnya.</p>
         <button class="ary-membership-check-status" id="membershipCheckStatus" type="button">Periksa status pembayaran</button>
@@ -1100,7 +1110,6 @@ body .nav button.active .nav-icon{color:#9af4e8!important}
     <h3>Riwayat membership</h3>
     <div id="membershipOrdersList"><p>Belum ada transaksi membership.</p></div>
   </div>
-  <div class="ary-membership-note">Akses Pro membuka Media Studio Pro, Ultra membuka Video Editor Studio, dan Max membuka Emote Studio. Fitur unduh dasar tetap tersedia untuk semua pengguna.</div>
   <button class="ary-membership-back" type="button" data-panel="allTools">← Kembali ke Pusat Alat</button>
 </div>
 <div class="panel card ary-members-panel" id="members">
@@ -1110,14 +1119,19 @@ body .nav button.active .nav-icon{color:#9af4e8!important}
   <div class="ary-members-empty">Belum ada data anggota online. Tidak ada data pengunjung yang ditampilkan sebelum penyimpanan dan pemberitahuan privasi diaktifkan.</div>
 </div>
 <div class="panel card ary-library-panel" id="history">
-  <div class="ary-library-hero"><div><span class="section-kicker">RUANG PRIBADI</span><h2>Pustaka</h2><p>Semua aktivitas dan koleksi favoritmu, tersusun dalam satu tampilan.</p></div><div class="ary-library-mark">▤</div></div>
+  <div class="ary-library-hero"><div><span class="section-kicker">KOLEKSI PRIBADI</span><h2>Pustaka Saya</h2><p>Riwayat media dan favorit tersimpan rapi di perangkatmu.</p></div><div class="ary-library-mark">▤</div></div>
   <div class="ary-library-stats"><div><span>RIWAYAT</span><b id="aryLibraryHistoryCount">0</b></div><div><span>FAVORIT</span><b id="aryLibraryFavoriteCount">0</b></div><div><span>PENYIMPANAN</span><b>LOKAL</b></div></div>
   <div class="ary-library-switch" role="tablist" aria-label="Kategori pustaka">
     <button type="button" class="active" id="aryLibraryHistoryTab" role="tab" aria-selected="true" aria-controls="aryLibraryHistoryView">◷ Riwayat <span id="aryLibraryHistoryBadge">0</span></button>
     <button type="button" id="aryLibraryFavoriteTab" role="tab" aria-selected="false" aria-controls="aryLibraryFavoriteView">♡ Favorit <span id="aryLibraryFavoriteBadge">0</span></button>
   </div>
   <div class="ary-library-toolbar">
-    <label class="ary-library-search" for="aryLibrarySearch"><span aria-hidden="true">⌕</span><input id="aryLibrarySearch" type="search" autocomplete="off" placeholder="Cari nama media atau tautan…"></label>
+    <label class="ary-library-search" for="aryLibrarySearch"><span aria-hidden="true">⌕</span><input id="aryLibrarySearch" type="search" autocomplete="off" placeholder="Cari dalam Pustaka…"></label>
+    <div class="ary-library-filter-row">
+      <label for="aryLibraryMediaFilter">Jenis media <select id="aryLibraryMediaFilter"><option value="all">Semua</option><option value="video">Video</option><option value="audio">Audio</option><option value="image">Gambar</option></select></label>
+      <label for="aryLibrarySort">Urutkan <select id="aryLibrarySort"><option value="newest">Terbaru</option><option value="oldest">Terlama</option><option value="name">Nama A–Z</option></select></label>
+      <button id="aryLibraryClearSearch" type="button" class="ary-library-clear-filter">Reset filter</button>
+    </div>
     <span class="ary-library-storage"><i></i> Tersimpan di perangkat ini</span>
   </div>
   <section class="ary-library-view active" id="aryLibraryHistoryView" role="tabpanel" aria-labelledby="aryLibraryHistoryTab">
@@ -1137,10 +1151,12 @@ body .nav button.active .nav-icon{color:#9af4e8!important}
     <p id="aryLibraryBackupStatus" role="status" aria-live="polite"></p>
   </div>
   <div class="ary-library-note"><b>Disimpan di perangkat ini</b><p>Riwayat dan favorit tersimpan di browser ini, tidak otomatis tersinkron ke perangkat lain. Cadangkan sebelum membersihkan data Chrome atau berganti HP.</p></div>
-  <section class="v25-profile-card v25-backup-card">
-    <div class="v25-section-heading"><div><span class="v25-kicker">YOUR DATA</span><h3>Backup & pemulihan</h3></div><span class="v25-heading-icon">⬡</span></div>
-    <div class="v25-backup-actions"><button class="tag" id="exportData" type="button">↓ Ekspor backup</button><label class="tag v25-import-label">↑ Pulihkan backup<input id="importData" type="file" accept="application/json" hidden></label><button class="tag" id="restoreAutoBackup" type="button">↺ Pulihkan cadangan otomatis</button></div>
-  </section>
+  <details class="ary-library-advanced-backup">
+    <summary>Cadangan lengkap profil & pengaturan</summary>
+    <section class="v25-profile-card v25-backup-card">
+      <div class="v25-backup-actions"><button class="tag" id="exportData" type="button">↓ Ekspor data lengkap</button><label class="tag v25-import-label">↑ Pulihkan data lengkap<input id="importData" type="file" accept="application/json" hidden></label><button class="tag" id="restoreAutoBackup" type="button">↺ Pulihkan otomatis</button></div>
+    </section>
+  </details>
 </div><div class="panel card image-studio-panel" id="imageTools">
   <div class="image-studio-heading"><div><span class="section-kicker">ARYANZZ CREATIVE LAB</span><h3>▧ Image Studio</h3></div><span class="image-studio-mark">✦</span></div>
   <div class="image-studio-tabs" role="tablist" aria-label="Mode Image Studio"><button type="button" class="active" id="imageEditTab" aria-selected="true">✦ Editor gambar</button><button type="button" id="imageDownloadTab" aria-selected="false">↓ Image Downloader</button></div>
@@ -1237,8 +1253,9 @@ body .nav button.active .nav-icon{color:#9af4e8!important}
 <div class="panel card v25-profile-panel ary-profile-v2" id="profile">
   <header class="ary-profile2-header">
     <div>
+      <span class="ary-profile-kicker">AKUN & IDENTITAS</span>
       <h1>Profil Saya</h1>
-      <p>Kelola akun, informasi pribadi, dan perangkat.</p>
+      <p>Foto, akun, koleksi, dan privasi dalam satu tempat.</p>
     </div>
     <div class="ary-profile-account-actions">
       <button id="aryAccountOpen" type="button" class="ary-profile2-primary">Masuk / Daftar</button>
@@ -1247,6 +1264,11 @@ body .nav button.active .nav-icon{color:#9af4e8!important}
     </div>
   </header>
 
+  <nav class="ary-profile-shortcuts" aria-label="Akses cepat profil">
+    <button type="button" data-panel="history">♡ Pustaka saya</button>
+    <button type="button" data-panel="membership">♛ Membership</button>
+    <button type="button" id="aryProfileDeviceJump">▣ Perangkat</button>
+  </nav>
   <div class="ary-profile-data-status" role="note">
     <span id="aryProfileStorageNotice">Riwayat dan foto profil saat ini disimpan di browser perangkat ini.</span>
     <button type="button" data-panel="history">Lihat Pustaka & Cadangan →</button>
@@ -1308,7 +1330,8 @@ body .nav button.active .nav-icon{color:#9af4e8!important}
           </div>
           <div class="ary-v1-device-identity-copy"><small id="aryDeviceCurrentHeading">PERANGKAT SAAT INI</small><b id="deviceCurrent">Membaca perangkat…</b><span class="ary-v1-device-active">Aktif di browser ini</span></div>
         </div>
-        <h3>Spesifikasi yang tersedia</h3>
+        <details class="ary-profile-device-details">
+          <summary>Lihat spesifikasi perangkat</summary>
         <dl class="ary-v1-device-specs" id="deviceSpecGrid">
           <div><dt>Sistem operasi</dt><dd data-device-spec="os">Memeriksa…</dd></div>
           <div><dt>Model</dt><dd data-device-spec="model">Memeriksa…</dd></div>
@@ -1327,14 +1350,14 @@ body .nav button.active .nav-icon{color:#9af4e8!important}
           <div><dt>Layar &amp; sentuhan</dt><dd data-device-spec="touch">Memeriksa…</dd></div>
           <div><dt>Kuota penyimpanan situs</dt><dd data-device-spec="storage">Memeriksa…</dd></div>
           <div><dt>Status koneksi</dt><dd data-device-spec="online">Memeriksa…</dd></div>
-        </dl>
+        </dl></details>
         
       </section>
-      <section class="ary-profile2-history-device ary-v1-device-history" aria-labelledby="aryDeviceHistoryHeading">
-        <div class="ary-v1-device-history-heading"><small id="aryDeviceHistoryHeading">RIWAYAT PERANGKAT</small><span>Browser ini saja</span></div>
+      <details class="ary-profile2-history-device ary-v1-device-history" aria-labelledby="aryDeviceHistoryHeading">
+        <summary id="aryDeviceHistoryHeading">Riwayat perangkat (browser ini saja)</summary>
         <div id="deviceHistoryList" class="ary-profile2-device-list" aria-live="polite"></div>
-        <p class="ary-v1-device-disclaimer">Riwayat ini tersimpan lokal di Chrome/browser ini; bukan daftar seluruh HP yang pernah mengakses akun.</p>
-      </section>
+        <p class="ary-v1-device-disclaimer">Riwayat tersimpan di browser ini; bukan daftar seluruh HP yang memakai akun.</p>
+      </details>
     </div>
     <section class="ary-profile2-location ary-v1-location" aria-labelledby="aryDeviceLocationHeading">
       <div class="ary-profile2-location-copy">
