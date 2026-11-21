@@ -597,6 +597,6 @@ export async function handleAuthRequest(request, env) {
     return reply({ ok: false, error: "Endpoint autentikasi tidak ditemukan." }, 404);
   } catch (error) {
     console.error("[ARYANZZ_AUTH] request_failed", path, error instanceof Error ? error.name : "unknown");
-    return reply({ ok: false, error: "Layanan akun sementara tidak tersedia. Coba lagi nanti." }, 500);
+    return reply({ ok: false, code:"AUTH_BACKEND_UNAVAILABLE", error: "Layanan akun sementara belum siap. Periksa migrasi D1 dan konfigurasi verifikasi sebelum mencoba login atau daftar lagi." }, 503);
   }
 }
