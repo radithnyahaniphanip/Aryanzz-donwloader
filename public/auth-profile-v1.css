@@ -164,3 +164,117 @@
  #profile.ary-profile-v2 .ary-profile2-stat small{font-size:8px!important}
  #profile.ary-profile-v2 .ary-v1-phone-visual{display:none}
 }
+
+
+/* 2026-11-21 — Full-width mobile Pustaka/Profil, simplified navigation. */
+body #history.ary-library-panel,
+body #profile.ary-profile-v2{
+  width:100%!important;
+  max-width:1180px!important;
+  min-width:0!important;
+  margin-inline:auto!important;
+  box-sizing:border-box!important;
+}
+body #history.ary-library-panel{
+  padding:clamp(16px,2.5vw,30px)!important;
+  margin-bottom:24px!important;
+}
+body #history .ary-library-hero{
+  padding:clamp(19px,3vw,30px)!important;
+  min-height:135px!important;
+  margin-bottom:17px!important;
+}
+body #history .ary-library-hero h2{font-size:clamp(26px,4vw,36px)!important}
+body #history .ary-library-list{
+  max-height:min(65vh,720px)!important;
+  min-height:260px!important;
+  overflow-y:auto!important;
+}
+body #history .ary-library-stats{gap:12px!important;margin:15px 0 19px!important}
+body #history .ary-library-view{padding-top:16px!important}
+body #profile.ary-profile-v2{
+  padding:clamp(16px,2.5vw,30px)!important;
+  margin-bottom:24px!important;
+}
+body #profile .ary-profile2-header{margin-bottom:20px!important}
+body #profile .ary-profile2-hero{margin-bottom:17px!important}
+body #profile .ary-profile2-stats{gap:14px!important;margin:17px 0 22px!important}
+body #profile .ary-profile2-grid{gap:17px!important}
+body #profile .ary-profile2-device{margin-top:19px!important}
+body #profile .ary-profile2-location{
+  padding:clamp(15px,2vw,22px)!important;
+  margin-top:18px!important;
+  gap:14px!important;
+}
+body #profile #deviceMapFrame{
+  display:block;
+  width:100%!important;
+  height:clamp(260px,42vw,430px)!important;
+  border:0;
+  border-radius:13px;
+}
+body #profile .ary-profile-signin-row{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:flex-start!important;
+  flex-wrap:wrap!important;
+  gap:12px!important;
+  margin:18px 0 8px!important;
+  padding:16px 0 0!important;
+  border-top:1px solid rgba(128,174,220,.2);
+}
+body #profile .ary-profile-signin-row button{
+  width:auto!important;
+  min-height:43px!important;
+  padding:11px 18px!important;
+  font-size:12px!important;
+}
+body #profile .ary-profile-signin-row #aryAccountStatus{
+  flex:1 1 160px;
+  font-size:11px!important;
+}
+body .nav{
+  display:grid!important;
+  grid-template-columns:repeat(6,minmax(0,1fr));
+  gap:clamp(4px,1vw,10px)!important;
+  padding-inline:clamp(7px,2vw,16px)!important;
+}
+body .nav button{
+  min-width:0!important;
+  width:100%!important;
+  padding:8px 2px!important;
+  gap:6px!important;
+}
+body .nav button .nav-icon{font-size:17px!important;line-height:1.05}
+body .nav button[data-nav="history"] .nav-icon{
+  font-size:14px!important;
+  line-height:1.1;
+  margin-bottom:2px;
+}
+body .nav button>span:last-child{font-size:clamp(9px,1.8vw,11px)!important}
+@media(max-width:600px){
+  body #history.ary-library-panel,
+  body #profile.ary-profile-v2{
+    max-width:none!important;
+    width:100%!important;
+    padding:clamp(10px,3vw,16px)!important;
+    border-radius:17px!important;
+  }
+  body #history .ary-library-hero{padding:17px!important;min-height:112px!important}
+  body #history .ary-library-stats{gap:8px!important;margin:13px 0 16px!important}
+  body #history .ary-library-list{min-height:220px!important;max-height:62vh!important}
+  body #profile .ary-profile2-identity{gap:13px!important;padding:16px!important}
+  body #profile .ary-profile2-hero{margin-bottom:15px!important}
+  body #profile .ary-profile2-stat{padding:10px!important}
+  body #profile .ary-profile2-stats{gap:8px!important;margin:15px 0 18px!important}
+  body #profile .ary-profile2-device{margin-top:16px!important}
+  body #profile .ary-profile-signin-row{display:grid!important;grid-template-columns:1fr!important;gap:10px!important}
+  body #profile .ary-profile-signin-row button{width:100%!important}
+  body #profile .ary-profile-signin-row #aryAccountStatus{flex:auto!important}
+  body #profile #deviceMapFrame{height:300px!important}
+}
+@media(max-width:370px){
+  body .nav{gap:3px!important;padding-inline:5px!important}
+  body .nav button{padding:7px 1px!important}
+  body .nav button>span:last-child{font-size:9px!important}
+}
