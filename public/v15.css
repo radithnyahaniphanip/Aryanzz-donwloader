@@ -152,3 +152,50 @@ body[data-view="tool"] .panel:not(.active){display:none}
 .speed-footnote{margin:11px 2px 0;color:#879bb8;font-size:10px;line-height:1.6}
 @media(max-width:390px){.speed-network-grid{gap:7px}.speed-network-tile{padding:9px;gap:7px}.speed-network-icon{width:32px;height:32px;flex-basis:32px}.speed-network-icon svg{width:23px;height:23px}.speed-network-tile b{font-size:11px}.speed-network-tile small{font-size:9px}.speed-stat{padding:10px 7px}.speed-stat b{font-size:14px}.speed-heading h2{font-size:19px}.speed-heading-icon{width:47px;height:47px;flex-basis:47px}}
 @media(prefers-reduced-motion:reduce){.speed-progress-track>div,.speed-network-tile{transition:none}}
+
+
+/* ARYANZZ V2 • pre-test connection insight (browser estimate vs measured). */
+#speed .speed-connection-insight {
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  min-width:0;
+  max-width:100%;
+  margin:13px 0 17px;
+  padding:clamp(14px,2.5vw,19px);
+  border:1px solid rgba(87,208,213,.38);
+  border-radius:17px;
+  background:linear-gradient(118deg,rgba(27,66,90,.88),rgba(13,29,51,.95));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.06);
+}
+#speed .speed-connection-insight strong {
+  display:block;
+  color:#a4f4e4;
+  font-size:clamp(16px,2.3vw,21px);
+  font-weight:900;
+  letter-spacing:-.02em;
+  line-height:1.3;
+  overflow-wrap:anywhere;
+}
+#speed .speed-connection-insight > span {
+  display:block;
+  color:#cadbf3;
+  font-size:11px;
+  line-height:1.55;
+  overflow-wrap:anywhere;
+}
+#speed .speed-connection-insight p {
+  margin:3px 0 0;
+  color:#9fb8d6;
+  font-size:11px;
+  line-height:1.65;
+  overflow-wrap:anywhere;
+}
+@media(max-width:600px) {
+  #speed .speed-connection-insight {
+    margin:10px 0 14px;
+    padding:14px;
+    border-radius:14px;
+  }
+  #speed .speed-connection-insight strong {font-size:17px}
+}
