@@ -55,7 +55,7 @@ assert.match(ui, /AIRPAY_MERCHANT_BLOCKED/);
 assert.match(ui, /AIRPAY_SANDBOX_PRODUCTION_BLOCKED/);
 assert.match(ui, /membershipCheckoutRetry"\)\.hidden = invalidKey \|\| merchantBlocked \|\| sandboxBlocked/);
 assert.match(membership, /sandboxBlocked\(\)/);
-assert.match(membership, /gatewayAuthorization: "not-verified"/);
+assert.match(membership, /gatewayAuthorization: merchantBlocked \? "merchant-blocked" : "not-verified"/);
 assert.match(membership, /AIRPAY_MERCHANT_BLOCKED/);
 assert.match(membership, /async activeMerchantBlock\(\)/);
 assert.match(membership, /"airpay-merchant-block"/);
