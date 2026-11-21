@@ -277,7 +277,8 @@ export class MembershipStore {
         methods: [{
           id: "qris",
           name: "QRIS",
-          description: "Satu QR untuk aplikasi yang mendukung QRIS, termasuk DANA, GoPay, LinkAja, OVO, dan mobile banking."
+          description: "Satu QR untuk aplikasi yang mendukung QRIS, termasuk DANA, GoPay, LinkAja, OVO, ShopeePay, dan mobile banking.",
+          supportedApps: ["DANA", "GoPay", "LinkAja", "OVO", "ShopeePay", "Mobile Banking"]
         }]
       });
     }
@@ -536,7 +537,7 @@ export class MembershipStore {
           feeAmount: order.feeAmount,
           totalAmount: order.totalAmount,
           expiryAt: order.expiryAt,
-          supportedApps: ["DANA", "GoPay", "LinkAja", "OVO", "Mobile Banking"]
+          supportedApps: ["DANA", "GoPay", "LinkAja", "OVO", "ShopeePay", "Mobile Banking"]
         },
         message: "Invoice QRIS berhasil dibuat. Membership akan aktif setelah status lunas diverifikasi oleh server."
       }, 201);
