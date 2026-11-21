@@ -2,6 +2,7 @@ const BUILD_VERSION = "__ARYANZZ_VERSION__";
 import { PLATFORM_CATALOG, PLATFORM_DOMAINS, PLATFORM_CATALOG_BY_ID, platformForHost } from "./platform-catalog.js";
 import { handleAuthRequest, moderationGate } from "./auth.js";
 import { MembershipStore } from "./membership-store.js";
+import { withAuthDatabase } from "./auth-database.js";
 const MEDIA_EXT = new Set(["mp4","webm","mov","m4v","mkv","avi","mpeg","mpg","m2ts","mts","ts","3gp","ogv","asf","wmv","mp3","m4a","aac","wav","ogg","oga","flac","opus","wma","aiff","aif","mka"]);
 const MAX_BYTES = 100 * 1024 * 1024;
 const DEFAULT_PUBLIC_ORIGIN = "https://aryanzz-donwloader.aryanz.workers.dev";
@@ -4303,7 +4304,8 @@ async function securityFetch(request,env){
     }
   }
   try{
-    const response=await workerHandler.fetch(request,env);
+    const runtimeEnv=withAuthDatabase(env);
+    const response=await workerHandler.fetch(request,runtimeEnv);
     return securityHeaders(response,requestId);
   }catch(error){
     console.error("[ARYANZZ_SECURITY] worker_exception",requestId,error instanceof Error?error.name:"unknown");
