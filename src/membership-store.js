@@ -111,6 +111,7 @@ function publicOrder(order) {
     planId: order.planId,
     planName: order.planName,
     billingPeriod: order.billingPeriod,
+    paymentMethod: order.paymentMethod || "qris",
     amount: order.amount,
     totalAmount: order.totalAmount || order.amount,
     feeAmount: order.feeAmount || 0,
@@ -365,6 +366,12 @@ export class MembershipStore {
       return json({ ok: false, error: "Paket atau periode membership tidak valid." }, 400);
     }
 
+    // AirPay currently exposes QRIS only. Wallet and m-banking options on the
+    // frontend are scanner preferences, not unsupported direct-transfer rails.
+    const paymentMethod = String(body.paymentMethod || "qris").trim().toLowerCase();
+    if (!["qris","dana","gopay","linkaja","ovo","shopeepay","mobile_banking"].includes(paymentMethod)) {
+      return json({ ok: false, error: "Metode QRIS tidak dikenali." }, 400);
+    }
     const customerName = String(body.customerName || "").trim().replace(/\s+/g, " ").slice(0, 100);
     const customerEmail = String(body.customerEmail || "").trim().toLowerCase();
     if (customerEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerEmail)) {
@@ -437,6 +444,7 @@ export class MembershipStore {
       planId: plan.id,
       planName: plan.name,
       billingPeriod,
+      paymentMethod,
       amount,
       totalAmount: amount,
       feeAmount: 0,
@@ -539,7 +547,7 @@ export class MembershipStore {
           expiryAt: order.expiryAt,
           supportedApps: ["DANA", "GoPay", "LinkAja", "OVO", "ShopeePay", "Mobile Banking"]
         },
-        message: "Invoice QRIS berhasil dibuat. Membership akan aktif setelah status lunas diverifikasi oleh server."
+        message: "Invoice QRIS otomatis dibuat berdasarkan metode yang dipilih. Membership aktif setelah status lunas diverifikasi AirPay."
       }, 201);
     } catch (error) {
       order.status = "rejected";
