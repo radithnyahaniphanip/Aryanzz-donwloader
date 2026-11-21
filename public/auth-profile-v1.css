@@ -741,3 +741,92 @@ body .nav button>span:last-child{font-size:clamp(9px,1.8vw,11px)!important}
 /* Hide any stale V67.7 injected library heading if old SW cache mixes assets.
    The current Pustaka panel's own .ary-library-hero remains visible. */
 body #history.ary-library-panel > .v677-feature-hero{display:none!important}
+
+
+/* ARYANZZ V2 · spacious banner, avatar sits below its cover, copy has breathing room. */
+body #profile.ary-profile-v2 > section.ary-profile2-hero {
+  width:100%!important;max-width:100%!important;min-width:0!important;
+  overflow:visible!important;position:relative!important;
+  border-radius:23px!important;
+}
+body #profile.ary-profile-v2 .ary-profile2-cover {
+  height:clamp(185px,24vw,285px)!important;
+  min-height:185px!important;
+  width:100%!important;
+  border-radius:22px 22px 0 0!important;
+  background-position:center 43%!important;
+  background-size:cover!important;
+}
+body #profile.ary-profile-v2 .ary-profile2-identity {
+  display:flex!important;align-items:flex-end!important;justify-content:flex-start!important;
+  gap:clamp(14px,2vw,22px)!important;
+  min-width:0!important;
+  padding:0 clamp(16px,3vw,28px) 24px!important;
+  margin-top:-26px!important;
+  position:relative!important;
+}
+body #profile.ary-profile-v2 .ary-profile2-avatar-wrap {
+  flex:0 0 clamp(94px,10vw,126px)!important;
+  width:clamp(94px,10vw,126px)!important;
+  height:clamp(94px,10vw,126px)!important;
+  transform:none!important;
+  z-index:2!important;
+}
+body #profile.ary-profile-v2 .ary-profile2-avatar {
+  width:100%!important;height:100%!important;
+  min-width:0!important;min-height:0!important;
+  border:5px solid #0d2036!important;border-radius:26px!important;
+  box-shadow:0 10px 28px rgba(0,0,0,.38)!important;
+}
+body #profile.ary-profile-v2 .ary-profile2-identity-copy {
+  min-width:0!important;
+  padding:35px 0 5px!important;
+  margin:0!important;
+  transform:none!important;
+}
+body #profile.ary-profile-v2 .ary-profile2-identity-copy h2 {
+  margin:0 0 7px!important;
+  font-size:clamp(20px,2.5vw,27px)!important;
+  line-height:1.25!important;
+  overflow-wrap:anywhere!important;
+}
+body #profile.ary-profile-v2 .ary-profile2-identity-copy p {
+  margin:0!important;
+  font-size:clamp(11px,1.5vw,13px)!important;
+  line-height:1.5!important;
+}
+@media(max-width:767px) {
+  body #profile.ary-profile-v2 > section.ary-profile2-hero {
+    width:calc(100% - 16px)!important;
+    max-width:calc(100% - 16px)!important;
+    margin:0 8px 17px!important;
+  }
+  body #profile.ary-profile-v2 .ary-profile2-cover {
+    height:clamp(165px,45vw,215px)!important;
+    min-height:165px!important;
+  }
+  body #profile.ary-profile-v2 .ary-profile2-identity {
+    gap:12px!important;padding:0 15px 20px!important;
+    margin-top:-19px!important;
+  }
+  body #profile.ary-profile-v2 .ary-profile2-avatar-wrap {
+    flex:0 0 84px!important;width:84px!important;height:84px!important;
+    transform:none!important;
+  }
+  body #profile.ary-profile-v2 .ary-profile2-identity-copy {
+    padding:25px 0 5px!important;
+    transform:none!important;
+  }
+  body #profile.ary-profile-v2 .ary-profile2-identity-copy h2 {
+    font-size:clamp(16px,4vw,20px)!important;
+  }
+  body #profile.ary-profile-v2 .ary-profile2-identity-copy p {
+    font-size:11px!important;
+  }
+}
+@media(max-width:350px) {
+  body #profile.ary-profile-v2 .ary-profile2-identity {
+    align-items:flex-start!important;flex-direction:column!important;
+  }
+  body #profile.ary-profile-v2 .ary-profile2-identity-copy{padding-top:0!important}
+}
