@@ -20,6 +20,14 @@ assert.ok(profileView.indexOf('id="aryAccountOpen"')>profileView.indexOf('id="de
 assert.match(html,/class="ary-profile-device-details"/);
 assert.match(html,/class="ary-library-advanced-backup"/);
 assert.doesNotMatch(html,/Your library\s*[•·]\s*05/i);
+const legacyFeatureJs=read("public/v677.js");
+assert.doesNotMatch(legacyFeatureJs,/YOUR LIBRARY\s*[•·]\s*05|Riwayat & Favorit/,
+  "Legacy V67 decorator must never inject the unwanted second Pustaka heading");
+assert.doesNotMatch(legacyFeatureJs,/"queue","history","imageTools"/,
+  "Pustaka should not be included in the legacy panel decorator");
+assert.match(pCss,/#history\.ary-library-panel > \.v677-feature-hero\{display:none!important\}/,
+  "Old PWA script leftovers cannot display the duplicate library banner");
+
 assert.ok(profile.includes('navigator.permissions.query({name:"geolocation"})')&&profile.includes('permission.state!=="granted"')&&profile.includes('requestDeviceLocation()'),"Map must auto-load only when geolocation has been granted");
 assert.ok(profile.includes('getCurrentPosition')&&profile.includes('renderLocationMap(item)'),"Manual scan and embedded map must still work");
 assert.ok(library.includes('"aryLibraryMediaFilter"')&&library.includes('"aryLibrarySort"')&&library.includes('"aryLibraryClearSearch"'),"Library filters must remain functional");
