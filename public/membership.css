@@ -133,3 +133,39 @@ body .nav button span:last-child{font-size:9px}
  .ary-membership-order-status{grid-column:2;grid-row:1}
  .ary-membership-receipt{grid-column:1/-1;justify-self:start}
 }
+
+
+/* ARYANZZ checkout V2: choose QRIS wallet/banking app before a real invoice exists. */
+#membership .ary-pay-method-intro{max-width:580px;margin:10px 0 14px;color:#bdd2ea;font-size:12px;line-height:1.6}
+#membership .ary-pay-method-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin:11px 0 13px}
+#membership .ary-pay-method{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;text-align:left;gap:5px;min-width:0;min-height:76px;padding:13px;border:1px solid rgba(100,159,221,.42);border-radius:13px;background:linear-gradient(145deg,#183253,#0e1d31);color:#f0f7ff;cursor:pointer;transition:border-color .17s,transform .17s,box-shadow .17s}
+#membership .ary-pay-method strong{font-size:14px;line-height:1.25;font-weight:850}
+#membership .ary-pay-method small{font-size:10px;color:#a8c2df;line-height:1.35}
+#membership .ary-pay-method:is(:hover,:focus-visible,.selected){border-color:#5bdde8;box-shadow:0 0 0 2px rgba(59,203,231,.18)}
+#membership .ary-pay-method:focus-visible{outline:2px solid #7af0f6;outline-offset:2px}
+#membership .ary-pay-method:active{transform:scale(.98)}
+#membership .ary-pay-method:disabled{opacity:.5;cursor:wait}
+#membership .ary-pay-method-bank{grid-column:span 3;background:linear-gradient(110deg,#12354c,#17243a)}
+#membership .ary-pay-buyer-details{margin:12px 0 0;border:1px solid #35506a;background:rgba(15,35,55,.5);padding:11px 13px;border-radius:13px}
+#membership .ary-pay-buyer-details summary{cursor:pointer;font-size:11px;color:#d5eaff;font-weight:800}
+#membership .ary-pay-buyer-details .ary-membership-form{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+#membership .ary-pay-open-link{display:inline-flex!important;text-decoration:none;align-items:center;justify-content:center;margin:7px 0!important;white-space:normal}
+#membership .ary-pay-open-link[hidden],#membership .ary-membership-receipt[hidden],#membership .ary-membership-checkout[hidden],#membership .ary-membership-payment[hidden]{display:none!important}
+#membership .ary-pay-selected-method{color:#77e1e7!important;font-weight:800!important}
+#membership .ary-pay-on-device-note{font-size:10px!important;color:#a5b9d2!important}
+#membership .ary-membership-receipt{margin-top:14px;padding:17px;border:1px solid #3b927d;border-radius:16px;background:linear-gradient(145deg,#12302e,#0d202d)}
+#membership .ary-membership-receipt h3{font-size:17px;color:#b4f6df;margin:0 0 7px}
+#membership .ary-membership-receipt p{font-size:11px;color:#b8d0cd;line-height:1.5}
+#membership .ary-auto-receipt-row{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid #285049;font-size:11px}
+#membership .ary-auto-receipt-row span{color:#a4c9bb}
+#membership .ary-auto-receipt-row strong{text-align:right;overflow-wrap:anywhere;color:#eafff5}
+#membership .ary-membership-receipt button{margin-top:12px}
+@media(max-width:580px){
+ #membership .ary-pay-method-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+ #membership .ary-pay-method{min-height:69px;padding:11px}
+ #membership .ary-pay-method strong{font-size:12px}
+ #membership .ary-pay-method small{font-size:9px}
+ #membership .ary-pay-method-bank{grid-column:span 2}
+ #membership .ary-pay-buyer-details .ary-membership-form{grid-template-columns:1fr}
+}
+@media(prefers-reduced-motion:reduce){#membership .ary-pay-method{transition:none}}
