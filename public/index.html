@@ -1048,7 +1048,12 @@ body .nav button.active .nav-icon{color:#9af4e8!important}
     <button id="membershipWeekly" type="button" aria-pressed="false">Mingguan</button>
     <button id="membershipYearly" type="button" aria-pressed="false">Tahunan</button>
   </div>
-  <div class="ary-membership-plan-grid" id="membershipPlans" aria-live="polite"></div>
+  <div class="ary-membership-rail-controls" id="membershipPlanNavigation" role="group" aria-label="Geser daftar paket membership" hidden>
+    <span>Geser untuk melihat paket lainnya</span>
+    <button id="membershipPlanPrev" type="button" aria-label="Lihat paket sebelumnya" aria-controls="membershipPlans">←</button>
+    <button id="membershipPlanNext" type="button" aria-label="Lihat paket berikutnya" aria-controls="membershipPlans">→</button>
+  </div>
+  <div class="ary-membership-plan-grid" id="membershipPlans" tabindex="0" role="region" aria-label="Paket Membership — geser ke samping untuk melihat semua paket" aria-live="polite"></div>
   <section class="ary-membership-checkout" id="membershipCheckout" hidden>
     <h3 id="membershipCheckoutTitle">Checkout membership</h3>
     <p id="membershipCheckoutSummary">Pilih paket untuk melanjutkan.</p>
