@@ -53,7 +53,7 @@ assert.match(aryHtmlSection(html), /id="membershipPaymentCountdown"/);
 assert.match(ui, /AIRPAY_INVALID_API_KEY/);
 assert.match(ui, /AIRPAY_MERCHANT_BLOCKED/);
 assert.match(ui, /AIRPAY_SANDBOX_PRODUCTION_BLOCKED/);
-assert.match(ui, /membershipCheckoutRetry"\)\.hidden = invalidKey \|\| merchantBlocked \|\| sandboxBlocked/);
+assert.match(ui, /membershipCheckoutRetry"\)\.hidden = invalidKey \|\| merchantBlocked \|\| apiForbidden \|\| sandboxBlocked/);
 assert.match(membership, /sandboxBlocked\(\)/);
 assert.match(membership, /gatewayAuthorization: merchantBlocked \? "merchant-blocked" : "not-verified"/);
 assert.match(membership, /AIRPAY_MERCHANT_BLOCKED/);
@@ -110,4 +110,12 @@ assert.match(html, /data-membership-min="pro"/);
 assert.match(html, /data-membership-min="ultra"/);
 assert.match(html, /data-membership-min="max"/);
 
+assert.match(membership,/error\.code = blocked \? "AIRPAY_MERCHANT_BLOCKED" : "AIRPAY_API_FORBIDDEN"/,
+  "AirPay 403 must distinguish explicit merchant ban from generic API access rejection");
+assert.match(ui,/Akses API QRIS AirPay ditolak \(403\)/,
+  "UI must explain QRIS permission refusal without inventing a payment");
+assert.match(membership,/if \(error\?\.code === "AIRPAY_MERCHANT_BLOCKED"\)/,
+  "Only explicitly classified merchant blocks should activate the temporary 2-minute circuit breaker");
+assert.match(ui,/supportLink\.hidden = !\(merchantBlocked \|\| apiForbidden\)/,
+  "Official gateway dashboard must remain accessible after either 403 failure");
 console.log("ARYANZZ AirPay membership smoke tests passed.");
