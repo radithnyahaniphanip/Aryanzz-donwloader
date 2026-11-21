@@ -5,7 +5,7 @@ const clientCache = new Map();
 function plainRow(row) {
   if (!row) return null;
   if (typeof row.toJSON === "function") return row.toJSON();
-  return Object.fromEntries(Object.entries(row));
+  return row;
 }
 
 function resultMeta(result) {
