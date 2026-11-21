@@ -31,12 +31,16 @@ Do not put the token in source code, frontend JavaScript, or a public GitHub fil
 
 ## 3. Configure the Cloudflare Worker
 
-In the ARYANZZ Worker settings, add:
+In GitHub repository Settings, add these Actions secrets:
 
-| Name | Type | Purpose |
-| --- | --- | --- |
-| `TURSO_DATABASE_URL` | Variable | Turso database URL |
-| `TURSO_AUTH_TOKEN` | Secret | Private Turso database token |
+| Name | Purpose |
+| --- | --- |
+| `TURSO_DATABASE_URL` | Turso database URL |
+| `TURSO_AUTH_TOKEN` | Private Turso database token |
+
+The deployment workflow copies them into the primary and backup Cloudflare Workers as secrets when the migration switch is enabled. It never writes the token into the repository.
+
+After importing any existing production account data, add the repository variable `ARYANZZ_USE_TURSO` and set it to `true`. This makes the deployment workflow apply the Turso schema and skip D1 provisioning. Until that switch is enabled, the existing D1 compatibility path remains in place so a draft migration cannot unexpectedly strand current accounts.
 
 Keep the existing authentication/security settings configured:
 
