@@ -494,6 +494,7 @@ if(shouldTryYoutube){
   }
  }
 }
+if(requestId!==searchRequestId)return;
 if(!mediaItems.length)throw searchFailure||new Error("Belum ada hasil publik yang cocok dari "+target.name+". Hasil dari platform lain tidak akan ditampilkan.");
 }
 render(mediaItems,target,q,unavailable,imageItems);
