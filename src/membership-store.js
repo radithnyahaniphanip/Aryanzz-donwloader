@@ -845,19 +845,36 @@ export class MembershipStore {
 
   async webhook(request) {
     if (request.method !== "POST") return json({ ok: false, error: "Method tidak diizinkan." }, 405);
-    if (this.paymentConfigError()) return json({ ok: false, error: this.paymentConfigError() }, 503);
 
     const rawBody = await request.text();
     const signature = String(request.headers.get("X-AirPay-Signature") || "");
-    if (!await verifyAirPaySignature(rawBody, signature, this.apiKey())) {
-      return json({ ok: false, error: "Tanda tangan webhook AirPay tidak valid." }, 401);
-    }
-
     let event;
     try {
       event = JSON.parse(rawBody);
+      if (!event || typeof event !== "object" || Array.isArray(event)) throw new Error("Expected an object");
     } catch {
       return json({ ok: false, error: "Payload webhook tidak valid." }, 400);
+    }
+
+    // The AirPay dashboard's "Kirim tes" signs webhook.test with a SANDBOX
+    // key, even when production invoices use the LIVE key. A test notification
+    // is acknowledged only after verifying that separate key. It must NEVER
+    // be processed as a payment, looked up as an order, or activate Membership.
+    const bodyEvent = String(event.event || event.type || "").trim().toLowerCase();
+    const headerEvent = String(request.headers.get("X-AirPay-Event") || "").trim().toLowerCase();
+    if (bodyEvent === "webhook.test" || headerEvent === "webhook.test") {
+      const configuredTestKey = String(this.env.AIRPAY_WEBHOOK_TEST_KEY || "").trim();
+      const stagingKey = this.apiKey().startsWith("ak_test_") && !this.sandboxBlocked() ? this.apiKey() : "";
+      const testKey = configuredTestKey || stagingKey;
+      if (!testKey.startsWith("ak_test_") || !await verifyAirPaySignature(rawBody, signature, testKey)) {
+        return json({ ok: false, error: "Tanda tangan webhook tes AirPay tidak valid. Periksa AIRPAY_WEBHOOK_TEST_KEY." }, 401);
+      }
+      return json({ ok: true, event: "webhook.test", test: true });
+    }
+
+    if (this.paymentConfigError()) return json({ ok: false, error: this.paymentConfigError() }, 503);
+    if (!await verifyAirPaySignature(rawBody, signature, this.apiKey())) {
+      return json({ ok: false, error: "Tanda tangan webhook AirPay tidak valid." }, 401);
     }
 
     const data = event.data || event;
