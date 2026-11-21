@@ -8,7 +8,7 @@
   const MOTION_KEY="aryanzz.motion.v75";
   const AUTOSAVE_DB="aryanzz-auto-save-v74";
   const HISTORY_KEYS=["aryanzz.history.v2","aryanzz-download-history-v1"];
-  const FAV_KEYS=["aryanzz.favorites.v2","aryanzz.favorites.v1"];
+  const FAV_KEYS=["aryanzz.favorites.v2","aryanzz.favorites.v1","aryanzz-library-favorites-v1"];
   const safeGet=(key,fallback="")=>{try{const value=localStorage.getItem(key);return value===null?fallback:value}catch{return fallback}};
   const safeSet=(key,value)=>{try{localStorage.setItem(key,String(value));return true}catch{return false}};
   const read=(key,fallback)=>{try{return JSON.parse(safeGet(key,JSON.stringify(fallback)))}catch{return fallback}};
@@ -146,7 +146,18 @@
     $("clearProfilePhoto")?.addEventListener("click",()=>{const d=readDesign();d.avatar="";d.avatarAnimated=false;if(!write(DESIGN_KEY,d)){toast("Foto profil belum terhapus karena penyimpanan browser penuh.");return;}removeMotionAvatar();applyDesign();window.dispatchEvent(new Event("aryanzz:profile-assets-updated"));toast("Foto profil berhasil dihapus.");});
   }
   function profileCounts(){
-    const count=keys=>{for(const key of keys){const value=read(key,[]);if(Array.isArray(value)&&value.length)return value.length;}return 0;};
+    const count=keys=>{
+      const seen=new Set();
+      for(const key of keys){
+        const value=read(key,[]);
+        if(!Array.isArray(value))continue;
+        for(const item of value){
+          const identity=String(item?.url||item?.link||item?.mediaUrl||item?.id||item?.name||JSON.stringify(item));
+          if(identity)seen.add(identity);
+        }
+      }
+      return seen.size;
+    };
     const history=count(HISTORY_KEYS),favorites=count(FAV_KEYS);
     if($("profileHistoryCount"))$("profileHistoryCount").textContent=history;
     if($("profileFavoriteCount"))$("profileFavoriteCount").textContent=favorites;
@@ -439,7 +450,14 @@
       };
       const fail=err=>{
         finish();
-        if(status)status.textContent=err.code===1?"Izin lokasi ditolak. Aktifkan izin lokasi untuk situs ini di Chrome.":err.code===3?"GPS belum merespons. Pastikan layanan lokasi HP aktif, lalu coba lagi.":"Lokasi belum tersedia. Periksa pengaturan lokasi perangkat.";
+        if(!status)return;
+        if(err.code===1){
+          status.textContent="Akses lokasi diblokir. Di Chrome Android: ketuk ikon pengaturan di kiri alamat situs → Izin → Lokasi → Izinkan. Jika tidak muncul, buka ⋮ → Setelan → Setelan situs → Lokasi, izinkan situs ini, muat ulang halaman, lalu pindai lagi.";
+        }else if(err.code===3){
+          status.textContent="GPS belum merespons. Aktifkan Lokasi pada pengaturan HP, gunakan mode akurasi tinggi, lalu tekan Pindai lokasi lagi.";
+        }else{
+          status.textContent="Lokasi belum tersedia. Pastikan GPS HP aktif, koneksi internet tersedia, dan izin lokasi untuk situs ini diizinkan.";
+        }
       };
       // Fast cached/coarse fix first; high accuracy only if the initial GPS request times out.
       navigator.geolocation.getCurrentPosition(accept,err=>{
