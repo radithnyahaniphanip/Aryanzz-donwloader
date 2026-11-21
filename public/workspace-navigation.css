@@ -52,6 +52,12 @@
   font-size:18px!important;
   line-height:1!important;
 }
+.nav button{cursor:pointer;transition:transform .18s ease,color .18s ease,background-color .2s ease,filter .2s ease}
+.nav button:hover{filter:brightness(1.25);transform:translateY(-2px)}
+.nav button:active{transform:scale(.93)}
+.nav button:focus-visible{outline:2px solid #7de9ee;outline-offset:2px}
+.nav button.active .nav-icon{animation:navIconIn .28s cubic-bezier(.2,.8,.2,1)}
+@keyframes navIconIn{0%{transform:scale(.78) rotate(-10deg)}70%{transform:scale(1.12) rotate(3deg)}100%{transform:scale(1) rotate(0)}}
 
 @media(max-width:680px){
  .nav{width:calc(100% - 20px)!important;padding:5px!important}
@@ -61,3 +67,4 @@
  .nav{width:calc(100% - 16px)!important;gap:2px!important}
  .nav button{font-size:8px!important}
 }
+@media(prefers-reduced-motion:reduce){.nav button,.nav button.active .nav-icon{transition:none!important;animation:none!important}}

@@ -53,6 +53,17 @@
 @media(max-width:600px){.ary-membership-hero{flex-direction:column}.ary-membership-account{align-items:flex-start;flex-direction:column}.ary-membership-form{grid-template-columns:1fr}.ary-membership-submit{width:100%}.ary-membership-payment-layout{grid-template-columns:1fr}.ary-membership-qr-wrap{max-width:230px;margin:auto}.ary-membership-plan-summary{min-height:0}}
 @media(max-width:360px){.ary-membership-plan-grid{grid-template-columns:1fr}.ary-membership-plan-price{font-size:25px}.ary-membership-period{width:100%}.ary-membership-period button{flex:1}}
 
+/* Touch friendly motion and clear selection states for every billing period. */
+.ary-membership-period button,.ary-membership-select,.ary-membership-cart-toggle,.ary-membership-cart-checkout,.ary-membership-submit,.ary-membership-check-status,.ary-membership-checkout-error button,.ary-membership-payment-back,.ary-membership-back{cursor:pointer;transition:transform .18s ease,filter .18s ease,box-shadow .18s ease,border-color .18s ease,background-color .18s ease}
+.ary-membership-period button:hover,.ary-membership-select:hover,.ary-membership-cart-toggle:hover,.ary-membership-cart-checkout:hover,.ary-membership-submit:hover,.ary-membership-check-status:hover,.ary-membership-checkout-error button:hover,.ary-membership-payment-back:hover,.ary-membership-back:hover{filter:brightness(1.14);box-shadow:0 7px 22px rgba(63,151,231,.2)}
+.ary-membership-period button:active,.ary-membership-select:active,.ary-membership-cart-toggle:active,.ary-membership-cart-checkout:active,.ary-membership-submit:active,.ary-membership-check-status:active,.ary-membership-checkout-error button:active,.ary-membership-payment-back:active,.ary-membership-back:active{transform:scale(.97)}
+.ary-membership-period button:focus-visible,.ary-membership-select:focus-visible,.ary-membership-cart-toggle:focus-visible,.ary-membership-cart-checkout:focus-visible,.ary-membership-submit:focus-visible{outline:2px solid #7de9ee;outline-offset:3px}
+.ary-membership-plan{transition:transform .24s ease,border-color .24s ease,box-shadow .24s ease}
+.ary-membership-plan:hover{transform:translateY(-3px);border-color:#5baac2;box-shadow:0 12px 28px rgba(24,185,213,.12)}
+.ary-membership-plan.is-popular{animation:membershipGlow 4s ease-in-out infinite}
+@keyframes membershipGlow{0%,100%{box-shadow:0 0 0 1px #4a9cae33,inset 0 1px #ffffff12}50%{box-shadow:0 0 0 1px #64dbea88,0 0 24px #39b7d522,inset 0 1px #ffffff20}}
+@media(prefers-reduced-motion:reduce){.ary-membership-period button,.ary-membership-select,.ary-membership-cart-toggle,.ary-membership-cart-checkout,.ary-membership-submit,.ary-membership-check-status,.ary-membership-checkout-error button,.ary-membership-payment-back,.ary-membership-back,.ary-membership-plan{transition:none!important}.ary-membership-plan.is-popular{animation:none!important}}
+
 body .nav{gap:4px}
 body .nav button{min-width:0;flex:1;max-width:112px;padding:7px 5px}
 body .nav button span:last-child{font-size:9px}

@@ -25,6 +25,10 @@
   const money = value => new Intl.NumberFormat("id-ID", {
     style: "currency", currency: "IDR", maximumFractionDigits: 0
   }).format(Number(value || 0));
+  const priceForPeriod = (plan, period) => period === "yearly" ? plan.yearlyPrice : period === "weekly" ? (plan.weeklyPrice || Math.max(1000, Math.round(plan.monthlyPrice * 7 / 3000) * 1000)) : plan.monthlyPrice;
+  const periodLabel = period => period === "yearly" ? "Tahunan" : period === "weekly" ? "Mingguan" : "Bulanan";
+  const periodUnit = period => period === "yearly" ? "tahun" : period === "weekly" ? "minggu" : "bulan";
+  const periodDuration = period => period === "yearly" ? "365 hari" : period === "weekly" ? "7 hari" : "30 hari";
 
   async function api(path, options) {
     const opts = options || {};
@@ -73,7 +77,7 @@
     byId("membershipCheckoutErrorText").textContent = merchantBlocked
       ? "AirPay menolak pembuatan invoice (HTTP 403). Dokumentasi AirPay menyebut kode ini sebagai status merchant dibanned. Status akun/izin API perlu diperiksa oleh dukungan AirPay; masuk dasbor saja tidak memastikan API QRIS live sudah aktif."
       : apiForbidden
-        ? "AirPay menerima koneksi server tetapi tidak mengizinkan pembuatan QRIS (HTTP 403). Periksa izin merchant, API Key live, dan aktivasi pembayaran di dasbor. Tidak ada tagihan atau QRIS valid yang diterbitkan."
+        ? "AirPay belum menerbitkan invoice (HTTP 403), jadi belum ada QRIS yang bisa dipindai. Error ini datang dari gateway, bukan karena akun ARYANZZ diblokir. Minta dukungan AirPay memeriksa izin API QRIS untuk API Key live yang terpasang. Key sandbox berawalan ak_test_ hanya untuk simulasi dan tidak dapat menerima pembayaran sungguhan."
       : sandboxBlocked
         ? "Kunci ak_test_ hanya untuk pengujian tanpa uang sungguhan pada Worker staging. Jangan menggunakannya untuk membership produksi."
         : invalidKey
@@ -146,14 +150,14 @@
     grid.replaceChildren();
     const plans = state.catalog && Array.isArray(state.catalog.plans) ? state.catalog.plans : [];
     plans.forEach(plan => {
-      const price = state.period === "yearly" ? plan.yearlyPrice : plan.monthlyPrice;
+      const price = priceForPeriod(plan, state.period);
       const card = make("article", "ary-membership-plan" + (plan.id === "pro" ? " is-popular" : ""));
       const top = make("div", "ary-membership-plan-top");
       top.append(make("h3", "", plan.name));
       top.append(make("span", "ary-membership-plan-label", plan.badge || plan.name.toUpperCase()));
       card.append(top);
       card.append(make("div", "ary-membership-plan-price", money(price)));
-      card.append(make("div", "ary-membership-plan-period", state.period === "yearly" ? "per tahun" : "per bulan"));
+      card.append(make("div", "ary-membership-plan-period", "per " + periodUnit(state.period)));
       card.append(make("p", "ary-membership-plan-summary", plan.summary || ""));
       const list = make("ul", "");
       (plan.features || []).forEach(feature => list.append(make("li", "", feature)));
@@ -179,7 +183,7 @@
     try {
       const saved = JSON.parse(sessionStorage.getItem("aryanzz_membership_cart_v1") || "null");
       const plan = state.catalog?.plans?.find(item => item.id === saved?.planId);
-      if (plan && ["monthly", "yearly"].includes(saved.period)) state.cart = { planId: plan.id, period: saved.period };
+      if (plan && ["weekly", "monthly", "yearly"].includes(saved.period)) state.cart = { planId: plan.id, period: saved.period };
     } catch {}
     renderCart();
   }
@@ -207,11 +211,11 @@
       byId("membershipCartCheckout").disabled = true;
       return;
     }
-    const price = state.cart.period === "yearly" ? plan.yearlyPrice : plan.monthlyPrice;
+    const price = priceForPeriod(plan, state.cart.period);
     const row = make("div", "ary-membership-cart-item");
     const copy = make("div", "ary-membership-cart-item-copy");
-    copy.append(make("strong", "", plan.name + " · " + (state.cart.period === "yearly" ? "Tahunan" : "Bulanan")));
-    copy.append(make("small", "", state.cart.period === "yearly" ? "Masa aktif 365 hari" : "Masa aktif 30 hari"));
+    copy.append(make("strong", "", plan.name + " · " + periodLabel(state.cart.period)));
+    copy.append(make("small", "", "Masa aktif " + periodDuration(state.cart.period)));
     row.append(copy, make("b", "ary-membership-cart-item-price", money(price)));
     const remove = make("button", "ary-membership-cart-remove", "Hapus");
     remove.type = "button";
@@ -249,11 +253,15 @@
     state.selectedPlan = plan;
     state.period = state.cart.period;
     byId("membershipMonthly").classList.toggle("active", state.period === "monthly");
+    byId("membershipWeekly").classList.toggle("active", state.period === "weekly");
     byId("membershipYearly").classList.toggle("active", state.period === "yearly");
-    const price = state.period === "yearly" ? plan.yearlyPrice : plan.monthlyPrice;
+    byId("membershipMonthly").setAttribute("aria-pressed", String(state.period === "monthly"));
+    byId("membershipWeekly").setAttribute("aria-pressed", String(state.period === "weekly"));
+    byId("membershipYearly").setAttribute("aria-pressed", String(state.period === "yearly"));
+    const price = priceForPeriod(plan, state.period);
     byId("membershipCheckoutTitle").textContent = "Checkout " + plan.name;
     byId("membershipCheckoutSummary").textContent =
-      money(price) + (state.period === "yearly" ? " untuk 1 tahun." : " untuk 1 bulan.");
+      money(price) + " untuk " + periodDuration(state.period) + ".";
     byId("membershipCart").hidden = true;
     byId("membershipCartToggle").setAttribute("aria-expanded", "false");
     byId("membershipCheckout").hidden = false;
@@ -497,7 +505,7 @@
       ["ID Pesanan", order.id],
       ["ID Transaksi AirPay", order.providerTransactionId || order.transactionId || "-"],
       ["Paket", order.planName || order.planId || "Membership"],
-      ["Periode", order.billingPeriod === "yearly" ? "Tahunan" : "Bulanan"],
+      ["Periode", periodLabel(order.billingPeriod)],
       ["Harga paket", money(order.amount)],
       ["Biaya layanan", money(order.feeAmount || 0)],
       ["Total lunas", money(order.totalAmount || order.amount)],
@@ -624,7 +632,7 @@
     <div class="line"><span>ID Pesanan</span><b>${escapeHtml(order.id)}</b></div>
     <div class="line"><span>ID Transaksi AirPay</span><b>${escapeHtml(order.providerTransactionId || order.transactionId || "-")}</b></div>
     <div class="line"><span>Paket</span><b>${escapeHtml(order.planName || order.planId || "Membership")}</b></div>
-    <div class="line"><span>Periode</span><b>${order.billingPeriod === "yearly" ? "Tahunan · 365 hari" : "Bulanan · 30 hari"}</b></div>
+    <div class="line"><span>Periode</span><b>${periodLabel(order.billingPeriod)} · ${periodDuration(order.billingPeriod)}</b></div>
     <div class="line"><span>Harga paket</span><b>${escapeHtml(money(order.amount))}</b></div>
     <div class="line"><span>Biaya transaksi</span><b>${escapeHtml(money(order.feeAmount || 0))}</b></div>
     <div class="line total"><span>Total dibayar</span><b>${escapeHtml(money(order.totalAmount || order.amount))}</b></div>
@@ -654,7 +662,7 @@
       const row = make("div", "ary-membership-order");
       const copy = make("div", "ary-membership-order-copy");
       copy.append(make("strong", "", (order.planName || order.planId || "Membership") + " · " +
-        (order.billingPeriod === "yearly" ? "Tahunan" : "Bulanan")));
+        periodLabel(order.billingPeriod)));
       copy.append(make("small", "", money(order.totalAmount || order.amount) + " · " + formatDate(order.createdAt)));
       if (order.transactionId) copy.append(make("small", "", "ID transaksi: " + order.transactionId));
       row.append(copy);
@@ -755,17 +763,22 @@
       renderCart();
     }
     byId("membershipMonthly").classList.toggle("active", period === "monthly");
+    byId("membershipWeekly").classList.toggle("active", period === "weekly");
     byId("membershipYearly").classList.toggle("active", period === "yearly");
+    byId("membershipMonthly").setAttribute("aria-pressed", String(period === "monthly"));
+    byId("membershipWeekly").setAttribute("aria-pressed", String(period === "weekly"));
+    byId("membershipYearly").setAttribute("aria-pressed", String(period === "yearly"));
     if (state.selectedPlan) {
       const plan = state.selectedPlan;
-      const price = period === "yearly" ? plan.yearlyPrice : plan.monthlyPrice;
+      const price = priceForPeriod(plan, period);
       byId("membershipCheckoutSummary").textContent =
-        money(price) + (period === "yearly" ? " untuk 1 tahun." : " untuk 1 bulan.");
+        money(price) + " untuk " + periodDuration(period) + ".";
     }
     renderPlans();
   }
 
   byId("membershipMonthly").addEventListener("click", () => setPeriod("monthly"));
+  byId("membershipWeekly").addEventListener("click", () => setPeriod("weekly"));
   byId("membershipYearly").addEventListener("click", () => setPeriod("yearly"));
   byId("membershipCartToggle").addEventListener("click", () => {
     const cart = byId("membershipCart");

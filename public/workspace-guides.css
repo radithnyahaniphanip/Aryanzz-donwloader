@@ -131,3 +131,16 @@
  .ary-guide-overlay{padding:6px!important}
  .ary-guide-dialog{width:100%!important;max-height:calc(100dvh - 12px)!important;border-radius:16px!important}
 }
+
+/* Mobile guide cards stay in a single readable column; the old horizontal
+   grid let long titles paint over adjacent cards on narrow Android screens. */
+@media(max-width:760px){
+ .ary-guide-body{min-width:0;width:100%}
+ .ary-guide-sidebar{width:100%;min-width:0;box-sizing:border-box}
+ .ary-guide-list{display:grid;grid-auto-flow:row;grid-auto-columns:auto;grid-template-columns:minmax(0,1fr);width:100%;max-height:230px;box-sizing:border-box;overflow-x:hidden;overflow-y:auto;scroll-snap-type:none;scrollbar-width:thin}
+ .ary-guide-item{width:100%;min-width:0;min-height:0;box-sizing:border-box;overflow:hidden}
+ .ary-guide-item-top{display:flex;min-width:0;flex-direction:column;align-items:flex-start;gap:4px}
+ .ary-guide-item-top b{min-width:0;max-width:100%;overflow-wrap:anywhere}
+ .ary-guide-item-desc{display:-webkit-box;overflow:hidden;-webkit-box-orient:vertical;-webkit-line-clamp:2}
+ .ary-guide-detail{width:100%;min-width:0;box-sizing:border-box;overflow-wrap:anywhere}
+}

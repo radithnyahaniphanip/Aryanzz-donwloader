@@ -7,6 +7,7 @@ const PLANS = [
     name: "Starter",
     badge: "STARTER",
     monthlyPrice: 10000,
+    weeklyPrice: 2000,
     yearlyPrice: 40000,
     durationDays: 30,
     yearlyDurationDays: 365,
@@ -23,6 +24,7 @@ const PLANS = [
     name: "Pro",
     badge: "PRO",
     monthlyPrice: 66000,
+    weeklyPrice: 15000,
     yearlyPrice: 127000,
     durationDays: 30,
     yearlyDurationDays: 365,
@@ -39,6 +41,7 @@ const PLANS = [
     name: "Ultra",
     badge: "ULTRA",
     monthlyPrice: 200000,
+    weeklyPrice: 47000,
     yearlyPrice: 370000,
     durationDays: 30,
     yearlyDurationDays: 365,
@@ -55,6 +58,7 @@ const PLANS = [
     name: "Max",
     badge: "MAX",
     monthlyPrice: 600000,
+    weeklyPrice: 140000,
     yearlyPrice: 1600000,
     durationDays: 30,
     yearlyDurationDays: 365,
@@ -406,7 +410,7 @@ export class MembershipStore {
 
     const plan = planFor(body && body.planId);
     const billingPeriod = String(body && body.billingPeriod || "monthly").toLowerCase();
-    if (!plan || !["monthly", "yearly"].includes(billingPeriod)) {
+    if (!plan || !["weekly", "monthly", "yearly"].includes(billingPeriod)) {
       return json({ ok: false, error: "Paket atau periode membership tidak valid." }, 400);
     }
 
@@ -422,7 +426,7 @@ export class MembershipStore {
       return json({ ok: false, error: "Format email tidak valid." }, 400);
     }
 
-    const amount = billingPeriod === "yearly" ? plan.yearlyPrice : plan.monthlyPrice;
+    const amount = billingPeriod === "yearly" ? plan.yearlyPrice : billingPeriod === "weekly" ? plan.weeklyPrice : plan.monthlyPrice;
     if (!Number.isInteger(amount) || amount < 1000 || amount > 10000000) {
       return json({ ok: false, error: "Nominal paket tidak memenuhi batas transaksi AirPay." }, 400);
     }
@@ -520,7 +524,7 @@ export class MembershipStore {
       const createBody = JSON.stringify({
         amount,
         external_id: id,
-        description: "ARYANZZ Membership " + plan.name + " " + (billingPeriod === "yearly" ? "Tahunan" : "Bulanan"),
+        description: "ARYANZZ Membership " + plan.name + " " + (billingPeriod === "yearly" ? "Tahunan" : billingPeriod === "weekly" ? "Mingguan" : "Bulanan"),
         callback_url: new URL("/api/membership/webhook", request.url).href,
         return_url: returnUrl.href
       });
@@ -769,7 +773,7 @@ export class MembershipStore {
     const base = previous.status === "active" && previous.expiresAt
       ? Math.max(now, Number(previous.expiresAt))
       : now;
-    const durationDays = order.billingPeriod === "yearly" ? plan.yearlyDurationDays : plan.durationDays;
+    const durationDays = order.billingPeriod === "yearly" ? plan.yearlyDurationDays : order.billingPeriod === "weekly" ? 7 : plan.durationDays;
     const expiresAt = base + durationDays * DAY_MS;
 
     order.status = "paid";
