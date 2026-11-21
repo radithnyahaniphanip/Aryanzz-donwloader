@@ -36,7 +36,7 @@ assert.ok(!html.includes('data-owner-link="telegram"')&&!html.includes("ownerTel
 assert.ok(owner.includes('whatsapp: "https://wa.me/6283163637190"'),"The owner WhatsApp action must keep the correct destination");
 assert.ok(owner.includes('"Chat WhatsApp"')&&!owner.includes("+62 831-6363-7190"),"The WhatsApp card must not print the owner's phone number");
 assert.ok(css.includes("aryDeveloperBadge")&&css.includes("ary-owner2-social-card:hover"),"The owner badge and official channel cards should have dedicated effects");
-assert.ok(search.includes('const shouldTryYoutube=kind!=="image"&&selected==="all"&&!hasYoutubeResult'),"YouTube fallback is reserved for Smart Search and never replaces a selected platform's own results");
+assert.ok(search.includes('const shouldTryYoutube=kind!=="image"&&selected==="all"&&!hasYoutubeResult'),"Cross-platform YouTube fallback is reserved for Smart Search; selecting YouTube remains a native platform search");
 assert.ok(regression.includes('query:"Tabola Bale",platform:"all",mediaType:"video"'),"A Tabola Bale all-platform regression test must remain in the suite");
 assert.ok(worker.includes('query+" official video"')&&worker.includes('youtubeFallbackAttempted&&youtubeFallbackCandidateCount>0'),"The Worker should retry YouTube with video intent and report all-platform fallback");
 assert.ok(html.includes('/arya-v2-refresh.css?v=__ARYANZZ_VERSION__')&&html.includes('/arya-v2-refresh.js?v=__ARYANZZ_VERSION__'),"The V2.1 visual layer and interaction script must be loaded by the live page");
