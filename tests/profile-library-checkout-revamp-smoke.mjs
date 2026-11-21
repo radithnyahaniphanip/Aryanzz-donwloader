@@ -42,4 +42,10 @@ assert.match(html, /href="https:\/\/airpaygateway\.site\/masuk"/,"Merchant recov
 assert.ok(membership.includes("membershipCheckoutError")&&membership.includes("membershipQrLoading")&&membership.includes("membershipPaymentCountdown"),"Payment must retain genuine QR loading and a 10-minute checkout countdown");
 assert.ok(backend.includes("AIRPAY_INVALID_API_KEY"),"Invalid AirPay credentials must remain blocked");
 assert.ok(html.includes('id="membershipReceipt"'),"Verified receipts must remain available");
+const wrangler=read("wrangler.toml");
+const deployWorkflow=read(".github/workflows/deploy-cloudflare.yml");
+assert.match(wrangler,/\[\[d1_databases\]\][\s\S]*?binding = "AUTH_DB"[\s\S]*?database_name = "aryanzz-auth-db"[\s\S]*?database_id = "[0-9a-f-]{36}"/i,
+  "The existing Cloudflare D1 database must be declared as AUTH_DB in wrangler.toml");
+assert.ok(deployWorkflow.includes('Using existing AUTH_DB binding from wrangler.toml.'),
+  "Cloudflare deployment must reuse the declared binding instead of demanding a redundant GitHub Secret");
 console.log("ARYANZZ Profile, Pustaka, geolocation and Membership responsive smoke test passed.");
