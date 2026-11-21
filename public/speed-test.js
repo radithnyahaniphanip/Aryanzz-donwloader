@@ -41,7 +41,7 @@ window.addEventListener("offline",renderConnectionInsight);
 
 function apply(){window.ARYANZZ_NETWORK_PROFILE=estimate();const hint=$("networkProfileHint");if(hint)hint.textContent=selected==="auto"?"Otomatis: "+window.ARYANZZ_NETWORK_PROFILE+" jalur berdasarkan informasi jaringan perangkat.":"Mode manual aktif: "+window.ARYANZZ_NETWORK_PROFILE+" jalur. Kecepatan aktual tetap mengikuti jaringan dan server.";window.dispatchEvent(new CustomEvent("aryanzz:network-profile",{detail:{mode:selected,level:window.ARYANZZ_NETWORK_PROFILE}}));}
 const selector=$("networkProfile");if(selector){selected=selector.value;selector.addEventListener("change",()=>{selected=selector.value;apply();});}
-if(conn?.addEventListener)conn.addEventListener("change",()=>{if(selected==="auto")apply();renderConnectionInsight();});
+if(conn?.addEventListener)conn.addEventListener("change",()=>{measuredSpeed=null;if(selected==="auto")apply();renderConnectionInsight();});
 apply();renderConnectionInsight();
 const btn=$("speedBtn"),cancel=$("speedCancel"),msg=$("speedMsg"),down=$("downVal"),ping=$("pingVal"),upload=$("uploadVal"),jitter=$("jitterVal"),bar=$("speedProgressBar"),pct=$("speedPercent"),step=$("speedStep");
 if(!btn||btn.dataset.speedBound)return;btn.dataset.speedBound="1";
