@@ -2489,8 +2489,8 @@ function threadsCanonicalPostUrl(page,sharedUrl){
     const kind=String(attrs.property||attrs.name||attrs.rel||"").toLowerCase();
     if(["canonical","og:url","twitter:url","al:ios:url"].includes(kind))candidates.push(attrs.href||attrs.content||"");
   }
-  const directPostUrlPattern=/https?:\\?\/\\?\/(?:www\.)?threads\.(?:com|net)\\?\/(?:@[^\\/"\s<>]+\\?\/)?post\\?\/[A-Za-z0-9_-]{6,40}/gi;
-  for(const match of html.matchAll(directPostUrlPattern))candidates.push(match[0]);
+  // Do not infer the destination from unrelated recommended links in the HTML.
+  // Only redirects and explicit canonical/og:url metadata identify the post.
   for(const raw of candidates){
     let url;
     try{url=new URL(decode(raw),sharedUrl)}catch{continue}
