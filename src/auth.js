@@ -51,10 +51,10 @@ function missingConfig(env) {
 async function authSchemaMissing(env){
   // A D1 binding can exist before migrations have created any auth tables.
   // Without this check, /api/auth/config would misleadingly report ready.
-  const required=["auth_users","auth_sessions","auth_verifications","auth_device_lock_accounts","auth_user_bans"];
+  const required=["auth_users","auth_sessions","auth_verifications","auth_trusted_devices","auth_user_bans","auth_banned_devices","auth_device_accounts","auth_moderation_events","auth_device_lock_accounts"];
   if(!env.AUTH_DB||typeof env.AUTH_DB.prepare!=="function")return [];
   try{
-    const rows=await env.AUTH_DB.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name IN ('auth_users','auth_sessions','auth_verifications','auth_device_lock_accounts','auth_user_bans')").all();
+    const rows=await env.AUTH_DB.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name IN ('auth_users','auth_sessions','auth_verifications','auth_trusted_devices','auth_user_bans','auth_banned_devices','auth_device_accounts','auth_moderation_events','auth_device_lock_accounts')").all();
     const present=new Set((rows?.results||[]).map(row=>String(row.name||"")));
     return required.filter(name=>!present.has(name));
   }catch{
