@@ -28,6 +28,14 @@ assert.ok(library.includes('copyMediaLink')&&library.includes('Hapus satu riwaya
 assert.ok(lCss.includes(".ary-library-filter-row")&&lCss.includes(".ary-library-item-actions"),"Library filters must retain responsive styles");
 assert.ok(pCss.includes(".ary-profile-signin-row")&&pCss.includes("max-width:1180px")&&pCss.includes('button[data-nav="history"] .nav-icon'),"Wide layout, login row and compact history icon must be styled");
 assert.ok(html.lastIndexOf('/auth-profile-v1.css')>html.lastIndexOf('/arya-v2-refresh.css'),"Profile responsive overrides must load after legacy visual layers");
+const navMarkup=html.match(/<nav class="nav"[^>]*>([\s\S]*?)<\/nav>/)?.[1]||"";
+assert.equal((navMarkup.match(/data-nav="/g)||[]).length,6,"There must be exactly six navigation buttons");
+assert.match(pCss, /body nav\.nav\s*\{[\s\S]*?grid-template-columns:repeat\(6,minmax\(0,1fr\)\)!important/,"The final mobile stylesheet must override five-column !important theme layouts");
+assert.match(pCss, /@media\(max-width:899px\)/,"Six-item navigation should not override the desktop left rail");
+assert.match(html, /id="membershipCheckoutSupport"/,"Merchant recovery link must be present in checkout");
+assert.match(membership, /supportLink\.hidden = !merchantBlocked/,"Merchant support link is visible only when AirPay rejects the merchant");
+assert.match(html, /href="https:\/\/airpaygateway\.site\/masuk"/,"Merchant recovery action must point to the official AirPay sign-in");
+
 assert.ok(membership.includes("membershipCheckoutError")&&membership.includes("membershipQrLoading")&&membership.includes("membershipPaymentCountdown"),"Payment must retain genuine QR loading and a 10-minute checkout countdown");
 assert.ok(backend.includes("AIRPAY_INVALID_API_KEY"),"Invalid AirPay credentials must remain blocked");
 assert.ok(html.includes('id="membershipReceipt"'),"Verified receipts must remain available");
