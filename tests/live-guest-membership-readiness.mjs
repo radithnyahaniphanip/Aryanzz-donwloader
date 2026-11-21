@@ -17,6 +17,12 @@ const auth=await parse(authResponse);
 assert.equal(auth.ok,true);
 assert.equal(auth.schemaReady,true,"Production D1 schema must be initialized, not merely bound");
 assert.deepEqual(auth.missingTables,[],"All required auth tables must exist");
+assert.equal(auth.captchaSiteKey,"0x4AAAAAAF3YBaqlVpejw9CO",
+  "Turnstile's public sitekey must match the existing owner's widget");
+assert.equal(auth.loginReady,true,
+  "Login should be available when production D1, session Secret and both Turnstile keys are present");
+assert.deepEqual(auth.missingLogin,[],
+  "Login must report no missing security configuration");
 const cookie=(authResponse.headers.get("set-cookie")||"").match(/(?:^|[;, ]+)aryanzz_device_lock=([a-f0-9]{64})/i);
 assert.ok(cookie,"New guest must receive a HttpOnly device identity cookie");
 const headers={cookie:"aryanzz_device_lock="+cookie[1],"cache-control":"no-store"};
