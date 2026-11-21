@@ -230,9 +230,9 @@ export class MembershipStore {
   }
 
   async activeMerchantBlock() {
-    // A real HTTP 403 is an AirPay merchant-account problem, not a QR render
-    // failure. Stop repeated invoice requests for two minutes; this is only
-    // a short-lived safety circuit, not a permanent account ban diagnosis.
+    // Only explicit gateway "merchant blocked" responses trigger a short
+    // cooldown. An otherwise unexplained 403 is an API permission error,
+    // not reliable evidence that the merchant account is banned.
     const record = await this.ctx.storage.get("airpay-merchant-block");
     return record && Number(record.blockedUntil) > Date.now() ? record : null;
   }
@@ -557,10 +557,19 @@ export class MembershipStore {
           throw error;
         }
         if (response.status === 403) {
-          // AirPay's current API documentation specifies 403 = merchant banned.
-          // Rotating an otherwise accepted key does not lift that restriction.
-          const error = new Error("AirPay menolak merchant (HTTP 403). Menurut dokumentasi AirPay, akun merchant diblokir. Periksa status akun dan hubungi dukungan resmi AirPay untuk membuka akses QRIS. Mengganti API Key saja tidak akan mengatasi blokir ini.");
-          error.code = "AIRPAY_MERCHANT_BLOCKED";
+          // HTTP 403 alone indicates an API permission denial. Some providers
+          // use it for banned merchants, others for live QRIS activation,
+          // credentials or missing access rights. Only claim "merchant banned"
+          // when the gateway explicitly names that reason. Never invent QRIS
+          // or grant Membership just because a key exists.
+          const gatewayCode = String(payload?.code || payload?.error_code || payload?.status_code || "").trim();
+          const blocked = /(?:merchant|account|akun|pedagang).{0,48}(?:blocked|banned|suspend|diblokir|dibekukan)|(?:blocked|banned|suspend|diblokir|dibekukan).{0,48}(?:merchant|account|akun)/i.test(gatewayMessage) ||
+            /^(?:MERCHANT_BANNED|MERCHANT_BLOCKED|ACCOUNT_BANNED|ACCOUNT_BLOCKED)$/i.test(gatewayCode);
+          const error = new Error(blocked
+            ? "AirPay secara eksplisit menolak akun merchant (HTTP 403, status diblokir). Periksa pusat bantuan AirPay untuk meminta peninjauan."
+            : "AirPay menolak izin pembuatan QRIS melalui API (HTTP 403). Akun yang bisa masuk dasbor belum tentu sudah mendapat akses API QRIS live. Periksa izin produk QRIS, status merchant, kesesuaian API Key live, dan pengaturan pembayaran di dasbor AirPay.");
+          error.code = blocked ? "AIRPAY_MERCHANT_BLOCKED" : "AIRPAY_API_FORBIDDEN";
+          error.gatewayHttpStatus = 403;
           throw error;
         }
         throw new Error(response.status >= 500
@@ -642,7 +651,7 @@ export class MembershipStore {
         ok: false,
         code,
         error: code === "AIRPAY_INVALID_API_KEY" ? order.note : "Invoice AirPay gagal dibuat. " + order.note
-      }, ["AIRPAY_INVALID_API_KEY", "AIRPAY_MERCHANT_BLOCKED"].includes(code) ? 503 : 502);
+      }, ["AIRPAY_INVALID_API_KEY", "AIRPAY_MERCHANT_BLOCKED", "AIRPAY_API_FORBIDDEN"].includes(code) ? 503 : 502);
     }
   }
 

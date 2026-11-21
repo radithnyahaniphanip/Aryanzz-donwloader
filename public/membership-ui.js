@@ -53,11 +53,14 @@
     const error = String(message || "");
     const invalidKey = code === "AIRPAY_INVALID_API_KEY" || /invalid api key|kunci API AirPay ditolak/i.test(error);
     const merchantBlocked = code === "AIRPAY_MERCHANT_BLOCKED";
+    const apiForbidden = code === "AIRPAY_API_FORBIDDEN";
     const sandboxBlocked = code === "AIRPAY_SANDBOX_PRODUCTION_BLOCKED";
     const unconfigured = code === "AIRPAY_KEY_NOT_CONFIGURED";
     const noIdentity = code === "ARYANZZ_IDENTITY_NOT_READY";
     byId("membershipCheckoutErrorTitle").textContent = merchantBlocked
-      ? "Akun merchant AirPay diblokir (403)"
+      ? "AirPay menolak merchant (403)" 
+      : apiForbidden
+        ? "Akses API QRIS AirPay ditolak (403)"
       : sandboxBlocked
         ? "Key sandbox tidak boleh dipakai untuk Membership live"
         : invalidKey
@@ -68,7 +71,9 @@
               ? "Identitas perangkat belum siap"
               : "Invoice belum berhasil dibuat";
     byId("membershipCheckoutErrorText").textContent = merchantBlocked
-      ? "Gateway AirPay menolak pembuatan QRIS (403). Pengelola website perlu memulihkan akses merchant melalui AirPay. Pembayaran tidak dapat dilanjutkan sampai akun diizinkan kembali."
+      ? "AirPay menolak pembuatan invoice (HTTP 403). Dokumentasi AirPay menyebut kode ini sebagai status merchant dibanned. Status akun/izin API perlu diperiksa oleh dukungan AirPay; masuk dasbor saja tidak memastikan API QRIS live sudah aktif."
+      : apiForbidden
+        ? "AirPay menerima koneksi server tetapi tidak mengizinkan pembuatan QRIS (HTTP 403). Periksa izin merchant, API Key live, dan aktivasi pembayaran di dasbor. Tidak ada tagihan atau QRIS valid yang diterbitkan."
       : sandboxBlocked
         ? "Kunci ak_test_ hanya untuk pengujian tanpa uang sungguhan pada Worker staging. Jangan menggunakannya untuk membership produksi."
         : invalidKey
@@ -79,9 +84,9 @@
               ? "Sesi perangkat belum siap. Muat ulang website dan coba lagi setelah ID ARYANZZ tersedia."
               : (error || "Ada kendala saat menghubungkan layanan pembayaran.");
     panel.hidden = !error;
-    byId("membershipCheckoutRetry").hidden = invalidKey || merchantBlocked || sandboxBlocked || unconfigured || noIdentity;
+    byId("membershipCheckoutRetry").hidden = invalidKey || merchantBlocked || apiForbidden || sandboxBlocked || unconfigured || noIdentity;
     const supportLink = byId("membershipCheckoutSupport");
-    if (supportLink) supportLink.hidden = !merchantBlocked;
+    if (supportLink) supportLink.hidden = !(merchantBlocked || apiForbidden);
   }
 
   function formatDate(value) {

@@ -136,7 +136,7 @@
     }
     showStep(value === "register" ? "aryRegisterForm" : value === "reset" ? "aryResetStartForm" : "aryLoginForm");
     document.querySelectorAll("[data-auth-mode]").forEach(button => button.classList.toggle("active", button.dataset.authMode === value));
-    if (value === "register" && !config.registrationReady) say("Pendaftaran online belum siap. Kamu tetap bisa membuat akun lokal yang hanya tersimpan di browser ini; sinkronisasi lintas perangkat dan Membership memerlukan akun server.", true);
+    if (value === "register" && !config.registrationReady) say("Pendaftaran lokal tersedia di HP ini. Email belum terverifikasi; sinkronisasi, pemulihan akun, dan Membership online masih memerlukan akun server yang terverifikasi.");
   }
   async function post(path, data) {
     const response = await fetch(path, { method: "POST", credentials: "same-origin", cache: "no-store", headers: { "content-type": "application/json", accept: "application/json" }, body: JSON.stringify(data) });
@@ -207,10 +207,11 @@
   async function register(event) {
     event.preventDefault();
     const fullName = $("aryRegName").value.trim(), email = normalizeEmail($("aryRegEmail").value), password = $("aryRegPassword").value, confirm = $("aryRegPasswordConfirm").value;
-    if (!config.registrationReady) return say("Pendaftaran sementara ditutup sampai database, perlindungan server, dan email verifikasi siap.", true);
+    if (!config.registrationReady) say("Pendaftaran akun lokal tersedia di HP ini. Akun belum terverifikasi email dan tidak tersinkron untuk login lintas perangkat atau Membership online.");
     if (fullName.length < 2 || fullName.length > 80) return say("Nama lengkap harus 2–80 karakter.", true);
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return say("Masukkan email yang valid.", true);
     if (!validPassword(password)) return say("Password minimal 12 karakter, gunakan huruf besar, huruf kecil, angka, dan simbol.", true);
+    if (password !== confirm) return say("Konfirmasi password harus sama persis dengan password utama.", true);
     const button = $("aryRegisterSubmit"); button.disabled = true; button.textContent = "Memproses pendaftaran…";
     try {
       const deviceHash = await currentDeviceHash();
@@ -239,9 +240,9 @@
       };
       users.push(user); localStorage.setItem(USERS_KEY, JSON.stringify(users));
       saveLocalSession(user); setUser(user, true);
-      say("Akun dibuat pada browser ini. Penyimpanan akun online belum aktif.");
+      say("Akun lokal berhasil dibuat pada browser ini. Untuk akun online lintas perangkat, aktifkan verifikasi email terlebih dahulu.");
     } catch (error) { say("Pendaftaran belum berhasil: " + error.message, true); }
-    finally { button.disabled = false; button.textContent = "Buat akun ARYANZZ"; }
+    finally { button.disabled = false; button.textContent = config.registrationReady ? "Kirim kode verifikasi email" : "Buat akun lokal di HP ini"; }
   }
   async function verifyRegister(event) {
     event.preventDefault(); const button = $("aryRegisterVerifySubmit"); button.disabled = true;
@@ -497,10 +498,10 @@
       if(localUser)say("Login lokal dinonaktifkan untuk pemulihan sesi otomatis. Data akun lama tetap tersedia untuk login dan migrasi ke akun server.");
     }
     if($("aryLoginSubmit"))$("aryLoginSubmit").disabled=false;
-    if($("aryRegisterSubmit"))$("aryRegisterSubmit").disabled=false;
+    if($("aryRegisterSubmit")){$("aryRegisterSubmit").disabled=false;$("aryRegisterSubmit").textContent=config.registrationReady?"Kirim kode verifikasi email":"Buat akun lokal di HP ini";}
     if($("aryAuthFoot"))$("aryAuthFoot").textContent=config.registrationReady
       ?"Akun server memakai verifikasi email. ID ARYANZZ dan Membership tersimpan pada akun yang sama."
-      :"Akun lokal hanya tersimpan di browser ini. Untuk sinkronisasi lintas perangkat dan Membership, pemilik perlu mengaktifkan database akun, Turnstile, dan email verifikasi.";
+      :"Buat dan masuk akun lokal di browser ini tanpa email verifikasi. Untuk akun online, pemulihan, dan Membership lintas perangkat, layanan email verifikasi harus diaktifkan.";
     if(config.ready)say(config.registrationReady?"Login dan pendaftaran akun server siap.":"Login online tersedia; pendaftaran lokal tersedia sampai email verifikasi server diaktifkan.");
     else say("Mode pengunjung tetap aktif. Kamu bisa membuat akun lokal pada perangkat ini; konfigurasi server yang belum tersedia: "+(config.missingLogin.join(", ")||"database akun")+".");
     if (!window.crypto?.subtle || !window.crypto?.getRandomValues) say("Browser ini tidak mendukung Web Crypto. Gunakan Chrome terbaru melalui HTTPS.", true);

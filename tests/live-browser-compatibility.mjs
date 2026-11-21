@@ -70,6 +70,37 @@ async function openHome(context, label) {
     assert.ok(navigation.outer.height < 110, label + " mobile dock is too tall.");
     await page.locator('nav.nav button[data-nav="membership"]').click();
     await page.locator("#membership").waitFor({ state: "visible", timeout: 15000 });
+    // User's Android screenshot showed cramped Profile heading and Pustaka
+    // cards overflowing their shared page gutters.
+    if(layout.width<=767){
+      await page.locator('nav.nav button[data-nav="history"]').click();
+      await page.locator('#history').waitFor({state:"visible",timeout:15000});
+      const libraryGeometry=await page.evaluate(()=>{
+        const box=el=>{const r=el.getBoundingClientRect();return {left:r.left,right:r.right,top:r.top,bottom:r.bottom,width:r.width}};
+        const root=document.querySelector("#history");
+        return {panel:box(root),hero:box(root.querySelector(".ary-library-hero")),stats:box(root.querySelector(".ary-library-stats")),filter:box(root.querySelector(".ary-library-filter-row")),title:root.querySelector(".ary-library-hero h2")?.textContent?.trim()};
+      });
+      assert.equal(libraryGeometry.title,"Pustaka",label+" Pustaka must not inherit duplicate 'Your Library • 05' header text");
+      assert.ok(libraryGeometry.hero.top>=libraryGeometry.panel.top+8,
+        label+" Pustaka hero overlaps panel border: "+JSON.stringify(libraryGeometry));
+      assert.ok(libraryGeometry.hero.left>=libraryGeometry.panel.left-2&&libraryGeometry.hero.right<=libraryGeometry.panel.right+2,
+        label+" Pustaka hero overflows its container");
+      assert.ok(libraryGeometry.filter.left>=libraryGeometry.panel.left-2&&libraryGeometry.filter.right<=libraryGeometry.panel.right+2,
+        label+" Pustaka filters overflow their container");
+      await page.locator('nav.nav button[data-nav="profile"]').click();
+      await page.locator('#profile').waitFor({state:"visible",timeout:15000});
+      const profileGeometry=await page.evaluate(()=>{
+        const box=el=>{const r=el.getBoundingClientRect();return {left:r.left,right:r.right,top:r.top,bottom:r.bottom,width:r.width}};
+        const root=document.querySelector("#profile");
+        return {panel:box(root),heading:box(root.querySelector(".ary-profile2-header h1")),hero:box(root.querySelector(".ary-profile2-hero")),stats:box(root.querySelector(".ary-profile2-stats"))};
+      });
+      assert.ok(profileGeometry.heading.top>=profileGeometry.panel.top+12,
+        label+" Profil Saya title touches the panel border: "+JSON.stringify(profileGeometry));
+      assert.ok(profileGeometry.hero.left>=profileGeometry.panel.left-2&&profileGeometry.hero.right<=profileGeometry.panel.right+2,
+        label+" Profile card spills outside the shared gutters");
+      assert.ok(Math.abs(profileGeometry.panel.left-libraryGeometry.panel.left)<6,
+        label+" Pustaka and Profil panel gutters should match");
+    }
     await page.locator('nav.nav button[data-nav="home"]').click();
     await page.locator("#url").waitFor({ state: "visible", timeout: 15000 });
   } else {

@@ -36,7 +36,7 @@ assert.match(pCss, /@media\(min-width:900px\)/,"Desktop navigation must retain t
 assert.match(pCss, /body nav\.nav\s*\{[\s\S]*?display:flex!important/,"Desktop must use a vertical flex navigation");
 
 assert.match(html, /id="membershipCheckoutSupport"/,"Merchant recovery link must be present in checkout");
-assert.match(membership, /supportLink\.hidden = !merchantBlocked/,"Merchant support link is visible only when AirPay rejects the merchant");
+assert.match(membership, /supportLink\.hidden = !\(merchantBlocked \|\| apiForbidden\)/,"Merchant support link should be visible for explicit blocks and generic 403 API denial");
 assert.match(html, /href="https:\/\/airpaygateway\.site\/masuk"/,"Merchant recovery action must point to the official AirPay sign-in");
 
 assert.ok(membership.includes("membershipCheckoutError")&&membership.includes("membershipQrLoading")&&membership.includes("membershipPaymentCountdown"),"Payment must retain genuine QR loading and a 10-minute checkout countdown");
@@ -59,4 +59,13 @@ assert.match(pCss, /repeat\(auto-fit,minmax\(104px,1fr\)\)/,
   "Platform icons and names must have balanced desktop card widths");
 assert.match(pCss, /word-break:normal!important/,
   "Platform captions must avoid being broken into arbitrary character fragments");
+
+assert.match(pCss,/body #profile \.ary-profile2-header\{[\s\S]*?padding:0 4px 0!important/,
+  "Mobile Profil Saya title must have dedicated inset and vertical breathing room");
+assert.match(pCss,/body #history\.ary-library-panel::before/,
+  "Legacy injected Pustaka decoration must not duplicate the visible heading");
+assert.match(pCss,/body #history \.ary-library-filter-row\{[\s\S]*?grid-template-columns:repeat\(2,minmax\(0,1fr\)\)!important/,
+  "Pustaka filters must fit a mobile screen without overflowing");
+assert.match(pCss,/body nav\.nav>button\{[\s\S]*?min-height:52px!important/,
+  "All six mobile nav actions must keep consistent accessible tap targets");
 console.log("ARYANZZ Profile, Pustaka, geolocation and Membership responsive smoke test passed.");
