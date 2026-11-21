@@ -97,4 +97,14 @@ assert.match(workflow,/randomBytes\(32\)\.toString\("hex"\)/,
   "CI must use a cryptographic random generator rather than a hard-coded secret");
 assert.match(workflow,/wrangler secret put AUTH_SESSION_SECRET/,
   "CI must put the freshly generated key directly in Cloudflare");
+assert.ok(workflow.includes("Recover missing Turnstile secret through Cloudflare API"),
+  "Deployment must be able to provision Turnstile server validation");
+assert.ok(workflow.includes("/challenges/widgets/$SITEKEY/rotate_secret"),
+  "Turnstile secret must be rotated through Cloudflare's official API");
+assert.ok(workflow.includes('"invalidate_immediately":true'),
+  "The exposed old Turnstile secret must be invalidated after rotation");
+assert.ok(workflow.includes("wrangler secret put TURNSTILE_SECRET_KEY"),
+  "The replacement secret must be stored in Cloudflare, not committed");
+assert.ok(workflow.includes('select(.name == "TURNSTILE_SECRET_KEY")'),
+  "Routine deployments should preserve the installed Turnstile secret");
 console.log("ARYANZZ V2 public account backend, email verification and fail-closed security checks passed.");
