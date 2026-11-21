@@ -1,0 +1,91 @@
+name: ARYANZZ — Free Pages alternate access
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: aryanzz-pages-alternate
+  cancel-in-progress: true
+
+jobs:
+  pages:
+    name: Deploy independent Pages hostname (do not modify main Worker)
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check alternate route and Worker binding
+        run: |
+          node --check 'pages-alternate/functions/api/[[path]].js'
+          node tests/pages-alternate-smoke.mjs
+      - name: Build the same versioned website assets
+        run: |
+          npm install --no-audit --no-fund
+          npm run build:version
+      - name: Install Wrangler
+        run: npm install --global wrangler@latest
+      - name: Create / reuse free Cloudflare Pages project
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN" && test -n "$CLOUDFLARE_ACCOUNT_ID" || {
+            echo "::error::Cloudflare account credentials are missing from repository Secrets."
+            exit 1
+          }
+          PROJECT="aryanzz-access-alternate"
+          if curl --fail --silent --show-error --max-time 20 \
+             -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+             "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$PROJECT" \
+             | jq -e '.success and .result.name == "aryanzz-access-alternate"' >/dev/null; then
+            echo "Using existing free Cloudflare Pages project."
+          else
+            echo "Creating free Cloudflare Pages project (requires Pages Edit token permission)."
+            wrangler pages project create "$PROJECT" --production-branch main
+          fi
+      - name: Deploy Pages assets and same-origin private API Service Binding
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          cd pages-alternate
+          # Wrangler reads THIS Pages config, not the original Worker's
+          # wrangler.toml. No backend token/secret is copied to Pages.
+          wrangler pages deploy ../public --project-name aryanzz-access-alternate --branch main
+      - name: Verify HTML and same-origin backend over pages.dev
+        run: |
+          set -euo pipefail
+          SITE="https://aryanzz-access-alternate.pages.dev"
+          ready=0
+          for i in 1 2 3 4 5 6; do
+            if curl --fail --silent --show-error --max-time 20 \
+               "$SITE/" -o /tmp/aryanzz-alt-home.html \
+               && grep -q 'ARYANZZ' /tmp/aryanzz-alt-home.html \
+               && curl --fail --silent --show-error --max-time 20 \
+                  --cookie-jar /tmp/aryanzz-alt-cookies.txt \
+                  "$SITE/api/auth/config" -o /tmp/aryanzz-alt-auth.json \
+               && jq -e '.ok == true and .schemaReady == true' /tmp/aryanzz-alt-auth.json >/dev/null \
+               && curl --fail --silent --show-error --max-time 20 \
+                  --cookie /tmp/aryanzz-alt-cookies.txt \
+                  "$SITE/api/membership/payment-config" -o /tmp/aryanzz-alt-member.json \
+               && jq -e '.ok == true and .identityReady == true' /tmp/aryanzz-alt-member.json >/dev/null; then
+              ready=1; break
+            fi
+            sleep 5
+          done
+          test "$ready" = "1" || {
+            echo "::error::Pages alternate is not ready: check Pages permissions, binding, and deployment. Never advertise an unverified URL."
+            exit 1
+          }
+          echo "::notice::ARYANZZ alternate Pages HTML and same-origin account/Membership APIs verified."
+          echo "PAGE_READY=true"
