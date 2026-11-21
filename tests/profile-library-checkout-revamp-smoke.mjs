@@ -48,4 +48,15 @@ assert.match(wrangler,/\[\[d1_databases\]\][\s\S]*?binding = "AUTH_DB"[\s\S]*?da
   "The existing Cloudflare D1 database must be declared as AUTH_DB in wrangler.toml");
 assert.ok(deployWorkflow.includes('Using existing AUTH_DB binding from wrangler.toml.'),
   "Cloudflare deployment must reuse the declared binding instead of demanding a redundant GitHub Secret");
+
+assert.match(pCss, /body #home>\.v89-welcome \.ary-v1-hero-title \.ary-v1-hero-line/,
+  "Final stylesheet must prevent awkward word fragments in desktop hero");
+assert.match(pCss, /white-space:nowrap!important/,
+  "Desktop hero lines must remain whole words, rather than breaking inside 'berawal'");
+assert.match(pCss, /body #home \.v674-download #aryWorkspaceHeadline/,
+  "The 'Tempel tautan, mulai berkarya' headline must get desktop-specific typography");
+assert.match(pCss, /repeat\(auto-fit,minmax\(104px,1fr\)\)/,
+  "Platform icons and names must have balanced desktop card widths");
+assert.match(pCss, /word-break:normal!important/,
+  "Platform captions must avoid being broken into arbitrary character fragments");
 console.log("ARYANZZ Profile, Pustaka, geolocation and Membership responsive smoke test passed.");
