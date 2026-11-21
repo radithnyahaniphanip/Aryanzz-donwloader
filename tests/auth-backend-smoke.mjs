@@ -150,4 +150,42 @@ const brokenConfigEnv={...readyEnv,AUTH_DB:{prepare(){throw new Error("D1_ERROR:
 const brokenConfig=await handleAuthRequest(new Request("https://aryanzz.example/api/auth/config"),brokenConfigEnv);
 assert.equal((await brokenConfig.json()).schemaReady,false,
   "Auth config must be safe when D1 schema introspection fails");
+
+const { AUTH_D1_TABLES, ensureAuthD1Schema } = await import("../src/auth-d1-bootstrap.js");
+const sqlSource = await Promise.all([
+  "0001_auth","0002_trusted_devices","0003_account_moderation","0004_membership",
+  "0005_prestige_redeem_devices","0006_poketo_payments","0007_moderation_audit",
+  "0008_device_lock_accounts"
+].map(name=>fs.readFileSync(new URL("../migrations/"+name+".sql",import.meta.url),"utf8")));
+for(const table of AUTH_D1_TABLES)assert.ok(sqlSource.some(sql=>sql.includes("CREATE TABLE IF NOT EXISTS "+table+" (")),
+  "Runtime D1 bootstrap may only create tables from the existing project migrations: "+table);
+assert.equal(AUTH_D1_TABLES.length,15,"Bootstrap must include every original account, moderation and membership table");
+const createdTables=new Set(),executedStatements=[];
+const fakeD1={
+  prepare(sql){
+    if(sql.startsWith("SELECT name FROM sqlite_master"))return{
+      bind(...requested){return{all:async()=>({results:requested.filter(n=>createdTables.has(n)).map(name=>({name}))})}}
+    };
+    return {run:async()=>{
+      executedStatements.push(sql);
+      const table=sql.match(/^CREATE TABLE IF NOT EXISTS\s+(\w+)/);
+      if(table)createdTables.add(table[1]);
+      return {success:true};
+    }};
+  }
+};
+const bootstrapped=await ensureAuthD1Schema(fakeD1);
+assert.equal(bootstrapped.ready,true);
+assert.equal(bootstrapped.bootstrapped,true);
+assert.equal(createdTables.size,15);
+assert.equal(executedStatements.length,30,"Runtime bootstrap must apply all 30 fixed CREATE statements once");
+const again=await ensureAuthD1Schema(fakeD1);
+assert.equal(again.bootstrapped,false,"D1 schema cannot be rebuilt on every page view");
+assert.equal(executedStatements.length,30,"No DDL should run again after successful initialization");
+assert.match(backend,/ARYANZZ_D1_SCHEMA_BOOTSTRAP/,
+  "Runtime schema bootstrap is only executed under explicit server configuration");
+const wranglerSource=fs.readFileSync(new URL("../wrangler.toml",import.meta.url),"utf8");
+assert.match(wranglerSource,/ARYANZZ_D1_SCHEMA_BOOTSTRAP = "enabled"/,
+  "The production Worker must explicitly enable the schema bootstrap");
+
 console.log("ARYANZZ V2 public account backend, email verification and fail-closed security checks passed.");
