@@ -22,7 +22,7 @@ const deviceToken = "a".repeat(64);
 const requestHeaders = { cookie: "aryanzz_device_lock=" + deviceToken };
 const storage = new MemoryStorage();
 const ctx = { storage };
-const env = { AIRPAY_API_KEY: "ak_test_aryanzz-membership-smoke", ARYANZZ_PAYMENT_MODE: "sandbox" };
+const env = { AIRPAY_API_KEY: "ak_test_aryanzz-membership-smoke", AIRPAY_WEBHOOK_TEST_KEY: "ak_test_aryanzz-webhook-test-only", ARYANZZ_PAYMENT_MODE: "sandbox" };
 let invoice = null;
 let gatewayStatus = "Pending";
 let createCalls = 0;
@@ -130,6 +130,42 @@ try {
   assert.equal(expiredCheckoutData.order.status, "pending", "the backend keeps reconciling the real AirPay invoice after the local 10-minute checkout closes");
   assert.equal(expiredCheckoutData.order.checkoutExpired, true, "the 10-minute checkout must be hidden from the customer after timeout");
 
+  // AirPay's dashboard signs webhook.test with a sandbox key, not the live
+  // invoice key. Test events must return 200 without changing an order.
+  const { createHmac } = await import("node:crypto");
+  const dashboardTestBody = JSON.stringify({
+    event: "webhook.test",
+    status: "Success",
+    data: { external_id: created.order.id, transaction_id: invoice.transaction_id, status: "Success" }
+  });
+  const sign = (key, body) => createHmac("sha256", key).update(body).digest("hex");
+  const webhookWith = (body, signature, extraHeaders = {}) => new Request("https://aryanzz.test/api/membership/webhook", {
+    method: "POST",
+    headers: { "content-type": "application/json", "X-AirPay-Signature": signature, ...extraHeaders },
+    body
+  });
+  const dashboardTest = await store.fetch(webhookWith(dashboardTestBody, sign(env.AIRPAY_WEBHOOK_TEST_KEY, dashboardTestBody)));
+  assert.equal(dashboardTest.status, 200, "signed dashboard webhook.test should be acknowledged");
+  assert.equal((await dashboardTest.json()).event, "webhook.test");
+  assert.equal((await storage.get("order:" + created.order.id)).status, "pending", "dashboard test must never mark a paid order");
+  assert.equal(await storage.get("membership:" + deviceToken), undefined, "dashboard test must not activate a membership");
+
+  const invalidTest = await store.fetch(webhookWith(dashboardTestBody, sign("ak_test_wrong", dashboardTestBody)));
+  assert.equal(invalidTest.status, 401, "unknown sandbox signatures must be rejected");
+
+  const forgedLiveEvent = JSON.stringify({
+    event: "payment.success",
+    data: { external_id: created.order.id, transaction_id: invoice.transaction_id, status: "Success" }
+  });
+  const sandboxSignedPayment = await store.fetch(webhookWith(forgedLiveEvent, sign(env.AIRPAY_WEBHOOK_TEST_KEY, forgedLiveEvent)));
+  assert.equal(sandboxSignedPayment.status, 401, "sandbox test key must not authorize payment events");
+
+  const headerOnlyTestBody = JSON.stringify({ status: "test", message: "AirPay webhook test" });
+  const headerOnlyTest = await store.fetch(webhookWith(
+    headerOnlyTestBody, sign(env.AIRPAY_WEBHOOK_TEST_KEY, headerOnlyTestBody), { "X-AirPay-Event": "webhook.test" }
+  ));
+  assert.equal(headerOnlyTest.status, 200, "test event named in the header must be accepted when signed");
+
   gatewayStatus = "Success";
   const rawWebhook = JSON.stringify({
     event: "payment.success",
@@ -141,8 +177,7 @@ try {
       total_amount: invoice.total_amount
     }
   });
-  const { createHmac } = await import("node:crypto");
-  const signature = createHmac("sha256", env.AIRPAY_API_KEY).update(rawWebhook).digest("hex");
+  const signature = sign(env.AIRPAY_API_KEY, rawWebhook);
   const webhookRequest = () => new Request("https://aryanzz.test/api/membership/webhook", {
     method: "POST",
     headers: { "content-type": "application/json", "X-AirPay-Signature": signature },
