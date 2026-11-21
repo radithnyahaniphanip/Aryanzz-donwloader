@@ -78,6 +78,31 @@ async function openHome(context, label) {
       label + " desktop navigation is not a vertical rail.");
     assert.ok(navigation.outer.left >= 0 && navigation.outer.left <= 42,
       label + " desktop navigation rail is not left-aligned.");
+
+    const homeTypography = await page.evaluate(() => {
+      const title=document.querySelector("#home .ary-v1-hero-title");
+      const lines=[...(title?.querySelectorAll(".ary-v1-hero-line")||[])].map(el=>{
+        const box=el.getBoundingClientRect();
+        return {text:el.textContent.trim(),whiteSpace:getComputedStyle(el).whiteSpace,
+          clientWidth:el.clientWidth,scrollWidth:el.scrollWidth,top:box.top,bottom:box.bottom};
+      });
+      const headline=document.querySelector("#aryWorkspaceHeadline");
+      const platformTiles=[...document.querySelectorAll("#home .v736-platform")].slice(0,8).map(el=>{
+        const logo=el.querySelector(".v736-logo")?.getBoundingClientRect();
+        const card=el.getBoundingClientRect();
+        return {top:card.top,height:card.height,logoWidth:logo?.width||0,logoHeight:logo?.height||0};
+      });
+      return {lines,headlineWidth:headline?.getBoundingClientRect().width||0,platformTiles};
+    });
+    assert.equal(homeTypography.lines.length,2,label+" desktop hero should contain exactly two intentional full-word lines.");
+    assert.ok(homeTypography.lines.every(line=>line.whiteSpace==="nowrap"&&line.scrollWidth<=line.clientWidth+3),
+      label+" hero is fragmented or clipped: "+JSON.stringify(homeTypography.lines));
+    assert.ok(homeTypography.lines[1].top>=homeTypography.lines[0].bottom-2,
+      label+" desktop hero lines overlap");
+    assert.ok(homeTypography.headlineWidth>190,label+" downloader headline is compressed");
+    assert.ok(homeTypography.platformTiles.length>=4&&homeTypography.platformTiles.every(t=>t.logoWidth>=28&&t.logoHeight>=28),
+      label+" desktop platform icons are not sized consistently");
+
   }
 
   console.log("PASS " + label + " layout: viewport=" + layout.width + "px, document=" + layout.documentWidth + "px, controls and all six nav tabs visible.");

@@ -446,8 +446,38 @@
     }
     return null;
   }
-  async function inspectMp4Blob(blob,expectedDuration=0){
-    let offset=0,boxes=0,hasFtyp=false,hasMoov=false,hasMdat=false,duration=null;
+  function mp4VideoDimensions(moov){
+    // Read track display dimensions from ISO BMFF tkhd (16.16 fixed-point).
+    // This is independent of provider labels like "2K" or "1080p".
+    const view=new DataView(moov.buffer,moov.byteOffset,moov.byteLength);
+    const readBoxes=(start,end,callback)=>{
+      let pos=start,count=0;
+      while(pos+8<=end&&count++<512){
+        let size=view.getUint32(pos),header=8;
+        if(size===1){if(pos+16>end)break;size=Number(view.getBigUint64(pos+8));header=16;}
+        else if(size===0)size=end-pos;
+        if(!Number.isSafeInteger(size)||size<header||pos+size>end)break;
+        callback(mp4FourCC(moov,pos+4),pos+header,pos+size);
+        pos+=size;
+      }
+    };
+    let dimensions=null;
+    readBoxes(0,moov.length,(type,start,end)=>{
+      if(type!=="trak"||dimensions)return;
+      readBoxes(start,end,(child,dataStart,dataEnd)=>{
+        if(child!=="tkhd"||dimensions||dataStart+4>dataEnd)return;
+        const version=view.getUint8(dataStart);
+        const offset=version===1?88:76;
+        if(dataStart+offset+8>dataEnd)return;
+        const width=Math.round(view.getUint32(dataStart+offset)/65536);
+        const height=Math.round(view.getUint32(dataStart+offset+4)/65536);
+        if(width>=100&&height>=100&&width<=16384&&height<=16384)dimensions={width,height};
+      });
+    });
+    return dimensions;
+  }
+  async function inspectMp4Blob(blob,expectedDuration=0,expectedHeight=0){
+    let offset=0,boxes=0,hasFtyp=false,hasMoov=false,hasMdat=false,duration=null,dimensions=null;
     while(offset+8<=blob.size&&boxes++<4096){
       const head=new Uint8Array(await blob.slice(offset,Math.min(blob.size,offset+16)).arrayBuffer());
       if(head.length<8)break;
@@ -462,6 +492,7 @@
         hasMoov=true;
         const moov=new Uint8Array(await blob.slice(offset+header,offset+size).arrayBuffer());
         duration=mp4ReadMvhdDuration(moov);
+        dimensions=mp4VideoDimensions(moov);
       }
       offset+=size;
     }
@@ -471,7 +502,10 @@
       if(Math.abs(duration-expectedDuration)>tolerance)throw new Error("Durasi MP4 hasil unduhan ("+duration.toFixed(1)+" detik) berbeda jauh dari durasi sumber ("+expectedDuration.toFixed(1)+" detik). File ditahan agar tidak menyimpan video yang terpotong.");
     }
     if(expectedDuration>5&&duration!==null&&duration<1)throw new Error("Metadata MP4 menunjukkan durasi kurang dari 1 detik, bukan video utuh.");
-    return {duration,hasFtyp,hasMoov,hasMdat};
+    if(expectedHeight>0&&dimensions&&Math.abs(dimensions.height-expectedHeight)>3&&Math.abs(dimensions.width-expectedHeight)>3){
+      throw new Error("Resolusi file MP4 sesungguhnya "+dimensions.width+"×"+dimensions.height+" px, tidak sesuai kualitas "+expectedHeight+"p yang dipilih. File ditahan agar video SD tidak disamarkan sebagai HD/2K/4K/8K.");
+    }
+    return {duration,dimensions,hasFtyp,hasMoov,hasMdat};
   }
 
   let aryanzzFfmpegPromise=null;
@@ -821,6 +855,7 @@
       const result=await ffmpeg.readFile(output);
       if(!result||result.length<1024)throw new Error("Hasil MP4 kosong atau tidak lengkap.");
       const blob=new Blob([result],{type:outputExt==="webm"?"video/webm":"video/mp4"}),filename=safeFilename((info.outputName||info.title||"aryanzz-youtube").replace(/\.(?:mp4|mp3|m4a|webm|mov)$/i,"")+"."+outputExt);
+      if(outputExt==="mp4")await inspectMp4Blob(blob,info.duration,Number(videoItem.height)||0);
       progressText.textContent=outputExt.toUpperCase()+" selesai dirakit.";
       progressMeta.textContent="Ukuran file "+formatDownloadSize(blob.size)+" · tekan tombol unduh di bawah.";
       await saveBrowserBlob(blob,filename,progressText.parentElement);
@@ -898,7 +933,7 @@
         if(mode==="video"&&selected.ext==="mp4"){
           progressText.textContent="Memeriksa struktur MP4…";
           progressMeta.textContent="Transfer selesai · memvalidasi file "+formatDownloadSize(blob.size)+".";
-          try{await inspectMp4Blob(blob,info.duration);}catch(error){error.code="MEDIA_VALIDATION_FAILED";throw error;}
+          try{await inspectMp4Blob(blob,info.duration,actualQuality);}catch(error){error.code="MEDIA_VALIDATION_FAILED";throw error;}
         }
         await saveBrowserBlob(blob,filename,progressText.parentElement,"⬇ Simpan "+(mode==="video"?"MP4":"audio")+" sekarang");
         bar.style.width="100%";bar.parentElement?.classList.remove("is-indeterminate");bar.parentElement?.setAttribute("aria-valuenow","100");
@@ -954,12 +989,12 @@
       if(!candidates.length)candidates=selectProviderCandidates(all,2,8);
     }else{
       const wanted=Number(quality)||480;
-      const videoFormats=all.filter(item=>["mp4","webm"].includes(item.ext)&&Number(item.height)>0);
+      const videoFormats=all.filter(item=>["mp4","webm"].includes(item.ext)&&Number(item.height)===wanted&&(!item.videoOnly||(info.formats||[]).some(audio=>audio.mode==="audio"&&(item.ext==="webm"?["webm","opus","ogg"]:["m4a","aac","mp3"]).includes(String(audio.ext||"").toLowerCase())&&(!item.instance||!audio.instance||audio.instance===item.instance))));
+      if(!videoFormats.length)throw new Error("Kualitas "+wanted+"p tidak disediakan bersama audio yang kompatibel. Pilih kualitas lain yang benar-benar tersedia; ARYANZZ tidak akan mengirim 360p dengan label HD.");
       const progressive=videoFormats.filter(item=>!item.videoOnly).sort((a,b)=>(a.ext==="mp4"?0:1)-(b.ext==="mp4"?0:1));
       const adaptive=videoFormats.filter(item=>item.videoOnly).sort((a,b)=>(a.ext==="mp4"?0:1)-(b.ext==="mp4"?0:1));
-      // Exact requested resolution first; for fallbacks choose the nearest
-      // resolution and prefer the higher one on equal distance. Rank same-size
-      // streams by bitrate before preferring a simpler progressive file.
+      // Retry only equal-resolution providers. Never silently downgrade a
+      // requested 1080p/2K/4K/8K video to 360p to make download look successful.
       candidates=selectProviderCandidates(youtubeCandidateQualityOrder(videoFormats,wanted),2,8);
       if(candidates[0]?.videoOnly){
         progressText.textContent="Kualitas "+wanted+"p · menyiapkan satu file video otomatis.";
@@ -999,9 +1034,8 @@
         const reason=String(error.message||error).slice(0,180);
         failures.push((selected.provider||"provider")+" "+(instance||"")+": "+reason);
         if(mode==="video"&&/memori|RAM|terlalu besar|out of memory|allocation failed/i.test(reason)){
-          const next=candidates.find(item=>item!==selected&&Number(item.height)<Number(selected.height));
-          progressText.textContent="Kualitas "+selected.height+"p terlalu berat · mencoba "+(next?next.height+"p":"kualitas MP4 yang lebih ringan")+"…";
-          progressMeta.textContent="Data yang sudah tersimpan tetap dipertahankan. Mode "+({1:"Speed",3:"Max Speed",5:"Mega Speed"}[Number(speed)]||"Max Speed")+" aktif jika server mendukung Range.";
+          progressText.textContent="Kualitas "+selected.height+"p terlalu berat untuk perangkat ini.";
+          progressMeta.textContent="Resolusi tidak diturunkan diam-diam. Jika perangkat tidak mampu memproses 2K/4K/8K, pilih kualitas lebih rendah secara manual.";
         }
       }
     }
@@ -1023,8 +1057,13 @@
       try{
         const publicInfo={...(await postJson("/api/info",{url})),outputName:info.outputName};
         if(publicInfo.providerName==="Public API"&&publicInfo.providerReady){
-          progressText.textContent="Sumber alternatif tersedia · menyiapkan tautan unduh…";
-          return await downloadFile(url,mode,quality,bar,progressText,publicInfo,audioFormat,progressMeta);
+          const target=Number(quality)||0;
+          if(mode==="video"&&target>0&&!(publicInfo.formats||[]).some(item=>item.mode==="video"&&item.downloadUrl&&Number(item.height)===target)){
+            failures.push("Provider alternatif tidak menawarkan resolusi "+target+"p.");
+          }else{
+            progressText.textContent="Sumber alternatif dengan kualitas setara tersedia · menyiapkan tautan unduh…";
+            return await downloadFile(url,mode,quality,bar,progressText,publicInfo,audioFormat,progressMeta);
+          }
         }
       }catch(error){failures.push("Provider publik alternatif: "+String(error.message||error).slice(0,150));}
     }
@@ -1335,6 +1374,9 @@ function socialNetworkPlan(selected=0){
       const hasSocialDownloadFormats=Array.isArray(info.formats)&&info.formats.some(item=>item?.downloadUrl);
       if(hasSocialDownloadFormats){
         const formats=Array.isArray(info.formats)?info.formats:[];
+        // Cari Judul and Public API YouTube use the same quality contract.
+        let exactYouTubeSource=false;
+        try{exactYouTubeSource=/(^|\.)(youtube\.com|youtube-nocookie\.com)$|(^|\.)youtu\.be$/.test(new URL(url).hostname.toLowerCase());}catch{}
         const all=mode==="video"
           ?formats.filter(item=>item.mode==="video"&&item.downloadUrl&&["mp4","m4v","webm"].includes(String(item.ext||"").toLowerCase())&&(!item.videoOnly||providerAudioForVideo(item,formats)))
           :formats.filter(item=>item.mode===mode&&item.downloadUrl);
@@ -1353,6 +1395,10 @@ function socialNetworkPlan(selected=0){
             if(Boolean(a.videoOnly)!==Boolean(b.videoOnly))return a.videoOnly?1:-1;
             return (Number(b.bitrate)||0)-(Number(a.bitrate)||0);
           });
+        }
+        if(mode==="video"&&exactYouTubeSource&&Number(quality)>0){
+          orderedCandidates=orderedCandidates.filter(item=>Number(item.height)===Number(quality));
+          if(!orderedCandidates.length)throw new Error("Kualitas YouTube "+Number(quality)+"p tidak tersedia. Pilih resolusi yang benar-benar ada; tidak ada penurunan otomatis ke 360p.");
         }
         const seenCandidates=new Set();
         orderedCandidates=orderedCandidates.filter(item=>{
@@ -2412,8 +2458,9 @@ function socialNetworkPlan(selected=0){
         mode.disabled=true;
       }else{
         const available = heights.length ? heights : (isYouTube||hasProviderDownloadFormats?[]:[360,480,720,1080,1440,2160]);
-        const quickPool=progressiveHeights.length?progressiveHeights:(adaptiveHeights.length?adaptiveHeights:available);
-        const quickHeight=quickPool.filter(height=>height<=480).sort((a,b)=>b-a)[0]||quickPool.filter(height=>height<=720).sort((a,b)=>b-a)[0]||quickPool.slice().sort((a,b)=>a-b)[0];
+        // Prefer a real HD/FHD source by default, not a 360p source
+        // when a genuine 720p or 1080p stream is available.
+        const quickHeight=available.filter(height=>height>=720&&height<=1080).sort((a,b)=>b-a)[0]||available.filter(height=>height<=1080).sort((a,b)=>b-a)[0]||available[0]||0;
         if(hasProviderDownloadFormats&&!heights.length){
           const original=make("option","","Kualitas asli · ukuran diperiksa sebelum unduh");
           original.value="0";original.selected=true;quality.append(original);quality.disabled=true;qualityLabel.textContent="KUALITAS SUMBER";

@@ -5,7 +5,7 @@ const worker = readFileSync("src/index.js", "utf8");
 const downloader = readFileSync("public/downloader.js", "utf8");
 
 function functionSource(source, name, indent = "") {
-  const pattern = new RegExp("(^|\\n)" + indent + "function " + name + "\\([^\\n]*\\)\\s*\\{[\\s\\S]*?\\n" + indent + "\\}", "m");
+  const pattern = new RegExp("(^|\\n)" + indent + "(?:async )?function " + name + "\\([^\\n]*\\)\\s*\\{[\\s\\S]*?\\n" + indent + "\\}", "m");
   const match = source.match(pattern);
   assert.ok(match, "Expected function " + name + " to exist");
   return match[0].trim();
@@ -102,5 +102,43 @@ assert.match(downloader, /checkLink\(url,button,\{deep:true\}\)/, "When the arch
 assert.match(downloader, /6\*60\*60\*1000/, "Automatic Live monitoring must stop after a bounded six-hour window");
 assert.match(downloader, /Biarkan halaman ini tetap terbuka/, "The UI must explain that monitoring runs in the open page");
 assert.match(downloader, /if\(latest\.isLive\)/, "Live monitoring must keep the active stream state separate from archive-ready state");
+
+
+assert.ok(downloader.includes('Number(item.height)===wanted&&(!item.videoOnly'),
+  "Real YouTube downloads must only try streams at the EXACT selected resolution");
+assert.match(downloader,/tidak akan mengirim 360p dengan label HD/,
+  "Missing HD/2K/4K/8K source must produce an explicit failure, not fake success");
+assert.match(downloader,/orderedCandidates=orderedCandidates\.filter\(item=>Number\(item\.height\)===Number\(quality\)\)/,
+  "The Public API/Cari Judul download route must also keep the requested YouTube resolution");
+assert.match(downloader,/const quickHeight=available\.filter\(height=>height>=720&&height<=1080\)/,
+  "The default YouTube source should favor available 720p/1080p rather than 360p");
+assert.match(downloader,/await inspectMp4Blob\(blob,info\.duration,actualQuality\)/,
+  "Direct MP4 files must validate the actual track dimensions");
+assert.match(downloader,/if\(outputExt==="mp4"\)await inspectMp4Blob\(blob,info\.duration,Number\(videoItem\.height\)\|\|0\)/,
+  "Muxed MP4 files must validate the actual track dimensions");
+
+const fourcc = (bytes,offset)=>String.fromCharCode(...bytes.slice(offset,offset+4));
+const dims = new Function("mp4FourCC", "return (" + functionSource(downloader,"mp4VideoDimensions","  ") + ");")(fourcc);
+const duration = new Function("mp4FourCC", "return (" + functionSource(downloader,"mp4ReadMvhdDuration","  ") + ");")(fourcc);
+const inspect = new Function("mp4FourCC","mp4ReadMvhdDuration","mp4VideoDimensions",
+  "return (" + functionSource(downloader,"inspectMp4Blob","  ") + ");")(fourcc,duration,dims);
+const box=(type,payload)=>{
+  const out=new Uint8Array(8+payload.length);
+  new DataView(out.buffer).setUint32(0,out.length);
+  for(let i=0;i<4;i++)out[4+i]=type.charCodeAt(i);
+  out.set(payload,8);
+  return out;
+};
+const track=new Uint8Array(84);
+new DataView(track.buffer).setUint32(76,1920*65536);
+new DataView(track.buffer).setUint32(80,1080*65536);
+const movie=box("moov",box("trak",box("tkhd",track)));
+assert.deepEqual(dims(new Uint8Array(movie.slice(8))),{width:1920,height:1080},
+  "MP4 parser should read actual video track dimensions");
+const sample=new Blob([box("ftyp",new Uint8Array(8)),movie,box("mdat",new Uint8Array(32))],{type:"video/mp4"});
+assert.equal((await inspect(sample,0,1080)).dimensions.height,1080,
+  "An actual 1080p file should pass 1080p quality validation");
+await assert.rejects(inspect(sample,0,2160),/Resolusi file MP4 sesungguhnya/,
+  "An actual 1080p file must not be delivered under a 4K label");
 
 console.log("YouTube Live URL/state detection, bounded provider failover, exact-resolution bitrate ranking, 8K, adaptive mux and archive monitoring regression tests passed.");
