@@ -42,7 +42,7 @@ function turnstileSecret(env) { return String(env.TURNSTILE_SECRET_KEY || env.TU
 function turnstileSiteKey(env) { return String(env.AUTH_TURNSTILE_SITE_KEY || env.TURNSTILE_SITE_KEY || env.CF_TURNSTILE_SITE_KEY || "").trim(); }
 function missingConfig(env) {
   const missing = [];
-  if (!env.AUTH_DB || typeof env.AUTH_DB.prepare !== "function") missing.push("Cloudflare D1 (AUTH_DB)");
+  if (!env.AUTH_DB || typeof env.AUTH_DB.prepare !== "function") missing.push("Turso database (TURSO_DATABASE_URL + TURSO_AUTH_TOKEN)");
   if (String(env.AUTH_SESSION_SECRET || "").length < 32) missing.push("AUTH_SESSION_SECRET");
   if (!turnstileSecret(env)) missing.push("TURNSTILE_SECRET_KEY (or TURNSTILE_SECRET / CF_TURNSTILE_SECRET_KEY)");
   if (!turnstileSiteKey(env)) missing.push("AUTH_TURNSTILE_SITE_KEY (or TURNSTILE_SITE_KEY / CF_TURNSTILE_SITE_KEY)");
@@ -540,7 +540,7 @@ export async function handleAuthRequest(request, env) {
     const missing = missingConfig(env);
     const loginReady = ready(env);
     const registrationAllowed = String(env.AUTH_PUBLIC_ACCOUNTS_ENABLED||"true").toLowerCase()!=="false";
-    const missingLogin = missing.filter(item => ["Cloudflare D1 (AUTH_DB)","AUTH_SESSION_SECRET","TURNSTILE_SECRET_KEY (or TURNSTILE_SECRET / CF_TURNSTILE_SECRET_KEY)","AUTH_TURNSTILE_SITE_KEY (or TURNSTILE_SITE_KEY / CF_TURNSTILE_SITE_KEY)"].includes(item));
+    const missingLogin = missing.filter(item => ["Turso database (TURSO_DATABASE_URL + TURSO_AUTH_TOKEN)","AUTH_SESSION_SECRET","TURNSTILE_SECRET_KEY (or TURNSTILE_SECRET / CF_TURNSTILE_SECRET_KEY)","AUTH_TURNSTILE_SITE_KEY (or TURNSTILE_SITE_KEY / CF_TURNSTILE_SITE_KEY)"].includes(item));
     const missingRegistration = [...missingLogin];
     if(!String(env.RESEND_API_KEY||"").trim())missingRegistration.push("RESEND_API_KEY");
     if(!String(env.AUTH_EMAIL_FROM||"").trim())missingRegistration.push("AUTH_EMAIL_FROM");
@@ -554,8 +554,8 @@ export async function handleAuthRequest(request, env) {
   }
   if (path === "/api/auth/logout" && request.method === "POST") return logout(request, env);
   const moderationReady=!!env.AUTH_DB&&typeof env.AUTH_DB.prepare==="function"&&String(env.AUTH_SESSION_SECRET||"").length>=32;
-  if(path==="/api/auth/admin/ban"&&request.method==="POST")return moderationReady?adminModerate(request,env,"ban"):reply({ok:false,code:"MODERATION_NOT_CONFIGURED",error:"Moderasi online membutuhkan database D1 dan AUTH_SESSION_SECRET."},503);
-  if(path==="/api/auth/admin/unban"&&request.method==="POST")return moderationReady?adminModerate(request,env,"unban"):reply({ok:false,code:"MODERATION_NOT_CONFIGURED",error:"Moderasi online membutuhkan database D1 dan AUTH_SESSION_SECRET."},503);
+  if(path==="/api/auth/admin/ban"&&request.method==="POST")return moderationReady?adminModerate(request,env,"ban"):reply({ok:false,code:"MODERATION_NOT_CONFIGURED",error:"Moderasi online membutuhkan database akun dan AUTH_SESSION_SECRET."},503);
+  if(path==="/api/auth/admin/unban"&&request.method==="POST")return moderationReady?adminModerate(request,env,"unban"):reply({ok:false,code:"MODERATION_NOT_CONFIGURED",error:"Moderasi online membutuhkan database akun dan AUTH_SESSION_SECRET."},503);
   if(path==="/api/auth/guest/bootstrap"&&request.method==="GET")return guestBootstrap(request,env);
   if (!ready(env)) return reply({ ok: false, code: "AUTH_NOT_CONFIGURED", error: "Layanan akun online belum dikonfigurasi. Login akun lokal dinonaktifkan sampai perlindungan akun server siap." }, 503);
   try {
