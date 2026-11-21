@@ -18,7 +18,7 @@ const checks=[
  ["Title search never mislabels an unchecked result as a verified download",server.includes("verified:false,downloadable:false,searchOnly:true")&&server.includes("const verificationLimit=0")],
  ["Image title discovery preserves platform filters and signature verification",server.includes("const pending=targetedAllPlatforms.filter(")&&server.includes("verifySocialImageSearchResult(item,request.url)")&&server.includes("verifiedImages=(await Promise.all(")],
  ["Network cache writes no longer delay API responses to phones",network.includes("void storeApiCache(key,data,response.status)")&&network.includes("void storeLibrary(body,data)")],
- ["Recent identical in-session title searches reuse response data",search.includes("const recentTitleSearch=new Map()")&&search.includes("Date.now()-saved.at<45000")&&search.includes("AbortSignal.timeout(34000)")],
+ ["Repeated identical title searches always run a fresh request and stale responses cannot overwrite newer results",search.includes("const requestId=++searchRequestId")&&search.includes("if(requestId!==searchRequestId)return;")&&!search.includes("recentTitleSearch")&&search.includes("AbortSignal.timeout(34000)")],
  ["All earlier public features retain their endpoints",html.includes('id="platformPicker"')&&html.includes('id="titleSearchBtn"')&&server.includes('async function searchSocial(request)')&&server.includes('async function socialImageSearch(request)')]
 ];
 for(const [label,ok] of checks){assert.ok(ok,label);console.log("✔ "+label);}
