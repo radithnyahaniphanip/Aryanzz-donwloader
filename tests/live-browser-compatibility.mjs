@@ -105,6 +105,18 @@ async function openHome(context, label) {
 
   }
 
+  const startup=await page.evaluate(()=>{
+    const n=performance.getEntriesByType("navigation")[0];
+    const entries=performance.getEntriesByType("resource");
+    return {
+      ttfb:n?Math.round(n.responseStart-n.requestStart):null,
+      domContentLoaded:n?Math.round(n.domContentLoadedEventEnd-n.startTime):null,
+      load:n&&n.loadEventEnd?Math.round(n.loadEventEnd-n.startTime):null,
+      css:entries.filter(r=>/\.css(?:\?|$)/.test(r.name)).length,
+      js:entries.filter(r=>/\.js(?:\?|$)/.test(r.name)).length
+    };
+  });
+  console.log("STARTUP "+label+" metrics: "+JSON.stringify(startup));
   console.log("PASS " + label + " layout: viewport=" + layout.width + "px, document=" + layout.documentWidth + "px, controls and all six nav tabs visible.");
   return page;
 }
@@ -178,6 +190,12 @@ async function testPwaAndStorage(page) {
   });
   const version = await readServiceWorkerVersion(page);
   assert.equal(version, EXPECTED_BUILD_VERSION, "Service Worker build mismatch: " + version);
+  const installedStatic = await page.evaluate(async build => {
+    const cache=await caches.open("aryanzz-build-"+build);
+    const entry=await cache.match("/v674.css?v="+build);
+    return !!entry && entry.ok && (entry.headers.get("content-type")||"").includes("text/css");
+  }, EXPECTED_BUILD_VERSION);
+  assert.ok(installedStatic,"Versioned static CSS must be installed for instant repeat visits.");
   const cacheNames = await page.evaluate(() => caches.keys());
   assert.ok(cacheNames.includes("aryanzz-build-" + EXPECTED_BUILD_VERSION), "Current versioned PWA cache is missing: " + cacheNames.join(", "));
   const marker = "qa-preserve-" + Date.now();
