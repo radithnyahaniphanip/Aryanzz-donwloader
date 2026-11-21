@@ -35,7 +35,7 @@ const unavailable=await handleAuthRequest(new Request("https://aryanzz.example/a
 assert.equal(unavailable.status,503);
 assert.equal((await unavailable.json()).code,"AUTH_NOT_CONFIGURED");
 
-const requiredAuthTables=["auth_users","auth_sessions","auth_verifications","auth_device_lock_accounts","auth_user_bans"];
+const requiredAuthTables=["auth_users","auth_sessions","auth_verifications","auth_trusted_devices","auth_user_bans","auth_banned_devices","auth_device_accounts","auth_moderation_events","auth_device_lock_accounts"];
 const mockMigratedDB={prepare(){return {all:async()=>({results:requiredAuthTables.map(name=>({name}))})}}};
 const readyEnv={
   AUTH_DB:mockMigratedDB,
