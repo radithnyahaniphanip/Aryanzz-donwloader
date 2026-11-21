@@ -76,4 +76,32 @@ assert.match(pCss,/body #history \.ary-library-filter-row\{[\s\S]*?grid-template
   "Pustaka filters must fit a mobile screen without overflowing");
 assert.match(pCss,/body nav\.nav>button\{[\s\S]*?min-height:52px!important/,
   "All six mobile nav actions must keep consistent accessible tap targets");
+// Desktop-site mode on Android retains the sidebar, but must not clip the
+// Membership card rail; the same controls apply to all billing periods.
+const desktopCss=read("public/desktop-workspace.css");
+assert.ok(desktopCss.includes('body.arya-v2-enhanced .app-shell.wrap {') &&
+  desktopCss.includes('width: calc(100% - var(--ary-desktop-rail) - 72px) !important;'),
+  "Desktop-site mode must reserve enough viewport width for the left sidebar");
+assert.ok(desktopCss.includes('body #membership #membershipPlans.ary-membership-plan-grid') &&
+  desktopCss.includes('grid-auto-flow: column !important;') &&
+  desktopCss.includes('grid-template-columns: none !important;') &&
+  desktopCss.includes('overflow-x: auto !important;') &&
+  desktopCss.includes('touch-action: pan-x pan-y;') &&
+  desktopCss.includes('scroll-snap-type: x proximity;'),
+  "Desktop membership plans must be horizontally scrollable by touch");
+assert.ok(desktopCss.includes('@media (max-width: 899px)') &&
+  desktopCss.includes('#membership .ary-membership-rail-controls { display: none !important; }'),
+  "Default phone layout must not show irrelevant desktop rail buttons");
+for (const id of ["membershipPlanNavigation","membershipPlanPrev","membershipPlanNext","membershipPlans"]) {
+  assert.ok(html.includes('id="'+id+'"'), "Membership rail must keep "+id);
+}
+assert.match(html,/id="membershipPlans" tabindex="0" role="region"/,
+  "The horizontal plan rail must be keyboard-focusable");
+assert.ok(membership.includes('function syncPlanNavigation()') &&
+  membership.includes('function movePlanRail(direction)') &&
+  membership.includes('new ResizeObserver(syncPlanNavigation)') &&
+  membership.includes('byId("membershipPlanPrev").addEventListener("click"') &&
+  membership.includes('byId("membershipPlanNext").addEventListener("click"') &&
+  membership.includes('byId("membershipPlans").scrollLeft = 0;'),
+  "The arrows and rail must update on scroll, resize, and billing-period changes");
 console.log("ARYANZZ Profile, Pustaka, geolocation and Membership responsive smoke test passed.");

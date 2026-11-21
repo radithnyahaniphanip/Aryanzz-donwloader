@@ -145,6 +145,26 @@
     renderFeatureLocks();
   }
 
+  function syncPlanNavigation() {
+    const rail = byId("membershipPlans");
+    const controls = byId("membershipPlanNavigation");
+    if (!rail || !controls) return;
+    const desktop = !window.matchMedia || window.matchMedia("(min-width: 900px)").matches;
+    const maxScroll = Math.max(0, rail.scrollWidth - rail.clientWidth);
+    controls.hidden = !desktop || maxScroll <= 3;
+    byId("membershipPlanPrev").disabled = rail.scrollLeft <= 3;
+    byId("membershipPlanNext").disabled = rail.scrollLeft >= maxScroll - 3;
+  }
+
+  function movePlanRail(direction) {
+    const rail = byId("membershipPlans");
+    const card = rail.querySelector(".ary-membership-plan");
+    const gap = Number.parseFloat(getComputedStyle(rail).columnGap) || 14;
+    const step = (card ? card.getBoundingClientRect().width : Math.max(230, rail.clientWidth * .7)) + gap;
+    const reducedMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    rail.scrollBy({ left: direction * step, behavior: reducedMotion ? "auto" : "smooth" });
+  }
+
   function renderPlans() {
     const grid = byId("membershipPlans");
     grid.replaceChildren();
@@ -170,6 +190,7 @@
       card.append(button);
       grid.append(card);
     });
+    window.requestAnimationFrame(syncPlanNavigation);
   }
 
   function persistCart() {
@@ -775,11 +796,20 @@
         money(price) + " untuk " + periodDuration(period) + ".";
     }
     renderPlans();
+    byId("membershipPlans").scrollLeft = 0;
+    window.requestAnimationFrame(syncPlanNavigation);
   }
 
   byId("membershipMonthly").addEventListener("click", () => setPeriod("monthly"));
   byId("membershipWeekly").addEventListener("click", () => setPeriod("weekly"));
   byId("membershipYearly").addEventListener("click", () => setPeriod("yearly"));
+  byId("membershipPlanPrev").addEventListener("click", () => movePlanRail(-1));
+  byId("membershipPlanNext").addEventListener("click", () => movePlanRail(1));
+  byId("membershipPlans").addEventListener("scroll", syncPlanNavigation, { passive: true });
+  window.addEventListener("resize", syncPlanNavigation, { passive: true });
+  if (typeof ResizeObserver === "function") {
+    new ResizeObserver(syncPlanNavigation).observe(byId("membershipPlans"));
+  }
   byId("membershipCartToggle").addEventListener("click", () => {
     const cart = byId("membershipCart");
     cart.hidden = !cart.hidden;

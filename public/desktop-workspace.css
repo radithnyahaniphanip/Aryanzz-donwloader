@@ -477,3 +477,126 @@
     margin:10px 0 18px!important;
   }
 }
+
+
+/* ARYANZZ V2 — Desktop-site mode on Android: keep the page inside the viewport.
+   The older brand-system rule (body .app-shell.wrap) overrode the desktop
+   sidebar offset with width:100% + margin:auto. Use a more specific selector
+   so the membership content cannot end up behind the desktop left rail. */
+@media (min-width: 900px) {
+  body.arya-v2-enhanced .app-shell.wrap {
+    box-sizing: border-box !important;
+    width: calc(100% - var(--ary-desktop-rail) - 72px) !important;
+    max-width: 1540px !important;
+    min-width: 0 !important;
+    margin: 0 24px 0 calc(var(--ary-desktop-rail) + 48px) !important;
+  }
+
+  body.arya-v2-enhanced #toolsArea,
+  body.arya-v2-enhanced #toolsArea > #membership {
+    box-sizing: border-box !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  #membership .ary-membership-hero > div:first-child,
+  #membership .ary-membership-account > div:first-child,
+  #membership .ary-membership-payment-layout,
+  #membership .ary-membership-payment-details {
+    min-width: 0 !important;
+    max-width: 100%;
+  }
+
+  /* One independently scrollable track for all four plans in every billing
+     period. It is intentionally NOT the body/document horizontal scrollbar. */
+  body #membership #membershipPlans.ary-membership-plan-grid {
+    display: grid !important;
+    grid-template-columns: none !important;
+    grid-auto-flow: column !important;
+    grid-auto-columns: clamp(230px, 30%, 300px) !important;
+    align-items: stretch !important;
+    column-gap: 14px !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    scroll-snap-type: x proximity;
+    scroll-padding-inline: 4px;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x pan-y;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(99,196,225,.65) rgba(30,59,92,.35);
+    padding: 6px 4px 16px !important;
+  }
+
+  #membership #membershipPlans > .ary-membership-plan {
+    box-sizing: border-box;
+    min-width: 0 !important;
+    width: 100% !important;
+    height: 100%;
+    scroll-snap-align: start;
+  }
+
+  #membership #membershipPlans::-webkit-scrollbar { height: 7px; }
+  #membership #membershipPlans::-webkit-scrollbar-track {
+    background: rgba(30,59,92,.35);
+    border-radius: 999px;
+  }
+  #membership #membershipPlans::-webkit-scrollbar-thumb {
+    background: rgba(99,196,225,.65);
+    border-radius: 999px;
+  }
+
+  #membership .ary-membership-rail-controls {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 9px;
+    width: 100%;
+    min-width: 0;
+    margin: -4px 0 7px;
+  }
+  #membership .ary-membership-rail-controls[hidden] { display: none !important; }
+  #membership .ary-membership-rail-controls > span {
+    margin-right: auto;
+    color: #9eb9d1;
+    font-size: 11px;
+    line-height: 1.4;
+  }
+  #membership .ary-membership-rail-controls > button {
+    display: inline-grid;
+    place-items: center;
+    width: 36px;
+    height: 34px;
+    flex: 0 0 36px;
+    border: 1px solid #43799c;
+    border-radius: 10px;
+    background: linear-gradient(145deg,#173751,#10243c);
+    color: #e5f7ff;
+    font-size: 18px;
+    cursor: pointer;
+  }
+  #membership .ary-membership-rail-controls > button:disabled {
+    opacity: .38;
+    cursor: default;
+  }
+  #membership .ary-membership-rail-controls > button:focus-visible {
+    outline: 2px solid #7ce5ef;
+    outline-offset: 2px;
+  }
+}
+
+@media (min-width: 900px) and (max-width: 1120px) {
+  body.arya-v2-enhanced .app-shell.wrap {
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+  }
+}
+
+/* Native phone layout stays stacked; desktop-only arrows stay hidden. */
+@media (max-width: 899px) {
+  #membership .ary-membership-rail-controls { display: none !important; }
+}
