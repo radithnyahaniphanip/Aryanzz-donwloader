@@ -166,9 +166,20 @@
       const now=new Date();since=[now.getFullYear(),String(now.getMonth()+1).padStart(2,"0"),String(now.getDate()).padStart(2,"0")].join("-");
       safeSet("aryanzz.member.since.v25",since);
     }
-    const parts=/^\d{4}-\d{2}-\d{2}$/.test(since)?since.split("-").map(Number):null;
-    const joined=parts?new Date(parts[0],parts[1]-1,parts[2]):new Date(since);
+    const user=window.aryanzzAuthUser||null;
+    const isOnlineAccount=!!user&&!user.localOnly&&!!user.id;
+    const accountCreatedAt=user?.createdAt||user?.joinedAt||null;
+    const accountTime=typeof accountCreatedAt==="number"?new Date(accountCreatedAt):accountCreatedAt?new Date(accountCreatedAt):null;
+    const localParts=since.split("-").map(Number);
+    const localTime=new Date(localParts[0],localParts[1]-1,localParts[2]);
+    const joined=isOnlineAccount&&accountTime&&!Number.isNaN(accountTime.getTime())?accountTime:localTime;
     if($("profileSince"))$("profileSince").textContent=(Number.isNaN(joined.getTime())?new Date():joined).toLocaleDateString("id-ID",{day:"2-digit",month:"short",year:"numeric"});
+    if($("profileSinceLabel"))$("profileSinceLabel").textContent=isOnlineAccount&&accountTime&&!Number.isNaN(accountTime.getTime())?"Akun sejak":"Menggunakan sejak";
+    if($("aryProfileStorageNotice"))$("aryProfileStorageNotice").textContent=isOnlineAccount
+      ?"Akun online aktif. Pustaka, riwayat dan favorit masih disimpan lokal pada browser ini; gunakan cadangan untuk pindah perangkat."
+      :user?.localOnly
+        ?"Akun lokal aktif. Profil dan Pustaka tersimpan pada browser ini, belum tersinkron ke server."
+        :"Mode pengunjung. Profil, riwayat dan favorit tersimpan pada browser perangkat ini, bukan akun online.";
   }
   function setupProfilePreview(){
     const name=$("profileName"),bio=$("profileBio"),saved=read(PROFILE_KEY,{});
@@ -582,6 +593,7 @@
     storeImage("profilePhoto","avatar",520,520,.8,"Foto profil");
     setupSurface();setupProfilePreview();setupBackupActions();profileCounts();setupReveal();setupPremiumEffects();initRandomProfileId();
     window.addEventListener("storage",()=>{profileCounts();applyDesign();});
+    window.addEventListener("aryanzz:auth-change",profileCounts);
     window.addEventListener("aryanzz:profile-assets-updated",applyDesign);
     window.addEventListener("aryanzz:history-updated",profileCounts);
     queueAutoSnapshot();
