@@ -94,8 +94,12 @@ async function openHome(context, label) {
         const root=document.querySelector("#profile");
         return {panel:box(root),heading:box(root.querySelector(".ary-profile2-header h1")),hero:box(root.querySelector(".ary-profile2-hero")),stats:box(root.querySelector(".ary-profile2-stats"))};
       });
-      assert.ok(profileGeometry.heading.top>=profileGeometry.panel.top+12,
+      assert.ok(profileGeometry.heading.top>=profileGeometry.panel.top+16,
         label+" Profil Saya title touches the panel border: "+JSON.stringify(profileGeometry));
+      assert.ok(profileGeometry.heading.left>=profileGeometry.panel.left+12,
+        label+" Profil Saya title is too close to the left border: "+JSON.stringify(profileGeometry));
+      assert.ok(profileGeometry.hero.left>=profileGeometry.panel.left+10,
+        label+" Profile cover needs consistent inner gutters: "+JSON.stringify(profileGeometry));
       assert.ok(profileGeometry.hero.left>=profileGeometry.panel.left-2&&profileGeometry.hero.right<=profileGeometry.panel.right+2,
         label+" Profile card spills outside the shared gutters");
       assert.ok(Math.abs(profileGeometry.panel.left-libraryGeometry.panel.left)<6,
