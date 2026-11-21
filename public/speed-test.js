@@ -3,10 +3,46 @@ const $=id=>document.getElementById(id);
 const conn=navigator.connection||navigator.mozConnection||navigator.webkitConnection;
 let selected="auto",controller=null;
 function estimate(){if(selected!=="auto")return Number(selected);const type=conn?.effectiveType||"";const down=Number(conn?.downlink)||0;const rtt=Number(conn?.rtt)||0;if(type==="slow-2g"||type==="2g"||down>0&&down<.7||rtt>900)return 1;if(type==="3g"||down>0&&down<2||rtt>450)return 2;if(down>=15&&rtt>0&&rtt<100)return 5;if(down>=6&&rtt>0&&rtt<180)return 4;return 3;}
+// Network Information API estimates are browser hints, never cellular RSSI
+// measurements. Do not invent signal bars or exact speeds if the API is absent.
+let measuredSpeed=null;
+function qualityFromMbps(mbps){
+ if(mbps<1)return {label:"Sangat lemah",use:"Teks dan pesan ringan mungkin bisa; video/call umumnya tidak stabil."};
+ if(mbps<5)return {label:"Lemah",use:"Chat dan browsing sederhana; video kualitas rendah mungkin tersendat."};
+ if(mbps<20)return {label:"Kuat",use:"Chat, sosial media, streaming HD dan panggilan video pada kondisi stabil."};
+ return {label:"Sangat kuat",use:"Media sosial, streaming resolusi tinggi dan unduhan besar relatif nyaman jika ping stabil."};
+}
+function renderConnectionInsight(){
+ const level=$("speedSignalLevel"),confidence=$("speedSignalConfidence"),uses=$("speedSignalUse"),name=$("speedNetworkName"),wifi=$("wifiState"),mobile=$("mobileState");
+ if(!level||!confidence||!uses)return;
+ const type=String(conn?.type||"").toLowerCase(),transport=type==="wifi"?"Wi-Fi":type==="cellular"?"Data seluler":type==="ethernet"?"Ethernet":"Jenis jaringan tidak terdeteksi";
+ if(name)name.textContent=transport;
+ if(wifi)wifi.textContent=type==="wifi"?"Terdeteksi":type==="cellular"?"Bukan koneksi aktif":"Tidak dapat dipastikan";
+ if(mobile)mobile.textContent=type==="cellular"?"Terdeteksi":type==="wifi"?"Bukan koneksi aktif":"Tidak dapat dipastikan";
+ if(!navigator.onLine){
+   level.textContent="Offline menurut browser"; confidence.textContent="Tidak ada koneksi yang terdeteksi saat ini.";uses.textContent="Hubungkan perangkat lalu jalankan Speed Test.";return;
+ }
+ const hint=Number(conn?.downlink);
+ const latencyHint=Number(conn?.rtt);
+ const hasHint=Number.isFinite(hint)&&hint>0;
+ const value=Number.isFinite(measuredSpeed)&&measuredSpeed>=0?measuredSpeed:hasHint?hint:null;
+ if(value===null){
+  level.textContent="Kualitas belum dapat diperkirakan";
+  confidence.textContent="Browser tidak menyediakan data kecepatan atau sinyal radio.";
+  uses.textContent="Tekan Mulai Speed Test untuk mengukur koneksi ke server ARYANZZ.";return;
+ }
+ const q=qualityFromMbps(value);
+ level.textContent=q.label;
+ confidence.textContent=measuredSpeed!==null?"Berdasarkan unduhan uji ke server ARYANZZ · bukan kekuatan sinyal radio":"Estimasi browser "+hint.toFixed(1)+" Mbps"+(latencyHint>0?", RTT kira-kira "+latencyHint+" ms":"")+" · belum diuji";
+ uses.textContent=q.use+" Kinerja aktual berbeda menurut aplikasi, waktu, jaringan dan server.";
+}
+window.addEventListener("online",renderConnectionInsight);
+window.addEventListener("offline",renderConnectionInsight);
+
 function apply(){window.ARYANZZ_NETWORK_PROFILE=estimate();const hint=$("networkProfileHint");if(hint)hint.textContent=selected==="auto"?"Otomatis: "+window.ARYANZZ_NETWORK_PROFILE+" jalur berdasarkan informasi jaringan perangkat.":"Mode manual aktif: "+window.ARYANZZ_NETWORK_PROFILE+" jalur. Kecepatan aktual tetap mengikuti jaringan dan server.";window.dispatchEvent(new CustomEvent("aryanzz:network-profile",{detail:{mode:selected,level:window.ARYANZZ_NETWORK_PROFILE}}));}
 const selector=$("networkProfile");if(selector){selected=selector.value;selector.addEventListener("change",()=>{selected=selector.value;apply();});}
-if(conn?.addEventListener)conn.addEventListener("change",()=>{if(selected==="auto")apply();});
-apply();
+if(conn?.addEventListener)conn.addEventListener("change",()=>{if(selected==="auto")apply();renderConnectionInsight();});
+apply();renderConnectionInsight();
 const btn=$("speedBtn"),cancel=$("speedCancel"),msg=$("speedMsg"),down=$("downVal"),ping=$("pingVal"),upload=$("uploadVal"),jitter=$("jitterVal"),bar=$("speedProgressBar"),pct=$("speedPercent"),step=$("speedStep");
 if(!btn||btn.dataset.speedBound)return;btn.dataset.speedBound="1";
 function progress(n,label){if(bar)bar.style.width=n+"%";if(pct)pct.textContent=n+"%";if(step)step.textContent=label;}
@@ -15,6 +51,6 @@ async function timedFetch(url,options={},ms=15000){const c=new AbortController()
 async function latency(){const samples=[];for(let i=0;i<5;i++){const t=performance.now();const r=await timedFetch("/api/speedtest/ping?x="+Math.random(),{},10000);if(!r.ok&&r.status!==204)throw new Error("Server ping tidak merespons (HTTP "+r.status+").");samples.push(performance.now()-t);}const avg=samples.reduce((a,b)=>a+b,0)/samples.length;const diffs=samples.slice(1).map((v,i)=>Math.abs(v-samples[i]));return {avg,jitter:diffs.reduce((a,b)=>a+b,0)/(diffs.length||1)};}
 async function download(bytes){const t=performance.now();const r=await timedFetch("/api/speedtest/download?bytes="+bytes+"&nonce="+Math.random(),{},25000);if(!r.ok)throw new Error("Tes download gagal (HTTP "+r.status+").");const data=await r.arrayBuffer();const sec=(performance.now()-t)/1000;if(data.byteLength!==bytes)throw new Error("Data tes download tidak lengkap.");return data.byteLength*8/sec/1e6;}
 async function uploadTest(bytes){const data=new Uint8Array(bytes);for(let i=0;i<data.length;i+=4096)data[i]=(i*13)&255;const t=performance.now();const r=await timedFetch("/api/speedtest/upload",{method:"POST",headers:{"content-type":"application/octet-stream"},body:data},25000);if(!r.ok)throw new Error("Tes upload gagal (HTTP "+r.status+").");const result=await r.json();const sec=(performance.now()-t)/1000;if(!result.ok||result.received!==bytes)throw new Error("Server belum menerima seluruh data tes upload.");return bytes*8/sec/1e6;}
-btn.addEventListener("click",async()=>{if(controller)return;controller=new AbortController();btn.disabled=true;if(cancel)cancel.hidden=false;const mode=$("speedMode")?.value||"quick";const size=mode==="full"?2097152:524288;try{down.textContent="—";upload.textContent="—";ping.textContent="—";jitter.textContent="—";progress(5,"Memeriksa koneksi ke server…");status("Menghubungkan ke server pengujian ARYANZZ…");const lat=await latency();ping.textContent=lat.avg.toFixed(0);jitter.textContent=lat.jitter.toFixed(1);progress(30,"Mengukur kecepatan download…");const d=await download(size);down.textContent=d.toFixed(2);progress(70,"Mengukur kecepatan upload…");const u=await uploadTest(mode==="full"?1048576:262144);upload.textContent=u.toFixed(2);progress(100,"Pengujian selesai");status("Tes berhasil. Hasil adalah pengukuran koneksi perangkat ke server ARYANZZ, dapat berbeda dari hasil server tes lain.");}catch(e){if(e.name==="AbortError")status("Pengujian dibatalkan.");else status((e.message||"Tes gagal.")+" Periksa koneksi lalu coba lagi.",true);progress(0,"Pengujian belum selesai");}finally{controller=null;btn.disabled=false;if(cancel)cancel.hidden=true;}});
+btn.addEventListener("click",async()=>{if(controller)return;controller=new AbortController();btn.disabled=true;if(cancel)cancel.hidden=false;const mode=$("speedMode")?.value||"quick";const size=mode==="full"?2097152:524288;try{down.textContent="—";upload.textContent="—";ping.textContent="—";jitter.textContent="—";progress(5,"Memeriksa koneksi ke server…");status("Menghubungkan ke server pengujian ARYANZZ…");const lat=await latency();ping.textContent=lat.avg.toFixed(0);jitter.textContent=lat.jitter.toFixed(1);progress(30,"Mengukur kecepatan download…");const d=await download(size);down.textContent=d.toFixed(2);measuredSpeed=d;renderConnectionInsight();progress(70,"Mengukur kecepatan upload…");const u=await uploadTest(mode==="full"?1048576:262144);upload.textContent=u.toFixed(2);progress(100,"Pengujian selesai");status("Tes berhasil. Hasil adalah pengukuran koneksi perangkat ke server ARYANZZ, dapat berbeda dari hasil server tes lain.");}catch(e){if(e.name==="AbortError")status("Pengujian dibatalkan.");else status((e.message||"Tes gagal.")+" Periksa koneksi lalu coba lagi.",true);progress(0,"Pengujian belum selesai");}finally{controller=null;btn.disabled=false;if(cancel)cancel.hidden=true;}});
 cancel?.addEventListener("click",()=>{controller?.abort();});
 })();
