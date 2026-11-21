@@ -398,6 +398,7 @@
       ["Harga paket", money(order.amount)],
       ["Biaya layanan", money(order.feeAmount || 0)],
       ["Total lunas", money(order.totalAmount || order.amount)],
+      ["Aplikasi dipilih", ({qris:"QRIS",dana:"DANA",gopay:"GoPay",linkaja:"LinkAja",ovo:"OVO",shopeepay:"ShopeePay",mobile_banking:"M-Banking"})[order.paymentMethod] || "QRIS"],
       ["Waktu pembayaran", formatDate(order.paidAt)]
     ];
     rows.forEach(([label,value]) => {
@@ -511,7 +512,9 @@
   }
 
   function downloadReceipt(order) {
-    const paidAt = order.paidAt ? formatDate(order.paidAt) : "Belum dibayar";
+    if (!order || order.status !== "paid" || !order.paidAt) return;
+    const paidAt = formatDate(order.paidAt);
+    const scanner = ({qris:"QRIS",dana:"DANA",gopay:"GoPay",linkaja:"LinkAja",ovo:"OVO",shopeepay:"ShopeePay",mobile_banking:"M-Banking"})[order.paymentMethod] || "QRIS";
     const html = `<!doctype html><html lang="id"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Bukti Transaksi ARYANZZ</title>
     <style>body{font:15px/1.6 Arial,sans-serif;color:#172033;margin:0;padding:28px;background:#f3f6fa}.receipt{max-width:620px;margin:auto;padding:28px;background:#fff;border:1px solid #dce4ee;border-radius:18px}.brand{font-size:12px;letter-spacing:2px;font-weight:900;color:#2766b4}.title{font-size:25px;margin:8px 0 3px}.status{display:inline-block;margin:14px 0;padding:6px 11px;border-radius:30px;background:#e6f8ef;color:#13784c;font-weight:800}.line{display:flex;justify-content:space-between;gap:16px;padding:11px 0;border-bottom:1px solid #e7edf4}.line span{color:#66758b}.total{font-size:19px;font-weight:900}.foot{margin-top:22px;color:#78869a;font-size:11px}@media print{body{background:#fff;padding:0}.receipt{border:0;box-shadow:none}}</style>
     <main class="receipt"><div class="brand">ARYANZZ MEMBERSHIP</div><h1 class="title">Bukti Transaksi</h1><div>Dokumen pembayaran digital</div><div class="status">PEMBAYARAN BERHASIL</div>
@@ -523,7 +526,8 @@
     <div class="line"><span>Biaya transaksi</span><b>${escapeHtml(money(order.feeAmount || 0))}</b></div>
     <div class="line total"><span>Total dibayar</span><b>${escapeHtml(money(order.totalAmount || order.amount))}</b></div>
     <div class="line"><span>Waktu pembayaran</span><b>${escapeHtml(paidAt)}</b></div>
-    <div class="line"><span>Metode</span><b>QRIS · AirPay</b></div>
+    <div class="line"><span>Jalur pembayaran</span><b>QRIS · AirPay</b></div>
+    <div class="line"><span>Aplikasi dipilih</span><b>${escapeHtml(scanner)}</b></div>
     <p class="foot">Bukti ini dibuat oleh ARYANZZ berdasarkan status pembayaran yang telah diverifikasi oleh server. Simpan dokumen ini sebagai arsip transaksi.</p><button onclick="window.print()">Cetak / Simpan PDF</button></main></html>`;
     const blob = new Blob([html], { type: "text/html;charset=utf-8" });
     const url = URL.createObjectURL(blob);
