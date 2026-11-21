@@ -209,6 +209,71 @@
     if (favoriteView) favoriteView.hidden = historyActive;
   }
 
+  function sanitizeBackupEntries(value,limit) {
+    if(!Array.isArray(value))return [];
+    return value.slice(0,Math.max(limit,150)).flatMap(item=>{
+      if(!item||typeof item!=="object")return [];
+      const url=safeLink(item.url||item.link||item.mediaUrl);
+      if(!url)return [];
+      const clipped=(text,max)=>String(text||"").slice(0,max);
+      const at=Number(item.at||item.savedAt||Date.now());
+      return [{
+        url,
+        name:clipped(item.name||item.title,240),
+        title:clipped(item.title||item.name,240),
+        platform:clipped(item.platform,70),
+        uploader:clipped(item.uploader||item.author,120),
+        type:clipped(item.type||item.mediaType,32),
+        at:Number.isFinite(at)?at:Date.now()
+      }];
+    }).slice(0,limit);
+  }
+
+  function libraryBackupStatus(message) {
+    const status=$("aryLibraryBackupStatus");
+    if(status)status.textContent=message;
+  }
+
+  $("aryLibraryExport")?.addEventListener("click",()=>{
+    const content=JSON.stringify({
+      format:"aryanzz-library-backup",version:1,createdAt:new Date().toISOString(),
+      history:readHistory(),favorites:readFavorites()
+    },null,2);
+    const blob=new Blob([content],{type:"application/json;charset=utf-8"});
+    const url=URL.createObjectURL(blob),link=document.createElement("a");
+    link.href=url;link.download="ARYANZZ-Pustaka-"+new Date().toISOString().slice(0,10)+".json";
+    document.body.append(link);link.click();link.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),30000);
+    libraryBackupStatus("Cadangan Pustaka dibuat dan disimpan melalui browser.");
+  });
+
+  $("aryLibraryImport")?.addEventListener("change",async event=>{
+    const file=event.target?.files?.[0];
+    if(!file)return;
+    try{
+      if(file.size>2*1024*1024)throw new Error("Cadangan maksimal 2 MB.");
+      const data=JSON.parse(await file.text());
+      if(data?.format!=="aryanzz-library-backup"||Number(data.version)!==1||!Array.isArray(data.history)||!Array.isArray(data.favorites))throw new Error("Format cadangan ARYANZZ tidak valid.");
+      const importedHistory=sanitizeBackupEntries(data.history,HISTORY_LIMIT);
+      const importedFavorites=sanitizeBackupEntries(data.favorites,FAVORITE_LIMIT);
+      const merge=(a,b,limit)=>{
+        const seen=new Set();
+        return [...a,...b].filter(item=>{
+          const key=String(item.url||"");
+          if(!key||seen.has(key))return false;
+          seen.add(key);return true;
+        }).slice(0,limit);
+      };
+      const history=merge(readHistory(),importedHistory,HISTORY_LIMIT);
+      const favorites=merge(readFavorites(),importedFavorites,FAVORITE_LIMIT);
+      if(!writeKeys(HISTORY_KEYS,history)||!writeKeys(FAVORITE_KEYS,favorites))throw new Error("Penyimpanan browser penuh atau tidak tersedia.");
+      renderHistory();renderLibrary();notifyLibraryChanged();
+      libraryBackupStatus("Berhasil memulihkan "+importedHistory.length+" riwayat dan "+importedFavorites.length+" favorit. Data lama tetap dipertahankan.");
+    }catch(error){
+      libraryBackupStatus("Cadangan gagal dipulihkan: "+String(error?.message||error));
+    }finally{event.target.value="";}
+  });
+
   $("aryLibraryHistoryTab")?.addEventListener("click", () => setLibraryTab("history"));
   $("aryLibraryFavoriteTab")?.addEventListener("click", () => setLibraryTab("favorite"));
   $("aryLibrarySearch")?.addEventListener("input", renderLibrary);
