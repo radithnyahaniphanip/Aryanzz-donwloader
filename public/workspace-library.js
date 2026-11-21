@@ -109,7 +109,7 @@
 
   function writeFavorites(items) {
     const normalized = items.slice(0, FAVORITE_LIMIT);
-    const saved = writeKeys(["aryanzz.favorites.v2", "aryanzz-library-favorites-v1"], normalized);
+    const saved = writeKeys(FAVORITE_KEYS, normalized);
     renderLibrary();
     notifyLibraryChanged();
     return saved;
