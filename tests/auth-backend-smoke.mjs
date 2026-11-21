@@ -188,4 +188,17 @@ const wranglerSource=fs.readFileSync(new URL("../wrangler.toml",import.meta.url)
 assert.match(wranglerSource,/ARYANZZ_D1_SCHEMA_BOOTSTRAP = "enabled"/,
   "The production Worker must explicitly enable the schema bootstrap");
 
+const authUI=fs.readFileSync(new URL("../public/auth-gate.js",import.meta.url),"utf8");
+assert.doesNotMatch(authUI,/if \(!config\.registrationReady\) return say\("Pendaftaran sementara ditutup/,
+  "Local browser registration must not be blocked while verified email delivery is unavailable");
+assert.match(authUI,/if \(!checkLocalCaptcha\("aryReg"\)\) return/,
+  "Local-only signup should still require the browser verification puzzle");
+assert.match(authUI,/password !== confirm/,
+  "Local-only signup must reject mismatched password confirmation");
+assert.match(authUI,/localOnly:true/,
+  "Local account must carry an explicit local-only flag and must not impersonate verified online identity");
+assert.match(authUI,/Buat akun lokal di HP ini/,
+  "Registration mode must clearly label local-only account creation");
+assert.ok(backend.includes("EMAIL_DELIVERY_NOT_CONFIGURED"),
+  "Online signup must continue to require a verified transactional email provider");
 console.log("ARYANZZ V2 public account backend, email verification and fail-closed security checks passed.");
