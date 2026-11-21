@@ -206,6 +206,7 @@ try{
   console.log("✔ All-platform title search falls back to exact YouTube results when indexed candidates are irrelevant");
 
 
+  publicSearchRequests.length=0;
   const expansionSearch=await worker.fetch(new Request("https://aryanzz.example/api/social/search",{
     method:"POST",
     headers:{"content-type":"application/json","cf-connecting-ip":"198.51.100.36"},
@@ -214,9 +215,11 @@ try{
   assert.equal(expansionSearch.status,200,"Keyword expansion search should return a valid response");
   const expansionData=await expansionSearch.json();
   assert.ok(expansionData.searchVariants.includes("green screen meme template"),"Green-screen meme searches must expand to useful related title variants");
-  assert.equal(expansionData.fallbackUsed,true,"A selected social platform with no verified result must activate the YouTube fallback");
-  assert.ok(expansionData.results.some(item=>item.platform==="youtube"&&item.searchOnly===true),"Selected-platform fallback must show a real YouTube title result even if its stream is not yet verified");
-  console.log("✔ Title-search keyword expansion remains active for supported providers");
+  assert.equal(expansionData.fallbackUsed,false,"A selected platform must never activate cross-platform fallback");
+  assert.ok(expansionData.results.length>0&&expansionData.results.every(item=>item.platform==="instagram"),"Selecting Instagram must return only Instagram results");
+  assert.ok(!publicSearchRequests.some(item=>item.query.startsWith("site:youtube.com")),"Selected Instagram search must not query YouTube");
+  assert.ok(publicSearchRequests.some(item=>item.query.startsWith("site:instagram.com")),"Selected Instagram search must query Instagram directly");
+  console.log("✔ Selected-platform keyword search stays on Instagram; cross-platform fallback is reserved for Smart Search");
 
   const videoInfo=await worker.fetch(new Request("https://aryanzz.example/api/platform/info",{
     method:"POST",
