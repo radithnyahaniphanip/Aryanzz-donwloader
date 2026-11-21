@@ -28,6 +28,8 @@ let gatewayStatus = "Pending";
 let createCalls = 0;
 let rejectApiKey = false;
 let rejectMerchant = false;
+let failNextCreate = false;
+const requestBodies = [];
 const originalFetch = globalThis.fetch;
 
 globalThis.fetch = async (input, init = {}) => {
@@ -37,6 +39,11 @@ globalThis.fetch = async (input, init = {}) => {
     if (rejectMerchant) return new Response(JSON.stringify({success:false,message:"Merchant banned"}),{status:403,headers:{"content-type":"application/json"}});
     createCalls += 1;
     const body = JSON.parse(init.body || "{}");
+    requestBodies.push(body);
+    if (failNextCreate) {
+      failNextCreate = false;
+      throw new TypeError("Simulated upstream connection reset after receiving invoice request");
+    }
     const amount = Number(body.amount);
     const fee = amount < 150000 ? Math.ceil(amount * 0.007 + 295) : Math.ceil(amount * 0.0095);
     invoice = {
@@ -189,6 +196,23 @@ try {
     assert.ok(data.payment.qrUrl.startsWith("https://airpaygateway.site/qr/"));
     assert.equal(createCalls,before+1,"Only one AirPay invoice must be created per method click");
   }
+
+  // Recover an interrupted invoice response by reusing the SAME external_id.
+  // A retry must never create a different order identifier or a second charge.
+  const retryStore = new MembershipStore({storage:new MemoryStorage()},env);
+  const previousBodies = requestBodies.length;
+  const beforeRetry = createCalls;
+  failNextCreate = true;
+  const recovered = await retryStore.fetch(new Request("https://aryanzz.test/api/membership/orders",{
+    method:"POST",headers:{...requestHeaders,"content-type":"application/json"},
+    body:JSON.stringify({planId:"starter",billingPeriod:"monthly",paymentMethod:"dana"})
+  }));
+  const recoveredData = await recovered.json();
+  assert.equal(recovered.status,201,"An idempotent retry should restore a valid AirPay QRIS invoice");
+  assert.equal(recoveredData.order.paymentMethod,"dana");
+  assert.equal(createCalls,beforeRetry+2,"Only one internal retry is allowed after a transient network error");
+  assert.equal(requestBodies[previousBodies].external_id,requestBodies[previousBodies+1].external_id,"AirPay retry must reuse the exact external order ID");
+  assert.equal(requestBodies[previousBodies].amount,requestBodies[previousBodies+1].amount,"AirPay retry must reuse the original amount");
 
   // Reject unsupported methods before calling the live gateway.
   const beforeInvalid = createCalls;
