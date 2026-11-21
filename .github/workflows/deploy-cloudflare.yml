@@ -147,6 +147,8 @@ jobs:
           echo "ARYANZZ D1 account database is ready and AUTH_DB is included in this deployment."
       - name: Sync ARYANZZ account, CAPTCHA and AirPay secrets when configured
         env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           AUTH_SESSION_SECRET: ${{ secrets.AUTH_SESSION_SECRET }}
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           AUTH_EMAIL_FROM: ${{ secrets.AUTH_EMAIL_FROM }}
@@ -163,6 +165,38 @@ jobs:
               echo "::notice::Worker setting $name is not supplied; any existing Cloudflare value is left unchanged."
             fi
           done
+      - name: Provision persistent AUTH_SESSION_SECRET when absent
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          AUTH_SESSION_SECRET: ${{ secrets.AUTH_SESSION_SECRET }}
+        run: |
+          set -euo pipefail
+          if [ -n "$AUTH_SESSION_SECRET" ]; then
+            echo "Session key is supplied from GitHub Actions and was synchronized."
+            exit 0
+          fi
+          # Never regenerate a session key on routine deployments: rotating a
+          # valid key would invalidate sessions, trusted devices and OTP hashes.
+          # Read names only; Cloudflare does not return plaintext secret values.
+          if ! secret_names="$(wrangler secret list --format json 2>/dev/null)"; then
+            echo "::error::Cannot inspect existing Cloudflare Worker secret names. Refusing to generate a new key to avoid accidental rotation."
+            exit 1
+          fi
+          if ! printf '%s' "$secret_names" | jq -e 'type == "array"' >/dev/null 2>&1; then
+            echo "::error::Invalid Cloudflare secret-list response. No key generated."
+            exit 1
+          fi
+          if printf '%s' "$secret_names" | jq -e '.[] | select(.name == "AUTH_SESSION_SECRET")' >/dev/null; then
+            echo "Existing Cloudflare AUTH_SESSION_SECRET found; preserving it unchanged."
+            exit 0
+          fi
+          # Generate 256 bits of cryptographic randomness only inside the
+          # ephemeral GitHub runner. Never commit, store, echo or expose it.
+          # The screenshot-provided key is NOT used.
+          node -e 'process.stdout.write(require("node:crypto").randomBytes(32).toString("hex"))' |
+            wrangler secret put AUTH_SESSION_SECRET >/dev/null
+          echo "Created a persistent AUTH_SESSION_SECRET directly in Cloudflare."
       - name: Deploy Worker and static assets
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
