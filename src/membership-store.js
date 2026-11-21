@@ -214,6 +214,21 @@ export class MembershipStore {
     return String(this.env.AIRPAY_API_KEY || "").trim();
   }
 
+  // Never accept simulated AirPay payments on the production Membership worker.
+  // The staging Worker must have its own origin, state and explicit sandbox mode.
+  sandboxBlocked() {
+    if (!this.apiKey().startsWith("ak_test_")) return false;
+    const origin = String(this.env.ARYANZZ_PUBLIC_ORIGIN || "");
+    const productionOrigin = /^https:\/\/aryanzz-(?:donwloader|backup)\.aryanz\.workers\.dev\/?$/i.test(origin);
+    return productionOrigin || this.env.ARYANZZ_PAYMENT_MODE !== "sandbox";
+  }
+
+  paymentConfigError() {
+    if (!this.apiKey()) return "AIRPAY_API_KEY belum terpasang sebagai Secret Worker.";
+    if (this.sandboxBlocked()) return "Kunci sandbox tidak boleh digunakan pada website produksi. Gunakan key LIVE di Worker utama; uji sandbox hanya pada Worker staging yang terpisah.";
+    return "";
+  }
+
   async fetch(request) {
     const url = new URL(request.url);
     const path = url.pathname;
@@ -226,7 +241,7 @@ export class MembershipStore {
         ok: true,
         pricingStatus: "active",
         provider: "AirPay QRIS",
-        paymentEnabled: !!this.apiKey(),
+        paymentEnabled: !!this.apiKey() && !this.sandboxBlocked(),
         plans: PLANS,
         free: {
           id: "free",
@@ -242,10 +257,12 @@ export class MembershipStore {
       const session = await this.session(request);
       const identityReady = !!session;
       const authReady = !!this.env.AUTH_DB && typeof this.env.AUTH_DB.prepare === "function" && String(this.env.AUTH_SESSION_SECRET || "").length >= 32;
-      const ready = apiKeyReady && identityReady;
+      const sandboxBlocked = this.sandboxBlocked();
+      const ready = apiKeyReady && identityReady && !sandboxBlocked;
       const missing = [];
       const optionalMissing = [];
       if (!apiKeyReady) missing.push("AIRPAY_API_KEY · Secret API Key AirPay pada Cloudflare Worker");
+      if (sandboxBlocked) missing.push("API Key sandbox tidak diizinkan di website produksi");
       if (!identityReady) missing.push("ID perangkat ARYANZZ belum tersedia; muat ulang halaman");
       if (!authReady) optionalMissing.push("AUTH_DB + AUTH_SESSION_SECRET · sinkronisasi Membership lintas perangkat");
       return json({
@@ -253,11 +270,14 @@ export class MembershipStore {
         enabled: ready,
         checkoutEnabled: ready,
         apiKeyReady,
+        keyInstalledNotValidated: apiKeyReady,
+        gatewayAuthorization: "not-verified",
+        sandboxBlocked,
         authReady,
         identityReady,
         identityMode: session?.deviceBound ? "device" : identityReady ? "account" : "unavailable",
         provider: "AirPay QRIS",
-        mode: this.apiKey().startsWith("ak_test_") ? "sandbox" : apiKeyReady ? "live" : "not-configured",
+        mode: this.apiKey().startsWith("ak_test_") ? (sandboxBlocked ? "sandbox-blocked" : "sandbox") : apiKeyReady ? "live" : "not-configured",
         statusVerification: "webhook-and-server-side-polling",
         webhookAvailable: true,
         webhookUrl: new URL("/api/membership/webhook", url.origin).href,
@@ -265,9 +285,11 @@ export class MembershipStore {
         optionalMissing,
         message: ready
           ? authReady
-            ? "Checkout QRIS siap. Pembayaran diverifikasi server dan Membership tersimpan pada akun ARYANZZ."
-            : "Checkout QRIS siap pada perangkat ini. Membership terikat ke ID perangkat; aktifkan D1 dan AUTH_SESSION_SECRET untuk sinkronisasi lintas perangkat."
-          : "Checkout menunggu API Key AirPay dan ID perangkat ARYANZZ."
+            ? "Kunci AirPay terpasang, tetapi status merchant belum diverifikasi oleh gateway. Jika invoice sukses, status pembayaran akan diverifikasi server dan tersimpan pada akun."
+            : "Kunci AirPay terpasang, tetapi izin merchant belum diverifikasi. Jika invoice sukses, Membership terikat ke perangkat ini; D1 diperlukan untuk sinkronisasi lintas perangkat."
+          : sandboxBlocked
+            ? "Checkout produksi dinonaktifkan: API Key sandbox hanya untuk lingkungan uji yang terisolasi."
+            : "Checkout menunggu konfigurasi AirPay dan ID perangkat ARYANZZ."
       });
     }
 
@@ -341,10 +363,12 @@ export class MembershipStore {
   }
 
   async createOrder(request) {
-    if (!this.apiKey()) {
+    const configError = this.paymentConfigError();
+    if (configError) {
       return json({
         ok: false,
-        error: "Pembayaran belum dikonfigurasi. AIRPAY_API_KEY belum terpasang di Cloudflare Worker."
+        code: this.sandboxBlocked() ? "AIRPAY_SANDBOX_PRODUCTION_BLOCKED" : "AIRPAY_KEY_NOT_CONFIGURED",
+        error: configError
       }, 503);
     }
 
@@ -496,8 +520,10 @@ export class MembershipStore {
           throw error;
         }
         if (response.status === 403) {
-          const error = new Error("Akun merchant AirPay tidak diizinkan membuat QRIS. Periksa status akun di dashboard AirPay.");
-          error.code = "AIRPAY_ACCOUNT_RESTRICTED";
+          // AirPay's current API documentation specifies 403 = merchant banned.
+          // Rotating an otherwise accepted key does not lift that restriction.
+          const error = new Error("AirPay menolak merchant (HTTP 403). Menurut dokumentasi AirPay, akun merchant diblokir. Periksa status akun dan hubungi dukungan resmi AirPay untuk membuka akses QRIS. Mengganti API Key saja tidak akan mengatasi blokir ini.");
+          error.code = "AIRPAY_MERCHANT_BLOCKED";
           throw error;
         }
         throw new Error(response.status >= 500
@@ -572,7 +598,7 @@ export class MembershipStore {
         ok: false,
         code,
         error: code === "AIRPAY_INVALID_API_KEY" ? order.note : "Invoice AirPay gagal dibuat. " + order.note
-      }, code === "AIRPAY_INVALID_API_KEY" || code === "AIRPAY_ACCOUNT_RESTRICTED" ? 503 : 502);
+      }, ["AIRPAY_INVALID_API_KEY", "AIRPAY_MERCHANT_BLOCKED"].includes(code) ? 503 : 502);
     }
   }
 
@@ -618,7 +644,7 @@ export class MembershipStore {
   async checkOrderStatus(order) {
     if (!order || order.status !== "pending") return order;
     if (!order.transactionId) return order;
-    if (!this.apiKey()) throw new Error("AIRPAY_API_KEY belum tersedia pada server.");
+    if (this.paymentConfigError()) throw new Error(this.paymentConfigError());
 
     const endpoint = new URL("https://airpaygateway.site/api/qris/status");
     endpoint.searchParams.set("transaction_id", order.transactionId);
@@ -762,7 +788,7 @@ export class MembershipStore {
 
   async webhook(request) {
     if (request.method !== "POST") return json({ ok: false, error: "Method tidak diizinkan." }, 405);
-    if (!this.apiKey()) return json({ ok: false, error: "AIRPAY_API_KEY belum dikonfigurasi." }, 503);
+    if (this.paymentConfigError()) return json({ ok: false, error: this.paymentConfigError() }, 503);
 
     const rawBody = await request.text();
     const signature = String(request.headers.get("X-AirPay-Signature") || "");
