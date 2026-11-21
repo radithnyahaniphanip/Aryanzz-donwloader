@@ -115,6 +115,16 @@
     return saved;
   }
 
+  function toggleFavorite(item) {
+    if (!item || typeof item !== "object") return false;
+    const url = String(item.url || item.link || item.mediaUrl || "").trim();
+    if (!url) return false;
+    const current = readFavorites();
+    const exists = current.some(saved => saved.url === url);
+    writeFavorites(exists ? current.filter(saved => saved.url !== url) : [{ ...item, url, savedAt: Date.now() }, ...current]);
+    return !exists;
+  }
+
   function renderLibrary() {
     const history = readHistory(), favorites = readFavorites();
     const historyCount = $("aryLibraryHistoryCount"), favoriteCount = $("aryLibraryFavoriteCount");
@@ -223,7 +233,7 @@
     }
   });
 
-  window.ARYANZZLibrary = Object.freeze({ saveHistory, renderHistory, renderLibrary, readHistory, readFavorites });
+  window.ARYANZZLibrary = Object.freeze({ saveHistory, toggleFavorite, renderHistory, renderLibrary, readHistory, readFavorites });
   renderHistory();
   renderLibrary();
 })();
