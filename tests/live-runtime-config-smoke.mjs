@@ -10,7 +10,8 @@ async function read(path){
 }
 const auth=await read("/api/auth/config");
 assert.ok(auth.captchaSiteKey,"Cloudflare Turnstile site key must be available to the browser");
-assert.ok(!(auth.missingLogin||[]).some(x=>String(x).includes("AUTH_DB")),"Production Worker must retain the AUTH_DB binding after deployment");
+assert.equal(auth.loginReady,true,"Production Worker must have an active online account database after deployment");
+assert.ok(!(auth.missingLogin||[]).some(x=>String(x).includes("Turso database")),"Production Worker must retain its configured external account database after deployment");
 assert.ok(!(auth.missing||[]).some(x=>String(x).includes("TURNSTILE_SECRET_KEY")),"Production Worker must retain the Turnstile verification secret after deployment");
 
 const payment=await read("/api/membership/payment-config");
@@ -27,4 +28,4 @@ assert.ok(["sandbox","live","not-configured"].includes(payment.mode),"AirPay mod
 assert.equal(payment.webhookUrl,base+"/api/membership/webhook","AirPay webhook URL must follow the deployed ARYANZZ hostname");
 if(!payment.apiKeyReady)assert.ok(payment.missing.some(item=>String(item).includes("AIRPAY_API_KEY")),"A missing AirPay key must be clearly reported as a deployment prerequisite");
 
-console.log("ARYANZZ production runtime bindings verified: AUTH_DB, Turnstile, AirPay QRIS, signed webhook, and device-bound membership.");
+console.log("ARYANZZ production runtime bindings verified: online account database, Turnstile, AirPay QRIS, signed webhook, and device-bound membership.");
