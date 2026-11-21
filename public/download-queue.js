@@ -6,6 +6,9 @@
   if(!input||!list||!add||!run||!clear)return;
   const KEY="aryanzz-smart-queue-v1";
   const MAX_ITEMS=100;
+  // Slots are supplied by the last server-verified Membership /me response.
+  // They limit the local browser queue; this is not a server bandwidth quota.
+  const queueLimit=()=>Math.max(0,Math.min(MAX_ITEMS,Number(window.ARYANZZMembership?.queueLimit?.()||0)));
   let items=[],running=false,activeId=null;
   const makeId=()=>crypto.randomUUID?crypto.randomUUID():"q-"+Date.now()+"-"+Math.random().toString(36).slice(2);
   const safeText=value=>String(value||"");
@@ -14,17 +17,19 @@
   function load(){try{const raw=JSON.parse(localStorage.getItem(KEY)||"[]");items=Array.isArray(raw)?raw.filter(x=>x&&typeof x.url==="string"&&["pending","active","done","skipped","failed"].includes(x.status)).slice(0,MAX_ITEMS):[];}catch{items=[];}}
   function hostOf(raw){try{return new URL(raw).hostname.replace(/^www\./,"");}catch{return "";}}
   function addItems(){
+    const allowed=queueLimit();
+    if(!allowed){setStatus("Smart Queue membutuhkan Membership Pro, Ultra, atau Max yang aktif.");return;}
     const lines=input.value.split(/[\r\n]+/).map(x=>x.trim()).filter(Boolean);
     if(!lines.length){setStatus("Tempel satu atau beberapa tautan, masing-masing satu baris.");return;}
     let added=0,duplicates=0,invalid=0;
     for(const raw of lines){
-      if(items.length>=MAX_ITEMS)break;
+      if(items.length>=allowed)break;
       let url;try{url=new URL(raw);if(!["http:","https:"].includes(url.protocol)||!url.hostname||url.username||url.password)throw Error("URL invalid");}catch{invalid++;continue;}
       if(items.some(x=>x.url===url.href)){duplicates++;continue;}
       items.push({id:makeId(),url:url.href,host:hostOf(url.href),status:"pending",addedAt:Date.now()});added++;
     }
     input.value="";save();render();
-    setStatus(added+" tautan ditambahkan"+(duplicates?", "+duplicates+" duplikat dilewati":"")+(invalid?", "+invalid+" tautan tidak valid":"")+". Maksimal "+MAX_ITEMS+" item.");
+    setStatus(added+" tautan ditambahkan"+(duplicates?", "+duplicates+" duplikat dilewati":"")+(invalid?", "+invalid+" tautan tidak valid":"")+". Kuota antrean paket: "+allowed+" item.");
   }
   function nextPending(){return items.find(x=>x.status==="pending");}
   function openItem(item){
@@ -107,7 +112,8 @@
     clear.disabled=!items.length;
   }
   add.addEventListener("click",addItems);
-  run.addEventListener("click",()=>{running=true;const active=items.find(x=>x.status==="active");const next=active||nextPending();if(next)openItem(next);else{running=false;setStatus("Tidak ada tautan yang menunggu.");}render();});
+  run.addEventListener("click",()=>{if(!queueLimit()){setStatus("Akses Smart Queue terkunci. Aktifkan Membership Pro atau lebih tinggi.");return;}running=true;const active=items.find(x=>x.status==="active");const next=active||nextPending();if(next)openItem(next);else{running=false;setStatus("Tidak ada tautan yang menunggu.");}render();});
+  window.addEventListener("aryanzz:membership-updated",()=>{render();});
   if(pause)pause.addEventListener("click",()=>{running=false;setStatus("Antrean dijeda. Item yang sedang aktif tidak dibatalkan.");render();});
   clear.addEventListener("click",()=>{if(!items.length)return;if(!confirm("Kosongkan seluruh antrean unduhan?"))return;items=[];activeId=null;running=false;save();render();setStatus("Antrean dikosongkan.");});
   input.addEventListener("keydown",event=>{if((event.ctrlKey||event.metaKey)&&event.key==="Enter")addItems();});
