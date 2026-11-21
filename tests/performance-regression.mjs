@@ -5,6 +5,8 @@ const server=read("../src/index.js");
 const downloader=read("../public/downloader.js");
 const search=read("../public/v674.js");
 const network=read("../public/network-mode.js");
+const serviceWorker=read("../public/sw.js");
+const auth=read("../src/auth.js");
 const html=read("../public/index.html");
 const checks=[
  ["Fast link inspection is opt-in at the backend and deep fallback remains available",server.includes('fast:body?.fast===true')&&server.includes('const fast=options.fast===true')&&server.includes('fast?5500:')],
@@ -19,6 +21,19 @@ const checks=[
  ["Image title discovery preserves platform filters and signature verification",server.includes("const pending=targetedAllPlatforms.filter(")&&server.includes("verifySocialImageSearchResult(item,request.url)")&&server.includes("verifiedImages=(await Promise.all(")],
  ["Network cache writes no longer delay API responses to phones",network.includes("void storeApiCache(key,data,response.status)")&&network.includes("void storeLibrary(body,data)")],
  ["Repeated identical title searches always run a fresh request and stale responses cannot overwrite newer results",search.includes("const requestId=++searchRequestId")&&search.includes("if(requestId!==searchRequestId)return;")&&!search.includes("recentTitleSearch")&&search.includes("setTimeout(()=>{timedOut=true;controller.abort();},34000)")],
+ ["Offline update downloads have a bounded concurrency of 4 rather than one slow serial request per asset",
+   serviceWorker.includes("Math.min(4,manifest.files.length)")&&serviceWorker.includes("Promise.all(Array.from")&&serviceWorker.includes("response.body.getReader")],
+ ["Previously installed versioned static assets load from CacheStorage before reaching the network",
+   serviceWorker.includes("versionedAsset=SHELL.includes(u.pathname+u.search)")&&serviceWorker.includes("const cached=await cache.match(e.request);")&&serviceWorker.includes("if(cached)return cached;")],
+ ["Private APIs and HTML remain network-first despite static cache optimization",
+   serviceWorker.includes('if(u.pathname.startsWith("/api/"))return;')&&serviceWorker.includes('e.request.mode==="navigate"')&&serviceWorker.includes('new Request(e.request,{cache:"no-store"})')],
+ ["Secondary styles never delay first render while the final Beranda stylesheet stays blocking",
+   ["audio-studio.css","media-studio.css","download-queue.css","image-studio.css","membership.css","workspace-library.css","workspace-tools.css","toolbox-100.css"].every(file=>{
+     const escaped=file.replaceAll(".","\\.");
+     return new RegExp('<link rel="stylesheet" href="/'+escaped+'\\?[^"]+" media="print" onload="this.media=\\\'all\\\'"').test(html);
+   })&&html.includes('<link rel="stylesheet" href="/auth-profile-v1.css?v=__ARYANZZ_VERSION__">')],
+ ["D1 moderation checks are concurrent and still enforce both independent ban sources",
+   auth.includes("const [lockOwner,deviceBanned]=await Promise.all([")&&auth.includes("if(!lockOwner&&!deviceBanned)return null;")],
  ["All earlier public features retain their endpoints",html.includes('id="platformPicker"')&&html.includes('id="titleSearchBtn"')&&server.includes('async function searchSocial(request)')&&server.includes('async function socialImageSearch(request)')]
 ];
 for(const [label,ok] of checks){assert.ok(ok,label);console.log("✔ "+label);}
