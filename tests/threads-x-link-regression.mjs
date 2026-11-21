@@ -18,7 +18,11 @@ assert.ok(client.includes('imageCheckTimeout=fast?9000'),"Photo timeout must cov
 const originalFetch=globalThis.fetch;
 const shares={
   "_hmjQ-mLv":"https://www.threads.com/@sample/post/VideoExample",
-  "BBbOsV3Lue":"https://www.threads.com/@sample/post/ImageExample"
+  "BBbOsV3Lue":"https://www.threads.com/@sample/post/ImageExample",
+  "BAUhksxtUb":"https://www.threads.com/@nana_nug/post/Df9Ilu_o38t",
+  "BAYRAGcanN":"https://www.threads.com/@dinamarsyy/post/Df_IQXEj0k0",
+  "_vMfK8cNH":"https://www.threads.com/@adiba_aylaa/post/Df9B-_4E_Bx",
+  "BAcRllNPSI":"https://www.threads.com/@mona_emilyjewelry/post/Df9EnLhmpmC"
 };
 const xUrls=[
   "https://x.com/InFiniteH0riZ0n/status/2120550563897372815",
@@ -36,7 +40,7 @@ globalThis.fetch=async(input)=>{
     if(!dest)return new Response("Not found",{status:404});
     return new Response(null,{status:302,headers:{location:dest}});
   }
-  if(u.hostname==="www.threads.com"&&u.pathname.startsWith("/@sample/post/")){
+  if(u.hostname==="www.threads.com"&&/^\/@[^/]+\/post\//.test(u.pathname)){
     const isImage=u.pathname.includes("ImageExample");
     const html='<html><head><title>Threads test post</title><link rel="canonical" href="'+u.href+'">'+(isImage?'<meta property="og:image" content="'+imageUrl+'">':'<meta property="og:video" content="'+videoUrl+'">')+'</head><body></body></html>';
     return new Response(html,{status:200,headers:{"content-type":"text/html; charset=utf-8"}});
@@ -68,6 +72,16 @@ try{
   assert.equal(photoResponse.status,200,"Threads image share extraction failed: "+JSON.stringify(photo));
   assert.ok(photo.images?.some(item=>item.downloadUrl),"Threads image post should have image download URLs");
   assert.equal(photo.platform,"threads");
+  // Four real user-provided share tokens and their observed public canonical posts.
+  // Media here is simulated; this test verifies routing, NOT availability of live files.
+  for(const [token,expected] of Object.entries(shares).filter(([key])=>!["_hmjQ-mLv","BBbOsV3Lue"].includes(key))){
+    const req=new URL("https://aryanzz.example/api/threads/direct");
+    req.searchParams.set("url","https://www.threads.com/share/"+token);
+    const resp=await worker.fetch(new Request(req),{});
+    const body=await resp.json();
+    assert.equal(body.canonicalUrl,expected,"Threads share "+token+" must map to its correct post");
+    assert.equal(resp.status,200,"Mocked post must produce valid video metadata: "+token+" "+JSON.stringify(body));
+  }
   for(const source of xUrls){
     const xResponse=await post(source,"x");
     const data=await xResponse.json();
