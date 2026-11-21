@@ -65,7 +65,7 @@ assert.match(ui, /config\.merchantBlocked/);
 assert.match(ui, /function closePaymentActions\(\)/);
 assert.match(ui, /link\.removeAttribute\("href"\)/);
 assert.match(ui, /closePaymentActions\(\);[\s\S]*?setMessage\("Pembayaran berhasil diverifikasi/);
-assert.match(ui, /closePaymentActions\(\);[\s\S]*?byId\("membershipPaymentExpiry"\)\.textContent = "Invoice sudah "/);
+assert.match(ui, /closePaymentActions\(\);[\s\S]*?byId\("membershipPaymentExpiry"\)\.textContent = "Invoice dibatalkan atau kedaluwarsa\."/);
 assert.match(ui, /payLink\.hidden = !providerPage \|\| checkoutExpired/);
 assert.match(ui, /AIRPAY_KEY_NOT_CONFIGURED/);
 assert.match(ui, /ARYANZZ_IDENTITY_NOT_READY/);
