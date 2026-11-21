@@ -18,7 +18,10 @@
     identityReady: false,
     paymentConfig: null,
     paymentMethod: "qris",
-    checkoutBusy: false
+    checkoutBusy: false,
+    rateLimitUntil: 0,
+    rateLimitAttempts: 0,
+    rateLimitTimer: null
   };
 
   const rank = { free: 0, starter: 1, pro: 2, ultra: 3, max: 4 };
@@ -62,7 +65,8 @@
     const unconfigured = code === "AIRPAY_KEY_NOT_CONFIGURED";
     const noIdentity = code === "ARYANZZ_IDENTITY_NOT_READY";
     const rateLimited = code === "AIRPAY_RATE_LIMITED";
-    byId("membershipCheckoutErrorTitle").textContent = rateLimited ? "AirPay membatasi permintaan (429)" : merchantBlocked
+    byId("membershipCheckoutErrorTitle").textContent = rateLimited
+      ? state.rateLimitAttempts > 1 ? "AirPay masih membatasi QRIS (429)" : "AirPay membatasi permintaan QRIS (429)" : merchantBlocked
       ? "AirPay menolak merchant (403)" 
       : apiForbidden
         ? "Akses API QRIS AirPay ditolak (403)"
@@ -75,7 +79,10 @@
             : noIdentity
               ? "Identitas perangkat belum siap"
               : "Invoice belum berhasil dibuat";
-    byId("membershipCheckoutErrorText").textContent = rateLimited ? "Tunggu sebelum mencoba lagi; jangan tekan checkout berulang." : merchantBlocked
+    byId("membershipCheckoutErrorText").textContent = rateLimited
+      ? state.rateLimitAttempts > 1
+        ? "AirPay kembali menolak permintaan. Tidak ada percobaan ulang otomatis; jeda berikutnya diperpanjang agar tidak terus ditolak."
+        : "AirPay belum menerima pembuatan QRIS. ARYANZZ menghentikan permintaan selama jeda, tanpa percobaan ulang otomatis." : merchantBlocked
       ? "AirPay menolak pembuatan invoice (HTTP 403). Dokumentasi AirPay menyebut kode ini sebagai status merchant dibanned. Status akun/izin API perlu diperiksa oleh dukungan AirPay; masuk dasbor saja tidak memastikan API QRIS live sudah aktif."
       : apiForbidden
         ? "AirPay belum menerbitkan invoice (HTTP 403), jadi belum ada QRIS yang bisa dipindai. Error ini datang dari gateway, bukan karena akun ARYANZZ diblokir. Minta dukungan AirPay memeriksa izin API QRIS untuk API Key live yang terpasang. Key sandbox berawalan ak_test_ hanya untuk simulasi dan tidak dapat menerima pembayaran sungguhan."
@@ -92,6 +99,70 @@
     byId("membershipCheckoutRetry").hidden = invalidKey || merchantBlocked || apiForbidden || sandboxBlocked || unconfigured || noIdentity;
     const supportLink = byId("membershipCheckoutSupport");
     if (supportLink) supportLink.hidden = !(merchantBlocked || apiForbidden);
+  }
+
+  function syncAirPayCooldownUI() {
+    const remaining = Math.max(0, Math.ceil((state.rateLimitUntil - Date.now()) / 1000));
+    const hasThrottle = state.rateLimitAttempts > 0;
+    const retry = byId("membershipCheckoutRetry");
+    const methods = document.querySelectorAll("#membershipMethodGrid [data-ary-pay-method]");
+    const blocked = remaining > 0;
+    if (hasThrottle && retry) {
+      retry.hidden = false;
+      retry.disabled = blocked || state.checkoutBusy || !!state.activeOrderId;
+      retry.textContent = blocked
+        ? "Jeda AirPay " + Math.floor(remaining / 60) + ":" + String(remaining % 60).padStart(2, "0")
+        : "Periksa kesiapan AirPay";
+      const errorText = byId("membershipCheckoutErrorText");
+      if (!blocked && errorText && !state.checkoutBusy) {
+        errorText.textContent = "Jeda berakhir. Tidak ada invoice yang dibuat otomatis. Periksa kesiapan, lalu pilih satu metode QRIS jika ingin mencoba lagi.";
+      }
+    }
+    methods.forEach(button => {
+      button.disabled = blocked || state.checkoutBusy || !!state.activeOrderId;
+    });
+    const submit = byId("membershipCreateInvoice");
+    if (submit) submit.disabled = blocked || state.checkoutBusy || !!state.activeOrderId;
+    if (!blocked && state.rateLimitTimer) {
+      window.clearInterval(state.rateLimitTimer);
+      state.rateLimitTimer = null;
+    }
+    return blocked;
+  }
+
+  function showAirPayCooldown(details = {}) {
+    const seconds = Math.max(0, Number(details.retryAfterSeconds) || 0);
+    const until = Number(details.rateLimitUntil) || Date.now() + seconds * 1000;
+    state.rateLimitUntil = Math.max(Date.now(), until);
+    state.rateLimitAttempts = Math.max(1, Number(details.rateLimitAttempts) || 1);
+    setCheckoutError("AirPay sedang membatasi pembuatan invoice QRIS.", "AIRPAY_RATE_LIMITED");
+    syncAirPayCooldownUI();
+    if (state.rateLimitUntil > Date.now() && !state.rateLimitTimer) {
+      state.rateLimitTimer = window.setInterval(syncAirPayCooldownUI, 1000);
+    }
+  }
+
+  async function checkAirPayReadiness() {
+    if (state.checkoutBusy || state.activeOrderId || syncAirPayCooldownUI()) return;
+    const retry = byId("membershipCheckoutRetry");
+    if (retry) retry.disabled = true;
+    try {
+      const result = await api("/api/membership/payment-config", { method: "GET" });
+      if (!result.response.ok || !result.data.ok) throw new Error("Status AirPay belum bisa diperiksa.");
+      state.paymentConfig = result.data;
+      state.checkoutEnabled = !!(result.data.checkoutEnabled && result.data.identityReady);
+      if (result.data.rateLimited) {
+        showAirPayCooldown(result.data);
+      } else if (!state.checkoutEnabled) {
+        setCheckoutError("Konfigurasi checkout AirPay belum siap.", "AIRPAY_KEY_NOT_CONFIGURED");
+      } else {
+        setCheckoutError("Pemeriksaan selesai. Jeda server sudah lewat, tetapi keberhasilan invoice belum dijamin oleh AirPay. Pilih satu metode untuk mencoba sekali.", "AIRPAY_RATE_LIMITED");
+        const message = byId("membershipCheckoutErrorText");
+        if (message) message.textContent = "Tidak ada invoice baru dibuat. Jika AirPay masih menolak (429), checkout akan dijeda lebih lama.";
+      }
+    } catch (error) {
+      setMessage(error.message || "Status AirPay belum tersedia.", "warning");
+    } finally { syncAirPayCooldownUI(); }
   }
 
   function formatDate(value) {
@@ -292,6 +363,10 @@
     byId("membershipCheckout").hidden = false;
     byId("membershipPayment").hidden = true;
     setCheckoutError("");
+    if (state.rateLimitAttempts) showAirPayCooldown({
+      rateLimitUntil: state.rateLimitUntil,
+      rateLimitAttempts: state.rateLimitAttempts
+    });
     const createButton = byId("membershipCreateInvoice");
     if (!state.checkoutEnabled) {
       const config = state.paymentConfig || {};
@@ -309,6 +384,7 @@
       if (createButton) createButton.disabled = false;
       setMessage("Pilih DANA, GoPay, QRIS, atau m-banking. Setelah memilih metode, invoice dan QRIS dibuat otomatis oleh AirPay.", "info");
     }
+    syncAirPayCooldownUI();
     byId("membershipCheckout").scrollIntoView({ behavior: "smooth", block: "nearest" });
   }
 
@@ -449,6 +525,15 @@
   async function submitCheckout(event) {
     event?.preventDefault?.();
     if (!state.selectedPlan || state.checkoutBusy || state.activeOrderId) return;
+    // Never reach the create endpoint during a known provider cooldown.
+    // Timer expiry only re-enables a manual readiness check / one user choice.
+    if (syncAirPayCooldownUI()) {
+      showAirPayCooldown({
+        rateLimitUntil: state.rateLimitUntil,
+        rateLimitAttempts: state.rateLimitAttempts
+      });
+      return;
+    }
     if (!state.checkoutEnabled) {
       await refreshMe().catch(() => false);
       const status = await api("/api/membership/payment-config", { method: "GET" }).catch(() => null);
@@ -497,6 +582,8 @@
         const error = new Error(result.data.error || "Invoice belum berhasil dibuat.");
         error.code = String(result.data.code || "AIRPAY_CREATE_FAILED");
         error.retryAfterSeconds = Number(result.data.retryAfterSeconds || 0);
+        error.rateLimitUntil = Number(result.data.rateLimitUntil || 0);
+        error.rateLimitAttempts = Number(result.data.rateLimitAttempts || 0);
         throw error;
       }
 
@@ -506,13 +593,7 @@
     } catch (error) {
       const code = error?.code || "AIRPAY_CREATE_FAILED";
       setCheckoutError(error?.message || "Tidak dapat membuat invoice.", code);
-      if (code === "AIRPAY_RATE_LIMITED" && error.retryAfterSeconds) {
-        const retry = byId("membershipCheckoutRetry");
-        retry.hidden = false;
-        retry.disabled = true;
-        retry.textContent = "Jeda " + error.retryAfterSeconds + " detik";
-        window.setTimeout(() => {retry.disabled = false; retry.textContent = "Coba buat QRIS lagi";}, error.retryAfterSeconds * 1000);
-      }
+      if (code === "AIRPAY_RATE_LIMITED") showAirPayCooldown(error);
       // The descriptive error lives in the checkout card. Avoid repeating the
       // same text underneath the card, as observed in the user's screenshots.
       setMessage("", "error");
@@ -521,6 +602,7 @@
       button.disabled = false;
       methodButtons.forEach(item => item.disabled = false);
       button.textContent = "Buat invoice QRIS";
+      syncAirPayCooldownUI();
     }
   }
 
@@ -759,6 +841,7 @@
     if (catalogResult.response.ok && catalogResult.data.ok) state.catalog = catalogResult.data;
     const config = configResult.data || {};
     state.paymentConfig = config;
+    if (config.rateLimited) showAirPayCooldown(config);
     if (state.catalog) restoreCart();
     state.checkoutEnabled = !!(configResult.response.ok && config.checkoutEnabled && config.identityReady);
     renderCart();
@@ -786,6 +869,9 @@
         : "Paket sudah ditampilkan, tetapi checkout belum aktif. Konfigurasi yang diperlukan: " + missing + ".", "warning");
     }
 
+    if (config.rateLimited) {
+      setMessage("AirPay masih membatasi invoice QRIS (429). ARYANZZ tidak melakukan percobaan ulang otomatis.", "warning");
+    }
     const pending = state.orders.find(order => order.status === "pending" && order.transactionId);
     if (pending && !state.activeOrderId) {
       showPayment(pending, {
@@ -865,9 +951,7 @@
     });
   });
   byId("membershipCheckoutForm").addEventListener("submit", submitCheckout);
-  byId("membershipCheckoutRetry")?.addEventListener("click", () => {
-    if (!state.checkoutBusy && state.selectedPlan) submitCheckout({ preventDefault() {} });
-  });
+  byId("membershipCheckoutRetry")?.addEventListener("click", checkAirPayReadiness);
   byId("membershipCheckStatus").addEventListener("click", async () => {
     if (!state.activeOrderId) return;
     stopPolling();

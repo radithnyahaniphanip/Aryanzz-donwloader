@@ -237,6 +237,39 @@ export class MembershipStore {
     return "";
   }
 
+  async airPayCooldown() {
+    // One Durable Object is shared by devices and sessions: a browser reload
+    // cannot reset the provider's rate limit or issue another invoice.
+    const record = await this.ctx.storage.get("airpay-create-rate-limit-v2") || {};
+    const legacyUntil = Number(await this.ctx.storage.get("airpay-create-rate-limit-until") || 0);
+    const until = Math.max(Number(record.until) || 0, legacyUntil);
+    return {
+      until,
+      retryAfterSeconds: Math.max(0, Math.ceil((until - Date.now()) / 1000)),
+      consecutive: Number(record.consecutive) || 0
+    };
+  }
+
+  async recordAirPay429(retryAfterHeader) {
+    const now = Date.now();
+    const previous = await this.ctx.storage.get("airpay-create-rate-limit-v2") || {};
+    const consecutive = Number(previous.last429At) > now - 60 * 60 * 1000
+      ? Math.min(7, (Number(previous.consecutive) || 0) + 1) : 1;
+    // Honor AirPay's Retry-After when provided (seconds or HTTP-date).
+    const numericHeader = Number(retryAfterHeader);
+    const asDate = Date.parse(String(retryAfterHeader || ""));
+    const gatewayDelay = retryAfterHeader && Number.isFinite(numericHeader) && numericHeader >= 0
+      ? numericHeader
+      : Number.isFinite(asDate) ? Math.max(0, Math.ceil((asDate - now) / 1000)) : 0;
+    // Repeated 429s mean the previous wait did not restore provider capacity.
+    // Exponential shared backoff prevents a 90s loop and invoice spam.
+    const seconds = Math.min(3600, Math.max(gatewayDelay, 90 * 2 ** (consecutive - 1)));
+    const record = { until: now + seconds * 1000, last429At: now, consecutive };
+    await this.ctx.storage.put("airpay-create-rate-limit-v2", record);
+    await this.ctx.storage.put("airpay-create-rate-limit-until", record.until);
+    return { retryAfterSeconds: seconds, rateLimitUntil: record.until, consecutive };
+  }
+
   async activeMerchantBlock() {
     // Only explicit gateway "merchant blocked" responses trigger a short
     // cooldown. An otherwise unexplained 403 is an API permission error,
@@ -275,6 +308,7 @@ export class MembershipStore {
       const authReady = !!this.env.AUTH_DB && typeof this.env.AUTH_DB.prepare === "function" && String(this.env.AUTH_SESSION_SECRET || "").length >= 32;
       const sandboxBlocked = this.sandboxBlocked();
       const merchantBlocked = !!await this.activeMerchantBlock();
+      const throttle = await this.airPayCooldown();
       const ready = apiKeyReady && identityReady && !sandboxBlocked && !merchantBlocked;
       const missing = [];
       const optionalMissing = [];
@@ -291,6 +325,10 @@ export class MembershipStore {
         keyInstalledNotValidated: apiKeyReady,
         gatewayAuthorization: merchantBlocked ? "merchant-blocked" : "not-verified",
         merchantBlocked,
+        rateLimited: throttle.retryAfterSeconds > 0,
+        retryAfterSeconds: throttle.retryAfterSeconds,
+        rateLimitUntil: throttle.until,
+        rateLimitAttempts: throttle.consecutive,
         sandboxBlocked,
         authReady,
         identityReady,
@@ -432,12 +470,14 @@ export class MembershipStore {
       }, 503);
     }
 
-    const rateLimitUntil = Number(await this.ctx.storage.get("airpay-create-rate-limit-until") || 0);
-    if (rateLimitUntil > Date.now()) {
-      const seconds = Math.max(1, Math.ceil((rateLimitUntil - Date.now()) / 1000));
+    const throttle = await this.airPayCooldown();
+    if (throttle.retryAfterSeconds > 0) {
       return json({ ok: false, code: "AIRPAY_RATE_LIMITED",
-        error: "AirPay membatasi pembuatan invoice sementara. Coba lagi setelah jeda; jangan mengetuk checkout berulang.",
-        retryAfterSeconds: seconds }, 429, { "retry-after": String(seconds) });
+        error: "AirPay masih membatasi pembuatan QRIS. ARYANZZ tidak mengirim permintaan ulang selama jeda.",
+        retryAfterSeconds: throttle.retryAfterSeconds,
+        rateLimitUntil: throttle.until,
+        rateLimitAttempts: throttle.consecutive
+      }, 429, { "retry-after": String(throttle.retryAfterSeconds) });
     }
 
     let body;
@@ -594,13 +634,14 @@ export class MembershipStore {
       }
       if (!response.ok || !payload || payload.success === false) {
         if (response.status === 429) {
-          const rawRetry = Number(response.headers.get("retry-after"));
-          const seconds = Number.isFinite(rawRetry) && rawRetry > 0
-            ? Math.max(30, Math.min(300, Math.ceil(rawRetry))) : 90;
-          await this.ctx.storage.put("airpay-create-rate-limit-until", Date.now() + seconds * 1000);
-          const error = new Error("AirPay sedang membatasi permintaan pembuatan QRIS (HTTP 429). Coba lagi setelah " + seconds + " detik.");
+          const cooldown = await this.recordAirPay429(response.headers.get("retry-after"));
+          const error = new Error(cooldown.consecutive > 1
+            ? "AirPay masih membatasi QRIS (HTTP 429). ARYANZZ memperpanjang jeda agar tidak mengulang permintaan yang ditolak."
+            : "AirPay membatasi pembuatan QRIS (HTTP 429). ARYANZZ menjeda checkout tanpa mengulang permintaan.");
           error.code = "AIRPAY_RATE_LIMITED";
-          error.retryAfterSeconds = seconds;
+          error.retryAfterSeconds = cooldown.retryAfterSeconds;
+          error.rateLimitUntil = cooldown.rateLimitUntil;
+          error.rateLimitAttempts = cooldown.consecutive;
           throw error;
         }
         const gatewayMessage = String(payload?.message || payload?.error || "");
@@ -668,6 +709,8 @@ export class MembershipStore {
         : now + 10 * 60 * 1000;
       order.note = "Invoice QRIS dibuat. Sesi checkout ARYANZZ berlaku 10 menit; status gateway tetap direkonsiliasi sampai final.";
       await this.ctx.storage.delete("airpay-merchant-block");
+      await this.ctx.storage.delete("airpay-create-rate-limit-v2");
+      await this.ctx.storage.delete("airpay-create-rate-limit-until");
       await this.ctx.storage.put("order:" + id, order);
       await this.saveOrderList(session.id, order);
       await this.scheduleStatusCheck();
@@ -704,7 +747,11 @@ export class MembershipStore {
         ok: false,
         code,
         error: code === "AIRPAY_INVALID_API_KEY" || code === "AIRPAY_RATE_LIMITED" ? order.note : "Invoice AirPay gagal dibuat. " + order.note,
-        ...(code === "AIRPAY_RATE_LIMITED" ? { retryAfterSeconds: error.retryAfterSeconds || 90 } : {})
+        ...(code === "AIRPAY_RATE_LIMITED" ? {
+          retryAfterSeconds: error.retryAfterSeconds || 90,
+          rateLimitUntil: error.rateLimitUntil || Date.now() + 90000,
+          rateLimitAttempts: error.rateLimitAttempts || 1
+        } : {})
       }, code === "AIRPAY_RATE_LIMITED" ? 429 : ["AIRPAY_INVALID_API_KEY", "AIRPAY_MERCHANT_BLOCKED", "AIRPAY_API_FORBIDDEN"].includes(code) ? 503 : 502);
     }
   }
