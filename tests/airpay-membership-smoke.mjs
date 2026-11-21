@@ -57,6 +57,15 @@ assert.match(ui, /membershipCheckoutRetry"\)\.hidden = invalidKey \|\| merchantB
 assert.match(membership, /sandboxBlocked\(\)/);
 assert.match(membership, /gatewayAuthorization: "not-verified"/);
 assert.match(membership, /AIRPAY_MERCHANT_BLOCKED/);
+assert.match(ui, /function closePaymentActions\(\)/);
+assert.match(ui, /link\.removeAttribute\("href"\)/);
+assert.match(ui, /closePaymentActions\(\);[\s\S]*?setMessage\("Pembayaran berhasil diverifikasi/);
+assert.match(ui, /closePaymentActions\(\);[\s\S]*?byId\("membershipPaymentExpiry"\)\.textContent = "Invoice sudah "/);
+assert.match(ui, /payLink\.hidden = !providerPage \|\| checkoutExpired/);
+assert.match(ui, /AIRPAY_KEY_NOT_CONFIGURED/);
+assert.match(ui, /ARYANZZ_IDENTITY_NOT_READY/);
+assert.match(membership, /AirPay documents that this pair is idempotent/);
+assert.match(membership, /attempt < 2/);
 assert.match(ui, /qr\.onerror =/);
 assert.match(ui, /qr\.onload =/);
 assert.match(membership, /AIRPAY_INVALID_API_KEY/);

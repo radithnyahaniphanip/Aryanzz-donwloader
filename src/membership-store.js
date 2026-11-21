@@ -493,25 +493,42 @@ export class MembershipStore {
     returnUrl.searchParams.set("order", id);
 
     try {
-      const response = await fetch("https://airpaygateway.site/api/qris/create", {
-        method: "POST",
-        headers: {
-          "X-API-Key": this.apiKey(),
-          "Content-Type": "application/json",
-          "Accept": "application/json"
-        },
-        body: JSON.stringify({
-          amount,
-          external_id: id,
-          description: "ARYANZZ Membership " + plan.name + " " + (billingPeriod === "yearly" ? "Tahunan" : "Bulanan"),
-          callback_url: new URL("/api/membership/webhook", request.url).href,
-          return_url: returnUrl.href
-        }),
-        signal: AbortSignal.timeout(15000),
-        cache: "no-store"
+      // An interrupted connection can leave an AirPay invoice created but the
+      // QR never received. Retry once with the SAME external_id and amount:
+      // AirPay documents that this pair is idempotent and returns the old invoice.
+      // Never generate a different order ID on an internal retry.
+      const createBody = JSON.stringify({
+        amount,
+        external_id: id,
+        description: "ARYANZZ Membership " + plan.name + " " + (billingPeriod === "yearly" ? "Tahunan" : "Bulanan"),
+        callback_url: new URL("/api/membership/webhook", request.url).href,
+        return_url: returnUrl.href
       });
-
-      const payload = await response.json().catch(() => null);
+      let response;
+      let payload;
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          response = await fetch("https://airpaygateway.site/api/qris/create", {
+            method: "POST",
+            headers: {
+              "X-API-Key": this.apiKey(),
+              "Content-Type": "application/json",
+              "Accept": "application/json"
+            },
+            body: createBody,
+            signal: AbortSignal.timeout(15000),
+            cache: "no-store"
+          });
+          payload = await response.json().catch(() => null);
+          // A 401/403/409 is terminal and cannot be resolved by retrying.
+          // Transient 5xx or a truncated gateway JSON can be retried safely.
+          if (attempt === 0 && (response.status >= 500 || (response.ok && !payload))) continue;
+          break;
+        } catch (error) {
+          if (attempt === 0 && (error?.name === "AbortError" || error?.name === "TimeoutError" || error instanceof TypeError)) continue;
+          throw error;
+        }
+      }
       if (!response.ok || !payload || payload.success === false) {
         const gatewayMessage = String(payload?.message || payload?.error || "");
         if (response.status === 401 || /invalid[\\s_-]*(?:api[\\s_-]*)?key|unauthori[sz]ed|kunci.*tidak.*valid/i.test(gatewayMessage)) {

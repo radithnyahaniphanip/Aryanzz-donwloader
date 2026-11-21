@@ -54,22 +54,32 @@
     const invalidKey = code === "AIRPAY_INVALID_API_KEY" || /invalid api key|kunci API AirPay ditolak/i.test(error);
     const merchantBlocked = code === "AIRPAY_MERCHANT_BLOCKED";
     const sandboxBlocked = code === "AIRPAY_SANDBOX_PRODUCTION_BLOCKED";
+    const unconfigured = code === "AIRPAY_KEY_NOT_CONFIGURED";
+    const noIdentity = code === "ARYANZZ_IDENTITY_NOT_READY";
     byId("membershipCheckoutErrorTitle").textContent = merchantBlocked
       ? "Akun merchant AirPay diblokir (403)"
       : sandboxBlocked
         ? "Key sandbox tidak boleh dipakai untuk Membership live"
         : invalidKey
           ? "API Key AirPay tidak valid (401)"
-          : "Invoice belum berhasil dibuat";
+          : unconfigured
+            ? "Gateway pembayaran belum dikonfigurasi"
+            : noIdentity
+              ? "Identitas perangkat belum siap"
+              : "Invoice belum berhasil dibuat";
     byId("membershipCheckoutErrorText").textContent = merchantBlocked
       ? "AirPay menolak izin akun merchant membuat QRIS. Buka dashboard AirPay, periksa status merchant, lalu hubungi dukungan AirPay untuk meminta pemulihan akun. Mengganti API Key atau menekan tombol berulang kali tidak menghapus blokir."
       : sandboxBlocked
         ? "Kunci ak_test_ hanya untuk pengujian tanpa uang sungguhan pada Worker staging. Jangan menggunakannya untuk membership produksi."
         : invalidKey
           ? "AirPay menolak kunci server. Pengelola website perlu memasang API Key live valid melalui Secret Cloudflare. Jangan kirim kunci lewat chat."
-          : (error || "Ada kendala saat menghubungkan layanan pembayaran.");
+          : unconfigured
+            ? "AIRPAY_API_KEY live harus tersedia sebagai Secret pada server. Tidak ada QR yang bisa ditampilkan sebelum invoice resmi dibuat."
+            : noIdentity
+              ? "Sesi perangkat belum siap. Muat ulang website dan coba lagi setelah ID ARYANZZ tersedia."
+              : (error || "Ada kendala saat menghubungkan layanan pembayaran.");
     panel.hidden = !error;
-    byId("membershipCheckoutRetry").hidden = invalidKey || merchantBlocked || sandboxBlocked;
+    byId("membershipCheckoutRetry").hidden = invalidKey || merchantBlocked || sandboxBlocked || unconfigured || noIdentity;
   }
 
   function formatDate(value) {
@@ -266,6 +276,26 @@
     }
   }
 
+  function closePaymentActions() {
+    // Never leave a QR image or payment link active after the 10-minute
+    // checkout window (or once AirPay reports a final order status).
+    const qr = byId("membershipQr");
+    if (qr) {
+      qr.onload = null;
+      qr.onerror = null;
+      qr.removeAttribute("src");
+      qr.hidden = true;
+    }
+    const loading = byId("membershipQrLoading");
+    if (loading) loading.hidden = true;
+    for (const id of ["membershipQrDownload", "membershipPayLink"]) {
+      const link = byId(id);
+      if (!link) continue;
+      link.hidden = true;
+      link.removeAttribute("href");
+    }
+  }
+
   function stopCountdown() {
     if (state.countdownTimer) clearInterval(state.countdownTimer);
     state.countdownTimer = null;
@@ -283,9 +313,7 @@
       display.textContent = minutes + ":" + seconds;
       if (remaining <= 0) {
         stopCountdown();
-        const qr = byId("membershipQr");
-        qr.removeAttribute("src");
-        qr.hidden = true;
+        closePaymentActions();
         if (caption) caption.textContent = "Waktu checkout berakhir · status gateway tetap diperiksa";
         byId("membershipPaymentExpiry").textContent = "Batas checkout 10 menit selesai. QR disembunyikan dan keranjang direset; status invoice tetap dicocokkan dengan AirPay agar pembayaran yang sudah masuk tidak hilang.";
         byId("membershipPaymentBack").hidden = false;
@@ -324,7 +352,7 @@
     byId("membershipSelectedMethod").textContent = "Metode dipilih: " + (methodNames[selected] || "QRIS") + " · diterbitkan oleh AirPay";
     const payLink = byId("membershipPayLink");
     const providerPage = safeProviderLink(data.payUrl || order.payUrl);
-    if (payLink) { payLink.hidden = !providerPage; if (providerPage) payLink.href = providerPage; else payLink.removeAttribute("href"); }
+    if (payLink) { payLink.hidden = !providerPage || checkoutExpired; if (providerPage && !checkoutExpired) payLink.href = providerPage; else payLink.removeAttribute("href"); }
     const qr = byId("membershipQr");
     const loading = byId("membershipQrLoading");
     const qrError = byId("membershipQrError");
@@ -382,8 +410,13 @@
       if (status?.response?.ok) state.paymentConfig = status.data;
       state.checkoutEnabled = !!(status?.response?.ok && status.data?.checkoutEnabled && state.identityReady);
       if (!state.checkoutEnabled) {
-        const missing = Array.isArray(state.paymentConfig?.missing) ? state.paymentConfig.missing.join(", ") : "ID perangkat atau konfigurasi AirPay";
-        setMessage("Tagihan belum dapat dibuat: " + missing + ". Periksa akun atau izin perangkat dan coba lagi.", "warning");
+        const config = state.paymentConfig || {};
+        const code = config.sandboxBlocked ? "AIRPAY_SANDBOX_PRODUCTION_BLOCKED"
+          : !config.apiKeyReady ? "AIRPAY_KEY_NOT_CONFIGURED"
+          : "ARYANZZ_IDENTITY_NOT_READY";
+        const missing = Array.isArray(config.missing) ? config.missing.join(", ") : "ID perangkat atau konfigurasi AirPay";
+        setCheckoutError("Tagihan belum dapat dibuat: " + missing, code);
+        setMessage("", "error");
         return;
       }
     }
@@ -490,6 +523,7 @@
     if (order.status === "paid") {
       stopPolling();
       stopCountdown();
+      closePaymentActions();
       clearCart();
       setMessage("Pembayaran berhasil diverifikasi. Membership " + (order.planName || "") + " sudah aktif!", "success");
       await refreshMe();
@@ -506,8 +540,7 @@
       stopPolling();
       stopCountdown();
       clearCart();
-      byId("membershipQr").removeAttribute("src");
-      byId("membershipQr").hidden = true;
+      closePaymentActions();
       byId("membershipPaymentExpiry").textContent = "Invoice sudah " + order.status + ".";
       setMessage("Invoice " + order.status + ". Keranjang dikosongkan; pilih paket kembali untuk membuat invoice baru.", "error");
       await refreshMe();
