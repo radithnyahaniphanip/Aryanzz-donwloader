@@ -48,6 +48,19 @@ function missingConfig(env) {
   if (!turnstileSiteKey(env)) missing.push("AUTH_TURNSTILE_SITE_KEY (or TURNSTILE_SITE_KEY / CF_TURNSTILE_SITE_KEY)");
   return missing;
 }
+async function authSchemaMissing(env){
+  // A D1 binding can exist before migrations have created any auth tables.
+  // Without this check, /api/auth/config would misleadingly report ready.
+  const required=["auth_users","auth_sessions","auth_verifications","auth_device_lock_accounts","auth_user_bans"];
+  if(!env.AUTH_DB||typeof env.AUTH_DB.prepare!=="function")return [];
+  try{
+    const rows=await env.AUTH_DB.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name IN ('auth_users','auth_sessions','auth_verifications','auth_device_lock_accounts','auth_user_bans')").all();
+    const present=new Set((rows?.results||[]).map(row=>String(row.name||"")));
+    return required.filter(name=>!present.has(name));
+  }catch{
+    return required;
+  }
+}
 function ready(env) {
   return !!env.AUTH_DB&&typeof env.AUTH_DB.prepare==="function"&&String(env.AUTH_SESSION_SECRET||"").length>=32&&
     !!turnstileSecret(env)&&!!turnstileSiteKey(env);
@@ -538,17 +551,20 @@ export async function handleAuthRequest(request, env) {
   const url = new URL(request.url), path = url.pathname;
   if (path === "/api/auth/config" && request.method === "GET") {
     const missing = missingConfig(env);
-    const loginReady = ready(env);
+    const missingTables = await authSchemaMissing(env);
+    const schemaReady = !!env.AUTH_DB&&typeof env.AUTH_DB.prepare==="function"&&missingTables.length===0;
+    if(!schemaReady&&missingTables.length)missing.push("AUTH_DB_MIGRATIONS");
+    const loginReady = ready(env)&&schemaReady;
     const registrationAllowed = String(env.AUTH_PUBLIC_ACCOUNTS_ENABLED||"true").toLowerCase()!=="false";
-    const missingLogin = missing.filter(item => ["Cloudflare D1 (AUTH_DB)","AUTH_SESSION_SECRET","TURNSTILE_SECRET_KEY (or TURNSTILE_SECRET / CF_TURNSTILE_SECRET_KEY)","AUTH_TURNSTILE_SITE_KEY (or TURNSTILE_SITE_KEY / CF_TURNSTILE_SITE_KEY)"].includes(item));
+    const missingLogin = missing.filter(item => ["Cloudflare D1 (AUTH_DB)","AUTH_DB_MIGRATIONS","AUTH_SESSION_SECRET","TURNSTILE_SECRET_KEY (or TURNSTILE_SECRET / CF_TURNSTILE_SECRET_KEY)","AUTH_TURNSTILE_SITE_KEY (or TURNSTILE_SITE_KEY / CF_TURNSTILE_SITE_KEY)"].includes(item));
     const missingRegistration = [...missingLogin];
     if(!String(env.RESEND_API_KEY||"").trim())missingRegistration.push("RESEND_API_KEY");
     if(!String(env.AUTH_EMAIL_FROM||"").trim())missingRegistration.push("AUTH_EMAIL_FROM");
     if(!registrationAllowed)missingRegistration.push("AUTH_PUBLIC_ACCOUNTS_ENABLED");
     const registrationReady = loginReady && registrationAllowed && missingRegistration.length===0;
-    const moderationReady=!!env.AUTH_DB&&typeof env.AUTH_DB.prepare==="function"&&String(env.AUTH_SESSION_SECRET||"").length>=32;
+    const moderationReady=schemaReady&&String(env.AUTH_SESSION_SECRET||"").length>=32;
     const existing=deviceLockTokenFrom(request),lockToken=existing||randomHex(32);
-    return reply({ ok: true, ready: loginReady, loginReady, registrationReady, registrationEnabled:registrationReady, publicAccess:true, moderationReady, publicVersion: "V2", captchaSiteKey: turnstileSiteKey(env), missing, missingLogin, missingRegistration,
+    return reply({ ok: true, ready: loginReady, loginReady, registrationReady, registrationEnabled:registrationReady, publicAccess:true, moderationReady, schemaReady, missingTables, publicVersion: "V2", captchaSiteKey: turnstileSiteKey(env), missing, missingLogin, missingRegistration,
       message: loginReady ? (registrationReady ? "Login dan pendaftaran akun publik ARYANZZ siap." : "Login online siap. Pendaftaran online menunggu konfigurasi email verifikasi.") : "Layanan akun online menunggu konfigurasi keamanan server: " + missingLogin.join(", ") + "." },
       200,existing?{}:{"set-cookie":DEVICE_LOCK_COOKIE+"="+lockToken+"; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=63072000"});
   }
