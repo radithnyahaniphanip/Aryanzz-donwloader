@@ -107,4 +107,30 @@ assert.ok(workflow.includes("wrangler secret put TURNSTILE_SECRET_KEY"),
   "The replacement secret must be stored in Cloudflare, not committed");
 assert.ok(workflow.includes('select(.name == "TURNSTILE_SECRET_KEY")'),
   "Routine deployments should preserve the installed Turnstile secret");
+
+// Regression: an existing phone's device-lock cookie must never turn the
+// entire public homepage into a 500 JSON error when D1 tables are missing.
+// Protected account/payment APIs still fail closed with HTTP 503.
+const { default: edgeWorker } = await import("../src/index.js");
+const brokenDB={
+  prepare(){ throw new Error("D1_ERROR: no such table: auth_device_lock_accounts"); }
+};
+const brokenDBEnv={
+  AUTH_DB:brokenDB,
+  AUTH_SESSION_SECRET:"x".repeat(64),
+  ASSETS:{async fetch(){return new Response("<!doctype html><title>ARYANZZ</title><h1>ARYANZZ V2</h1>",{status:200,headers:{"content-type":"text/html; charset=utf-8"}});}}
+};
+const lockedCookie="aryanzz_device_lock="+"a".repeat(64);
+const publicPage=await edgeWorker.fetch(new Request("https://aryanzz.example/",{headers:{cookie:lockedCookie}}),brokenDBEnv);
+assert.equal(publicPage.status,200,"D1 migration failures must not take down the public homepage");
+assert.match(publicPage.headers.get("content-type")||"",/text\/html/);
+assert.match(await publicPage.text(),/ARYANZZ V2/);
+const protectedRequest=await edgeWorker.fetch(new Request("https://aryanzz.example/api/auth/guest/bootstrap",{
+  method:"POST",headers:{cookie:lockedCookie,"content-type":"application/json"},body:"{}"
+}),brokenDBEnv);
+assert.equal(protectedRequest.status,503,"Missing ban tables must fail-closed for privileged/account API writes");
+assert.equal((await protectedRequest.json()).code,"AUTH_DATABASE_UNAVAILABLE");
+const noCookiePage=await edgeWorker.fetch(new Request("https://aryanzz.example/",{}),brokenDBEnv);
+assert.equal(noCookiePage.status,200,"Public pages should load without a device cookie as before");
+
 console.log("ARYANZZ V2 public account backend, email verification and fail-closed security checks passed.");

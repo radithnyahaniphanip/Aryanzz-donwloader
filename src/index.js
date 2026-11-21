@@ -4205,7 +4205,18 @@ const SFL_BYPASS_BUCKETS=new Map();
 const workerHandler = {async fetch(request,env){
   const url=new URL(request.url);
   const publicOrigin=getPublicOrigin(env);
-  const moderationResponse=await moderationGate(request,env);
+  let moderationResponse=null;
+  try {
+    moderationResponse=await moderationGate(request,env);
+  } catch(error) {
+    // If D1 migrations have not been applied, checking device bans can
+    // throw "no such table" for anyone with the device-lock cookie. Public
+    // pages must still load; do not allow unverified protected API calls.
+    console.error("[ARYANZZ_AUTH] moderation_database_unavailable",error instanceof Error?error.name:"unknown");
+    if(url.pathname.startsWith("/api/")&&url.pathname!=="/api/auth/config"&&url.pathname!=="/api/health"){
+      return json({ok:false,code:"AUTH_DATABASE_UNAVAILABLE",error:"Layanan akun sedang dalam pemeliharaan database. Halaman publik tetap dapat diakses."},503);
+    }
+  }
   if(moderationResponse)return moderationResponse;
   // Serve crawler files explicitly so Google receives deterministic XML/plain-text MIME types.
   if(url.pathname==="/sitemap.xml"&&request.method==="GET"){
