@@ -86,7 +86,7 @@
     panel.hidden = !error;
     byId("membershipCheckoutRetry").hidden = invalidKey || merchantBlocked || apiForbidden || sandboxBlocked || unconfigured || noIdentity;
     const supportLink = byId("membershipCheckoutSupport");
-    if (supportLink) supportLink.hidden = !merchantBlocked;
+    if (supportLink) supportLink.hidden = !(merchantBlocked || apiForbidden);
   }
 
   function formatDate(value) {
