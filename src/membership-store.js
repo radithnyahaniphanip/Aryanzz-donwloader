@@ -529,7 +529,7 @@ export class MembershipStore {
       id,
       userId: session.id,
       planId: plan.id,
-      planName: plan.name,
+      planName: plan.name + " · " + (billingPeriod === "weekly" ? "Mingguan" : billingPeriod === "yearly" ? "Tahunan" : "Bulanan"),
       billingPeriod,
       paymentMethod,
       amount,
@@ -711,6 +711,11 @@ export class MembershipStore {
 
   async saveOrderList(sessionId, order) {
     const current = await this.ctx.storage.get("orders:" + sessionId) || [];
+    const previous = current.find(item => item.id === order.id);
+    // Preserve an owner's "hide failed history" preference through late
+    // gateway retries, but show any payment that was subsequently verified.
+    if (previous?.hiddenFromHistory && order.status !== "paid") order.hiddenFromHistory = true;
+    if (order.status === "paid") order.hiddenFromHistory = false;
     const next = [order, ...current.filter(item => item.id !== order.id)].slice(0, 50);
     await this.ctx.storage.put("orders:" + sessionId, next);
   }
@@ -834,7 +839,7 @@ export class MembershipStore {
 
     const membership = {
       tier: effectivePlan.id,
-      planName: effectivePlan.name,
+      planName: effectivePlan.name + " · " + (order.billingPeriod === "weekly" ? "Mingguan" : order.billingPeriod === "yearly" ? "Tahunan" : "Bulanan"),
       status: "active",
       startedAt: previous.status === "active" && previous.startedAt ? previous.startedAt : now,
       expiresAt,
