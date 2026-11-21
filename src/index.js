@@ -148,6 +148,7 @@ function freeProviderMediaInfo(data,rawUrl,requestUrl){
     return {mode:audio?"audio":"video",type:audio?"audio":"video",ext:finalExt,height:audio?0:height,videoOnly,hasAudio:video?!videoOnly:undefined,mimeType:mime||null,url:mediaUrl.href,downloadUrl:downloadUrl.href,previewUrl:previewUrl.href,label,filesize:Number(item?.sizeBytes||item?.size_bytes||item?.filesize||item?.size||0)||null};
   }).filter(Boolean);
   const thumbnail=safePublicMediaUrl(normalized?.thumbnail||rawResult.thumbnail||rawResult.cover)?.href||null;
+  const uploader=String(normalized?.uploader||normalized?.author||normalized?.channel||rawResult.uploader||rawResult.author||rawResult.channel||rawResult.username||"").trim().slice(0,160)||null;
   const duration=Number(normalized?.duration||rawResult.duration||rawResult.video?.duration||0)||null;
   const width=Number(normalized?.width||normalized?.videoWidth||normalized?.video_width||normalized?.video?.width||rawResult.width||rawResult.video?.width||data?.width)||null;
   const height=Number(normalized?.height||normalized?.videoHeight||normalized?.video_height||normalized?.video?.height||rawResult.height||rawResult.video?.height||data?.height)||null;
@@ -155,7 +156,7 @@ function freeProviderMediaInfo(data,rawUrl,requestUrl){
   formats.sort((a,b)=>a.mode===b.mode?(b.height-a.height):a.mode==="video"?-1:1);
   const platformKey=platformIdForUrl(rawUrl)||freePlatformKey(rawUrl);
   const mp4Formats=formats.filter(item=>item.mode==="video"&&!item.videoOnly&&["mp4","m4v"].includes(item.ext));
-  return {ok:true,providerName:"Public API",providerReady:true,provider:"Free public provider",platform:platformKey,title,filename:title,duration,thumbnail,width,height,aspectRatio:width&&height?width/height:null,type:formats.some(x=>x.mode==="video")?"video":"audio",formats,capabilities:{linkAccepted:true,preview:formats.some(item=>item.mode==="video"||item.mode==="audio"),mp4:mp4Formats.length>0,audio:formats.some(item=>item.mode==="audio"),mp4Qualities:[...new Set(mp4Formats.map(item=>item.height).filter(Boolean))]}};
+  return {ok:true,providerName:"Public API",providerReady:true,provider:"Free public provider",platform:platformKey,title,filename:title,uploader,duration,thumbnail,width,height,aspectRatio:width&&height?width/height:null,type:formats.some(x=>x.mode==="video")?"video":"audio",formats,capabilities:{linkAccepted:true,preview:formats.some(item=>item.mode==="video"||item.mode==="audio"),mp4:mp4Formats.length>0,audio:formats.some(item=>item.mode==="audio"),mp4Qualities:[...new Set(mp4Formats.map(item=>item.height).filter(Boolean))]}};
 }
 
 async function verifyTikTokPhotoVideoFormats(info,canonicalUrl){
@@ -1539,7 +1540,7 @@ async function searchSocial(request){
         const itemPlatform=platformIdForUrl(item.url);
         return !!itemPlatform&&canonicalPlatformId(itemPlatform)===canonicalPlatform&&platformSupportsSearchMode(itemPlatform,desiredMode)&&strictTitleIntentScore(query,item.title,item.snippet||"")>=0.7;
       });
-    const shouldRunYoutubeFallback=desiredMode!=="image"&&!hasRelevantSelectedCandidate;
+    const shouldRunYoutubeFallback=platform==="all"&&desiredMode!=="image"&&!hasRelevantSelectedCandidate;
     let youtubeFallbackAttempted=false,youtubeFallbackCandidateCount=0,youtubeFallbackCandidates=[];
     if(shouldRunYoutubeFallback){
       youtubeFallbackAttempted=true;
@@ -1600,7 +1601,7 @@ async function searchSocial(request){
       resultSeen.add(item.url);results.push(item);
       if(results.length>=resultLimit)break;
     }
-    const fallbackUsed=platform!=="youtube"&&(fallbackSearchOnly.length>0||verifiedResults.some(item=>item.platform==="youtube")||(platform==="all"&&youtubeFallbackAttempted&&youtubeFallbackCandidateCount>0));
+    const fallbackUsed=platform==="all"&&(fallbackSearchOnly.length>0||verifiedResults.some(item=>item.platform==="youtube")||(youtubeFallbackAttempted&&youtubeFallbackCandidateCount>0));
     const resultsWithThumbnails=results; // Kandidat tanpa gambar tidak menunggu pengambilan thumbnail eksternal.
     const searchOnlyCount=resultsWithThumbnails.filter(item=>item.searchOnly===true).length;
     const verifiedCount=resultsWithThumbnails.filter(item=>item.verified===true&&item.downloadable===true).length;
