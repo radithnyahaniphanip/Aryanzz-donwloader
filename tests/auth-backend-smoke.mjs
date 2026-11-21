@@ -85,4 +85,16 @@ assert.ok(fs.readFileSync(new URL("../migrations/0008_device_lock_accounts.sql",
 assert.ok(backend.includes("aryanzz_device_lock")&&backend.includes("HttpOnly; Secure; SameSite=Lax"));
 assert.ok(backend.includes("MODERATION_NOT_CONFIGURED"));
 assert.ok(backend.includes("async function guestBootstrap")&&backend.includes("/api/auth/guest/bootstrap"));
+
+const workflow=fs.readFileSync(new URL("../.github/workflows/deploy-cloudflare.yml",import.meta.url),"utf8");
+assert.match(workflow,/Provision persistent AUTH_SESSION_SECRET when absent/,
+  "CI must offer secure server-side session key provisioning");
+assert.match(workflow,/wrangler secret list --format json/,
+  "CI must check Cloudflare for a previously created session key");
+assert.match(workflow,/select\(\.name == "AUTH_SESSION_SECRET"\)/,
+  "CI must never rotate existing session keys on ordinary releases");
+assert.match(workflow,/randomBytes\(32\)\.toString\("hex"\)/,
+  "CI must use a cryptographic random generator rather than a hard-coded secret");
+assert.match(workflow,/wrangler secret put AUTH_SESSION_SECRET/,
+  "CI must put the freshly generated key directly in Cloudflare");
 console.log("ARYANZZ V2 public account backend, email verification and fail-closed security checks passed.");
