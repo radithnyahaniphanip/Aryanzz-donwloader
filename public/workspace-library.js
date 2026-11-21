@@ -125,6 +125,19 @@
     return !exists;
   }
 
+  function mediaCategory(item) {
+    const kind = String(item.type||item.mediaType||item.ext||item.name||item.title||item.url||"").toLowerCase();
+    if (/audio|mp3|m4a|wav|flac|ogg|spotify|soundcloud/.test(kind)) return "audio";
+    if (/image|photo|jpg|jpeg|png|webp|gif|pic|picture/.test(kind)) return "image";
+    return "video";
+  }
+  async function copyMediaLink(value) {
+    const url=safeLink(value);
+    if (!url) return false;
+    try { await navigator.clipboard.writeText(url); return true; }
+    catch { return false; }
+  }
+
   function renderLibrary() {
     const history = readHistory(), favorites = readFavorites();
     const historyCount = $("aryLibraryHistoryCount"), favoriteCount = $("aryLibraryFavoriteCount");
@@ -135,11 +148,20 @@
     if (favoriteBadge) favoriteBadge.textContent = favorites.length;
 
     const query = String($("aryLibrarySearch")?.value || "").trim().toLocaleLowerCase("id-ID");
+    const category = String($("aryLibraryMediaFilter")?.value || "all");
+    const sort = String($("aryLibrarySort")?.value || "newest");
     const draw = (id, items, kind) => {
       const box = $(id);
       if (!box) return;
       box.replaceChildren();
-      const visible = items.filter(item => !query || [item.name, item.title, item.url, item.platform, item.uploader].some(value => String(value || "").toLocaleLowerCase("id-ID").includes(query)));
+      const visible = items.filter(item => {
+        if (category !== "all" && mediaCategory(item) !== category) return false;
+        return !query || [item.name,item.title,item.url,item.platform,item.uploader].some(value => String(value||"").toLocaleLowerCase("id-ID").includes(query));
+      }).sort((a,b) => {
+        if(sort === "name") return String(a.name||a.title||"").localeCompare(String(b.name||b.title||""),"id");
+        const at = Number(a.savedAt||a.at||0), bt = Number(b.savedAt||b.at||0);
+        return sort === "oldest" ? at-bt : bt-at;
+      });
       if (!visible.length) {
         const empty = document.createElement("div");
         empty.className = "ary-library-empty-state";
@@ -159,8 +181,8 @@
         row.className = "ary-library-item";
         const icon = document.createElement("span");
         icon.className = "ary-library-item-icon";
-        const mediaType = String(item.type || item.mediaType || item.ext || item.name || "").toLowerCase();
-        icon.textContent = /audio|mp3|m4a|wav|flac|spotify|soundcloud/.test(mediaType) ? "♫" : /image|jpg|jpeg|png|webp/.test(mediaType) ? "▧" : "▶";
+        const mediaType = mediaCategory(item);
+        icon.textContent = mediaType === "audio" ? "♫" : mediaType === "image" ? "▧" : "▶";
         const main = document.createElement("div");
         main.className = "ary-library-item-main";
         const link = document.createElement("a");
@@ -173,21 +195,34 @@
         const details = [item.platform || "", item.uploader || item.author || "", item.at ? new Date(item.at).toLocaleString("id-ID") : "Disimpan di perangkat ini"].filter(Boolean);
         meta.textContent = details.join(" · ");
         main.append(link, meta);
-        const action = document.createElement("button");
-        action.type = "button";
-        action.className = "ary-library-item-action";
-        action.textContent = kind === "history" ? (favorites.some(saved => saved.url === item.url) ? "★" : "☆") : "×";
-        action.setAttribute("aria-label", kind === "history" ? "Simpan ke favorit" : "Hapus dari favorit");
-        action.addEventListener("click", () => {
-          if (kind === "history") {
-            const current = readFavorites();
-            const exists = current.some(saved => saved.url === item.url);
-            writeFavorites(exists ? current.filter(saved => saved.url !== item.url) : [{ ...item, savedAt: Date.now() }, ...current]);
-          } else {
-            writeFavorites(readFavorites().filter(saved => saved.url !== item.url));
-          }
+        const actions = document.createElement("div");
+        actions.className = "ary-library-item-actions";
+        const button = (label, title, onClick) => {
+          const el = document.createElement("button");
+          el.type="button";
+          el.className="ary-library-item-action";
+          el.title=title;
+          el.setAttribute("aria-label",title);
+          el.textContent=label;
+          el.addEventListener("click",onClick);
+          actions.append(el);
+          return el;
+        };
+        if(kind === "history") {
+          button(favorites.some(saved => saved.url === item.url) ? "★" : "☆","Tambah atau hapus favorit",()=>toggleFavorite(item));
+        }
+        button("⧉","Salin tautan",async event => {
+          const ok=await copyMediaLink(item.url);
+          event.currentTarget.textContent=ok?"✓":"!";
+          event.currentTarget.title=ok?"Tautan disalin":"Browser memblokir penyalinan";
         });
-        row.append(icon, main, action);
+        button("×",kind === "history"?"Hapus satu riwayat":"Hapus dari favorit",()=>{
+          if(kind === "history") {
+            writeKeys(HISTORY_KEYS,readHistory().filter(entry=>entry.url!==item.url));
+            renderHistory();renderLibrary();notifyLibraryChanged();
+          } else writeFavorites(readFavorites().filter(entry=>entry.url!==item.url));
+        });
+        row.append(icon, main, actions);
         box.append(row);
       });
     };
@@ -277,6 +312,14 @@
   $("aryLibraryHistoryTab")?.addEventListener("click", () => setLibraryTab("history"));
   $("aryLibraryFavoriteTab")?.addEventListener("click", () => setLibraryTab("favorite"));
   $("aryLibrarySearch")?.addEventListener("input", renderLibrary);
+  $("aryLibraryMediaFilter")?.addEventListener("change",renderLibrary);
+  $("aryLibrarySort")?.addEventListener("change",renderLibrary);
+  $("aryLibraryClearSearch")?.addEventListener("click",()=>{
+    if($("aryLibrarySearch"))$("aryLibrarySearch").value="";
+    if($("aryLibraryMediaFilter"))$("aryLibraryMediaFilter").value="all";
+    if($("aryLibrarySort"))$("aryLibrarySort").value="newest";
+    renderLibrary();$("aryLibrarySearch")?.focus();
+  });
   $("clearHistoryV2")?.addEventListener("click", () => {
     if (!confirm("Hapus semua riwayat pada perangkat ini?")) return;
     HISTORY_KEYS.forEach(key => { try { localStorage.removeItem(key); } catch {} });
