@@ -22,17 +22,19 @@ const deviceToken = "a".repeat(64);
 const requestHeaders = { cookie: "aryanzz_device_lock=" + deviceToken };
 const storage = new MemoryStorage();
 const ctx = { storage };
-const env = { AIRPAY_API_KEY: "ak_test_aryanzz-membership-smoke" };
+const env = { AIRPAY_API_KEY: "ak_test_aryanzz-membership-smoke", ARYANZZ_PAYMENT_MODE: "sandbox" };
 let invoice = null;
 let gatewayStatus = "Pending";
 let createCalls = 0;
 let rejectApiKey = false;
+let rejectMerchant = false;
 const originalFetch = globalThis.fetch;
 
 globalThis.fetch = async (input, init = {}) => {
   const url = new URL(String(input));
   if (url.pathname === "/api/qris/create") {
     if (rejectApiKey) return new Response(JSON.stringify({success:false,message:"Invalid API key"}),{status:401,headers:{"content-type":"application/json"}});
+    if (rejectMerchant) return new Response(JSON.stringify({success:false,message:"Merchant banned"}),{status:403,headers:{"content-type":"application/json"}});
     createCalls += 1;
     const body = JSON.parse(init.body || "{}");
     const amount = Number(body.amount);
@@ -77,7 +79,8 @@ try {
 
   const config = await store.fetch(request("/api/membership/payment-config"));
   const configData = await config.json();
-  assert.equal(configData.checkoutEnabled, true, "device-bound checkout should work without D1");
+  assert.equal(configData.checkoutEnabled, true, "isolated sandbox staging checkout should work without D1");
+  assert.equal(configData.gatewayAuthorization, "not-verified", "Installed keys cannot prove merchant eligibility until AirPay accepts an invoice");
   assert.equal(configData.identityMode, "device");
   assert.equal(configData.authReady, false, "cross-device account sync remains optional without D1");
 
@@ -216,6 +219,42 @@ try {
   const failedMemberData=await failedMember.json();
   assert.notEqual(failedMemberData.membership?.status,"active","Rejected API key must never grant membership");
   rejectApiKey=false;
+
+  // AirPay documents HTTP 403 as banned merchant. This must never become a
+  // misleading "try QR again" status or grant membership.
+  rejectMerchant = true;
+  const blockedStore = new MembershipStore({storage:new MemoryStorage()},env);
+  const blockedResponse = await blockedStore.fetch(new Request("https://aryanzz.test/api/membership/orders",{
+    method:"POST",headers:{...requestHeaders,"content-type":"application/json"},
+    body:JSON.stringify({planId:"starter",billingPeriod:"monthly",paymentMethod:"qris"})
+  }));
+  const blockedData = await blockedResponse.json();
+  assert.equal(blockedResponse.status,503);
+  assert.equal(blockedData.code,"AIRPAY_MERCHANT_BLOCKED");
+  assert.match(blockedData.error,/403/);
+  const blockedAccount = await blockedStore.fetch(request("/api/membership/me"));
+  assert.notEqual((await blockedAccount.json()).membership?.status,"active");
+  rejectMerchant = false;
+
+  // A sandbox credential accidentally configured on the *production* Worker
+  // must never be allowed to issue an invoice or activate paid privileges.
+  const prodEnv={...env,ARYANZZ_PUBLIC_ORIGIN:"https://aryanzz-donwloader.aryanz.workers.dev"};
+  const prodStore=new MembershipStore({storage:new MemoryStorage()},prodEnv);
+  const prodConfig=await prodStore.fetch(request("/api/membership/payment-config"));
+  const prodConfigData=await prodConfig.json();
+  assert.equal(prodConfigData.checkoutEnabled,false);
+  assert.equal(prodConfigData.sandboxBlocked,true);
+  assert.equal(prodConfigData.mode,"sandbox-blocked");
+  const prodBefore=createCalls;
+  const prodInvoice=await prodStore.fetch(new Request("https://aryanzz.test/api/membership/orders",{
+    method:"POST",headers:{...requestHeaders,"content-type":"application/json"},
+    body:JSON.stringify({planId:"starter",billingPeriod:"monthly",paymentMethod:"qris"})
+  }));
+  assert.equal(prodInvoice.status,503);
+  assert.equal((await prodInvoice.json()).code,"AIRPAY_SANDBOX_PRODUCTION_BLOCKED");
+  assert.equal(createCalls,prodBefore,"Production must not contact AirPay with a sandbox credential");
+  const prodMember=await prodStore.fetch(request("/api/membership/me"));
+  assert.notEqual((await prodMember.json()).membership?.status,"active");
 
   console.log("MembershipStore AirPay smoke test passed.");
 } finally {
