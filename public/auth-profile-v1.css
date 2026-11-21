@@ -737,3 +737,7 @@ body .nav button>span:last-child{font-size:clamp(9px,1.8vw,11px)!important}
     max-width:100%!important;
   }
 }
+
+/* Hide any stale V67.7 injected library heading if old SW cache mixes assets.
+   The current Pustaka panel's own .ary-library-hero remains visible. */
+body #history.ary-library-panel > .v677-feature-hero{display:none!important}
