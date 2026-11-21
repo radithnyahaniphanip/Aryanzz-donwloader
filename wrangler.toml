@@ -40,3 +40,6 @@ migrations_dir = "migrations"
 [vars]
 ARYANZZ_BUILD_VERSION = "__ARYANZZ_VERSION__"
 ARYANZZ_PUBLIC_ORIGIN = "https://aryanzz-donwloader.aryanz.workers.dev"
+# Explicitly restore fixed, idempotent schema via the already-bound D1 Worker.
+# Remote Wrangler migrations remain recommended after a D1 Edit token is granted.
+ARYANZZ_D1_SCHEMA_BOOTSTRAP = "enabled"
