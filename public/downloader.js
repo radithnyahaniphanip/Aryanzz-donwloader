@@ -1787,31 +1787,35 @@ function socialNetworkPlan(selected=0){
               })()
               :await postJson("/api/platform/info",{url:url.href,expectedPlatform:selectedPlatform,fast},slowSocialSource?(fast?10000:41000):(fast?10000:34000));
       }catch(error){
-        if(!shouldTryImageExtraction)throw error;
-        info={ok:false,error:String(error?.message||error),title:"",formats:[],type:"image"};
+        if(shouldTryImageExtraction)info={ok:false,error:String(error?.message||error),title:"",formats:[],type:"image"};
+        else if(fast&&!isYouTube&&!isDirectMediaUrl)info={ok:false,error:String(error?.message||error),title:"",formats:[]};
+        else throw error;
       }
       if(runId!==analysisRunId)return;
-      // The quick TikTok provider may return only an official embed while the full
-      // provider cascade can still expose a real MP4. Retry automatically before
-      // presenting an embed-only result so the normal Periksa button gets the same
-      // extraction path as the full diagnostic.
-      if(fast&&isTikTokPlatform&&!isTikTokPhotoPost){
-        const hasQuickVideo=Array.isArray(info?.formats)&&info.formats.some(item=>item?.mode==="video"&&item?.downloadUrl&&["mp4","m4v","webm"].includes(String(item.ext||"").toLowerCase()));
-        let resolvedPhoto=false;
-        try{resolvedPhoto=/\/photo\//i.test(new URL(info?.canonicalUrl||url.href).pathname)}catch{}
-        if(!hasQuickVideo&&!resolvedPhoto){
-          intro.textContent="TikTok terdeteksi. Jalur cepat belum menemukan MP4; mencoba provider lengkap secara otomatis…";
-          try{
-            const deepInfo=await postJson("/api/platform/info",{url:url.href,expectedPlatform:selectedPlatform,fast:false},42000);
-            const hasDeepVideo=Array.isArray(deepInfo?.formats)&&deepInfo.formats.some(item=>item?.mode==="video"&&item?.downloadUrl&&["mp4","m4v","webm"].includes(String(item.ext||"").toLowerCase()));
-            if(hasDeepVideo)info=deepInfo;
-            else if(deepInfo?.embedUrl)info={...info,...deepInfo};
-            else if(deepInfo?.error&&!info?.error)info={...info,error:deepInfo.error};
-          }catch(error){
-            info={...info,deepFallbackError:String(error?.message||error).slice(0,240)};
-          }
-          if(runId!==analysisRunId)return;
+      // Mode Cepat is adaptive: if a provider returns only metadata, an embed-only
+      // response, or no usable stream, automatically escalate to the full cascade.
+      // This applies to all public social providers, not only TikTok.
+      const hasQuickPlayableMedia=Array.isArray(info?.formats)&&info.formats.some(item=>
+        (item?.mode==="video"||item?.mode==="audio"||item?.type==="video"||item?.type==="audio")&&
+        (item?.downloadUrl||item?.previewUrl)
+      );
+      const shouldEscalateFast=fast&&!isYouTube&&!isDirectMediaUrl&&!isTikTokPhotoPost&&!isYouTubePhotoPost&&!isPhotoRoute&&!isThreadsPlatform&&selectedPlatform!=="spotify"&&!info?.isLive&&!info?.isUpcoming&&!hasQuickPlayableMedia;
+      if(shouldEscalateFast){
+        intro.textContent=detectedPlatform+" belum memberikan stream siap pada jalur cepat. ARYANZZ otomatis mencoba pemeriksaan lengkap…";
+        try{
+          const deepInfo=await postJson("/api/platform/info",{url:url.href,expectedPlatform:selectedPlatform,fast:false},selectedPlatform==="x"?52000:44000);
+          const hasDeepPlayableMedia=Array.isArray(deepInfo?.formats)&&deepInfo.formats.some(item=>
+            (item?.mode==="video"||item?.mode==="audio"||item?.type==="video"||item?.type==="audio")&&
+            (item?.downloadUrl||item?.previewUrl)
+          );
+          if(hasDeepPlayableMedia)info=deepInfo;
+          else if(deepInfo?.embedUrl)info={...info,...deepInfo};
+          else if(deepInfo?.error)info={...info,error:deepInfo.error,deepFallbackError:String(deepInfo.error).slice(0,240)};
+        }catch(error){
+          info={...info,deepFallbackError:String(error?.message||error).slice(0,240)};
+          if(!info.error)info.error="Pemeriksaan cepat dan lengkap belum mendapatkan stream publik. "+String(error?.message||error).slice(0,140);
         }
+        if(runId!==analysisRunId)return;
       }
       const hasVideoFormat=(info.formats||[]).some(item=>item?.mode==="video"||item?.type==="video"||/^video\//i.test(String(item?.mimeType||item?.mime_type||""))||["mp4","m4v","webm","mov","avi","3gp"].includes(String(item?.ext||"").toLowerCase()));
       // Threads posts may contain a video and a photo carousel in the same post.
@@ -1821,6 +1825,27 @@ function socialNetworkPlan(selected=0){
       if(runId!==analysisRunId)return;
       const imageData=imageResult?.data||{};
       const imageItems=Array.isArray(imageData.images)?imageData.images.slice(0,35):[];
+      if(selectedPlatform==="spotify"&&info?.embedUrl){
+        box.replaceChildren();
+        const title=make("b","youtube-title",info.title||"Audio Spotify");
+        const meta=make("small","muted",[info.artist||"", "Spotify · pemutar resmi"].filter(Boolean).join(" · "));
+        const embedUrl=safeUrl(info.embedUrl);
+        if(!embedUrl||embedUrl.origin!=="https://open.spotify.com"||!embedUrl.pathname.startsWith("/embed/"))throw new Error("Alamat pemutar Spotify tidak valid.");
+        const frame=make("iframe","ary-spotify-embed");
+        frame.src=embedUrl.href;
+        frame.title="Pemutar Spotify · "+(info.title||"audio");
+        frame.loading="lazy";
+        frame.referrerPolicy="strict-origin-when-cross-origin";
+        frame.allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture";
+        frame.allowFullscreen=true;
+        frame.style.cssText="display:block;width:100%;height:"+(["playlist","album","show"].includes(info.spotifyType)?352:152)+"px;border:0;border-radius:14px;background:#101010";
+        const wrap=make("div","ary-spotify-player");wrap.append(frame);
+        const note=make("p","muted",info.message||"Pemutar resmi Spotify. Login Spotify mungkin diperlukan.");
+        const source=make("a","tag","Buka di Spotify ↗");
+        source.href=info.externalUrl||url.href;source.target="_blank";source.rel="noopener noreferrer";
+        box.append(title,meta,wrap,note,source);
+        return;
+      }
       const isTikTokResolvedPhotoPost=isTikTokPlatform&&/\/photo\//i.test(String(info?.canonicalUrl||""));
       const hasAnyFormat=Array.isArray(info.formats)&&info.formats.length>0;
       const archivePending=Boolean(info.isLiveArchive&&!hasVideoFormat);
@@ -2071,7 +2096,7 @@ function socialNetworkPlan(selected=0){
       const details = make("div", "youtube-details");
       details.append(make("b", "youtube-title", info.title || info.filename || "Media siap diunduh"));
       const detectedKindLabel=info.contentKind==="mixed-video-photo"?"Video + galeri foto":info.contentKind==="photo-carousel"?"Galeri foto":info.contentKind==="live-replay"?"Arsip siaran langsung":info.contentKind==="live"?"Siaran langsung":"";
-      const mediaMetaLine=make("small","muted",[info.extractor||info.sourceLabel||platformName(url),detectedKindLabel,info.isLiveArchive?"Arsip siaran langsung":"",duration(info.duration),info.size?(info.size/1048576).toFixed(1)+" MB":""].filter(Boolean).join(" · "));
+      const mediaMetaLine=make("small","muted",[info.extractor||info.sourceLabel||platformName(url),info.uploader||info.author||"",detectedKindLabel,info.width&&info.height?Number(info.width)+" × "+Number(info.height)+" px":"",info.isLiveArchive?"Arsip siaran langsung":"",duration(info.duration),info.size?(info.size/1048576).toFixed(1)+" MB":""].filter(Boolean).join(" · "));
       details.append(mediaMetaLine);
       if(info.isLive)details.append(make("small","warning","● Siaran LIVE terdeteksi · unduhan file aktif tidak tersedia."));
       else if(info.isUpcoming)details.append(make("small","muted","◷ Siaran belum dimulai."));
@@ -2122,8 +2147,8 @@ function socialNetworkPlan(selected=0){
         if(previewFormat){
           const previewWrap=make("div","ary-video-preview-wrap ary-tiktok-player");
           const preview=make("video","v737-media-preview");
-          preview.controls=false;
-          preview.removeAttribute("controls");
+          preview.controls=true;
+          preview.setAttribute("controls","");
           preview.controlsList="nodownload noplaybackrate noremoteplayback";
           preview.setAttribute("controlslist","nodownload noplaybackrate noremoteplayback");
           preview.disablePictureInPicture=true;
@@ -2184,7 +2209,7 @@ function socialNetworkPlan(selected=0){
           });
           previewWrap.addEventListener("contextmenu",event=>event.preventDefault());
           ["loadedmetadata","durationchange","timeupdate","play","pause","ended","volumechange"].forEach(name=>preview.addEventListener(name,updatePlayerControls));
-          let previewCandidateIndex=0,previewDirectFallbackTried=false,previewWatchdog=null;
+          let previewCandidateIndex=0,previewDirectFallbackTried=false,previewWatchdog=null,previewDeepRetryTriggered=false;
           const clearPreviewWatchdog=()=>{if(previewWatchdog){clearTimeout(previewWatchdog);previewWatchdog=null;}};
           const previewSourceFor=(candidate,direct=false)=>{
             const source=safeUrl(direct?candidate?.url:(candidate?.previewUrl||candidate?.downloadUrl));
@@ -2240,6 +2265,12 @@ function socialNetworkPlan(selected=0){
             return true;
           };
           const showUnavailablePreview=()=>{
+            if(fast&&!previewDeepRetryTriggered&&runId===analysisRunId){
+              previewDeepRetryTriggered=true;
+              previewStatus.textContent="Pratinjau jalur cepat belum berhasil. Mencoba pemeriksaan lengkap otomatis…";
+              checkLink(url,button,{deep:true});
+              return;
+            }
             const sourceLink=make("a","youtube-thumb-download","Buka video di "+platformName(url));
             sourceLink.href=url.href;sourceLink.target="_blank";sourceLink.rel="noopener";
             previewWrap.replaceChildren(sourceLink);
@@ -2284,7 +2315,7 @@ function socialNetworkPlan(selected=0){
              clearPreviewWatchdog();
              applyIntrinsicRatio();
              const actual=Number(preview.duration),expected=Number(info.duration)||0;
-             if(Number.isFinite(actual)&&actual>0){const mm=Math.floor(actual/60),ss=Math.floor(actual%60);mediaMetaLine.textContent=[info.extractor||platformName(url),mm+":"+String(ss).padStart(2,"0"),info.size?(info.size/1048576).toFixed(1)+" MB":""].filter(Boolean).join(" · ");}
+             if(Number.isFinite(actual)&&actual>0){const mm=Math.floor(actual/60),ss=Math.floor(actual%60),dimensions=preview.videoWidth&&preview.videoHeight?preview.videoWidth+" × "+preview.videoHeight+" px":"";mediaMetaLine.textContent=[info.extractor||platformName(url),info.uploader||info.author||"",dimensions,mm+":"+String(ss).padStart(2,"0"),info.size?(info.size/1048576).toFixed(1)+" MB":""].filter(Boolean).join(" · ");}
              if(expected>0&&Number.isFinite(actual)&&Math.abs(actual-expected)>Math.max(3,expected*0.12)){
                previewStatus.textContent+=" · Periksa durasi: sumber "+expected.toFixed(1)+" detik";
                previewStatus.className="warning";
@@ -2318,7 +2349,7 @@ function socialNetworkPlan(selected=0){
            };
            setPreviewCandidate(0,false,"Memuat pratinjau video");
            window.addEventListener("resize",applyIntrinsicRatio,{passive:true});
-           previewWrap.append(preview,playerControls);
+           previewWrap.append(preview);
            updatePlayerControls();
            box.append(previewWrap,previewStatus);
         }else{
