@@ -2478,24 +2478,49 @@ async function resolveTikTokShortLinkViaReader(rawUrl,timeoutMs=4500){
   }
   throw new Error("Reader tidak menemukan URL postingan TikTok canonical.");
 }
+function threadsCanonicalPostUrl(page,sharedUrl){
+  // Extract a specific Threads post URL. Never mistake a login page, profile,
+  // unrelated recommended post, or a share-wrapper URL for a playable post.
+  const candidates=[String(page?.url||"")],html=String(page?.html||"");
+  const decode=value=>String(value||"").replace(/&amp;/gi,"&").replace(/\\u002f/gi,"/").replace(/\\u0026/gi,"&").replace(/\\\//g,"/").replace(/&quot;/gi,'"');
+  for(const tag of html.match(/<(?:meta|link)\b[^>]*>/gi)||[]){
+    const attrs={};
+    for(const match of tag.matchAll(/([A-Za-z_:][-A-Za-z0-9_:]*)\s*=\s*(?:"([^"]*)"|'([^']*)')/g))attrs[match[1].toLowerCase()]=match[2]??match[3]??"";
+    const kind=String(attrs.property||attrs.name||attrs.rel||"").toLowerCase();
+    if(["canonical","og:url","twitter:url","al:ios:url"].includes(kind))candidates.push(attrs.href||attrs.content||"");
+  }
+  const directPostUrlPattern=/https?:\\?\/\\?\/(?:www\.)?threads\.(?:com|net)\\?\/(?:@[^\\/"\s<>]+\\?\/)?post\\?\/[A-Za-z0-9_-]{6,40}/gi;
+  for(const match of html.matchAll(directPostUrlPattern))candidates.push(match[0]);
+  for(const raw of candidates){
+    let url;
+    try{url=new URL(decode(raw),sharedUrl)}catch{continue}
+    if(platformForHost(url.hostname)?.id!=="threads"||!/^\/@[^/]+\/post\/[A-Za-z0-9_-]{6,40}\/?$/i.test(url.pathname))continue;
+    url.protocol="https:";url.hostname="www.threads.com";url.search="";url.hash="";
+    return url.href;
+  }
+  return null;
+}
+
 async function resolveSocialShortLink(rawUrl,key,timeoutMs=11000){
   const canonical=canonicalSocialPostUrl(rawUrl,key);
   if(key==="facebook")return resolveFacebookShareLink(canonical,timeoutMs);
-  // Threads /share/ URLs are share wrappers, not media posts. Resolve to a real /post/ URL first.
+  // /share/ is a wrapper. Only use post URLs proven by an official redirect,
+  // canonical metadata or post URL embedded in the SAME public Threads page.
   if(key==="threads"){
     let shared;try{shared=new URL(canonical)}catch{return canonical}
-    if(/^\/share\/[^/]+\/?$/i.test(shared.pathname)){
-      try{
-        const page=await fetchSocialPostHtml(shared.href,timeoutMs);
-        const candidates=[page.url];
-        for(const match of String(page.html||"").matchAll(/<(?:link|meta)\b[^>]*(?:rel=["']canonical["']|property=["']og:url["'])[^>]*>/gi)){
-          const tag=match[0];const raw=tag.match(/(?:href|content)=["']([^"']+)["']/i)?.[1];if(raw)candidates.push(raw.replace(/&amp;/g,"&"));
-        }
-        for(const raw of candidates){
-          let target;try{target=new URL(raw,shared.href)}catch{continue}
-          if(platformIdForUrl(target.href)==="threads"&&/^\/(?:@[^/]+\/)?post\/[^/]+\/?$/i.test(target.pathname))return target.href;
-        }
-      }catch{}
+    const match=shared.pathname.match(/^\/share\/([A-Za-z0-9_-]{4,64})\/?$/i);
+    if(match){
+      const code=match[1];
+      const alternatives=[shared.href,"https://www.threads.com/share/"+encodeURIComponent(code),"https://www.threads.net/share/"+encodeURIComponent(code)];
+      const unique=[...new Set(alternatives)];
+      const results=await Promise.allSettled(unique.slice(0,3).map(async candidate=>{
+        const page=await fetchSocialPostHtml(candidate,Math.min(timeoutMs,11000));
+        return threadsCanonicalPostUrl(page,shared.href);
+      }));
+      for(const result of results){
+        if(result.status==="fulfilled"&&result.value)return result.value;
+      }
+      return canonical;
     }
   }
   let input;try{input=new URL(canonical)}catch{return canonical}
