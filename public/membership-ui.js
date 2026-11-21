@@ -47,6 +47,21 @@
     target.dataset.kind = kind || "info";
   }
 
+  function setCheckoutError(message, code) {
+    const panel = byId("membershipCheckoutError");
+    if (!panel) return;
+    const error = String(message || "");
+    const invalidKey = code === "AIRPAY_INVALID_API_KEY" || /invalid api key|kunci API AirPay ditolak/i.test(error);
+    byId("membershipCheckoutErrorTitle").textContent = invalidKey
+      ? "QRIS gagal dibuat: API Key AirPay tidak valid"
+      : "Invoice belum berhasil dibuat";
+    byId("membershipCheckoutErrorText").textContent = invalidKey
+      ? "AirPay menolak kunci pembayaran server. Pengelola website perlu mengganti AIRPAY_API_KEY pada Secret Cloudflare dengan key baru yang aktif di akun AirPay. QR dan timer baru dapat ditampilkan setelah tagihan valid berhasil dibuat."
+      : (error || "Ada kendala saat menghubungkan layanan pembayaran.");
+    panel.hidden = !error;
+    byId("membershipCheckoutRetry").hidden = invalidKey;
+  }
+
   function formatDate(value) {
     if (!value) return "Belum aktif";
     const date = new Date(value);
@@ -216,6 +231,7 @@
     byId("membershipCartToggle").setAttribute("aria-expanded", "false");
     byId("membershipCheckout").hidden = false;
     byId("membershipPayment").hidden = true;
+    setCheckoutError("");
     const createButton = byId("membershipCreateInvoice");
     if (!state.checkoutEnabled) {
       const config = state.paymentConfig || {};
@@ -278,6 +294,7 @@
     byId("membershipCheckout").hidden = true;
     byId("membershipCart").hidden = true;
     byId("membershipPaymentBack").hidden = false;
+    setCheckoutError("");
     byId("membershipCartToggle").setAttribute("aria-expanded", "false");
     byId("membershipPaymentTitle").textContent = "Selesaikan pembayaran " + (order.planName || "membership");
     byId("membershipPaymentAmount").textContent = money(data.totalAmount || order.totalAmount || order.amount);
@@ -299,14 +316,37 @@
     const providerPage = safeProviderLink(data.payUrl || order.payUrl);
     if (payLink) { payLink.hidden = !providerPage; if (providerPage) payLink.href = providerPage; else payLink.removeAttribute("href"); }
     const qr = byId("membershipQr");
+    const loading = byId("membershipQrLoading");
+    const qrError = byId("membershipQrError");
+    const qrOpen = byId("membershipQrDownload");
     const qrUrl = safeProviderLink(data.qrUrl || order.qrUrl);
-    if (qrUrl && !checkoutExpired) {
-      qr.src = qrUrl;
+    if (qrOpen) {
+      qrOpen.hidden = !qrUrl || checkoutExpired;
+      if (qrUrl && !checkoutExpired) qrOpen.href = qrUrl;
+      else qrOpen.removeAttribute("href");
+    }
+    qr.onload = () => {
       qr.hidden = false;
+      if (loading) loading.hidden = true;
+      if (qrError) qrError.hidden = true;
+    };
+    qr.onerror = () => {
+      qr.hidden = true;
+      if (loading) loading.hidden = true;
+      if (qrError) qrError.hidden = false;
+    };
+    if (loading) loading.hidden = !qrUrl || checkoutExpired;
+    if (qrError) qrError.hidden = true;
+    if (qrUrl && !checkoutExpired) {
+      qr.hidden = true;
+      qr.src = qrUrl;
+      if (qr.complete && qr.naturalWidth > 0) qr.onload();
     } else {
       qr.removeAttribute("src");
       qr.hidden = true;
     }
+    const ref = byId("membershipOrderReference");
+    if (ref) ref.textContent = "ID Pesanan: " + String(order.id || "") + " · Status diperiksa otomatis";
 
     const checkButton = byId("membershipCheckStatus");
     checkButton.disabled = false;
@@ -337,6 +377,7 @@
         return;
       }
     }
+    setCheckoutError("");
     state.checkoutBusy = true;
     const button = byId("membershipCreateInvoice");
     button.disabled = true;
@@ -364,13 +405,17 @@
         return;
       }
       if (!result.response.ok || !result.data.ok) {
-        throw new Error(result.data.error || "Invoice belum berhasil dibuat.");
+        const error = new Error(result.data.error || "Invoice belum berhasil dibuat.");
+        error.code = String(result.data.code || "AIRPAY_CREATE_FAILED");
+        throw error;
       }
 
       clearCart();
       showPayment(result.data.order, result.data.payment);
       await refreshMe();
     } catch (error) {
+      const code = error?.code || "AIRPAY_CREATE_FAILED";
+      setCheckoutError(error?.message || "Tidak dapat membuat invoice.", code);
       setMessage(error.message || "Tidak dapat membuat invoice.", "error");
     } finally {
       state.checkoutBusy = false;
@@ -680,6 +725,9 @@
     });
   });
   byId("membershipCheckoutForm").addEventListener("submit", submitCheckout);
+  byId("membershipCheckoutRetry")?.addEventListener("click", () => {
+    if (!state.checkoutBusy && state.selectedPlan) submitCheckout({ preventDefault() {} });
+  });
   byId("membershipCheckStatus").addEventListener("click", async () => {
     if (!state.activeOrderId) return;
     stopPolling();
