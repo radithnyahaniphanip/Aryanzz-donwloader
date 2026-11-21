@@ -26,7 +26,7 @@ const missingConfig=await handleAuthRequest(new Request("https://aryanzz.example
 assert.equal(missingConfig.status,200);
 const missingBody=await missingConfig.json();
 assert.equal(missingBody.ready,false,"Auth must fail closed until service configuration exists");
-assert.ok(missingBody.missing.includes("Cloudflare D1 (AUTH_DB)"),"Config should report a missing D1 binding without exposing secrets");
+assert.ok(missingBody.missing.includes("Turso database (TURSO_DATABASE_URL + TURSO_AUTH_TOKEN)"),"Config should report a missing external database configuration without exposing secrets");
 assert.equal(missingBody.registrationReady,false);
 const unavailable=await handleAuthRequest(new Request("https://aryanzz.example/api/auth/register/start",{
   method:"POST",headers:{"content-type":"application/json"},
@@ -43,7 +43,7 @@ const readyEnv={
 };
 const loginReady=await handleAuthRequest(new Request("https://aryanzz.example/api/auth/config"),readyEnv);
 const loginBody=await loginReady.json();
-assert.equal(loginBody.loginReady,true,"D1, session secret and Turnstile should enable server login");
+assert.equal(loginBody.loginReady,true,"Database, session secret and Turnstile should enable server login");
 assert.equal(loginBody.registrationReady,false,"Online registration must wait for the email sender");
 assert.equal(loginBody.registrationEnabled,false);
 assert.equal(loginBody.publicAccess,true);

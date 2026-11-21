@@ -1,3 +1,5 @@
+import { withAuthDatabase } from "./auth-database.js";
+
 const DAY_MS = 24 * 60 * 60 * 1000;
 const STATUS_POLL_MS = 30 * 1000;
 
@@ -163,7 +165,7 @@ function normalizedPaymentStatus(value) {
 export class MembershipStore {
   constructor(ctx, env) {
     this.ctx = ctx;
-    this.env = env;
+    this.env = withAuthDatabase(env);
   }
 
   async session(request) {
@@ -246,7 +248,7 @@ export class MembershipStore {
       const optionalMissing = [];
       if (!apiKeyReady) missing.push("AIRPAY_API_KEY · Secret API Key AirPay pada Cloudflare Worker");
       if (!identityReady) missing.push("ID perangkat ARYANZZ belum tersedia; muat ulang halaman");
-      if (!authReady) optionalMissing.push("AUTH_DB + AUTH_SESSION_SECRET · sinkronisasi Membership lintas perangkat");
+      if (!authReady) optionalMissing.push("TURSO_DATABASE_URL + TURSO_AUTH_TOKEN + AUTH_SESSION_SECRET · sinkronisasi Membership lintas perangkat");
       return json({
         ok: true,
         enabled: ready,
@@ -265,7 +267,7 @@ export class MembershipStore {
         message: ready
           ? authReady
             ? "Checkout QRIS siap. Pembayaran diverifikasi server dan Membership tersimpan pada akun ARYANZZ."
-            : "Checkout QRIS siap pada perangkat ini. Membership terikat ke ID perangkat; aktifkan D1 dan AUTH_SESSION_SECRET untuk sinkronisasi lintas perangkat."
+            : "Checkout QRIS siap pada perangkat ini. Membership terikat ke ID perangkat; aktifkan database akun Turso dan AUTH_SESSION_SECRET untuk sinkronisasi lintas perangkat."
           : "Checkout menunggu API Key AirPay dan ID perangkat ARYANZZ."
       });
     }
