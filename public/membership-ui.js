@@ -15,7 +15,8 @@
     countdownTimer: null,
     cart: null,
     checkoutEnabled: false,
-    identityReady: false
+    identityReady: false,
+    paymentConfig: null
   };
 
   const rank = { free: 0, starter: 1, pro: 2, ultra: 3, max: 4 };
@@ -174,7 +175,7 @@
     row.append(remove);
     items.append(row);
     byId("membershipCartTotal").textContent = money(price);
-    byId("membershipCartCheckout").disabled = !state.checkoutEnabled || !!state.activeOrderId;
+    byId("membershipCartCheckout").disabled = !!state.activeOrderId;
   }
 
   function addToCart(plan) {
@@ -197,10 +198,6 @@
       setMessage("Tambahkan paket Membership ke keranjang terlebih dahulu.", "warning");
       return;
     }
-    if (!state.checkoutEnabled) {
-      setMessage("Checkout belum siap. API Key AirPay harus dipasang sebagai Secret pada Cloudflare Worker.", "warning");
-      return;
-    }
     if (state.activeOrderId) {
       setMessage("Masih ada invoice yang menunggu status final AirPay. ARYANZZ mencegah pembuatan tagihan ganda.", "warning");
       return;
@@ -217,7 +214,18 @@
     byId("membershipCartToggle").setAttribute("aria-expanded", "false");
     byId("membershipCheckout").hidden = false;
     byId("membershipPayment").hidden = true;
-    setMessage("Paket siap dibayar melalui QRIS. Tidak perlu memasukkan nomor rekening atau nomor HP.", "info");
+    const createButton = byId("membershipCreateInvoice");
+    if (!state.checkoutEnabled) {
+      const config = state.paymentConfig || {};
+      const missing = Array.isArray(config.missing) ? config.missing.slice() : [];
+      if (!config.apiKeyReady && !missing.includes("AIRPAY_API_KEY")) missing.push("AIRPAY_API_KEY");
+      if (!state.identityReady && !missing.includes("ID perangkat/sesi")) missing.push("ID perangkat/sesi");
+      if (createButton) createButton.disabled = true;
+      setMessage("Checkout terbuka, tetapi invoice belum dapat dibuat. Konfigurasi server yang belum siap: " + (missing.join(", ") || "layanan pembayaran AirPay") + ". Setelah admin mengaktifkannya di Cloudflare Worker, tombol Buat invoice QRIS akan aktif. API Key tidak perlu dikirim melalui chat.", "warning");
+    } else {
+      if (createButton) createButton.disabled = false;
+      setMessage("Paket siap dibayar melalui QRIS AirPay. Invoice akan dibuat oleh server dan statusnya diverifikasi otomatis.", "info");
+    }
     byId("membershipCheckout").scrollIntoView({ behavior: "smooth", block: "nearest" });
   }
 
@@ -310,6 +318,12 @@
   async function submitCheckout(event) {
     event.preventDefault();
     if (!state.selectedPlan) return;
+    if (!state.checkoutEnabled) {
+      const config = state.paymentConfig || {};
+      const missing = Array.isArray(config.missing) ? config.missing.join(", ") : "AIRPAY_API_KEY";
+      setMessage("Invoice belum dapat dibuat. Konfigurasi server belum siap: " + missing + ".", "warning");
+      return;
+    }
     const button = byId("membershipCreateInvoice");
     button.disabled = true;
     button.textContent = "Membuat invoice…";
@@ -533,6 +547,7 @@
     ]);
     if (catalogResult.response.ok && catalogResult.data.ok) state.catalog = catalogResult.data;
     const config = configResult.data || {};
+    state.paymentConfig = config;
     if (state.catalog) restoreCart();
     state.checkoutEnabled = !!(configResult.response.ok && config.checkoutEnabled && config.identityReady);
     renderCart();
