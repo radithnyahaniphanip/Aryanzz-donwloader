@@ -148,6 +148,7 @@ function freeProviderMediaInfo(data,rawUrl,requestUrl){
     return {mode:audio?"audio":"video",type:audio?"audio":"video",ext:finalExt,height:audio?0:height,videoOnly,hasAudio:video?!videoOnly:undefined,mimeType:mime||null,url:mediaUrl.href,downloadUrl:downloadUrl.href,previewUrl:previewUrl.href,label,filesize:Number(item?.sizeBytes||item?.size_bytes||item?.filesize||item?.size||0)||null};
   }).filter(Boolean);
   const thumbnail=safePublicMediaUrl(normalized?.thumbnail||rawResult.thumbnail||rawResult.cover)?.href||null;
+  const uploader=String(normalized?.uploader||normalized?.author||normalized?.channel||rawResult.uploader||rawResult.author||rawResult.channel||rawResult.username||"").trim().slice(0,160)||null;
   const duration=Number(normalized?.duration||rawResult.duration||rawResult.video?.duration||0)||null;
   const width=Number(normalized?.width||normalized?.videoWidth||normalized?.video_width||normalized?.video?.width||rawResult.width||rawResult.video?.width||data?.width)||null;
   const height=Number(normalized?.height||normalized?.videoHeight||normalized?.video_height||normalized?.video?.height||rawResult.height||rawResult.video?.height||data?.height)||null;
@@ -155,7 +156,7 @@ function freeProviderMediaInfo(data,rawUrl,requestUrl){
   formats.sort((a,b)=>a.mode===b.mode?(b.height-a.height):a.mode==="video"?-1:1);
   const platformKey=platformIdForUrl(rawUrl)||freePlatformKey(rawUrl);
   const mp4Formats=formats.filter(item=>item.mode==="video"&&!item.videoOnly&&["mp4","m4v"].includes(item.ext));
-  return {ok:true,providerName:"Public API",providerReady:true,provider:"Free public provider",platform:platformKey,title,filename:title,duration,thumbnail,width,height,aspectRatio:width&&height?width/height:null,type:formats.some(x=>x.mode==="video")?"video":"audio",formats,capabilities:{linkAccepted:true,preview:formats.some(item=>item.mode==="video"||item.mode==="audio"),mp4:mp4Formats.length>0,audio:formats.some(item=>item.mode==="audio"),mp4Qualities:[...new Set(mp4Formats.map(item=>item.height).filter(Boolean))]}};
+  return {ok:true,providerName:"Public API",providerReady:true,provider:"Free public provider",platform:platformKey,title,filename:title,uploader,duration,thumbnail,width,height,aspectRatio:width&&height?width/height:null,type:formats.some(x=>x.mode==="video")?"video":"audio",formats,capabilities:{linkAccepted:true,preview:formats.some(item=>item.mode==="video"||item.mode==="audio"),mp4:mp4Formats.length>0,audio:formats.some(item=>item.mode==="audio"),mp4Qualities:[...new Set(mp4Formats.map(item=>item.height).filter(Boolean))]}};
 }
 
 async function verifyTikTokPhotoVideoFormats(info,canonicalUrl){
@@ -390,6 +391,45 @@ async function threadsDirectMediaInfo(request){
   const errors=tried.map(t=>t.status==="fulfilled"?String(t.value.data?.error||"Tidak ada stream publik"):String(t.reason?.message||t.reason)).slice(0,2);
   return json({ok:false,platform:"threads",canonicalUrl:canonical.href,providerName:"Threads direct public media",error:"Video/audio langsung belum ditemukan pada halaman Threads publik. Jika postingan berupa foto, ARYANZZ akan memeriksa galeri secara terpisah.",diagnostics:errors},404);
 }
+async function spotifyEmbedInfo(rawUrl,requestUrl){
+  let parsed;
+  try{parsed=new URL(rawUrl)}catch{return json({ok:false,error:"Tautan Spotify tidak valid."},400)}
+  const allowedHost=host=>host==="spotify.link"||host==="spotify.com"||host.endsWith(".spotify.com");
+  if(!allowedHost(parsed.hostname.toLowerCase()))return json({ok:false,error:"Tautan harus berasal dari Spotify."},400);
+  if(parsed.hostname.toLowerCase()==="spotify.link"){
+    try{
+      const response=await fetch(parsed.href,{redirect:"follow",headers:{accept:"text/html"},cache:"no-store",signal:AbortSignal.timeout(6500)});
+      const resolved=new URL(response.url||parsed.href);
+      await response.body?.cancel().catch(()=>{});
+      if(!allowedHost(resolved.hostname.toLowerCase())||resolved.hostname.toLowerCase()==="spotify.link")throw new Error("Tautan pendek Spotify tidak mengarah ke halaman Spotify resmi.");
+      parsed=resolved;
+    }catch(error){
+      return json({ok:false,platform:"spotify",error:"Tautan pendek Spotify belum dapat dibuka. Coba salin tautan langsung dari tombol Bagikan di Spotify. "+String(error?.message||error).slice(0,120)},502);
+    }
+  }
+  const parts=parsed.pathname.split("/").filter(Boolean);
+  const contentKinds=["track","album","playlist","episode","show"];
+  const kindIndex=parts.findIndex(part=>contentKinds.includes(part.toLowerCase()));
+  const kind=kindIndex>=0?parts[kindIndex].toLowerCase():"";
+  const id=kindIndex>=0?String(parts[kindIndex+1]||""):"";
+  if(!kind||! /^[A-Za-z0-9]{22}$/.test(id))return json({ok:false,platform:"spotify",error:"Tautan Spotify dikenali, tetapi jenis kontennya belum didukung. Gunakan tautan track, album, playlist, episode, atau show."},400);
+  const externalUrl="https://open.spotify.com/"+kind+"/"+id;
+  const embedUrl="https://open.spotify.com/embed/"+kind+"/"+id+"?utm_source=generator&theme=0";
+  let title=kind==="track"?"Track Spotify":kind==="album"?"Album Spotify":kind==="playlist"?"Playlist Spotify":kind==="episode"?"Episode Spotify":"Podcast Spotify";
+  let artist="",thumbnail=null;
+  try{
+    const endpoint=new URL("https://open.spotify.com/oembed");
+    endpoint.searchParams.set("url",externalUrl);
+    const response=await fetch(endpoint.href,{headers:{accept:"application/json"},cache:"no-store",signal:AbortSignal.timeout(5000)});
+    if(response.ok){
+      const data=await response.json().catch(()=>({}));
+      title=String(data.title||title).slice(0,300);
+      artist=String(data.author_name||"").slice(0,160);
+      thumbnail=safePublicMediaUrl(data.thumbnail_url||"")?.href||null;
+    }
+  }catch{}
+  return json({ok:true,platform:"spotify",type:"audio",mediaMode:"audio",title,artist,thumbnail,embedUrl,externalUrl,spotifyType:kind,spotifyId:id,providerName:"Spotify official embed",provider:"Spotify Embed Player",providerReady:true,directDownloadAvailable:false,formats:[],message:"Pemutar resmi Spotify siap. Login Spotify mungkin diperlukan; sebagian konten hanya menyediakan cuplikan sesuai kebijakan Spotify."});
+}
 async function platformMediaInfo(request){
   let body;try{body=await request.json()}catch{return json({error:"Body JSON tidak valid."},400)}
   const raw=String(body?.url||"").trim();
@@ -409,9 +449,25 @@ async function platformMediaInfo(request){
   }
   const normalizedExpected=expectedEntry?.providerKey||({x:"twitter",twitter:"twitter",instagramlite:"instagram",facebooklite:"facebook",tiktoklite:"tiktok"})[expected]||expected;
   if(normalizedExpected!==key)return json({ok:false,error:"GAGAL — tautan "+key+" ditolak karena endpoint ini khusus untuk "+normalizedExpected+"."},400);
+  if(key==="spotify")return spotifyEmbedInfo(parsed.href,request.url);
+
   // Threads share URLs are multi-hop; always use the proven full extraction cascade.
   // The quick path routinely exits before the public post/embedding fallbacks finish.
-  return freePublicMediaInfo(parsed.href,request.url,{fast:body?.fast===true&&key!=="threads"});
+  const primary=await freePublicMediaInfo(parsed.href,request.url,{fast:body?.fast===true&&key!=="threads"});
+  if(body?.fast===true||key==="threads")return primary;
+  const primaryData=await primary.clone().json().catch(()=>({}));
+  const primaryHasMedia=primary.ok&&primaryData?.ok!==false&&Array.isArray(primaryData?.formats)&&primaryData.formats.some(item=>item?.mode==="video"||item?.mode==="audio");
+  if(primaryHasMedia||primaryData?.isLive||primaryData?.isUpcoming)return primary;
+  try{
+    const fallback=await genericPublicPageMediaInfo(parsed.href,request.url,platformEntry,9500);
+    const fallbackData=await fallback.clone().json().catch(()=>({}));
+    const fallbackHasMedia=fallback.ok&&fallbackData?.ok!==false&&Array.isArray(fallbackData?.formats)&&fallbackData.formats.some(item=>item?.mode==="video"||item?.mode==="audio");
+    if(fallbackHasMedia)return json({...fallbackData,providerName:"Public page fallback",provider:"Public page metadata + direct media",fallbackUsed:true,primaryProviderError:String(primaryData?.error||"Provider utama belum mengirim stream.").slice(0,220)});
+    if(fallbackData?.isLive||fallbackData?.isUpcoming)return fallback;
+  }catch(error){
+    console.warn("[ARYANZZ_MEDIA] generic_fallback_failed",key,error instanceof Error?error.name:"unknown");
+  }
+  return primary;
 }
 async function snackVideoNativePageFallback(rawUrl,requestUrl,timeoutMs=8500){
   const response=await fetch(rawUrl,{
@@ -1539,7 +1595,7 @@ async function searchSocial(request){
         const itemPlatform=platformIdForUrl(item.url);
         return !!itemPlatform&&canonicalPlatformId(itemPlatform)===canonicalPlatform&&platformSupportsSearchMode(itemPlatform,desiredMode)&&strictTitleIntentScore(query,item.title,item.snippet||"")>=0.7;
       });
-    const shouldRunYoutubeFallback=desiredMode!=="image"&&!hasRelevantSelectedCandidate;
+    const shouldRunYoutubeFallback=(platform==="all"||platform==="youtube")&&desiredMode!=="image"&&!hasRelevantSelectedCandidate;
     let youtubeFallbackAttempted=false,youtubeFallbackCandidateCount=0,youtubeFallbackCandidates=[];
     if(shouldRunYoutubeFallback){
       youtubeFallbackAttempted=true;
@@ -1600,7 +1656,7 @@ async function searchSocial(request){
       resultSeen.add(item.url);results.push(item);
       if(results.length>=resultLimit)break;
     }
-    const fallbackUsed=platform!=="youtube"&&(fallbackSearchOnly.length>0||verifiedResults.some(item=>item.platform==="youtube")||(platform==="all"&&youtubeFallbackAttempted&&youtubeFallbackCandidateCount>0));
+    const fallbackUsed=platform==="all"&&(fallbackSearchOnly.length>0||verifiedResults.some(item=>item.platform==="youtube")||(youtubeFallbackAttempted&&youtubeFallbackCandidateCount>0));
     const resultsWithThumbnails=results; // Kandidat tanpa gambar tidak menunggu pengambilan thumbnail eksternal.
     const searchOnlyCount=resultsWithThumbnails.filter(item=>item.searchOnly===true).length;
     const verifiedCount=resultsWithThumbnails.filter(item=>item.verified===true&&item.downloadable===true).length;
@@ -2422,24 +2478,49 @@ async function resolveTikTokShortLinkViaReader(rawUrl,timeoutMs=4500){
   }
   throw new Error("Reader tidak menemukan URL postingan TikTok canonical.");
 }
+function threadsCanonicalPostUrl(page,sharedUrl){
+  // Extract a specific Threads post URL. Never mistake a login page, profile,
+  // unrelated recommended post, or a share-wrapper URL for a playable post.
+  const candidates=[String(page?.url||"")],html=String(page?.html||"");
+  const decode=value=>String(value||"").replace(/&amp;/gi,"&").replace(/\\u002f/gi,"/").replace(/\\u0026/gi,"&").replace(/\\\//g,"/").replace(/&quot;/gi,'"');
+  for(const tag of html.match(/<(?:meta|link)\b[^>]*>/gi)||[]){
+    const attrs={};
+    for(const match of tag.matchAll(/([A-Za-z_:][-A-Za-z0-9_:]*)\s*=\s*(?:"([^"]*)"|'([^']*)')/g))attrs[match[1].toLowerCase()]=match[2]??match[3]??"";
+    const kind=String(attrs.property||attrs.name||attrs.rel||"").toLowerCase();
+    if(["canonical","og:url","twitter:url","al:ios:url"].includes(kind))candidates.push(attrs.href||attrs.content||"");
+  }
+  // Do not infer the destination from unrelated recommended links in the HTML.
+  // Only redirects and explicit canonical/og:url metadata identify the post.
+  for(const raw of candidates){
+    let url;
+    try{url=new URL(decode(raw),sharedUrl)}catch{continue}
+    if(platformForHost(url.hostname)?.id!=="threads"||!/^\/@[^/]+\/post\/[A-Za-z0-9_-]{6,40}\/?$/i.test(url.pathname))continue;
+    url.protocol="https:";url.hostname="www.threads.com";url.search="";url.hash="";
+    return url.href;
+  }
+  return null;
+}
+
 async function resolveSocialShortLink(rawUrl,key,timeoutMs=11000){
   const canonical=canonicalSocialPostUrl(rawUrl,key);
   if(key==="facebook")return resolveFacebookShareLink(canonical,timeoutMs);
-  // Threads /share/ URLs are share wrappers, not media posts. Resolve to a real /post/ URL first.
+  // /share/ is a wrapper. Only use post URLs proven by an official redirect,
+  // canonical metadata or post URL embedded in the SAME public Threads page.
   if(key==="threads"){
     let shared;try{shared=new URL(canonical)}catch{return canonical}
-    if(/^\/share\/[^/]+\/?$/i.test(shared.pathname)){
-      try{
-        const page=await fetchSocialPostHtml(shared.href,timeoutMs);
-        const candidates=[page.url];
-        for(const match of String(page.html||"").matchAll(/<(?:link|meta)\b[^>]*(?:rel=["']canonical["']|property=["']og:url["'])[^>]*>/gi)){
-          const tag=match[0];const raw=tag.match(/(?:href|content)=["']([^"']+)["']/i)?.[1];if(raw)candidates.push(raw.replace(/&amp;/g,"&"));
-        }
-        for(const raw of candidates){
-          let target;try{target=new URL(raw,shared.href)}catch{continue}
-          if(platformIdForUrl(target.href)==="threads"&&/^\/(?:@[^/]+\/)?post\/[^/]+\/?$/i.test(target.pathname))return target.href;
-        }
-      }catch{}
+    const match=shared.pathname.match(/^\/share\/([A-Za-z0-9_-]{4,64})\/?$/i);
+    if(match){
+      const code=match[1];
+      const alternatives=[shared.href,"https://www.threads.com/share/"+encodeURIComponent(code),"https://www.threads.net/share/"+encodeURIComponent(code)];
+      const unique=[...new Set(alternatives)];
+      const results=await Promise.allSettled(unique.slice(0,3).map(async candidate=>{
+        const page=await fetchSocialPostHtml(candidate,Math.min(timeoutMs,11000));
+        return threadsCanonicalPostUrl(page,shared.href);
+      }));
+      for(const result of results){
+        if(result.status==="fulfilled"&&result.value)return result.value;
+      }
+      return canonical;
     }
   }
   let input;try{input=new URL(canonical)}catch{return canonical}

@@ -53,3 +53,54 @@
  #profile .ary-profile-account-actions button{flex:0 0 auto}
  #profile .ary-profile-account-actions span{width:100%}
 }
+
+
+/* V2 compact profile layout: clearer hierarchy on narrow Android screens. */
+#profile.ary-profile-v2{max-width:1000px!important;padding:12px!important}
+#profile.ary-profile-v2 .ary-profile2-header{margin-bottom:13px!important;gap:10px!important}
+#profile.ary-profile-v2 .ary-profile2-header h1{font-size:clamp(22px,5vw,27px)!important;letter-spacing:-.6px!important}
+#profile.ary-profile-v2 .ary-profile2-hero{border:1px solid rgba(113,169,221,.22)!important;border-radius:19px!important;background:linear-gradient(145deg,#10243b,#09182b)!important;box-shadow:0 14px 34px rgba(0,0,0,.2)!important}
+#profile.ary-profile-v2 .ary-profile2-cover{height:clamp(94px,24vw,138px)!important;background-position:center 42%!important}
+#profile.ary-profile-v2 .ary-profile2-identity{gap:12px!important;padding:13px 15px 16px!important}
+#profile.ary-profile-v2 .ary-profile2-avatar-wrap,#profile.ary-profile-v2 .ary-profile2-avatar{width:86px!important;height:86px!important}
+#profile.ary-profile-v2 .ary-profile2-avatar{border-width:4px!important;border-radius:21px!important;font-size:30px!important}
+#profile.ary-profile-v2 .ary-profile2-identity-copy{gap:4px!important;padding:0!important}
+#profile.ary-profile-v2 .ary-profile2-identity-copy h2{font-size:clamp(17px,4vw,21px)!important;line-height:1.2!important}
+#profile.ary-profile-v2 .ary-profile2-identity-copy p{font-size:10px!important;line-height:1.45!important}
+#profile.ary-profile-v2 .ary-profile2-stats{gap:8px!important;margin:12px 0!important}
+#profile.ary-profile-v2 .ary-profile2-stat{min-height:76px;padding:11px!important;border-radius:14px!important}
+#profile.ary-profile-v2 .ary-profile2-stat-icon{width:32px!important;height:32px!important;border-radius:10px!important;font-size:17px!important}
+#profile.ary-profile-v2 .ary-profile2-stat b{font-size:17px!important}
+#profile.ary-profile-v2 .ary-profile2-stat small{font-size:8px!important}
+#profile.ary-profile-v2 .ary-profile2-grid{gap:10px!important}
+#profile.ary-profile-v2 .ary-profile2-card{padding:15px!important;border-radius:17px!important}
+#profile.ary-profile-v2 .ary-profile2-card-heading{margin-bottom:12px!important}
+#profile.ary-profile-v2 .ary-profile2-device{margin-top:11px!important}
+#profile.ary-profile-v2 .ary-profile2-device-grid{gap:9px!important}
+#profile.ary-profile-v2 .ary-profile2-current-device,#profile.ary-profile-v2 .ary-profile2-history-device{padding:11px!important;border-radius:13px!important}
+#profile.ary-profile-v2 .ary-profile2-location{margin-top:9px!important;padding:11px!important}
+#profile.ary-profile-v2 .ary-profile2-device-footer{margin-top:9px!important}
+#profile.ary-profile-v2 .ary-profile-account-actions{gap:7px!important}
+#profile.ary-profile-v2 .ary-profile-account-actions button{min-height:33px!important;padding:7px 10px!important;font-size:10px!important}
+@media(max-width:520px){
+ #profile.ary-profile-v2{padding:9px!important}
+ #profile.ary-profile-v2 .ary-profile2-header{gap:8px!important;margin-bottom:11px!important}
+ #profile.ary-profile-v2 .ary-profile2-header p{font-size:10px!important}
+ #profile.ary-profile-v2 .ary-profile2-cover{height:100px!important}
+ #profile.ary-profile-v2 .ary-profile2-identity{padding:11px 12px 13px!important;gap:10px!important}
+ #profile.ary-profile-v2 .ary-profile2-avatar-wrap,#profile.ary-profile-v2 .ary-profile2-avatar{width:76px!important;height:76px!important}
+ #profile.ary-profile-v2 .ary-profile2-avatar{font-size:26px!important;border-radius:18px!important}
+ #profile.ary-profile-v2 .ary-profile2-identity-copy h2{font-size:16px!important}
+ #profile.ary-profile-v2 .ary-profile2-identity-copy p{font-size:9px!important}
+ #profile.ary-profile-v2 .ary-profile2-stats{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:6px!important}
+ #profile.ary-profile-v2 .ary-profile2-stat{min-height:69px;padding:8px 5px!important}
+ #profile.ary-profile-v2 .ary-profile2-stat-icon{width:27px!important;height:27px!important;margin:0 auto 5px!important;font-size:14px!important}
+ #profile.ary-profile-v2 .ary-profile2-stat b{font-size:15px!important}
+ #profile.ary-profile-v2 .ary-profile2-stat small{font-size:7px!important;line-height:1.3!important}
+ #profile.ary-profile-v2 .ary-profile2-card{padding:12px!important}
+ #profile.ary-profile-v2 .ary-profile2-device-grid{grid-template-columns:1fr!important}
+ #profile.ary-profile-v2 .ary-profile2-location{gap:9px!important}
+ #profile.ary-profile-v2 .ary-profile2-location-actions{width:100%;justify-content:flex-start}
+ #profile.ary-profile-v2 .ary-profile2-location-actions button,#profile.ary-profile-v2 .ary-profile2-location-actions a{flex:1}
+}
+@media(prefers-reduced-motion:reduce){#profile.ary-profile-v2 .ary-profile2-hero,#profile.ary-profile-v2 .ary-profile2-stat{transition:none!important}}

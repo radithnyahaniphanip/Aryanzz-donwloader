@@ -1051,12 +1051,24 @@ body .nav button.active .nav-icon{color:#9af4e8!important}
   <section class="ary-membership-checkout" id="membershipCheckout" hidden>
     <h3 id="membershipCheckoutTitle">Checkout membership</h3>
     <p id="membershipCheckoutSummary">Pilih paket untuk melanjutkan.</p>
-    <form class="ary-membership-form" id="membershipCheckoutForm">
-      <label>Nama (opsional)<input id="membershipCustomerName" type="text" maxlength="100" autocomplete="name" placeholder="Nama pemesan"></label>
-      <label>Email (opsional)<input id="membershipCustomerEmail" type="email" maxlength="254" autocomplete="email" placeholder="nama@email.com"></label>
-      <button class="ary-membership-submit" id="membershipCreateInvoice" type="submit">Buat invoice QRIS</button>
-    </form>
-    <div class="ary-membership-note">Pembayaran AirPay menggunakan QRIS. Tidak perlu memasukkan nomor rekening atau nomor HP. Scan QR menggunakan aplikasi DANA, GoPay, LinkAja, atau mobile banking yang mendukung QRIS.</div>
+    <p class="ary-pay-method-intro">Pilih aplikasi pembayaran. Setelah dipilih, invoice dan QRIS AirPay dibuat otomatis oleh server—tidak perlu menekan tombol buat invoice lagi.</p>
+    <div class="ary-pay-method-grid" id="membershipMethodGrid" role="group" aria-label="Pilih metode pembayaran">
+      <button type="button" class="ary-pay-method" data-ary-pay-method="qris"><strong>▦ QRIS</strong><small>Semua aplikasi QRIS</small></button>
+      <button type="button" class="ary-pay-method" data-ary-pay-method="dana"><strong>DANA</strong><small>Bayar melalui QRIS</small></button>
+      <button type="button" class="ary-pay-method" data-ary-pay-method="gopay"><strong>GoPay</strong><small>Bayar melalui QRIS</small></button>
+      <button type="button" class="ary-pay-method" data-ary-pay-method="linkaja"><strong>LinkAja</strong><small>Bayar melalui QRIS</small></button>
+      <button type="button" class="ary-pay-method" data-ary-pay-method="ovo"><strong>OVO</strong><small>Bayar melalui QRIS</small></button>
+      <button type="button" class="ary-pay-method" data-ary-pay-method="shopeepay"><strong>ShopeePay</strong><small>Bayar melalui QRIS</small></button>
+      <button type="button" class="ary-pay-method ary-pay-method-bank" data-ary-pay-method="mobile_banking"><strong>M-Banking</strong><small>BCA, BRI, Mandiri, BNI, dan bank QRIS lainnya</small></button>
+    </div>
+    <details class="ary-pay-buyer-details"><summary>Informasi pembeli (opsional)</summary>
+      <form class="ary-membership-form" id="membershipCheckoutForm">
+        <label>Nama pemesan<input id="membershipCustomerName" type="text" maxlength="100" autocomplete="name" placeholder="Nama pemesan"></label>
+        <label>Email untuk bukti transaksi<input id="membershipCustomerEmail" type="email" maxlength="254" autocomplete="email" placeholder="nama@email.com"></label>
+        <button class="ary-membership-submit" id="membershipCreateInvoice" type="submit" hidden style="display:none!important">Buat invoice QRIS</button>
+      </form>
+    </details>
+    <div class="ary-membership-note">AirPay yang terpasang mendukung QRIS, bukan transfer langsung ke nomor DANA atau rekening pembeli. Pilih aplikasi di atas untuk membuat tagihan QRIS otomatis. Rekening pencairan merchant diatur terpisah pada akun AirPay.</div>
   </section>
   <section class="ary-membership-payment" id="membershipPayment" hidden>
     <h3 id="membershipPaymentTitle">Selesaikan pembayaran</h3>
@@ -1069,11 +1081,19 @@ body .nav button.active .nav-icon{color:#9af4e8!important}
         <p id="membershipPaymentExpiry">Menunggu pembayaran.</p>
         <div class="ary-membership-countdown" id="membershipPaymentCountdown" role="timer" aria-live="off">10:00</div>
         <small class="ary-membership-countdown-caption">Sisa waktu checkout · 10 menit</small>
-        <div class="ary-membership-supported"><span>SCAN QRIS MELALUI</span><div class="ary-membership-methods"><span>DANA</span><span>GoPay</span><span>LinkAja</span><span>OVO</span><span>Mobile Banking</span></div></div>
+        <div class="ary-membership-supported"><span>SCAN QRIS MELALUI</span><div class="ary-membership-methods"><span>DANA</span><span>GoPay</span><span>LinkAja</span><span>OVO</span><span>ShopeePay</span><span>Mobile Banking</span></div></div>
+        <p class="ary-pay-selected-method" id="membershipSelectedMethod">Metode: QRIS</p>
+        <a class="ary-membership-check-status ary-pay-open-link" id="membershipPayLink" target="_blank" rel="noopener noreferrer" hidden>Buka halaman pembayaran resmi AirPay</a>
+        <p class="ary-pay-on-device-note">Di HP yang sama, buka halaman pembayaran AirPay atau simpan QR untuk dipindai lewat fitur galeri/QRIS aplikasi pembayaran yang mendukungnya.</p>
         <button class="ary-membership-check-status" id="membershipCheckStatus" type="button">Periksa status pembayaran</button>
         <button class="ary-membership-payment-back" id="membershipPaymentBack" type="button" hidden>← Kembali ke paket Membership</button>
       </div>
     </div>
+  </section>
+  <section class="ary-membership-receipt" id="membershipReceipt" hidden aria-live="polite" aria-label="Bukti pembayaran otomatis">
+    <h3>✓ Bukti transaksi otomatis</h3>
+    <p>Tagihan telah diverifikasi lunas oleh server. Bukti transaksi langsung tersedia di sini tanpa perlu membuat invoice manual.</p>
+    <div id="membershipReceiptDetails"></div>
   </section>
   <p class="ary-membership-status" id="membershipStatus" role="status" aria-live="polite">Memuat katalog membership…</p>
   <div class="ary-membership-orders">
@@ -1108,7 +1128,15 @@ body .nav button.active .nav-icon{color:#9af4e8!important}
     <div class="ary-library-section-head"><div><h3>Koleksi favorit</h3><p>Simpan item penting agar mudah ditemukan lagi.</p></div><button class="tag" id="clearFavoritesV2" type="button">Hapus semua</button></div>
     <div id="favoriteList" class="ary-library-list result"><span class="ary-library-empty">Belum ada favorit.</span></div>
   </section>
-  <div class="ary-library-note"><b>Disimpan di perangkat ini</b><p>Riwayat dan favorit tersimpan di browser ini, tidak otomatis tersinkron ke perangkat lain.</p></div>
+  <div class="ary-library-backup">
+    <div><strong>Cadangan Pustaka</strong><p>Ekspor riwayat dan favorit ke file JSON di HP, atau pulihkan dari cadangan lama tanpa menghapus koleksi yang sudah ada.</p></div>
+    <div class="ary-library-backup-actions">
+      <button id="aryLibraryExport" type="button">↓ Cadangkan</button>
+      <label for="aryLibraryImport">↑ Pulihkan<input id="aryLibraryImport" type="file" accept=".json,application/json" hidden></label>
+    </div>
+    <p id="aryLibraryBackupStatus" role="status" aria-live="polite"></p>
+  </div>
+  <div class="ary-library-note"><b>Disimpan di perangkat ini</b><p>Riwayat dan favorit tersimpan di browser ini, tidak otomatis tersinkron ke perangkat lain. Cadangkan sebelum membersihkan data Chrome atau berganti HP.</p></div>
   <section class="v25-profile-card v25-backup-card">
     <div class="v25-section-heading"><div><span class="v25-kicker">YOUR DATA</span><h3>Backup & pemulihan</h3></div><span class="v25-heading-icon">⬡</span></div>
     <div class="v25-backup-actions"><button class="tag" id="exportData" type="button">↓ Ekspor backup</button><label class="tag v25-import-label">↑ Pulihkan backup<input id="importData" type="file" accept="application/json" hidden></label><button class="tag" id="restoreAutoBackup" type="button">↺ Pulihkan cadangan otomatis</button></div>

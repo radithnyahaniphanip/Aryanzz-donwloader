@@ -97,16 +97,18 @@
     if(!r.ok)throw new Error(data.error||"Tautan belum dapat diperiksa.");return data;
   }
   function recordHistory(item){
+    if(window.ARYANZZLibrary?.saveHistory){window.ARYANZZLibrary.saveHistory(item);return;}
     const key=KEY.history;const values=readArray(key);
     saveArray(key,[{...item,at:Date.now()},...values.filter(v=>v.url!==item.url)].slice(0,40));
-    renderLibrary();window.dispatchEvent(new Event("aryanzz:history-updated"));
+    window.dispatchEvent(new Event("aryanzz:history-updated"));
   }
   function setFavorite(item){
+    if(window.ARYANZZLibrary?.toggleFavorite)return window.ARYANZZLibrary.toggleFavorite(item);
     const current=readArray(KEY.favorites),values=current.length?current:readArray("aryanzz.favorites.v1");
     const has=values.some(v=>v.url===item.url);
     saveArray(KEY.favorites,has?values.filter(v=>v.url!==item.url):[{...item,at:Date.now()},...values].slice(0,40));
     try{localStorage.removeItem("aryanzz.favorites.v1")}catch{}
-    renderLibrary();window.dispatchEvent(new Event("aryanzz:history-updated"));return !has;
+    window.dispatchEvent(new Event("aryanzz:history-updated"));return !has;
   }
   async function startDownload(url,data,mode,quality,bar,label,btn,cancel){
     const controller=new AbortController();activeController=controller;
@@ -218,99 +220,11 @@
     const qr=$("qrTools"),qrInput=$("qrText");if(qr&&qrInput){const c=node("div","v15-counter");qrInput.after(c);const updateQR=()=>c.textContent=qrInput.value.length+" karakter untuk QR";qrInput.addEventListener("input",updateQR);updateQR();}
   }
 
-  /* V13 searchable local media library and stats, no fake online sync. */
-  let libraryQuery="";
-  function renderLibrary(){
-    const history=$("historyList"),fav=$("favoriteList");if(!history||!fav)return;
-    const currentHistory=readArray(KEY.history),legacyHistory=readArray("aryanzz-download-history-v1");
-    const values=(currentHistory.length?currentHistory:legacyHistory)
-      .filter((x,i,arr)=>x&&x.url&&arr.findIndex(y=>y&&y.url===x.url)===i)
-      .sort((a,b)=>Number(b.at||0)-Number(a.at||0)).slice(0,80);
-    const currentFavorites=readArray(KEY.favorites),legacyFavorites=readArray("aryanzz.favorites.v1");
-    const favorites=(currentFavorites.length?currentFavorites:legacyFavorites).filter((x,i,arr)=>x&&x.url&&arr.findIndex(y=>y&&y.url===x.url)===i);
-    const render=(root,items,isFavorite)=>{
-      root.replaceChildren();
-      const filtered=items.filter(x=>(String(x.name||"")+" "+String(x.url||"")).toLocaleLowerCase("id").includes(libraryQuery));
-      if(!filtered.length){root.append(node("p","ary-library-empty",isFavorite?"Belum ada favorit.":"Belum ada riwayat."));return}
-      for(const item of filtered){
-        let url;try{url=safeURL(item.url).href}catch{continue}
-        const row=node("div","v15-library-row"),info=node("div","v15-library-info");
-        info.append(node("b","",item.name||"Media"),node("small","",new Date(item.at||Date.now()).toLocaleDateString("id-ID")));
-        const open=node("button","v15-action","Buka");open.type="button";open.addEventListener("click",()=>window.open(url,"_blank","noopener,noreferrer"));
-        const action=node("button","v15-action",isFavorite?"Hapus":"♡");action.type="button";
-        action.addEventListener("click",()=>{setFavorite({name:item.name||url,url});toast(isFavorite?"Favorit dihapus":"Disimpan ke favorit")});
-        row.append(info,open,action);root.append(row);
-      }
-    };
-    render(history,values,false);render(fav,favorites,true);
-    const counts={
-      history:["aryLibraryHistoryCount","aryLibraryHistoryBadge","v15HistoryCount"],
-      favorites:["aryLibraryFavoriteCount","aryLibraryFavoriteBadge","v15FavoriteCount"]
-    };
-    counts.history.forEach(id=>{const el=$(id);if(el)el.textContent=String(values.length)});
-    counts.favorites.forEach(id=>{const el=$(id);if(el)el.textContent=String(favorites.length)});
-  }
-  function setupLibrary(){
-    const panel=$("history");if(!panel||panel.dataset.v15LibraryBound==="1")return;
-    panel.dataset.v15LibraryBound="1";
-    const existingStats=panel.querySelector(".ary-library-stats");
-    if(!existingStats){
-      const stats=node("div","v15-stats");
-      for(const [id,label,value] of [["v15HistoryCount","Riwayat","0"],["v15FavoriteCount","Favorit","0"],["v15LocalStatus","Penyimpanan","Lokal"]]){
-        const box=node("div","v15-stat"),b=node("b","",value);b.id=id;box.append(b,node("small","",label));stats.append(box);
-      }
-      panel.insertBefore(stats,panel.querySelector("#historyList"));
-    }
-    let search=panel.querySelector("#v15LibrarySearch");
-    if(!search){
-      search=node("input","v15-control ary-library-search");
-      search.id="v15LibrarySearch";search.type="search";search.placeholder="Cari di pustaka…";
-      search.setAttribute("aria-label","Cari riwayat dan favorit");search.style.width="100%";search.style.marginTop="12px";
-      search.addEventListener("input",()=>{libraryQuery=search.value.trim().toLocaleLowerCase("id");renderLibrary()});
-      const tabs=panel.querySelector(".ary-library-switch");
-      if(tabs)tabs.after(search);else panel.insertBefore(search,panel.querySelector("#historyList"));
-    }
-    const historyTab=$("aryLibraryHistoryTab"),favoriteTab=$("aryLibraryFavoriteTab");
-    const historyView=$("aryLibraryHistoryView"),favoriteView=$("aryLibraryFavoriteView");
-    const showTab=favorite=>{
-      if(historyTab){historyTab.classList.toggle("active",!favorite);historyTab.setAttribute("aria-selected",String(!favorite));}
-      if(favoriteTab){favoriteTab.classList.toggle("active",favorite);favoriteTab.setAttribute("aria-selected",String(favorite));}
-      if(historyView)historyView.hidden=favorite;
-      if(favoriteView)favoriteView.hidden=!favorite;
-    };
-    historyTab?.addEventListener("click",()=>showTab(false));
-    favoriteTab?.addEventListener("click",()=>showTab(true));
-    showTab(false);
-    const clearHistory=$("clearHistoryV2");
-    if(clearHistory&&!clearHistory.dataset.v15Bound){
-      clearHistory.dataset.v15Bound="1";
-      clearHistory.addEventListener("click",()=>{
-        if(!window.confirm("Hapus seluruh riwayat unduhan dari perangkat ini?"))return;
-        try{localStorage.removeItem(KEY.history);localStorage.removeItem("aryanzz-download-history-v1");}
-        catch{toast("Riwayat tidak dapat dihapus. Periksa penyimpanan browser.");return;}
-        renderLibrary();window.dispatchEvent(new Event("aryanzz:history-updated"));toast("Seluruh riwayat unduhan dihapus.");
-      });
-    }
-    const clearFavorites=$("clearFavoritesV2");
-    if(clearFavorites&&!clearFavorites.dataset.v15Bound){
-      clearFavorites.dataset.v15Bound="1";
-      clearFavorites.addEventListener("click",()=>{
-        if(!window.confirm("Hapus seluruh media favorit dari perangkat ini?"))return;
-        try{localStorage.removeItem(KEY.favorites);localStorage.removeItem("aryanzz.favorites.v1");}
-        catch{toast("Favorit tidak dapat dihapus. Periksa penyimpanan browser.");return;}
-        renderLibrary();window.dispatchEvent(new Event("aryanzz:history-updated"));toast("Seluruh media favorit dihapus.");
-      });
-    }
-    window.addEventListener("storage",renderLibrary);
-    window.addEventListener("aryanzz:history-updated",renderLibrary);
-    renderLibrary();
-  }
-
   /* V15 finish. */
   function init(){
     bindNavigation();
     goto("home");
-    setupToolSearch();setupDownloader();setupImageLab();setupTextExtras();setupLibrary();
+    setupToolSearch();setupDownloader();setupImageLab();setupTextExtras();
     if("serviceWorker" in navigator)navigator.serviceWorker.ready.then(r=>r.update().catch(()=>{})).catch(()=>{});
     document.querySelector(".pill")?.setAttribute("title","ARYANZZ V25 Premium Experience");
   }

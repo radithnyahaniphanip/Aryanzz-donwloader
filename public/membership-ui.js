@@ -15,7 +15,10 @@
     countdownTimer: null,
     cart: null,
     checkoutEnabled: false,
-    identityReady: false
+    identityReady: false,
+    paymentConfig: null,
+    paymentMethod: "qris",
+    checkoutBusy: false
   };
 
   const rank = { free: 0, starter: 1, pro: 2, ultra: 3, max: 4 };
@@ -174,7 +177,7 @@
     row.append(remove);
     items.append(row);
     byId("membershipCartTotal").textContent = money(price);
-    byId("membershipCartCheckout").disabled = !state.checkoutEnabled || !!state.activeOrderId;
+    byId("membershipCartCheckout").disabled = !!state.activeOrderId;
   }
 
   function addToCart(plan) {
@@ -197,10 +200,6 @@
       setMessage("Tambahkan paket Membership ke keranjang terlebih dahulu.", "warning");
       return;
     }
-    if (!state.checkoutEnabled) {
-      setMessage("Checkout belum siap. API Key AirPay harus dipasang sebagai Secret pada Cloudflare Worker.", "warning");
-      return;
-    }
     if (state.activeOrderId) {
       setMessage("Masih ada invoice yang menunggu status final AirPay. ARYANZZ mencegah pembuatan tagihan ganda.", "warning");
       return;
@@ -217,14 +216,25 @@
     byId("membershipCartToggle").setAttribute("aria-expanded", "false");
     byId("membershipCheckout").hidden = false;
     byId("membershipPayment").hidden = true;
-    setMessage("Paket siap dibayar melalui QRIS. Tidak perlu memasukkan nomor rekening atau nomor HP.", "info");
+    const createButton = byId("membershipCreateInvoice");
+    if (!state.checkoutEnabled) {
+      const config = state.paymentConfig || {};
+      const missing = Array.isArray(config.missing) ? config.missing.slice() : [];
+      if (!config.apiKeyReady && !missing.includes("AIRPAY_API_KEY")) missing.push("AIRPAY_API_KEY");
+      if (!state.identityReady && !missing.includes("ID perangkat/sesi")) missing.push("ID perangkat/sesi");
+      if (createButton) createButton.disabled = false;
+      setMessage("Metode pembayaran tersedia, tetapi pembuatan tagihan memerlukan konfigurasi: " + (missing.join(", ") || "layanan pembayaran AirPay") + ". Periksa ID perangkat dan muat ulang apabila akun sudah dikonfigurasi.", "warning");
+    } else {
+      if (createButton) createButton.disabled = false;
+      setMessage("Pilih DANA, GoPay, QRIS, atau m-banking. Setelah memilih metode, invoice dan QRIS dibuat otomatis oleh AirPay.", "info");
+    }
     byId("membershipCheckout").scrollIntoView({ behavior: "smooth", block: "nearest" });
   }
 
   function safeProviderLink(value) {
     try {
       const url = new URL(String(value || ""));
-      return url.protocol === "https:" ? url.href : "";
+      return url.protocol === "https:" && (url.hostname === "airpaygateway.site" || url.hostname.endsWith(".airpaygateway.site")) ? url.href : "";
     } catch {
       return "";
     }
@@ -282,6 +292,12 @@
         ? "Invoice gateway berlaku sampai " + formatDate(data.expiryAt || order.gatewayExpiresAt || order.expiresAt)
         : "Selesaikan checkout dalam 10 menit.";
 
+    const selected = String(order.paymentMethod || state.paymentMethod || "qris");
+    const methodNames = { qris: "QRIS", dana: "DANA via QRIS", gopay: "GoPay via QRIS", linkaja: "LinkAja via QRIS", ovo: "OVO via QRIS", shopeepay: "ShopeePay via QRIS", mobile_banking: "M-Banking via QRIS" };
+    byId("membershipSelectedMethod").textContent = "Metode dipilih: " + (methodNames[selected] || "QRIS") + " · diterbitkan oleh AirPay";
+    const payLink = byId("membershipPayLink");
+    const providerPage = safeProviderLink(data.payUrl || order.payUrl);
+    if (payLink) { payLink.hidden = !providerPage; if (providerPage) payLink.href = providerPage; else payLink.removeAttribute("href"); }
     const qr = byId("membershipQr");
     const qrUrl = safeProviderLink(data.qrUrl || order.qrUrl);
     if (qrUrl && !checkoutExpired) {
@@ -308,12 +324,26 @@
   }
 
   async function submitCheckout(event) {
-    event.preventDefault();
-    if (!state.selectedPlan) return;
+    event?.preventDefault?.();
+    if (!state.selectedPlan || state.checkoutBusy || state.activeOrderId) return;
+    if (!state.checkoutEnabled) {
+      await refreshMe().catch(() => false);
+      const status = await api("/api/membership/payment-config", { method: "GET" }).catch(() => null);
+      if (status?.response?.ok) state.paymentConfig = status.data;
+      state.checkoutEnabled = !!(status?.response?.ok && status.data?.checkoutEnabled && state.identityReady);
+      if (!state.checkoutEnabled) {
+        const missing = Array.isArray(state.paymentConfig?.missing) ? state.paymentConfig.missing.join(", ") : "ID perangkat atau konfigurasi AirPay";
+        setMessage("Tagihan belum dapat dibuat: " + missing + ". Periksa akun atau izin perangkat dan coba lagi.", "warning");
+        return;
+      }
+    }
+    state.checkoutBusy = true;
     const button = byId("membershipCreateInvoice");
     button.disabled = true;
+    const methodButtons = [...document.querySelectorAll("#membershipMethodGrid [data-ary-pay-method]")];
+    methodButtons.forEach(item => item.disabled = true);
     button.textContent = "Membuat invoice…";
-    setMessage("Menghubungkan ke AirPay dan membuat QRIS.", "info");
+    setMessage("AirPay sedang membuat invoice QRIS otomatis. Jangan tekan metode pembayaran berulang kali.", "info");
 
     try {
       const result = await api("/api/membership/orders", {
@@ -321,6 +351,7 @@
         body: JSON.stringify({
           planId: state.selectedPlan.id,
           billingPeriod: state.period,
+          paymentMethod: state.paymentMethod || "qris",
           customerName: byId("membershipCustomerName").value.trim(),
           customerEmail: byId("membershipCustomerEmail").value.trim()
         })
@@ -342,9 +373,43 @@
     } catch (error) {
       setMessage(error.message || "Tidak dapat membuat invoice.", "error");
     } finally {
+      state.checkoutBusy = false;
       button.disabled = false;
+      methodButtons.forEach(item => item.disabled = false);
       button.textContent = "Buat invoice QRIS";
     }
+  }
+
+  function renderAutoReceipt(order) {
+    const section = byId("membershipReceipt");
+    const details = byId("membershipReceiptDetails");
+    if (!section || !details) return;
+    if (!order || order.status !== "paid" || !order.paidAt) {
+      section.hidden = true;
+      details.replaceChildren();
+      return;
+    }
+    details.replaceChildren();
+    const rows = [
+      ["ID Pesanan", order.id],
+      ["ID Transaksi AirPay", order.providerTransactionId || order.transactionId || "-"],
+      ["Paket", order.planName || order.planId || "Membership"],
+      ["Periode", order.billingPeriod === "yearly" ? "Tahunan" : "Bulanan"],
+      ["Harga paket", money(order.amount)],
+      ["Biaya layanan", money(order.feeAmount || 0)],
+      ["Total lunas", money(order.totalAmount || order.amount)],
+      ["Waktu pembayaran", formatDate(order.paidAt)]
+    ];
+    rows.forEach(([label,value]) => {
+      const row = make("div", "ary-auto-receipt-row");
+      row.append(make("span", "", label), make("strong", "", value));
+      details.append(row);
+    });
+    const download = make("button","ary-membership-receipt","Simpan bukti pembayaran");
+    download.type = "button";
+    download.addEventListener("click",()=>downloadReceipt(order));
+    details.append(download);
+    section.hidden = false;
   }
 
   function stopPolling() {
@@ -370,6 +435,7 @@
       clearCart();
       setMessage("Pembayaran berhasil diverifikasi. Membership " + (order.planName || "") + " sudah aktif!", "success");
       await refreshMe();
+      renderAutoReceipt(order);
       byId("membershipPaymentExpiry").textContent = "Membership aktif sampai " + formatDate(state.membership.expiresAt);
       byId("membershipPaymentCountdown").textContent = "LUNAS";
       state.activeOrderId = "";
@@ -434,6 +500,7 @@
     state.orders = Array.isArray(result.data.orders) ? result.data.orders : [];
     renderAccount();
     renderOrders();
+    renderAutoReceipt(state.orders.find(order => order.status === "paid" && order.paidAt) || null);
     return true;
   }
 
@@ -533,6 +600,7 @@
     ]);
     if (catalogResult.response.ok && catalogResult.data.ok) state.catalog = catalogResult.data;
     const config = configResult.data || {};
+    state.paymentConfig = config;
     if (state.catalog) restoreCart();
     state.checkoutEnabled = !!(configResult.response.ok && config.checkoutEnabled && config.identityReady);
     renderCart();
@@ -597,6 +665,16 @@
   });
   byId("membershipCartClear").addEventListener("click", clearCart);
   byId("membershipCartCheckout").addEventListener("click", openCheckout);
+  const allowedCheckoutMethods = new Set(["qris","dana","gopay","linkaja","ovo","shopeepay","mobile_banking"]);
+  document.querySelectorAll("#membershipMethodGrid [data-ary-pay-method]").forEach(button => {
+    button.addEventListener("click", async () => {
+      const method = String(button.dataset.aryPayMethod || "");
+      if (!allowedCheckoutMethods.has(method) || state.checkoutBusy || state.activeOrderId) return;
+      state.paymentMethod = method;
+      document.querySelectorAll("#membershipMethodGrid [data-ary-pay-method]").forEach(item => item.classList.toggle("selected", item === button));
+      await submitCheckout({ preventDefault() {} });
+    });
+  });
   byId("membershipCheckoutForm").addEventListener("submit", submitCheckout);
   byId("membershipCheckStatus").addEventListener("click", async () => {
     if (!state.activeOrderId) return;

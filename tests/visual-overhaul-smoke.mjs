@@ -36,7 +36,7 @@ assert.ok(!html.includes('data-owner-link="telegram"')&&!html.includes("ownerTel
 assert.ok(owner.includes('whatsapp: "https://wa.me/6283163637190"'),"The owner WhatsApp action must keep the correct destination");
 assert.ok(owner.includes('"Chat WhatsApp"')&&!owner.includes("+62 831-6363-7190"),"The WhatsApp card must not print the owner's phone number");
 assert.ok(css.includes("aryDeveloperBadge")&&css.includes("ary-owner2-social-card:hover"),"The owner badge and official channel cards should have dedicated effects");
-assert.ok(search.includes('const shouldTryYoutube=kind!=="image"&&selected!=="youtube"&&(!mediaItems.length||(selected==="all"&&!hasYoutubeResult))'),"YouTube is used only as an explicitly labelled fallback when a selected social provider has no results or all-platform search lacks YouTube");
+assert.ok(search.includes('const shouldTryYoutube=kind!=="image"&&selected==="all"&&!hasYoutubeResult'),"Cross-platform YouTube fallback is reserved for Smart Search; selecting YouTube remains a native platform search");
 assert.ok(regression.includes('query:"Tabola Bale",platform:"all",mediaType:"video"'),"A Tabola Bale all-platform regression test must remain in the suite");
 assert.ok(worker.includes('query+" official video"')&&worker.includes('youtubeFallbackAttempted&&youtubeFallbackCandidateCount>0'),"The Worker should retry YouTube with video intent and report all-platform fallback");
 assert.ok(html.includes('/arya-v2-refresh.css?v=__ARYANZZ_VERSION__')&&html.includes('/arya-v2-refresh.js?v=__ARYANZZ_VERSION__'),"The V2.1 visual layer and interaction script must be loaded by the live page");
@@ -49,4 +49,4 @@ assert.ok(refreshCss.includes("aryV2LogoFloat")&&refreshCss.includes("aryV2Phone
 assert.ok(refreshCss.includes("@media(max-width:760px)")&&refreshCss.includes("prefers-reduced-motion"),"The V2.1 visual layer must remain responsive and respect reduced-motion preferences");
 assert.ok(refreshJs.includes('fetch("/release.json?ui="+Date.now()')&&refreshJs.includes('badge.textContent="V2 GRATIS"')&&refreshJs.includes('badge.title="ARYANZZ V2 GRATIS · Build "+build'),"The header badge must show the V2 free release and expose the exact live build in its title");
 assert.ok(refreshJs.includes("IntersectionObserver")&&refreshJs.includes("arya-v2-pending"),"The new interface should reveal content as the user navigates without hiding content when motion is disabled");
-console.log("✔ ARYANZZ visual overhaul preserves all 39 tools including Membership and verifies device, owner, theme, and YouTube fallback behavior");
+console.log("✔ ARYANZZ visual overhaul preserves all 39 tools including Membership and verifies device, owner, theme, and Smart Search-only YouTube fallback behavior");

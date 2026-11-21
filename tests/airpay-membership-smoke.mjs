@@ -30,6 +30,22 @@ assert.match(aryHtmlSection(html), /DANA/);
 assert.match(aryHtmlSection(html), /GoPay/);
 assert.match(aryHtmlSection(html), /LinkAja/);
 assert.match(aryHtmlSection(html), /OVO/);
+assert.match(aryHtmlSection(html), /ShopeePay/);
+assert.ok([...membership.matchAll(/supportedApps: \["DANA", "GoPay", "LinkAja", "OVO", "ShopeePay", "Mobile Banking"\]/g)].length >= 2, "Both payment-method discovery and created invoices expose the supported QRIS apps");
+assert.match(aryHtmlSection(html), /id="membershipMethodGrid"/);
+for (const method of ["qris","dana","gopay","linkaja","ovo","shopeepay","mobile_banking"]) {
+  assert.ok(aryHtmlSection(html).includes('data-ary-pay-method="'+method+'"'),"Payment selector must expose "+method);
+}
+assert.match(aryHtmlSection(html), /id="membershipReceipt"/);
+assert.match(aryHtmlSection(html), /id="membershipPayLink"/);
+assert.match(ui, /methodButtons\.forEach\(item => item\.disabled = true\)/);
+assert.match(ui, /await submitCheckout\(\{ preventDefault\(\) \{\} \}\)/);
+assert.match(ui, /function renderAutoReceipt\(order\)/);
+assert.match(ui, /renderAutoReceipt\(order\)/);
+assert.match(ui, /paymentMethod: state\.paymentMethod/);
+assert.match(membership, /paymentMethod: order\.paymentMethod/);
+assert.match(membership, /const paymentMethod = String\(body\.paymentMethod/);
+assert.doesNotMatch(aryHtmlSection(html), /name="(?:bankAccount|bankNumber|walletPin|otp|password)"/i);
 assert.match(ui, /membershipPaymentBack/);
 assert.match(ui, /Waktu checkout 10 menit habis/);
 assert.match(ui, /renderCart\(\);[\s\S]*?renderPlans\(\);/);
