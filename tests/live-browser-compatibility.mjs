@@ -78,9 +78,10 @@ async function openHome(context, label) {
       const libraryGeometry=await page.evaluate(()=>{
         const box=el=>{const r=el.getBoundingClientRect();return {left:r.left,right:r.right,top:r.top,bottom:r.bottom,width:r.width}};
         const root=document.querySelector("#history");
-        return {panel:box(root),hero:box(root.querySelector(".ary-library-hero")),stats:box(root.querySelector(".ary-library-stats")),filter:box(root.querySelector(".ary-library-filter-row")),title:root.querySelector(".ary-library-hero h2")?.textContent?.trim()};
+        return {panel:box(root),hero:box(root.querySelector(".ary-library-hero")),stats:box(root.querySelector(".ary-library-stats")),filter:box(root.querySelector(".ary-library-filter-row")),title:root.querySelector(".ary-library-hero h2")?.textContent?.trim(),legacyHeader:!!root.querySelector(":scope > .v677-feature-hero")};
       });
       assert.equal(libraryGeometry.title,"Pustaka",label+" Pustaka must not inherit duplicate 'Your Library • 05' header text");
+      assert.equal(libraryGeometry.legacyHeader,false,label+" Pustaka must not have a second header injected by V67.7");
       assert.ok(libraryGeometry.hero.top>=libraryGeometry.panel.top+8,
         label+" Pustaka hero overlaps panel border: "+JSON.stringify(libraryGeometry));
       assert.ok(libraryGeometry.hero.left>=libraryGeometry.panel.left-2&&libraryGeometry.hero.right<=libraryGeometry.panel.right+2,
