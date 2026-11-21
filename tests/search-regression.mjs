@@ -6,14 +6,14 @@ const searchUi=readFileSync(new URL("../public/v674.js",import.meta.url),"utf8")
 assert.ok(searchUi.includes("function searchDomainsForPlatform")&&searchUi.includes("platformCatalog.flatMap"),"Link/search filtering must retain the full live platform catalogue");
 assert.ok(searchUi.includes("platform.searchModes")&&searchUi.includes("catalogForMode"),"Title-search picker must filter platforms by verified media modes");
 assert.ok(searchUi.includes("[10,20,50,100]"),"Search result pagination must offer 10, 20, 50 and 100 results per page");
-assert.ok(searchUi.includes("data.fallbackUsed===true")&&searchUi.includes("item?.platform===\"youtube\""),"The UI must allow explicitly marked YouTube fallback results for a selected social platform");
+assert.ok(searchUi.includes('selected==="all"&&!hasYoutubeResult')&&searchUi.includes("searchResultBelongsTo(item,selected)")&&!searchUi.includes("data.fallbackUsed===true"),"Only Smart Search may append YouTube results; a selected social platform must remain strictly scoped");
 assert.ok(searchUi.includes("https://www.youtube.com/results?search_query=")&&searchUi.includes("Cari di YouTube"),"Empty social searches must offer YouTube as the external fallback");
 assert.ok(searchUi.includes("Periksa tautan & unduh"),"Public title results without verified streams must still render an in-app check-and-download action");
 assert.ok(searchUi.includes("Mencari judul satu per satu di semua platform video yang didukung"),"All-platform mode must explain that each eligible platform is searched separately");
 assert.ok(searchUi.includes("const PLATFORM_SESSION_KEY=")&&searchUi.includes("persistPlatformSession")&&searchUi.includes("platformPageLink")&&searchUi.includes("platformPageTitle"),"Platform browsing position and input values must survive page reloads");
 assert.ok(searchUi.includes("renderPlatformPage(platformPage)")&&!searchUi.includes("if(!canLink&&canSearch)v=\"title\""),"Selecting a platform must not reset the 200-platform pager or force-hide the link tab");
 assert.ok(searchUi.includes("a.hidden=false")&&searchUi.includes("b.hidden=false")&&searchUi.includes("v674-mode-unavailable"),"Both link and title modes remain visible with a clear unsupported-provider notice");
-assert.ok(searchUi.includes('platform:"youtube",mediaType:kind')&&searchUi.includes("fallbackItems.length")&&searchUi.includes('mediaItems=selected==="all"')&&searchUi.includes("fallbackItems.filter(item=>!mediaItems.some"),"A video title search automatically retries YouTube and preserves other all-platform results");
+assert.ok(searchUi.includes('const shouldTryYoutube=kind!=="image"&&selected==="all"&&!hasYoutubeResult')&&searchUi.includes('platform:"youtube",mediaType:kind')&&searchUi.includes("fallbackItems.length")&&searchUi.includes("fallbackItems.filter(item=>!mediaItems.some"),"Only an all-platform video/audio title search may retry YouTube and preserve its other platform results");
 const workspaceCss=readFileSync(new URL("../public/desktop-workspace.css",import.meta.url),"utf8");
 assert.ok(workspaceCss.includes("margin:26px 0 12px")&&workspaceCss.includes(".v674-mode-unavailable"),"Platform search controls have clear spacing and unsupported-mode notices are styled");
 
