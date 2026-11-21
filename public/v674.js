@@ -508,7 +508,8 @@ const updatePage=()=>{const pages=Math.max(1,Math.ceil(resultCards.length/pageSi
 size.onchange=()=>{pageSize=Number(size.value);currentPage=1;updatePage()};prev.onclick=()=>{currentPage--;updatePage()};next.onclick=()=>{currentPage++;updatePage()};
 pager.append(prev,status,size,next);results.append(pager);updatePage();
 }catch(error){
-if(requestId!==searchRequestId||error?.name==="AbortError")return;
+if(requestId!==searchRequestId)return;
+if(error?.name==="AbortError"&&!timedOut)return;
 if(timedOut)error=new Error("Pencarian melewati batas waktu. Coba kata kunci lebih spesifik atau ulangi.");
 if(error?.name==="TimeoutError")error=new Error("Sumber pencarian terlalu lambat. Coba judul lebih spesifik atau pilih platform terlebih dahulu.");
 results.replaceChildren();
