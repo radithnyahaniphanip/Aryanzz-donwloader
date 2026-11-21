@@ -29,6 +29,14 @@ tag = "v3"
 new_sqlite_classes = ["MembershipStore"]
 
 
+# Existing D1 database confirmed by the owner in Cloudflare Dashboard.
+# Database IDs identify resources; never put AUTH_SESSION_SECRET in this file.
+[[d1_databases]]
+binding = "AUTH_DB"
+database_name = "aryanzz-auth-db"
+database_id = "cb98b8c1-31a2-4e7d-ad3b-6e647805861e"
+migrations_dir = "migrations"
+
 [vars]
 ARYANZZ_BUILD_VERSION = "__ARYANZZ_VERSION__"
 ARYANZZ_PUBLIC_ORIGIN = "https://aryanzz-donwloader.aryanz.workers.dev"
