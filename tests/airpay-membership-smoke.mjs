@@ -78,7 +78,7 @@ assert.doesNotMatch(aryHtmlSection(html), /AirPay yang terpasang mendukung QRIS,
 assert.doesNotMatch(aryHtmlSection(html), /Akses Pro membuka Media Studio Pro, Ultra membuka/);
 assert.doesNotMatch(aryHtmlSection(html), /nomor rekening pembeli/);
 assert.match(ui, /membershipPaymentBack/);
-assert.match(ui, /Waktu checkout 10 menit habis/);
+assert.match(ui, /Checkout dibatalkan\. Status akhir AirPay tetap diperiksa\./);
 assert.match(ui, /renderCart\(\);[\s\S]*?renderPlans\(\);/);
 assert.match(membership, /aryanzz_device_lock/);
 assert.match(membership, /auth_device_lock_accounts/);
