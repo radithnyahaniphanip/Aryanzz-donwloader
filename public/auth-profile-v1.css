@@ -235,7 +235,7 @@ body #profile .ary-profile-signin-row #aryAccountStatus{
 }
 body .nav{
   display:grid!important;
-  grid-template-columns:repeat(6,minmax(0,1fr));
+  grid-template-columns:repeat(6,minmax(0,1fr))!important;
   gap:clamp(4px,1vw,10px)!important;
   padding-inline:clamp(7px,2vw,16px)!important;
 }
@@ -277,4 +277,44 @@ body .nav button>span:last-child{font-size:clamp(9px,1.8vw,11px)!important}
   body .nav{gap:3px!important;padding-inline:5px!important}
   body .nav button{padding:7px 1px!important}
   body .nav button>span:last-child{font-size:9px!important}
+}
+
+/* Six navigation entries must fit in ONE row on phones. Several older
+   theme styles enforce a five-column grid with !important; the scoped
+   final cascade wins while leaving the desktop vertical rail unchanged. */
+@media(max-width:899px){
+  body nav.nav{
+    display:grid!important;
+    grid-template-columns:repeat(6,minmax(0,1fr))!important;
+    grid-template-rows:minmax(0,1fr)!important;
+    grid-auto-flow:row!important;
+    align-items:stretch!important;
+    gap:clamp(2px,.8vw,6px)!important;
+    width:calc(100% - 16px)!important;
+    max-width:620px!important;
+    padding:6px clamp(4px,1.2vw,9px) calc(6px + env(safe-area-inset-bottom))!important;
+  }
+  body nav.nav>button{
+    width:100%!important;
+    min-width:0!important;
+    max-width:none!important;
+    min-height:52px!important;
+    padding:6px 1px!important;
+    gap:4px!important;
+    overflow:hidden!important;
+    white-space:nowrap!important;
+  }
+  body nav.nav>button>span:last-child{
+    display:block!important;
+    max-width:100%!important;
+    white-space:nowrap!important;
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+    font-size:clamp(8px,2.2vw,10px)!important;
+  }
+  body nav.nav>button .nav-icon{
+    font-size:17px!important;
+    margin:0!important;
+  }
+  body nav.nav>button[data-nav="history"] .nav-icon{font-size:14px!important}
 }

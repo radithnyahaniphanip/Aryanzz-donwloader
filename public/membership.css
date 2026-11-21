@@ -189,3 +189,25 @@ body .nav button span:last-child{font-size:9px}
 #membership .ary-membership-qr{display:block;max-width:100%;height:auto;margin:auto}
 #membership .ary-membership-qr[hidden]{display:none!important}
 @media(max-width:520px){#membership .ary-pay-method-intro{font-size:11px}#membership .ary-membership-payment-layout{grid-template-columns:1fr!important}#membership .ary-membership-qr-wrap{max-width:300px;width:100%;margin-inline:auto}#membership .ary-membership-amount{font-size:clamp(24px,7vw,32px)}}
+
+/* Keep gateway failure messages compact and action-oriented on phones. */
+#membership .ary-checkout-support{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  align-self:flex-start;
+  max-width:100%;
+  min-height:38px;
+  padding:9px 12px;
+  margin-top:2px;
+  border:1px solid rgba(249,180,150,.54);
+  border-radius:10px;
+  background:rgba(255,255,255,.06);
+  color:#ffe1d0;
+  text-decoration:none;
+  font-size:11px;
+  font-weight:800;
+}
+#membership .ary-checkout-support[hidden]{display:none!important}
+#membership .ary-checkout-error{gap:8px;max-width:100%}
+#membership .ary-checkout-error p{max-width:55ch;line-height:1.55}

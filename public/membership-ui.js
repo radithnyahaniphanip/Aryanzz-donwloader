@@ -68,7 +68,7 @@
               ? "Identitas perangkat belum siap"
               : "Invoice belum berhasil dibuat";
     byId("membershipCheckoutErrorText").textContent = merchantBlocked
-      ? "AirPay menolak izin akun merchant membuat QRIS. Buka dashboard AirPay, periksa status merchant, lalu hubungi dukungan AirPay untuk meminta pemulihan akun. Mengganti API Key atau menekan tombol berulang kali tidak menghapus blokir."
+      ? "Gateway AirPay menolak pembuatan QRIS (403). Pengelola website perlu memulihkan akses merchant melalui AirPay. Pembayaran tidak dapat dilanjutkan sampai akun diizinkan kembali."
       : sandboxBlocked
         ? "Kunci ak_test_ hanya untuk pengujian tanpa uang sungguhan pada Worker staging. Jangan menggunakannya untuk membership produksi."
         : invalidKey
@@ -80,6 +80,8 @@
               : (error || "Ada kendala saat menghubungkan layanan pembayaran.");
     panel.hidden = !error;
     byId("membershipCheckoutRetry").hidden = invalidKey || merchantBlocked || sandboxBlocked || unconfigured || noIdentity;
+    const supportLink = byId("membershipCheckoutSupport");
+    if (supportLink) supportLink.hidden = !merchantBlocked;
   }
 
   function formatDate(value) {
