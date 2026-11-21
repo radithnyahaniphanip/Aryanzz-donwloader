@@ -34,6 +34,14 @@ const checks=[
    })&&html.includes('<link rel="stylesheet" href="/auth-profile-v1.css?v=__ARYANZZ_VERSION__">')],
  ["D1 moderation checks are concurrent and still enforce both independent ban sources",
    auth.includes("const [lockOwner,deviceBanned]=await Promise.all([")&&auth.includes("if(!lockOwner&&!deviceBanned)return null;")],
+ ["Mobile PWA navigation has a bounded timeout and cached offline-first recovery when a workers.dev request stalls",
+   serviceWorker.includes('e.request.mode==="navigate"')&&
+   serviceWorker.includes('fallbackAfterMs=installed?6500:12000')&&
+   serviceWorker.includes('controller.abort()')&&
+   serviceWorker.includes('x-aryanzz-offline-fallback')&&
+   serviceWorker.includes('ARYANZZ belum terhubung')],
+ ["Private APIs and account requests cannot use stale PWA fallback",
+   serviceWorker.indexOf('if(u.pathname.startsWith("/api/"))return;')<serviceWorker.indexOf('fallbackAfterMs=installed?6500:12000')],
  ["All earlier public features retain their endpoints",html.includes('id="platformPicker"')&&html.includes('id="titleSearchBtn"')&&server.includes('async function searchSocial(request)')&&server.includes('async function socialImageSearch(request)')]
 ];
 for(const [label,ok] of checks){assert.ok(ok,label);console.log("✔ "+label);}
