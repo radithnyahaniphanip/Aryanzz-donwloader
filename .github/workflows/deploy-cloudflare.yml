@@ -197,6 +197,52 @@ jobs:
           node -e 'process.stdout.write(require("node:crypto").randomBytes(32).toString("hex"))' |
             wrangler secret put AUTH_SESSION_SECRET >/dev/null
           echo "Created a persistent AUTH_SESSION_SECRET directly in Cloudflare."
+      - name: Recover missing Turnstile secret through Cloudflare API
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          TURNSTILE_SECRET_KEY: ${{ secrets.TURNSTILE_SECRET_KEY || secrets.TURNSTILE_SECRET || secrets.CF_TURNSTILE_SECRET_KEY }}
+          AUTH_TURNSTILE_SITE_KEY: ${{ secrets.AUTH_TURNSTILE_SITE_KEY || secrets.TURNSTILE_SITE_KEY || secrets.CF_TURNSTILE_SITE_KEY }}
+        run: |
+          set -euo pipefail
+          # The former widget key was exposed in a conversation and is NEVER
+          # embedded in code. A new key is rotated by Cloudflare itself.
+          # The sitekey is PUBLIC and already embedded in ARYANZZ's auth page.
+          if [ -n "$TURNSTILE_SECRET_KEY" ]; then
+            echo "GitHub already supplies a Turnstile secret; retaining existing secret sync behavior."
+            exit 0
+          fi
+          if ! names="$(wrangler secret list --format json 2>/dev/null)" ||
+             ! printf '%s' "$names" | jq -e 'type == "array"' >/dev/null; then
+            echo "::warning::Cannot inspect Worker secrets; refusing Turnstile rotation without confirming the current state."
+            exit 0
+          fi
+          if printf '%s' "$names" | jq -e '.[] | select(.name == "TURNSTILE_SECRET_KEY")' >/dev/null; then
+            echo "Existing Turnstile secret found in Cloudflare; preserving it. Review rotation manually if it was exposed."
+            exit 0
+          fi
+          SITEKEY="${AUTH_TURNSTILE_SITE_KEY:-0x4AAAAAAF3YBaqlVpejw9CO}"
+          # Rotation requires Account > Turnstile Sites > Write or Account Settings Write.
+          # If this token cannot rotate, leave sign-in safely disabled; never
+          # substitute the leaked secret or invent a CAPTCHA success.
+          if ! result="$(curl --silent --show-error --fail --max-time 25 \
+             --request POST \
+             --header "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+             --header "Content-Type: application/json" \
+             --data '{"invalidate_immediately":true}' \
+             "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/challenges/widgets/$SITEKEY/rotate_secret")"; then
+            echo "::warning::Cloudflare token cannot rotate the Turnstile widget. Grant Account > Turnstile Sites > Write or enter a NEW secret directly into the Worker."
+            exit 0
+          fi
+          # Cloudflare returns the NEW secret in a private API response. Never
+          # emit that body to Actions logs or commit it to the repository.
+          if ! secret="$(printf '%s' "$result" | jq -er '.result.secret | strings | select(length >= 24)')"; then
+            echo "::error::Cloudflare rotated the widget but did not supply a valid new secret. Recover through the Cloudflare dashboard."
+            exit 1
+          fi
+          printf '%s' "$secret" | wrangler secret put TURNSTILE_SECRET_KEY >/dev/null
+          unset secret result
+          echo "Turnstile Secret Key rotated and installed directly in Cloudflare without exposing its value."
       - name: Deploy Worker and static assets
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
