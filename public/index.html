@@ -1128,7 +1128,15 @@ body .nav button.active .nav-icon{color:#9af4e8!important}
     <div class="ary-library-section-head"><div><h3>Koleksi favorit</h3><p>Simpan item penting agar mudah ditemukan lagi.</p></div><button class="tag" id="clearFavoritesV2" type="button">Hapus semua</button></div>
     <div id="favoriteList" class="ary-library-list result"><span class="ary-library-empty">Belum ada favorit.</span></div>
   </section>
-  <div class="ary-library-note"><b>Disimpan di perangkat ini</b><p>Riwayat dan favorit tersimpan di browser ini, tidak otomatis tersinkron ke perangkat lain.</p></div>
+  <div class="ary-library-backup">
+    <div><strong>Cadangan Pustaka</strong><p>Ekspor riwayat dan favorit ke file JSON di HP, atau pulihkan dari cadangan lama tanpa menghapus koleksi yang sudah ada.</p></div>
+    <div class="ary-library-backup-actions">
+      <button id="aryLibraryExport" type="button">↓ Cadangkan</button>
+      <label for="aryLibraryImport">↑ Pulihkan<input id="aryLibraryImport" type="file" accept=".json,application/json" hidden></label>
+    </div>
+    <p id="aryLibraryBackupStatus" role="status" aria-live="polite"></p>
+  </div>
+  <div class="ary-library-note"><b>Disimpan di perangkat ini</b><p>Riwayat dan favorit tersimpan di browser ini, tidak otomatis tersinkron ke perangkat lain. Cadangkan sebelum membersihkan data Chrome atau berganti HP.</p></div>
   <section class="v25-profile-card v25-backup-card">
     <div class="v25-section-heading"><div><span class="v25-kicker">YOUR DATA</span><h3>Backup & pemulihan</h3></div><span class="v25-heading-icon">⬡</span></div>
     <div class="v25-backup-actions"><button class="tag" id="exportData" type="button">↓ Ekspor backup</button><label class="tag v25-import-label">↑ Pulihkan backup<input id="importData" type="file" accept="application/json" hidden></label><button class="tag" id="restoreAutoBackup" type="button">↺ Pulihkan cadangan otomatis</button></div>
