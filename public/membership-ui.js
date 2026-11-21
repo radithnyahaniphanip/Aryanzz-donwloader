@@ -261,7 +261,12 @@
       if (!config.apiKeyReady && !missing.includes("AIRPAY_API_KEY")) missing.push("AIRPAY_API_KEY");
       if (!state.identityReady && !missing.includes("ID perangkat/sesi")) missing.push("ID perangkat/sesi");
       if (createButton) createButton.disabled = false;
-      setMessage("Metode pembayaran tersedia, tetapi pembuatan tagihan memerlukan konfigurasi: " + (missing.join(", ") || "layanan pembayaran AirPay") + ". Periksa ID perangkat dan muat ulang apabila akun sudah dikonfigurasi.", "warning");
+      if (config.merchantBlocked) {
+        setCheckoutError("AirPay menolak izin merchant membuat invoice.", "AIRPAY_MERCHANT_BLOCKED");
+        setMessage("QRIS belum tersedia. Pengelola harus memulihkan akses merchant AirPay.", "warning");
+      } else {
+        setMessage("Metode pembayaran tersedia, tetapi pembuatan tagihan memerlukan konfigurasi: " + (missing.join(", ") || "layanan pembayaran AirPay") + ". Periksa ID perangkat dan muat ulang apabila akun sudah dikonfigurasi.", "warning");
+      }
     } else {
       if (createButton) createButton.disabled = false;
       setMessage("Pilih DANA, GoPay, QRIS, atau m-banking. Setelah memilih metode, invoice dan QRIS dibuat otomatis oleh AirPay.", "info");
@@ -413,7 +418,8 @@
       state.checkoutEnabled = !!(status?.response?.ok && status.data?.checkoutEnabled && state.identityReady);
       if (!state.checkoutEnabled) {
         const config = state.paymentConfig || {};
-        const code = config.sandboxBlocked ? "AIRPAY_SANDBOX_PRODUCTION_BLOCKED"
+        const code = config.merchantBlocked ? "AIRPAY_MERCHANT_BLOCKED"
+          : config.sandboxBlocked ? "AIRPAY_SANDBOX_PRODUCTION_BLOCKED"
           : !config.apiKeyReady ? "AIRPAY_KEY_NOT_CONFIGURED"
           : "ARYANZZ_IDENTITY_NOT_READY";
         const missing = Array.isArray(config.missing) ? config.missing.join(", ") : "ID perangkat atau konfigurasi AirPay";
@@ -719,7 +725,9 @@
     }
     if (!state.checkoutEnabled) {
       const missing = Array.isArray(config.missing) ? config.missing.join(", ") : "AIRPAY_API_KEY";
-      setMessage("Paket sudah ditampilkan, tetapi checkout belum aktif. Konfigurasi yang diperlukan: " + missing + ".", "warning");
+      setMessage(config.merchantBlocked
+        ? "Checkout sementara belum tersedia: AirPay menolak merchant (403). Pengelola perlu memulihkan akses sebelum menerima pembayaran."
+        : "Paket sudah ditampilkan, tetapi checkout belum aktif. Konfigurasi yang diperlukan: " + missing + ".", "warning");
     }
 
     const pending = state.orders.find(order => order.status === "pending" && order.transactionId);

@@ -318,3 +318,40 @@ body .nav button>span:last-child{font-size:clamp(9px,1.8vw,11px)!important}
   }
   body nav.nav>button[data-nav="history"] .nav-icon{font-size:14px!important}
 }
+
+/* Desktop workspace keeps its vertical six-item rail. The shared profile
+   stylesheet also styles the mobile grid, so reassert the desktop geometry
+   after all theme layers have loaded. */
+@media(min-width:900px){
+  body nav.nav{
+    display:flex!important;
+    flex-direction:column!important;
+    align-items:stretch!important;
+    justify-content:flex-start!important;
+    grid-template-columns:none!important;
+    position:fixed!important;
+    top:22px!important;
+    right:auto!important;
+    bottom:22px!important;
+    left:22px!important;
+    transform:none!important;
+    width:var(--ary-desktop-rail,200px)!important;
+    min-width:176px!important;
+    max-width:224px!important;
+    padding:21px 12px!important;
+    gap:9px!important;
+  }
+  body nav.nav>button{
+    display:flex!important;
+    flex-direction:row!important;
+    flex:0 0 auto!important;
+    align-items:center!important;
+    justify-content:flex-start!important;
+    width:100%!important;
+    min-height:55px!important;
+    padding:9px 13px!important;
+    gap:13px!important;
+    text-align:left!important;
+  }
+  body nav.nav>button>span:last-child{font-size:13px!important}
+}

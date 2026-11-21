@@ -32,6 +32,9 @@ const navMarkup=html.match(/<nav class="nav"[^>]*>([\s\S]*?)<\/nav>/)?.[1]||"";
 assert.equal((navMarkup.match(/data-nav="/g)||[]).length,6,"There must be exactly six navigation buttons");
 assert.match(pCss, /body nav\.nav\s*\{[\s\S]*?grid-template-columns:repeat\(6,minmax\(0,1fr\)\)!important/,"The final mobile stylesheet must override five-column !important theme layouts");
 assert.match(pCss, /@media\(max-width:899px\)/,"Six-item navigation should not override the desktop left rail");
+assert.match(pCss, /@media\(min-width:900px\)/,"Desktop navigation must retain the vertical rail after mobile CSS");
+assert.match(pCss, /body nav\.nav\s*\{[\s\S]*?display:flex!important/,"Desktop must use a vertical flex navigation");
+
 assert.match(html, /id="membershipCheckoutSupport"/,"Merchant recovery link must be present in checkout");
 assert.match(membership, /supportLink\.hidden = !merchantBlocked/,"Merchant support link is visible only when AirPay rejects the merchant");
 assert.match(html, /href="https:\/\/airpaygateway\.site\/masuk"/,"Merchant recovery action must point to the official AirPay sign-in");
