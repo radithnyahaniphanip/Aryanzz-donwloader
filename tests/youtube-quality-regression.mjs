@@ -5,7 +5,7 @@ const worker = readFileSync("src/index.js", "utf8");
 const downloader = readFileSync("public/downloader.js", "utf8");
 
 function functionSource(source, name, indent = "") {
-  const pattern = new RegExp("(^|\\n)" + indent + "function " + name + "\\([^\\n]*\\)\\s*\\{[\\s\\S]*?\\n" + indent + "\\}", "m");
+  const pattern = new RegExp("(^|\\n)" + indent + "(?:async )?function " + name + "\\([^\\n]*\\)\\s*\\{[\\s\\S]*?\\n" + indent + "\\}", "m");
   const match = source.match(pattern);
   assert.ok(match, "Expected function " + name + " to exist");
   return match[0].trim();
