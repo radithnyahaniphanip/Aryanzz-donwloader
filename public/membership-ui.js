@@ -61,7 +61,8 @@
     const sandboxBlocked = code === "AIRPAY_SANDBOX_PRODUCTION_BLOCKED";
     const unconfigured = code === "AIRPAY_KEY_NOT_CONFIGURED";
     const noIdentity = code === "ARYANZZ_IDENTITY_NOT_READY";
-    byId("membershipCheckoutErrorTitle").textContent = merchantBlocked
+    const rateLimited = code === "AIRPAY_RATE_LIMITED";
+    byId("membershipCheckoutErrorTitle").textContent = rateLimited ? "AirPay membatasi permintaan (429)" : merchantBlocked
       ? "AirPay menolak merchant (403)" 
       : apiForbidden
         ? "Akses API QRIS AirPay ditolak (403)"
@@ -74,7 +75,7 @@
             : noIdentity
               ? "Identitas perangkat belum siap"
               : "Invoice belum berhasil dibuat";
-    byId("membershipCheckoutErrorText").textContent = merchantBlocked
+    byId("membershipCheckoutErrorText").textContent = rateLimited ? "Tunggu sebelum mencoba lagi; jangan tekan checkout berulang." : merchantBlocked
       ? "AirPay menolak pembuatan invoice (HTTP 403). Dokumentasi AirPay menyebut kode ini sebagai status merchant dibanned. Status akun/izin API perlu diperiksa oleh dukungan AirPay; masuk dasbor saja tidak memastikan API QRIS live sudah aktif."
       : apiForbidden
         ? "AirPay belum menerbitkan invoice (HTTP 403), jadi belum ada QRIS yang bisa dipindai. Error ini datang dari gateway, bukan karena akun ARYANZZ diblokir. Minta dukungan AirPay memeriksa izin API QRIS untuk API Key live yang terpasang. Key sandbox berawalan ak_test_ hanya untuk simulasi dan tidak dapat menerima pembayaran sungguhan."
@@ -173,14 +174,17 @@
       const price = priceForPeriod(plan, state.period);
       const card = make("article", "ary-membership-plan" + (plan.id === "pro" ? " is-popular" : ""));
       const top = make("div", "ary-membership-plan-top");
-      top.append(make("h3", "", plan.name));
+      top.append(make("h3", "", plan.name + " · " + periodLabel(state.period)));
       top.append(make("span", "ary-membership-plan-label", plan.badge || plan.name.toUpperCase()));
       card.append(top);
       card.append(make("div", "ary-membership-plan-price", money(price)));
       card.append(make("div", "ary-membership-plan-period", "per " + periodUnit(state.period)));
       card.append(make("p", "ary-membership-plan-summary", plan.summary || ""));
+      card.append(make("div", "ary-membership-plan-duration", "Akses " + periodDuration(state.period)));
       const list = make("ul", "");
       (plan.features || []).forEach(feature => list.append(make("li", "", feature)));
+      const slots = Number(plan.queueSlots?.[state.period] || 0);
+      if (slots) list.append(make("li", "", "Antrean lokal hingga " + slots + " tautan sekaligus"));
       card.append(list);
       const inCart = state.cart && state.cart.planId === plan.id && state.cart.period === state.period;
       const button = make("button", "ary-membership-select", inCart ? "✓ Di keranjang" : "＋ Tambah ke keranjang");
@@ -356,10 +360,10 @@
         stopCountdown();
         closePaymentActions();
         if (caption) caption.textContent = "Waktu checkout berakhir · status gateway tetap diperiksa";
-        byId("membershipPaymentExpiry").textContent = "Batas checkout 10 menit selesai. QR disembunyikan dan keranjang direset; status invoice tetap dicocokkan dengan AirPay agar pembayaran yang sudah masuk tidak hilang.";
+        byId("membershipPaymentExpiry").textContent = "Checkout berakhir. Menunggu hasil akhir AirPay.";
         byId("membershipPaymentBack").hidden = false;
         clearCart();
-        setMessage("Waktu checkout 10 menit habis. QR ditutup dan keranjang direset. Server tetap memeriksa status AirPay sampai hasil akhir untuk mencegah pembayaran ganda atau kehilangan transaksi.", "warning");
+        setMessage("Checkout dibatalkan. Status akhir AirPay tetap diperiksa.", "warning");
       }
     };
     update();
@@ -385,12 +389,12 @@
     byId("membershipPaymentExpiry").textContent = checkoutExpired
       ? "Sesi checkout berakhir. Menunggu konfirmasi final dari AirPay."
       : data.expiryAt || order.gatewayExpiresAt || order.expiresAt
-        ? "Invoice gateway berlaku sampai " + formatDate(data.expiryAt || order.gatewayExpiresAt || order.expiresAt)
+        ? "Berlaku sampai " + formatDate(data.expiryAt || order.gatewayExpiresAt || order.expiresAt)
         : "Selesaikan checkout dalam 10 menit.";
 
     const selected = String(order.paymentMethod || state.paymentMethod || "qris");
     const methodNames = { qris: "QRIS", dana: "DANA via QRIS", gopay: "GoPay via QRIS", linkaja: "LinkAja via QRIS", ovo: "OVO via QRIS", shopeepay: "ShopeePay via QRIS", mobile_banking: "M-Banking via QRIS" };
-    byId("membershipSelectedMethod").textContent = "Metode dipilih: " + (methodNames[selected] || "QRIS") + " · diterbitkan oleh AirPay";
+    byId("membershipSelectedMethod").textContent = "Bayar dengan " + (methodNames[selected] || "QRIS");
     const payLink = byId("membershipPayLink");
     const providerPage = safeProviderLink(data.payUrl || order.payUrl);
     if (payLink) { payLink.hidden = !providerPage || checkoutExpired; if (providerPage && !checkoutExpired) payLink.href = providerPage; else payLink.removeAttribute("href"); }
@@ -425,7 +429,7 @@
       qr.hidden = true;
     }
     const ref = byId("membershipOrderReference");
-    if (ref) ref.textContent = "ID Pesanan: " + String(order.id || "") + " · Status diperiksa otomatis";
+    if (ref) ref.textContent = "Pesanan: " + String(order.id || "");
 
     const checkButton = byId("membershipCheckStatus");
     checkButton.disabled = false;
@@ -434,9 +438,9 @@
     if (checkoutExpired) {
       const caption = document.querySelector(".ary-membership-countdown-caption");
       if (caption) caption.textContent = "Waktu checkout berakhir · menunggu status final AirPay";
-      setMessage("Invoice ini melewati batas checkout 10 menit. QR disembunyikan; ARYANZZ tetap memeriksa status gateway agar pembayaran yang sudah masuk tidak hilang.", "warning");
+      setMessage("Checkout berakhir. Menunggu status akhir AirPay.", "warning");
     } else {
-      setMessage("Menunggu pembayaran. ARYANZZ memeriksa status langsung ke server AirPay.", "pending");
+      setMessage("Menunggu pembayaran…", "pending");
     }
     byId("membershipPayment").scrollIntoView({ behavior: "smooth", block: "nearest" });
     startPolling(order.id);
@@ -469,7 +473,7 @@
     const methodButtons = [...document.querySelectorAll("#membershipMethodGrid [data-ary-pay-method]")];
     methodButtons.forEach(item => item.disabled = true);
     button.textContent = "Membuat invoice…";
-    setMessage("AirPay sedang membuat invoice QRIS otomatis. Jangan tekan metode pembayaran berulang kali.", "info");
+    setMessage("Menyiapkan QRIS…", "info");
 
     try {
       const result = await api("/api/membership/orders", {
@@ -492,6 +496,7 @@
       if (!result.response.ok || !result.data.ok) {
         const error = new Error(result.data.error || "Invoice belum berhasil dibuat.");
         error.code = String(result.data.code || "AIRPAY_CREATE_FAILED");
+        error.retryAfterSeconds = Number(result.data.retryAfterSeconds || 0);
         throw error;
       }
 
@@ -501,6 +506,13 @@
     } catch (error) {
       const code = error?.code || "AIRPAY_CREATE_FAILED";
       setCheckoutError(error?.message || "Tidak dapat membuat invoice.", code);
+      if (code === "AIRPAY_RATE_LIMITED" && error.retryAfterSeconds) {
+        const retry = byId("membershipCheckoutRetry");
+        retry.hidden = false;
+        retry.disabled = true;
+        retry.textContent = "Jeda " + error.retryAfterSeconds + " detik";
+        window.setTimeout(() => {retry.disabled = false; retry.textContent = "Coba buat QRIS lagi";}, error.retryAfterSeconds * 1000);
+      }
       // The descriptive error lives in the checkout card. Avoid repeating the
       // same text underneath the card, as observed in the user's screenshots.
       setMessage("", "error");
@@ -583,8 +595,8 @@
       stopCountdown();
       clearCart();
       closePaymentActions();
-      byId("membershipPaymentExpiry").textContent = "Invoice sudah " + order.status + ".";
-      setMessage("Invoice " + order.status + ". Keranjang dikosongkan; pilih paket kembali untuk membuat invoice baru.", "error");
+      byId("membershipPaymentExpiry").textContent = "Invoice dibatalkan atau kedaluwarsa.";
+      setMessage("Invoice dibatalkan. Silakan pilih paket lainnya.", "warning");
       await refreshMe();
       state.activeOrderId = "";
       byId("membershipPaymentBack").hidden = false;
@@ -596,9 +608,9 @@
       Date.now() >= Number(order.checkoutExpiresAt || (Number(order.createdAt || Date.now()) + 10 * 60 * 1000));
     if (checkoutExpired) {
       byId("membershipPaymentBack").hidden = false;
-      setMessage("Batas checkout 10 menit berakhir. QR sudah ditutup dan keranjang direset. ARYANZZ masih memeriksa status AirPay agar pembayaran yang sudah masuk tetap tercatat.", "warning");
+      setMessage("Checkout berakhir. Status AirPay masih diperiksa.", "warning");
     } else {
-      setMessage("Pembayaran belum terdeteksi. Jika sudah membayar, tunggu beberapa saat lalu periksa kembali.", "pending");
+      setMessage("Menunggu pembayaran…", "pending");
     }
     return true;
   }
@@ -631,6 +643,7 @@
     state.identityReady = true;
     state.membership = result.data.membership || state.membership;
     state.orders = Array.isArray(result.data.orders) ? result.data.orders : [];
+    window.dispatchEvent(new CustomEvent("aryanzz:membership-updated", {detail:{tier: state.membership.tier || "free",billingPeriod:state.membership.billingPeriod || "monthly",status:state.membership.status || "free"}}));
     renderAccount();
     renderOrders();
     renderAutoReceipt(state.orders.find(order => order.status === "paid" && order.paidAt) || null);
@@ -675,6 +688,9 @@
   function renderOrders() {
     const list = byId("membershipOrdersList");
     list.replaceChildren();
+    const clearFailed = byId("membershipClearFailed");
+    const terminal = new Set(["expired", "failed", "rejected", "cancelled"]);
+    if (clearFailed) clearFailed.hidden = !state.orders.some(order => terminal.has(String(order.status || "").toLowerCase()));
     if (!state.orders.length) {
       list.append(make("p", "ary-membership-order-empty", "Belum ada transaksi membership."));
       return;
@@ -687,7 +703,13 @@
       copy.append(make("small", "", money(order.totalAmount || order.amount) + " · " + formatDate(order.createdAt)));
       if (order.transactionId) copy.append(make("small", "", "ID transaksi: " + order.transactionId));
       row.append(copy);
-      row.append(make("span", "ary-membership-order-status status-" + String(order.status || "pending").toLowerCase(), order.status || "pending"));
+      const rawStatus = String(order.status || "pending").toLowerCase();
+      const expiredCheckout = rawStatus === "pending" && (order.checkoutExpired ||
+        Date.now() >= Number(order.checkoutExpiresAt || Number(order.createdAt || Date.now()) + 600000));
+      const shownStatus = terminal.has(rawStatus) || expiredCheckout ? "CANCELLED" : rawStatus.toUpperCase();
+      const chip = make("span", "ary-membership-order-status status-" + (shownStatus === "CANCELLED" ? "cancelled" : rawStatus), shownStatus);
+      chip.title = expiredCheckout ? "Checkout ditutup setelah 10 menit; AirPay masih diperiksa." : "";
+      row.append(chip);
       if (order.status === "paid") {
         const receipt = make("button", "ary-membership-receipt", "Bukti transaksi ↓");
         receipt.type = "button";
@@ -800,6 +822,21 @@
     window.requestAnimationFrame(syncPlanNavigation);
   }
 
+  byId("membershipClearFailed")?.addEventListener("click", async () => {
+    if (!state.orders.some(order => ["expired","failed","rejected","cancelled"].includes(order.status))) return;
+    if (!confirm("Hapus riwayat transaksi gagal? Catatan transaksi lunas dan yang masih diproses tetap disimpan.")) return;
+    const button = byId("membershipClearFailed");
+    button.disabled = true;
+    try {
+      const result = await api("/api/membership/orders/clear-failed", { method: "POST", body: "{}" });
+      if (!result.response.ok || !result.data.ok) throw new Error(result.data.error || "Tidak dapat menghapus riwayat.");
+      await refreshMe();
+      setMessage(result.data.message || "Riwayat gagal dibersihkan.", "success");
+    } catch (error) {
+      setMessage(error.message || "Tidak dapat menghapus riwayat.", "error");
+    } finally { button.disabled = false; }
+  });
+
   byId("membershipMonthly").addEventListener("click", () => setPeriod("monthly"));
   byId("membershipWeekly").addEventListener("click", () => setPeriod("weekly"));
   byId("membershipYearly").addEventListener("click", () => setPeriod("yearly"));
@@ -863,6 +900,11 @@
     },
     setNotice(message) {
       setMessage(message, "warning");
+    },
+    queueLimit() {
+      if (state.membership.status !== "active") return 0;
+      const plan = state.catalog?.plans?.find(item => item.id === state.membership.tier);
+      return Number(plan?.queueSlots?.[state.membership.billingPeriod || "monthly"] || 0);
     }
   };
 

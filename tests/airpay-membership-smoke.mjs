@@ -65,7 +65,7 @@ assert.match(ui, /config\.merchantBlocked/);
 assert.match(ui, /function closePaymentActions\(\)/);
 assert.match(ui, /link\.removeAttribute\("href"\)/);
 assert.match(ui, /closePaymentActions\(\);[\s\S]*?setMessage\("Pembayaran berhasil diverifikasi/);
-assert.match(ui, /closePaymentActions\(\);[\s\S]*?byId\("membershipPaymentExpiry"\)\.textContent = "Invoice sudah "/);
+assert.match(ui, /closePaymentActions\(\);[\s\S]*?byId\("membershipPaymentExpiry"\)\.textContent = "Invoice dibatalkan atau kedaluwarsa\."/);
 assert.match(ui, /payLink\.hidden = !providerPage \|\| checkoutExpired/);
 assert.match(ui, /AIRPAY_KEY_NOT_CONFIGURED/);
 assert.match(ui, /ARYANZZ_IDENTITY_NOT_READY/);
@@ -78,7 +78,7 @@ assert.doesNotMatch(aryHtmlSection(html), /AirPay yang terpasang mendukung QRIS,
 assert.doesNotMatch(aryHtmlSection(html), /Akses Pro membuka Media Studio Pro, Ultra membuka/);
 assert.doesNotMatch(aryHtmlSection(html), /nomor rekening pembeli/);
 assert.match(ui, /membershipPaymentBack/);
-assert.match(ui, /Waktu checkout 10 menit habis/);
+assert.match(ui, /Checkout dibatalkan\. Status akhir AirPay tetap diperiksa\./);
 assert.match(ui, /renderCart\(\);[\s\S]*?renderPlans\(\);/);
 assert.match(membership, /aryanzz_device_lock/);
 assert.match(membership, /auth_device_lock_accounts/);

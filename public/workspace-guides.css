@@ -144,3 +144,110 @@
  .ary-guide-item-desc{display:-webkit-box;overflow:hidden;-webkit-box-orient:vertical;-webkit-line-clamp:2}
  .ary-guide-detail{width:100%;min-width:0;box-sizing:border-box;overflow-wrap:anywhere}
 }
+
+
+/* ARYANZZ V2 · real interactive Knowledge Center on small Android and
+   "Desktop site" Android. One readable list: no clipped/overlapping pills. */
+body .ary-guide-overlay .ary-guide-dialog {
+  max-width:min(1080px,100%)!important;
+  min-width:0!important;
+}
+body .ary-guide-overlay .ary-guide-body,
+body .ary-guide-overlay .ary-guide-sidebar,
+body .ary-guide-overlay .ary-guide-detail {min-width:0!important;max-width:100%!important}
+body .ary-guide-overlay .ary-guide-list {
+  display:flex!important;flex-direction:column!important;grid-auto-flow:row!important;
+  grid-template-columns:none!important;gap:8px!important;
+  min-width:0!important;min-height:0!important;
+  overflow-x:hidden!important;overflow-y:auto!important;
+  scroll-snap-type:none!important;align-content:stretch!important;
+  padding:3px 4px 8px 0!important;
+  scrollbar-width:thin;
+}
+body .ary-guide-overlay .ary-guide-item {
+  display:flex!important;flex:0 0 auto!important;flex-direction:column!important;
+  align-items:stretch!important;justify-content:flex-start!important;
+  width:100%!important;min-width:0!important;max-width:100%!important;
+  min-height:68px!important;height:auto!important;
+  padding:12px 13px!important;gap:5px!important;box-sizing:border-box!important;
+  white-space:normal!important;text-align:left!important;
+  border-radius:13px!important;
+  overflow-wrap:break-word!important;
+}
+body .ary-guide-overlay .ary-guide-item-top {
+  display:flex!important;flex-direction:row!important;flex-wrap:wrap!important;
+  align-items:center!important;justify-content:space-between!important;
+  gap:6px 10px!important;min-width:0!important;max-width:100%!important;
+}
+body .ary-guide-overlay .ary-guide-item-top b {
+  display:block!important;flex:1 1 130px!important;
+  font-size:13px!important;line-height:1.35!important;
+  min-width:0!important;white-space:normal!important;
+  overflow-wrap:break-word!important;
+}
+body .ary-guide-overlay .ary-guide-item .ary-guide-category {
+  flex:0 0 auto!important;max-width:100%!important;
+  font-size:9px!important;white-space:nowrap!important;
+}
+body .ary-guide-overlay .ary-guide-item-desc {
+  display:block!important;margin:0!important;max-width:100%!important;
+  font-size:10px!important;line-height:1.48!important;
+  white-space:normal!important;overflow:visible!important;
+  -webkit-line-clamp:unset!important;
+}
+body .ary-guide-overlay .ary-guide-item-state {
+  margin-top:2px!important;font-size:9px!important;
+}
+body .ary-guide-overlay .ary-guide-item:focus-visible {
+  outline:2px solid #75e7ee!important;outline-offset:2px!important;
+}
+@media(max-width:1120px){
+  body .ary-guide-overlay .ary-guide-dialog {
+    height:calc(100dvh - 18px)!important;
+    max-height:calc(100dvh - 18px)!important;
+    width:min(700px,100%)!important;
+    display:flex!important;flex-direction:column!important;
+  }
+  body .ary-guide-overlay .ary-guide-body {
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr)!important;
+    grid-template-rows:minmax(0, min(39vh,290px)) minmax(0,1fr)!important;
+    flex:1 1 auto!important;
+    min-height:0!important;overflow:hidden!important;
+  }
+  body .ary-guide-overlay .ary-guide-sidebar {
+    display:flex!important;flex-direction:column!important;
+    min-height:0!important;overflow:hidden!important;
+    padding:12px 15px!important;
+    border-right:0!important;
+    border-bottom:1px solid rgba(150,180,225,.18)!important;
+  }
+  body .ary-guide-overlay .ary-guide-list {
+    flex:1 1 auto!important;
+    max-height:none!important;overflow-y:auto!important;
+    min-height:0!important;
+  }
+  body .ary-guide-overlay .ary-guide-detail {
+    display:block!important;flex:1 1 auto!important;
+    min-height:0!important;overflow-x:hidden!important;
+    overflow-y:auto!important;
+    padding:16px 18px calc(22px + env(safe-area-inset-bottom))!important;
+  }
+  body .ary-guide-overlay .ary-guide-filters {
+    flex:0 0 auto!important;display:flex!important;flex-wrap:nowrap!important;
+    overflow-x:auto!important;overflow-y:hidden!important;
+    gap:6px!important;max-width:100%!important;
+  }
+  body .ary-guide-overlay .ary-guide-filters button {
+    flex:0 0 auto!important;min-height:35px!important;
+    white-space:nowrap!important;font-size:10px!important;
+  }
+}
+@media(max-width:420px) {
+  body .ary-guide-overlay .ary-guide-dialog {max-height:calc(100dvh - 8px)!important;height:calc(100dvh - 8px)!important}
+  body .ary-guide-overlay .ary-guide-header {padding:13px 14px!important}
+  body .ary-guide-overlay .ary-guide-header h2 {font-size:22px!important}
+  body .ary-guide-overlay .ary-guide-body {grid-template-rows:minmax(0,min(35vh,260px)) minmax(0,1fr)!important}
+  body .ary-guide-overlay .ary-guide-item {min-height:60px!important;padding:9px 11px!important}
+  body .ary-guide-overlay .ary-guide-item-top b {font-size:12px!important}
+}
