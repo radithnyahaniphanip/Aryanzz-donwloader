@@ -1,3 +1,4 @@
+import { ensureAuthD1Schema } from "./auth-d1-bootstrap.js";
 const COOKIE = "aryanzz_session";
 const ITERATIONS = 250000;
 const OTP_TTL = 10 * 60 * 1000;
@@ -54,6 +55,15 @@ async function authSchemaMissing(env){
   const required=["auth_users","auth_sessions","auth_verifications","auth_trusted_devices","auth_user_bans","auth_banned_devices","auth_device_accounts","auth_moderation_events","auth_device_lock_accounts"];
   if(!env.AUTH_DB||typeof env.AUTH_DB.prepare!=="function")return [];
   try{
+    if(String(env.ARYANZZ_D1_SCHEMA_BOOTSTRAP||"")==="enabled"){
+      try{
+        const outcome=await ensureAuthD1Schema(env.AUTH_DB);
+        if(outcome.bootstrapped)console.info("[ARYANZZ_AUTH] D1 schema restored through bound Worker using idempotent project migrations.");
+      }catch(error){
+        // DDL failures never permit login without the expected schema.
+        console.error("[ARYANZZ_AUTH] D1 schema bootstrap failed",error instanceof Error?error.name:"unknown");
+      }
+    }
     const rows=await env.AUTH_DB.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name IN ('auth_users','auth_sessions','auth_verifications','auth_trusted_devices','auth_user_bans','auth_banned_devices','auth_device_accounts','auth_moderation_events','auth_device_lock_accounts')").all();
     const present=new Set((rows?.results||[]).map(row=>String(row.name||"")));
     return required.filter(name=>!present.has(name));
