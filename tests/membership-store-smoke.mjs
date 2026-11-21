@@ -148,7 +148,7 @@ try {
   assert.equal(dashboardTest.status, 200, "signed dashboard webhook.test should be acknowledged");
   assert.equal((await dashboardTest.json()).event, "webhook.test");
   assert.equal((await storage.get("order:" + created.order.id)).status, "pending", "dashboard test must never mark a paid order");
-  assert.equal(await storage.get("membership:" + deviceToken), undefined, "dashboard test must not activate a membership");
+  assert.equal((await storage.list({ prefix: "membership:" })).size, 0, "dashboard test must not activate any membership");
 
   const invalidTest = await store.fetch(webhookWith(dashboardTestBody, sign("ak_test_wrong", dashboardTestBody)));
   assert.equal(invalidTest.status, 401, "unknown sandbox signatures must be rejected");
