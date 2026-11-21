@@ -11,12 +11,13 @@ const PLANS = [
     yearlyPrice: 40000,
     durationDays: 30,
     yearlyDurationDays: 365,
-    summary: "Mulai menikmati pengalaman member ARYANZZ.",
+    summary: "Identitas member dan studio warna untuk memulai.",
+    queueSlots: { weekly: 0, monthly: 0, yearly: 0 },
     features: [
-      "Badge Starter pada panel Membership",
-      "Status keanggotaan terhubung ke ID ARYANZZ",
-      "Riwayat pembayaran dan masa aktif",
-      "Perpanjangan paket dari akun yang sama"
+      "Badge Starter dan profil keanggotaan aktif",
+      "Membuka Gradient Studio di Pusat Alat",
+      "Masa aktif dan bukti transaksi terverifikasi",
+      "Akses perpanjangan Membership"
     ]
   },
   {
@@ -28,12 +29,13 @@ const PLANS = [
     yearlyPrice: 127000,
     durationDays: 30,
     yearlyDurationDays: 365,
-    summary: "Untuk pengguna aktif yang membutuhkan ruang kerja media lebih lengkap.",
+    summary: "Kelola media dan antrean dalam ruang kerja Pro.",
+    queueSlots: { weekly: 8, monthly: 16, yearly: 24 },
     features: [
-      "Semua fasilitas Starter",
-      "Membuka Media Studio Pro",
-      "Pustaka media dan pemutar lokal",
-      "Smart Queue untuk mengatur unduhan"
+      "Membuka Media Studio Pro dan pemutar media lokal",
+      "Membuka Smart Download Queue",
+      "Membuka Music Finder (jika layanan tersedia)",
+      "Badge Pro dan bukti transaksi terverifikasi"
     ]
   },
   {
@@ -45,12 +47,13 @@ const PLANS = [
     yearlyPrice: 370000,
     durationDays: 30,
     yearlyDurationDays: 365,
-    summary: "Pengalaman kreatif lanjutan dengan akses Studio yang lebih luas.",
+    summary: "Produksi video dan audio dengan studio editing lengkap.",
+    queueSlots: { weekly: 15, monthly: 30, yearly: 45 },
     features: [
-      "Semua fasilitas Pro",
       "Membuka Video Editor Studio",
-      "Trim, filter, teks, dan audio",
-      "Subtitle dan ekspor hasil edit"
+      "Membuka MP4 ke MP3 Converter",
+      "Timeline, trim, subtitle, filter dan ekspor",
+      "Badge Ultra dan antrean lokal lebih luas"
     ]
   },
   {
@@ -62,12 +65,13 @@ const PLANS = [
     yearlyPrice: 1600000,
     durationDays: 30,
     yearlyDurationDays: 365,
-    summary: "Paket tertinggi untuk pengguna yang ingin membuka seluruh ruang kreatif member.",
+    summary: "Studio ekspresi, gambar, dan ruang antrean terbesar.",
+    queueSlots: { weekly: 30, monthly: 60, yearly: 90 },
     features: [
-      "Semua fasilitas Ultra",
-      "Membuka Emote Studio",
-      "Edit stiker dan ekspor PNG/WebP",
-      "Buat GIF dan tambahkan stiker ke MP4"
+      "Membuka Emote Studio untuk stiker dan GIF",
+      "Membuka Image Studio premium",
+      "Ekspor PNG/WebP dan stiker video MP4",
+      "Badge Max dan ruang antrean lokal terbesar"
     ]
   }
 ];
@@ -332,12 +336,16 @@ export class MembershipStore {
         ok: true,
         user: { id: session.id },
         membership,
-        orders: orders.slice(0, 20).map(publicOrder)
+        orders: orders.filter(order => !order.hiddenFromHistory).slice(0, 20).map(publicOrder)
       });
     }
 
     if (path === "/api/membership/orders" && method === "POST") {
       return this.createOrder(request);
+    }
+
+    if (path === "/api/membership/orders/clear-failed" && method === "POST") {
+      return this.clearFailedOrders(request);
     }
 
     if (path === "/api/membership/orders/status" && method === "GET") {
@@ -352,6 +360,29 @@ export class MembershipStore {
     }
 
     return json({ ok: false, error: "Endpoint Membership tidak ditemukan." }, 404);
+  }
+
+  async clearFailedOrders(request) {
+    const session = await this.session(request);
+    if (!session) return json({ ok: false, error: "Sesi akun tidak ditemukan." }, 401);
+    const orders = await this.ctx.storage.get("orders:" + session.id) || [];
+    const terminal = new Set(["expired", "failed", "rejected", "cancelled"]);
+    let hidden = 0;
+    const next = orders.map(order => {
+      if (!terminal.has(String(order.status || "").toLowerCase()) || order.hiddenFromHistory) return order;
+      hidden++;
+      return { ...order, hiddenFromHistory: true, hiddenAt: Date.now() };
+    });
+    await this.ctx.storage.put("orders:" + session.id, next);
+    // Keep immutable payment/transaction records available for reconciliation,
+    // receipts, audit and webhooks; this removes only failed history from view.
+    for (const order of next.filter(item => item.hiddenFromHistory)) {
+      const stored = await this.ctx.storage.get("order:" + order.id);
+      if (stored && terminal.has(String(stored.status || "").toLowerCase()) && !stored.hiddenFromHistory) {
+        await this.ctx.storage.put("order:" + order.id, { ...stored, hiddenFromHistory: true, hiddenAt: Date.now() });
+      }
+    }
+    return json({ ok: true, hidden, message: hidden ? "Riwayat gagal disembunyikan." : "Tidak ada transaksi gagal yang dapat disembunyikan." });
   }
 
   async membershipFor(sessionId) {
@@ -399,6 +430,14 @@ export class MembershipStore {
         code: "AIRPAY_MERCHANT_BLOCKED",
         error: "Checkout sementara ditutup: AirPay menolak akun merchant (403). Hubungi dukungan resmi AirPay; jangan membuat invoice berulang kali."
       }, 503);
+    }
+
+    const rateLimitUntil = Number(await this.ctx.storage.get("airpay-create-rate-limit-until") || 0);
+    if (rateLimitUntil > Date.now()) {
+      const seconds = Math.max(1, Math.ceil((rateLimitUntil - Date.now()) / 1000));
+      return json({ ok: false, code: "AIRPAY_RATE_LIMITED",
+        error: "AirPay membatasi pembuatan invoice sementara. Coba lagi setelah jeda; jangan mengetuk checkout berulang.",
+        retryAfterSeconds: seconds }, 429, { "retry-after": String(seconds) });
     }
 
     let body;
@@ -554,6 +593,16 @@ export class MembershipStore {
         }
       }
       if (!response.ok || !payload || payload.success === false) {
+        if (response.status === 429) {
+          const rawRetry = Number(response.headers.get("retry-after"));
+          const seconds = Number.isFinite(rawRetry) && rawRetry > 0
+            ? Math.max(30, Math.min(300, Math.ceil(rawRetry))) : 90;
+          await this.ctx.storage.put("airpay-create-rate-limit-until", Date.now() + seconds * 1000);
+          const error = new Error("AirPay sedang membatasi permintaan pembuatan QRIS (HTTP 429). Coba lagi setelah " + seconds + " detik.");
+          error.code = "AIRPAY_RATE_LIMITED";
+          error.retryAfterSeconds = seconds;
+          throw error;
+        }
         const gatewayMessage = String(payload?.message || payload?.error || "");
         if (response.status === 401 || /invalid[\\s_-]*(?:api[\\s_-]*)?key|unauthori[sz]ed|kunci.*tidak.*valid/i.test(gatewayMessage)) {
           const error = new Error("Kunci API AirPay ditolak. Pemilik website perlu mengganti Secret AIRPAY_API_KEY dengan key aktif dari dashboard AirPay, lalu deploy ulang. Jangan kirim key melalui chat.");
@@ -654,8 +703,9 @@ export class MembershipStore {
       return json({
         ok: false,
         code,
-        error: code === "AIRPAY_INVALID_API_KEY" ? order.note : "Invoice AirPay gagal dibuat. " + order.note
-      }, ["AIRPAY_INVALID_API_KEY", "AIRPAY_MERCHANT_BLOCKED", "AIRPAY_API_FORBIDDEN"].includes(code) ? 503 : 502);
+        error: code === "AIRPAY_INVALID_API_KEY" || code === "AIRPAY_RATE_LIMITED" ? order.note : "Invoice AirPay gagal dibuat. " + order.note,
+        ...(code === "AIRPAY_RATE_LIMITED" ? { retryAfterSeconds: error.retryAfterSeconds || 90 } : {})
+      }, code === "AIRPAY_RATE_LIMITED" ? 429 : ["AIRPAY_INVALID_API_KEY", "AIRPAY_MERCHANT_BLOCKED", "AIRPAY_API_FORBIDDEN"].includes(code) ? 503 : 502);
     }
   }
 
@@ -789,6 +839,7 @@ export class MembershipStore {
       startedAt: previous.status === "active" && previous.startedAt ? previous.startedAt : now,
       expiresAt,
       sourceOrderId: order.id,
+      billingPeriod: order.billingPeriod,
       updatedAt: now
     };
 
